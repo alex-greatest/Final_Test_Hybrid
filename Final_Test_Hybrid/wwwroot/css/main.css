@@ -1,0 +1,165 @@
+﻿/* ===== КАРТОЧКА ШАПКИ ===== */
+
+.header-card {
+    border: 2px solid #000;
+    border-radius: 4px;
+}
+
+/* фон и тень RadzenCard */
+.header-card.rz-card,
+.header-card .rz-card-body {
+    background: rgb(180, 180, 180) !important;
+    box-shadow: none;
+}
+
+/* внутренние отступы только у body */
+.header-card .rz-card-body {
+    padding: 8px 12px;
+}
+
+
+/* ===== GRID ШАПКИ (3 БЛОКА) ===== */
+
+/* 3 блока по горизонтали: левый фикс 550px, остальные адаптивные */
+.header-grid {
+    display: grid;
+    grid-template-columns: 550px 2fr 1.6fr;
+    column-gap: 16px;
+    align-items: flex-start;
+}
+
+/* базовый блок шапки */
+.header-block {
+    display: grid;
+    row-gap: 8px;
+}
+
+/* левый блок: 2 колонки (2x2 поля) */
+.header-block-left {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 13px;
+    row-gap: 11px;
+}
+
+/* средний блок: одна колонка (поля в столбик) */
+.header-block-middle {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 11px;
+}
+
+/* вертикальные разделители между блоками */
+.header-block:not(:last-child) {
+    border-right: 1px solid #000;
+    padding-right: 16px;
+}
+
+
+/* ===== СТРОКИ ПОЛЕЙ ШАПКИ ===== */
+
+/* базовая строка: подпись слева, поле справа */
+.field-row {
+    display: grid;
+    grid-template-columns: 90px minmax(0, 1fr);
+    column-gap: 70px;
+    align-items: center;
+}
+
+.field-row-operator {
+    column-gap: 60px;
+}
+
+/* вариант со слегка другим gap для “средних” полей */
+.field-row.field-row-middle {
+    column-gap: 75px;
+}
+
+
+/* ===== СТРОКИ ПОЛЕЙ (ОБЩИЕ СТИЛИ) ===== */
+
+/* подпись Radzen – крупнее и жирнее */
+.field-row > .rz-label,
+.field-row-parameter > .rz-label {
+    white-space: nowrap;
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+/* TextBox занимает всю свою ячейку */
+.field-row .rz-textbox,
+.field-row-parameter .rz-textbox {
+    width: 100%;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: black;
+}
+
+/* текст внутри RadzenTextBox в шапке – крупный и жирный */
+.header-card .rz-inputtext {
+    font-size: 1.3rem !important;
+    font-weight: 700 !important;
+    color: #000 !important;
+}
+
+
+/* ===== КНОПКИ СПРАВА В ШАПКЕ ===== */
+
+.header-block-right .buttons-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    align-items: center;
+}
+
+/* размер кнопок только в правом блоке */
+.header-block-right .buttons-row .rz-button {
+    padding: 10px 24px;
+    min-width: 150px;
+    font-size: 1.3rem;
+    font-weight: 700 !important;
+    border-radius: 6px;
+}
+
+
+/* ===== GRID ПАРАМЕТРОВ ===== */
+
+.header-grid-parameter {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 280px)); /* 3 колонки по 280px */
+    column-gap: 0;
+    align-items: flex-start;
+}
+
+/* каждый блок параметров – просто столбик строк */
+.header-block-parameter {
+    display: grid;
+    row-gap: 11px;
+}
+
+/* строка параметра: подпись слева, поле справа */
+.field-row-parameter {
+    display: grid;
+    grid-template-columns: minmax(0, 90px) minmax(0, 100px);
+    column-gap: 35px;
+    align-items: center;
+}
+
+/* Стек внутри вкладки – колонками, растягивается по высоте панели */
+.main-stack {
+    display: flex;             /* RadzenStack рендерится как <div>, делаем его flex */
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* Карточки и textarea – по содержимому, НЕ растягиваются */
+.main-stack > .header-card,
+.main-stack > .rz-textarea {
+    flex: 0 0 auto;
+}
+
+/* DataGrid – забирает всю оставшуюся высоту */
+.main-stack > .main-grid.rz-datagrid {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+}

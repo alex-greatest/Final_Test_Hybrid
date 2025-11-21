@@ -3,7 +3,10 @@
         <RadzenTabs RenderMode="TabRenderMode.Client" @bind-SelectedIndex="@selectedIndex" class="app-tabs-90">
             <Tabs>
                 <RadzenTabsItem Text="Главный экран">
-                    <RadzenStack Orientation="Orientation.Vertical" Style="height: 100%; padding: 0 20px;">
+                    
+                    <RadzenStack Orientation="Orientation.Vertical"
+                                 class="main-stack"
+                                 Style="height: 100%;">
                         <RadzenCard Class="header-card">
                             <ChildContent>
                                 <div class="header-grid">
@@ -52,7 +55,7 @@
                                                           ButtonStyle="ButtonStyle.Light"
                                                           Style="color: black"/>
                                         </div>
-                                        <div class="field-row">
+                                        <div class="field-row field-row-operator">
                                             <RadzenLabel Text="Имя оператора"/>
                                             <RadzenTextBox Style="width:100%"/>
                                         </div>
@@ -60,7 +63,87 @@
 
                                 </div>
                             </ChildContent>
+
                         </RadzenCard>
+                        
+                        <RadzenCard Class="header-card">
+                            <ChildContent>
+                                <div class="header-grid-parameter">
+
+                                    @* Блок 1: четыре поля *@
+                                    <div class="header-block-parameter">
+                                        <div class="field-row-parameter">
+                                            <RadzenLabel Text="Q-GAS (G20)"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                        <div class="field-row-parameter">
+                                            <RadzenLabel Text="Q-GAS (LGP)"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                        <div class="field-row-parameter">
+                                            <RadzenLabel Text="P-GAS"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                        <div class="field-row-parameter">
+                                            <RadzenLabel Text="P-BURNER"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                    </div>
+                                        
+                                    <div class="header-block-parameter">
+                                        <div class="field-row-parameter">
+                                            <RadzenLabel Text="T-GAS"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                        <div class="field-row-parameter">
+                                            <RadzenLabel Text="DeltaTemp"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                        <div class="field-row-parameter">
+                                            <RadzenLabel Text="DeltaTemp"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="header-block-parameter">
+                                        <div class="field-row-parameter">
+                                            <RadzenLabel Text="T-GAS"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                        <div class="field-row-parameter">
+                                            <RadzenLabel Text="DeltaTemp"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                        <div class="field-row-parameter">
+                                            <RadzenLabel Text="DeltaTemp"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                        <div class="field-row-parameter">
+                                            <RadzenLabel Text="DeltaTemp"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                        <div class="field-row-parameter">
+                                            <RadzenLabel Text="DeltaTemp"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </ChildContent>
+                        </RadzenCard>
+                        <RadzenTextArea Rows="1" Style="width:100%; resize: none;  border: 2px solid #000;
+    border-radius: 4px; background-color: rgb(180, 180, 180); color: black; font-size: 4rem; font-weight: 700" />
+                        <RadzenDataGrid
+                            class="main-grid"
+                            TItem="Order"
+                            ColumnWidth="150px"
+                            AllowPaging="true"
+                            AllowSorting="true">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="Order" Property="Id" Title="ID" />
+                                <RadzenDataGridColumn TItem="Order" Property="Number" Title="Номер" />
+                                <RadzenDataGridColumn TItem="Order" Property="Status" Title="Статус" />
+                            </Columns>
+                        </RadzenDataGrid>
                     </RadzenStack>
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Orders">

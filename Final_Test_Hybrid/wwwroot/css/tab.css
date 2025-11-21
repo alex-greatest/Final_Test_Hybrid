@@ -1,13 +1,8 @@
-﻿.app-tabs-90 .rz-tabview-title {
-    font-size: 25px;
-}
-
-.app-tabs-90 .rz-tabview-nav {
-    gap: 2px;
-}
-
-.app-tabs-90 .rz-tabview-nav .rz-tabview-selected {
-    background-color: rgb(106, 106, 106) !important;
+﻿/* ==== Общие цвета и базовые настройки RadzenTabs ==== */
+.app-tabs-shell,
+.app-tabs-90 {
+    --app-tabs-bg: rgb(180, 180, 180);
+    --app-tabs-active-bg: rgb(106, 106, 106);
 }
 
 .app-tabs-90 {
@@ -17,52 +12,80 @@
     --rz-tabs-tab-color: black;
     --rz-tabs-tab-padding-block: 5px;
     --rz-tabs-tab-padding-inline: 24px;
-    --rz-tabs-tab-background-color: rgb(180, 180, 180);
-    --rz-tabs-background-color: rgb(180, 180, 180);
-    --rz-tabs-tab-hover-background-color: rgb(180, 180, 180);
+    --rz-tabs-tab-background-color: var(--app-tabs-bg);
+    --rz-tabs-background-color: var(--app-tabs-bg);
+    --rz-tabs-tab-hover-background-color: var(--app-tabs-bg);
     --rz-tabs-tab-hover-color: white;
     --rz-tabs-tab-selected-top-border-color: white;
 }
 
-.app-tabs-90 .rz-tabview-nav .rz-tabview-nav-link {
-    background: rgb(180, 180, 180) !important;
+/* Текст вкладок крупнее */
+.app-tabs-90 .rz-tabview-title {
+    font-size: 25px;
 }
 
+/* небольшой зазор между вкладками */
+.app-tabs-90 .rz-tabview-nav {
+    gap: 2px;
+}
+
+/* Фон НЕактивных вкладок */
+.app-tabs-90 .rz-tabview-nav li:not(.rz-tabview-selected) .rz-tabview-nav-link {
+    background-color: var(--app-tabs-bg) !important;
+}
+
+/* Фон АКТИВНОЙ вкладки (как у тебя в самом начале) */
+.app-tabs-90 .rz-tabview-nav li.rz-tabview-selected .rz-tabview-nav-link,
+.app-tabs-90 .rz-tabview-nav .rz-tabview-selected {
+    background-color: var(--app-tabs-active-bg) !important;
+}
+
+/* Панель содержимого вкладок */
 .app-tabs-90 .rz-tabview-panels {
     border: none;
     border-top: 1px solid rgb(80, 77, 77);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    /* переносим сюда твой padding из Style, чтобы не мешал расчёту высоты */
+    padding: 0 20px;
 }
 
+/* 3D-подложка под табы */
 .app-tabs-shell {
-    background: rgb(180, 180, 180);
+    background: var(--app-tabs-bg);
     padding: 4px;
     border-radius: 4px;
     flex: 0 0 90%;
     min-height: 0;
     overflow: hidden;
-
-    /* более тёмный, нейтральный 3D-бордер */
-    border-top: 2px solid #d0d0d0;   /* светло-серый вместо белого */
+    border-top: 2px solid #d0d0d0;
     border-left: 2px solid #d0d0d0;
-    border-bottom: 2px solid #4a4a4a; /* тёмно-серый */
+    border-bottom: 2px solid #4a4a4a;
     border-right: 2px solid #4a4a4a;
 }
 
+/* Все вкладки – одинаковая высота, без дерганья */
 .app-tabs-90.rz-tabview.rz-tabview-top > .rz-tabview-nav li {
     margin-bottom: 0 !important;
     border-bottom-width: 3px !important;
     border-bottom-style: solid;
-    border-bottom-color: rgb(180, 180, 180); /* под цвет фона, “невидимая” линия */
+    border-bottom-color: var(--app-tabs-bg);
 }
 
-/* активная вкладка – только цвет нижней линии другой */
+/* У активной – только цвет нижней линии */
 .app-tabs-90.rz-tabview.rz-tabview-top > .rz-tabview-nav li.rz-tabview-selected {
     border-bottom-color: black !important;
 }
 
-/* Всё, что внутри app-tabs-shell, без синей рамки при фокусе */
+/* Внутри блока табов – без синей фокус-рамки */
 .app-tabs-shell *:focus,
 .app-tabs-shell *:focus-visible {
     outline: none !important;
     box-shadow: none !important;
+}
+
+.app-tabs-90.rz-tabview .rz-tabview-panel {
+    padding: 1rem 0 !important;
 }

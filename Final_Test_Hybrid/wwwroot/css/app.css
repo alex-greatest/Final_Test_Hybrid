@@ -1,15 +1,14 @@
-﻿/* общий reset для всех элементов и их псевдо-элементов */
+﻿/* ===== БАЗОВЫЙ RESET ===== */
+
 *,
 *::before,
 *::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    /* убираем синие подсветки тапов на WebKit */
     -webkit-tap-highlight-color: transparent;
 }
 
-/* база для Blazor Hybrid в WinForms */
 html,
 body {
     height: 100%;
@@ -17,53 +16,26 @@ body {
     font-size: 14px;
     line-height: 1.4;
     overflow: hidden;
-    /* скролла страницы нет вообще */
-    /* HMI: запрещаем выделение текста везде по умолчанию */
+
     user-select: none;
     -webkit-user-select: none;
     -ms-user-select: none;
-    /* отключаем контекстное меню/подсказки по долгому тапу */
     -webkit-touch-callout: none;
-    /* тач-жесты только для кликов/тапов (без зума/двойного тапа) */
     touch-action: manipulation;
-    /* без оверскролла/подпрыгивания */
     overscroll-behavior: none;
+
     background: rgb(180, 180, 180) none !important;
 }
 
-/* === Верстка HMI: 90% Tabs, 10% нижняя зона === */
-
-/* сам RadzenStack – вертикальный flex-контейнер на всю высоту окна */
-.app-stack-vertical {
-    display: flex;
-    /* Radzen и так задаёт, но пусть */
-    flex-direction: column;
-    height: 100vh;
-    /* занимаем всю высоту WebView */
-    padding-top: 10px;
-    padding-left: 15px;
-    padding-right: 15px;
+img,
+svg {
+    -webkit-user-drag: none;
 }
 
-/* нижний блок: фиксированные 10% */
-.app-bottom-10 {
-    flex: 0 0 10%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Если где-то нужно разрешить выделение текста (например лог, инпуты и т.п.) */
 .selectable {
     user-select: text !important;
     -webkit-user-select: text !important;
     -ms-user-select: text !important;
-}
-
-/* Картинки: не даём браузеру их перетаскивать */
-img,
-svg {
-    -webkit-user-drag: none;
 }
 
 #blazor-error-ui {
@@ -86,103 +58,20 @@ svg {
 }
 
 
-/* сама карточка */
-.header-card {
-    border: 2px solid #000;
-    border-radius: 4px;
-}
+/* ===== ОБЩИЙ LAYOUT HMI (Tabs + нижняя зона) ===== */
 
-/* перекрашиваем RadzenCard + убираем тень */
-.header-card.rz-card {
-    background: rgb(180, 180, 180) !important;
-    box-shadow: none;
-}
-
-/* убираем белый фон у внутреннего тела карточки */
-.header-card .rz-card-body {
-    background: rgb(180, 180, 180) !important;
-    padding: 8px 12px; /* как было раньше на header-card */
-}
-
-/* Основная сетка: 3 блока по горизонтали */
-.header-grid {
-    display: grid;
-    grid-template-columns: 550px 2fr 1.6fr;  /* пропорции блоков */
-    column-gap: 16px;
-    align-items: flex-start;
-}
-
-/* Каждый блок – внутри тоже grid по строкам */
-.header-block {
-    display: grid;
-    row-gap: 8px;
-}
-
-.header-block-middle {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr); /* 2 равные колонки */
-    column-gap: 20px;
-    row-gap: 11px;
-}
-
-/* Левый блок: 2 колонки (2x2 поля) */
-.header-block-left {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr)); /* 2 равные колонки */
-    column-gap: 13px;
-    row-gap: 11px;
-}
-
-/* Вертикальные разделители между блоками */
-.header-block:not(:last-child) {
-    border-right: 1px solid #000;
-    padding-right: 16px;
-}
-
-/* Строка поля: label слева, поле справа – ОДИНАКОВО для всех */
-.field-row {
-    display: grid;
-    grid-template-columns: 90px minmax(0, 1fr); /* фикс ширина подписи + адаптивное поле */
-    column-gap: 70px;
-    align-items: center;
-}
-
-.field-row-middle {
-    column-gap: 75px; /* переписываем только gap */
-}
-
-/* Лейбл Radzen – крупнее и пожирнее */
-.field-row > .rz-label {
-    white-space: nowrap;
-    font-size: 1.3rem;   /* было 0.85rem */
-    font-weight: 700;     /* полу-жирный */
-}
-
-/* Поле растягивается на всю свою ячейку */
-.field-row .rz-textbox {
-    width: 100%;
-}
-
-/* Текст внутри RadzenTextBox – тоже крупнее и пожирнее */
-.header-card .rz-textbox {
-    font-size: 1.3rem !important;
-    font-weight: 700 !important;
-    color: black !important;
-}
-
-/* Кнопки справа: по содержимому и прижаты вправо */
-.header-block-right .buttons-row {
+.app-stack-vertical {
     display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    align-items: center;
+    flex-direction: column;
+    height: 100vh;
+    padding: 10px 15px 0 15px;
 }
 
-/* Общий размер кнопок в этой панели */
-.header-block-right .buttons-row .rz-button {
-    padding: 8px 24px;      /* выше (по вертикали) и шире (по горизонтали) */
-    min-width: 150px;       /* чтобы выглядели более массивно */
-    font-size: 1.3rem;        /* можно чуть увеличить шрифт */
-    font-weight: 700 !important;
-    border-radius: 6px;     /* если хочется чуть более “толстых” углов */
+.app-bottom-10 {
+    flex: 0 0 10%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+
+
