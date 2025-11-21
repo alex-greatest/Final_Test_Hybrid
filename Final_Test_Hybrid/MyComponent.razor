@@ -4,59 +4,61 @@
             <Tabs>
                 <RadzenTabsItem Text="Главный экран">
                     <RadzenStack Orientation="Orientation.Vertical" Style="height: 100%; padding: 0 20px;">
-                        <RadzenCard Class="header-form-card">
+                        <RadzenCard Class="header-card">
                             <ChildContent>
-                                <RadzenStack Orientation="Orientation.Horizontal"
-                                             AlignItems="AlignItems.Stretch"
-                                             Class="header-form">
-                                    <!-- Левая колонка -->
-                                    <RadzenStack Orientation="Orientation.Vertical"
-                                                 Class="header-form-block">
-                                        <RadzenLabel Text="Номер смены"/>
-                                        <RadzenTextBox Style="width:100%"/>
+                                <div class="header-grid">
 
-                                        <RadzenLabel Text="Номер заказа" Style="margin-top:8px"/>
-                                        <RadzenTextBox Style="width:100%"/>
+                                    @* Блок 1: четыре поля *@
+                                    <div class="header-block header-block-left">
+                                        <div class="field-row">
+                                            <RadzenLabel Text="Номер смены"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                        <div class="field-row">
+                                            <RadzenLabel Text="Номер заказа"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                        <div class="field-row">
+                                            <RadzenLabel Text="Котлов в заказе"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                        <div class="field-row">
+                                            <RadzenLabel Text="Котлов сделано"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                    </div>
 
-                                        <RadzenLabel Text="Котлов в заказе" Style="margin-top:8px"/>
-                                        <RadzenTextBox Style="width:100%"/>
+                                    @* Блок 2: тип + серийный + кнопка *@
+                                    <div class="header-block header-block-middle">
+                                        <div class="field-row field-row-middle">
+                                            <RadzenLabel Text="Тип котла"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                        <div class="field-row field-row-middle">
+                                            <RadzenLabel Text="Серийный номер"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                    </div>
 
-                                        <RadzenLabel Text="Котлов сделано в заказе" Style="margin-top:8px"/>
-                                        <RadzenTextBox Style="width:100%"/>
-                                    </RadzenStack>
+                                    @* Блок 3: кнопки + имя оператора *@
+                                    <div class="header-block header-block-right">
+                                        <div class="buttons-row">
+                                            <RadzenButton Text="Авторизация оператора"
+                                                          Icon="person"
+                                                          ButtonStyle="ButtonStyle.Primary"
+                                                          Style="background-color: #1e5fcf"/>
+                                            <RadzenButton Text="Выйти"
+                                                          Icon="logout"
+                                                          ButtonStyle="ButtonStyle.Light"
+                                                          Style="color: black"/>
+                                        </div>
+                                        <div class="field-row">
+                                            <RadzenLabel Text="Имя оператора"/>
+                                            <RadzenTextBox Style="width:100%"/>
+                                        </div>
+                                    </div>
 
-                                    <!-- Средняя колонка -->
-                                    <RadzenStack Orientation="Orientation.Vertical"
-                                                 Class="header-form-block">
-                                        <RadzenLabel Text="Тип котла"/>
-                                        <RadzenTextBox Style="width:100%"/>
-
-                                        <RadzenLabel Text="Серийный номер котла" Style="margin-top:8px"/>
-                                        <RadzenTextBox Style="width:100%"/>
-
-                                        <RadzenButton Text="Прервать"
-                                                      Icon="close"
-                                                      ButtonStyle="ButtonStyle.Light"
-                                                      Style="margin-top:16px"/>
-                                    </RadzenStack>
-
-                                    <!-- Правая колонка -->
-                                    <RadzenStack Orientation="Orientation.Vertical"
-                                                 Class="header-form-block header-form-block-right">
-                                        <RadzenButton Text="Авторизация оператора"
-                                                      Icon="person"
-                                                      ButtonStyle="ButtonStyle.Primary"
-                                                      Style="width:100%"/>
-
-                                        <RadzenButton Text="Выйти"
-                                                      Icon="logout"
-                                                      ButtonStyle="ButtonStyle.Light"
-                                                      Style="width:100%; margin-top:8px"/>
-
-                                        <RadzenLabel Text="Имя оператора" Style="margin-top:16px"/>
-                                        <RadzenTextBox Style="width:100%"/>
-                                    </RadzenStack>
-                                </RadzenStack>
+                                </div>
                             </ChildContent>
                         </RadzenCard>
                     </RadzenStack>

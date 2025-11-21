@@ -87,34 +87,102 @@ svg {
 
 
 /* сама карточка */
-.header-form-card {
-    padding: 16px;
+.header-card {
+    border: 2px solid #000;
     border-radius: 4px;
+}
+
+/* перекрашиваем RadzenCard + убираем тень */
+.header-card.rz-card {
     background: rgb(180, 180, 180) !important;
-    border: 2px solid #000000;
     box-shadow: none;
 }
 
-/* убираем белый фон у внутреннего контейнера RadzenCard */
-.header-form-card .rz-card-body {
-    background: rgb(180, 180, 180) !important; /* или transparent */
+/* убираем белый фон у внутреннего тела карточки */
+.header-card .rz-card-body {
+    background: rgb(180, 180, 180) !important;
+    padding: 8px 12px; /* как было раньше на header-card */
 }
 
-/* вертикальные разделители и колонки оставляем как были */
-.header-form {
-    gap: 0;
+/* Основная сетка: 3 блока по горизонтали */
+.header-grid {
+    display: grid;
+    grid-template-columns: 550px 2fr 1.6fr;  /* пропорции блоков */
+    column-gap: 16px;
+    align-items: flex-start;
 }
 
-.header-form-block {
-    flex: 1 1 0;
-    padding: 0 16px;
+/* Каждый блок – внутри тоже grid по строкам */
+.header-block {
+    display: grid;
+    row-gap: 8px;
 }
 
-.header-form-block:not(:last-child) {
-    border-right: 1px solid #000000;
+.header-block-middle {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr); /* 2 равные колонки */
+    column-gap: 20px;
+    row-gap: 11px;
 }
 
-.header-form-block-right {
-    padding-right: 0;
+/* Левый блок: 2 колонки (2x2 поля) */
+.header-block-left {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)); /* 2 равные колонки */
+    column-gap: 13px;
+    row-gap: 11px;
 }
 
+/* Вертикальные разделители между блоками */
+.header-block:not(:last-child) {
+    border-right: 1px solid #000;
+    padding-right: 16px;
+}
+
+/* Строка поля: label слева, поле справа – ОДИНАКОВО для всех */
+.field-row {
+    display: grid;
+    grid-template-columns: 90px minmax(0, 1fr); /* фикс ширина подписи + адаптивное поле */
+    column-gap: 70px;
+    align-items: center;
+}
+
+.field-row-middle {
+    column-gap: 75px; /* переписываем только gap */
+}
+
+/* Лейбл Radzen – крупнее и пожирнее */
+.field-row > .rz-label {
+    white-space: nowrap;
+    font-size: 1.3rem;   /* было 0.85rem */
+    font-weight: 700;     /* полу-жирный */
+}
+
+/* Поле растягивается на всю свою ячейку */
+.field-row .rz-textbox {
+    width: 100%;
+}
+
+/* Текст внутри RadzenTextBox – тоже крупнее и пожирнее */
+.header-card .rz-textbox {
+    font-size: 1.3rem !important;
+    font-weight: 700 !important;
+    color: black !important;
+}
+
+/* Кнопки справа: по содержимому и прижаты вправо */
+.header-block-right .buttons-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Общий размер кнопок в этой панели */
+.header-block-right .buttons-row .rz-button {
+    padding: 8px 24px;      /* выше (по вертикали) и шире (по горизонтали) */
+    min-width: 150px;       /* чтобы выглядели более массивно */
+    font-size: 1.3rem;        /* можно чуть увеличить шрифт */
+    font-weight: 700 !important;
+    border-radius: 6px;     /* если хочется чуть более “толстых” углов */
+}
