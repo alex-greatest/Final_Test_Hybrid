@@ -1,0 +1,162 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\projects\\Final_Test_Hybrid\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{1A925326-2952-BBD7-FD54-05C772A15C20}|Final_Test_Hybrid\\Final_Test_Hybrid.csproj|d:\\projects\\final_test_hybrid\\final_test_hybrid\\wwwroot\\css\\app.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
+      "RelativeMoniker": "D:0:0:{1A925326-2952-BBD7-FD54-05C772A15C20}|Final_Test_Hybrid\\Final_Test_Hybrid.csproj|solutionrelative:final_test_hybrid\\wwwroot\\css\\app.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A925326-2952-BBD7-FD54-05C772A15C20}|Final_Test_Hybrid\\Final_Test_Hybrid.csproj|d:\\projects\\final_test_hybrid\\final_test_hybrid\\mycomponent.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{1A925326-2952-BBD7-FD54-05C772A15C20}|Final_Test_Hybrid\\Final_Test_Hybrid.csproj|solutionrelative:final_test_hybrid\\mycomponent.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A925326-2952-BBD7-FD54-05C772A15C20}|Final_Test_Hybrid\\Final_Test_Hybrid.csproj|d:\\projects\\final_test_hybrid\\final_test_hybrid\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1A925326-2952-BBD7-FD54-05C772A15C20}|Final_Test_Hybrid\\Final_Test_Hybrid.csproj|solutionrelative:final_test_hybrid\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A925326-2952-BBD7-FD54-05C772A15C20}|Final_Test_Hybrid\\Final_Test_Hybrid.csproj|D:\\projects\\Final_Test_Hybrid\\final_test_hybrid\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{1A925326-2952-BBD7-FD54-05C772A15C20}|Final_Test_Hybrid\\Final_Test_Hybrid.csproj|solutionrelative:final_test_hybrid\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A925326-2952-BBD7-FD54-05C772A15C20}|Final_Test_Hybrid\\Final_Test_Hybrid.csproj|d:\\projects\\final_test_hybrid\\final_test_hybrid\\final_test_hybrid.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{1A925326-2952-BBD7-FD54-05C772A15C20}|Final_Test_Hybrid\\Final_Test_Hybrid.csproj|solutionrelative:final_test_hybrid\\final_test_hybrid.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A925326-2952-BBD7-FD54-05C772A15C20}|Final_Test_Hybrid\\Final_Test_Hybrid.csproj|d:\\projects\\final_test_hybrid\\final_test_hybrid\\wwwroot\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{1A925326-2952-BBD7-FD54-05C772A15C20}|Final_Test_Hybrid\\Final_Test_Hybrid.csproj|solutionrelative:final_test_hybrid\\wwwroot\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A925326-2952-BBD7-FD54-05C772A15C20}|Final_Test_Hybrid\\Final_Test_Hybrid.csproj|d:\\projects\\final_test_hybrid\\final_test_hybrid\\counter.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{1A925326-2952-BBD7-FD54-05C772A15C20}|Final_Test_Hybrid\\Final_Test_Hybrid.csproj|solutionrelative:final_test_hybrid\\counter.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1A925326-2952-BBD7-FD54-05C772A15C20}|Final_Test_Hybrid\\Final_Test_Hybrid.csproj|d:\\projects\\final_test_hybrid\\final_test_hybrid\\_imports.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{1A925326-2952-BBD7-FD54-05C772A15C20}|Final_Test_Hybrid\\Final_Test_Hybrid.csproj|solutionrelative:final_test_hybrid\\_imports.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 8,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{c6f34f0d-7ae5-4f3a-be61-fe0c21ae9eb8}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "Counter.razor",
+              "DocumentMoniker": "D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Counter.razor",
+              "RelativeDocumentMoniker": "Final_Test_Hybrid\\Counter.razor",
+              "ToolTip": "D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Counter.razor",
+              "RelativeToolTip": "Final_Test_Hybrid\\Counter.razor",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-11-20T09:03:18.874Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "index.html",
+              "DocumentMoniker": "D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\wwwroot\\index.html",
+              "RelativeDocumentMoniker": "Final_Test_Hybrid\\wwwroot\\index.html",
+              "ToolTip": "D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\wwwroot\\index.html",
+              "RelativeToolTip": "Final_Test_Hybrid\\wwwroot\\index.html",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAABrAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
+              "WhenOpened": "2025-11-20T09:11:22.802Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Form1.cs",
+              "DocumentMoniker": "D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Form1.cs",
+              "RelativeDocumentMoniker": "Final_Test_Hybrid\\Form1.cs",
+              "ToolTip": "D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Form1.cs",
+              "RelativeToolTip": "Final_Test_Hybrid\\Form1.cs",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAABMAAAAxAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-20T09:03:35.67Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Form1.cs [\u041A\u043E\u043D\u0441\u0442\u0440\u0443\u043A\u0442\u043E\u0440]",
+              "DocumentMoniker": "D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Form1.cs",
+              "RelativeDocumentMoniker": "Final_Test_Hybrid\\Form1.cs",
+              "ToolTip": "D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Form1.cs [\u041A\u043E\u043D\u0441\u0442\u0440\u0443\u043A\u0442\u043E\u0440]",
+              "RelativeToolTip": "Final_Test_Hybrid\\Form1.cs [\u041A\u043E\u043D\u0441\u0442\u0440\u0443\u043A\u0442\u043E\u0440]",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-20T09:03:26.274Z",
+              "EditorCaption": " [\u041A\u043E\u043D\u0441\u0442\u0440\u0443\u043A\u0442\u043E\u0440]"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "_Imports.razor",
+              "DocumentMoniker": "D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\_Imports.razor",
+              "RelativeDocumentMoniker": "Final_Test_Hybrid\\_Imports.razor",
+              "ToolTip": "D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\_Imports.razor",
+              "RelativeToolTip": "Final_Test_Hybrid\\_Imports.razor",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAAUAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-11-20T09:03:22.328Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "MyComponent.razor",
+              "DocumentMoniker": "D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\MyComponent.razor",
+              "RelativeDocumentMoniker": "Final_Test_Hybrid\\MyComponent.razor",
+              "ToolTip": "D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\MyComponent.razor",
+              "RelativeToolTip": "Final_Test_Hybrid\\MyComponent.razor",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-11-20T06:51:20.181Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "app.css",
+              "DocumentMoniker": "D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\wwwroot\\css\\app.css",
+              "RelativeDocumentMoniker": "Final_Test_Hybrid\\wwwroot\\css\\app.css",
+              "ToolTip": "D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\wwwroot\\css\\app.css",
+              "RelativeToolTip": "Final_Test_Hybrid\\wwwroot\\css\\app.css",
+              "ViewState": "AgIAAGkAAAAAAAAAAAAAAHEAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
+              "WhenOpened": "2025-11-20T06:40:32.336Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Final_Test_Hybrid",
+              "DocumentMoniker": "D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Final_Test_Hybrid.csproj",
+              "RelativeDocumentMoniker": "Final_Test_Hybrid\\Final_Test_Hybrid.csproj",
+              "ToolTip": "D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Final_Test_Hybrid.csproj",
+              "RelativeToolTip": "Final_Test_Hybrid\\Final_Test_Hybrid.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAKAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2025-11-21T06:48:15.157Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

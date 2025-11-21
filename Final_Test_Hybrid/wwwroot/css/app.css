@@ -1,0 +1,120 @@
+﻿/* общий reset для всех элементов и их псевдо-элементов */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    /* убираем синие подсветки тапов на WebKit */
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* база для Blazor Hybrid в WinForms */
+html,
+body {
+    height: 100%;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    overflow: hidden;
+    /* скролла страницы нет вообще */
+    /* HMI: запрещаем выделение текста везде по умолчанию */
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    /* отключаем контекстное меню/подсказки по долгому тапу */
+    -webkit-touch-callout: none;
+    /* тач-жесты только для кликов/тапов (без зума/двойного тапа) */
+    touch-action: manipulation;
+    /* без оверскролла/подпрыгивания */
+    overscroll-behavior: none;
+    background: rgb(180, 180, 180) none !important;
+}
+
+/* === Верстка HMI: 90% Tabs, 10% нижняя зона === */
+
+/* сам RadzenStack – вертикальный flex-контейнер на всю высоту окна */
+.app-stack-vertical {
+    display: flex;
+    /* Radzen и так задаёт, но пусть */
+    flex-direction: column;
+    height: 100vh;
+    /* занимаем всю высоту WebView */
+    padding-top: 10px;
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+/* нижний блок: фиксированные 10% */
+.app-bottom-10 {
+    flex: 0 0 10%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Если где-то нужно разрешить выделение текста (например лог, инпуты и т.п.) */
+.selectable {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -ms-user-select: text !important;
+}
+
+/* Картинки: не даём браузеру их перетаскивать */
+img,
+svg {
+    -webkit-user-drag: none;
+}
+
+#blazor-error-ui {
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}
+
+
+/* сама карточка */
+.header-form-card {
+    padding: 16px;
+    border-radius: 4px;
+    background: rgb(180, 180, 180) !important;
+    border: 2px solid #000000;
+    box-shadow: none;
+}
+
+/* убираем белый фон у внутреннего контейнера RadzenCard */
+.header-form-card .rz-card-body {
+    background: rgb(180, 180, 180) !important; /* или transparent */
+}
+
+/* вертикальные разделители и колонки оставляем как были */
+.header-form {
+    gap: 0;
+}
+
+.header-form-block {
+    flex: 1 1 0;
+    padding: 0 16px;
+}
+
+.header-form-block:not(:last-child) {
+    border-right: 1px solid #000000;
+}
+
+.header-form-block-right {
+    padding-right: 0;
+}
+
