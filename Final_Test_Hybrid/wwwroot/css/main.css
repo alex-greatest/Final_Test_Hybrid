@@ -142,24 +142,3 @@
     column-gap: 35px;
     align-items: center;
 }
-
-/* Стек внутри вкладки – колонками, растягивается по высоте панели */
-.main-stack {
-    display: flex;             /* RadzenStack рендерится как <div>, делаем его flex */
-    flex-direction: column;
-    flex: 1 1 auto;
-    min-height: 0;
-}
-
-/* Карточки и textarea – по содержимому, НЕ растягиваются */
-.main-stack > .header-card,
-.main-stack > .rz-textarea {
-    flex: 0 0 auto;
-}
-
-/* DataGrid – забирает всю оставшуюся высоту */
-.main-stack > .main-grid.rz-datagrid {
-    flex: 1 1 auto;
-    min-height: 0;
-    height: 100%;
-}

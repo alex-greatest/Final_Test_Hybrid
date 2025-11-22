@@ -50,6 +50,7 @@
     min-height: 0;
     /* переносим сюда твой padding из Style, чтобы не мешал расчёту высоты */
     padding: 0 20px;
+    overflow: hidden;
 }
 
 /* 3D-подложка под табы */
