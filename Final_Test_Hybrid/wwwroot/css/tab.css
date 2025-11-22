@@ -89,4 +89,8 @@
 
 .app-tabs-90.rz-tabview .rz-tabview-panel {
     padding: 1rem 0 !important;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }

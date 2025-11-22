@@ -127,11 +127,12 @@
                         <RadzenTextArea Rows="1" Style="width:100%; resize: none;  border: 2px solid #000;
     border-radius: 4px; background-color: rgb(180, 180, 180); color: black; font-size: 4rem; font-weight: 700" />
                         <RadzenDataGrid
+                            Style="flex: 1; min-height: 0;"
                             TItem="Order"
                             Data="_orders"
                             ColumnWidth="150px"
-                            AllowPaging="true"
-                            AllowSorting="true">
+                            AllowPaging="false"
+                            AllowSorting="false">
                             <Columns>
                                 <RadzenDataGridColumn TItem="Order" Property="OrderID" Title="ID"/>
                                 <RadzenDataGridColumn TItem="Order" Property="Number" Title="Номер"/>
