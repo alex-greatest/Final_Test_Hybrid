@@ -70,6 +70,7 @@ svg {
 .app-bottom-10 {
     flex: 0 0 7%;
     display: flex;
+    align-items: center;
 }
 
 

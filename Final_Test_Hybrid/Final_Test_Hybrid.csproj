@@ -14,4 +14,13 @@
     <PackageReference Include="Radzen.Blazor" Version="8.3.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="wwwroot\images\GreenLamp.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\images\RedLamp.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
