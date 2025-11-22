@@ -197,3 +197,26 @@
 .rz-grid-table td .rz-cell-data {
     font-size: 1.1rem !important;
 }
+
+/* ===== SCROLLBAR (TOUCH) ===== */
+/* Делаем скроллбар широким для удобства на тач-экране (только внутри DataGrid) */
+.rz-data-grid ::-webkit-scrollbar {
+    width: 26px;
+    height: 26px;
+}
+
+.rz-data-grid ::-webkit-scrollbar-track {
+    background-color: #e0e0e0;
+    border-radius: 4px;
+}
+
+.rz-data-grid ::-webkit-scrollbar-thumb {
+    background-color: #a0a0a0;
+    border-radius: 4px;
+    border: 4px solid transparent;
+    background-clip: content-box;
+}
+
+.rz-data-grid ::-webkit-scrollbar-thumb:hover {
+    background-color: #808080;
+}
