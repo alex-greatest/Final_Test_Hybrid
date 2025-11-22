@@ -143,6 +143,18 @@
     align-items: center;
 }
 
+/* ===== КОНТЕЙНЕР ДЛЯ КОНТЕНТА ТАБОВ ===== */
+.tab-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: 8px;
+    border: 2px solid #000;
+    border-radius: 4px;
+    padding: 10px;
+}
+
 /* ===== ТАБЛИЦА ===== */
 
 /* Убираем шахматную раскраску строк (делаем все белыми) */
