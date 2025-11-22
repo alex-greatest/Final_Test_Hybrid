@@ -156,10 +156,21 @@
     background-color: #f0f0f0 !important; /* Светло-серый при наведении для удобства */
 }
 
-/* Увеличение шрифта заголовков таблицы */
+/* Стили заголовков таблицы */
+.rz-grid-table thead th {
+    background-color: #ffdd00 !important; /* Желтый фон */
+}
+
 .rz-grid-table thead th .rz-column-title {
-    font-size: 1.2rem !important;
-    font-weight: 700 !important;
+    color: #000000 !important;      /* Черный цвет текста */
+    font-size: 1.1rem !important;   /* Еще крупнее */
+    font-weight: 600 !important;    /* Очень жирный */
+    text-transform: uppercase;      /* (Опционально) верхний регистр для важности */
+}
+
+/* Стили иконки сортировки в заголовке */
+.rz-grid-table thead th .rz-column-title-content .rz-sort-icon {
+    color: #000000 !important;      /* Иконка сортировки тоже черная */
 }
 
 /* Увеличение шрифта содержимого таблицы */
