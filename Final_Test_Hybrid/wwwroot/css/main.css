@@ -159,21 +159,29 @@
 /* Стили заголовков таблицы */
 .rz-grid-table thead th {
     background-color: #ffdd00 !important; /* Желтый фон */
+    padding-top: 4px !important;    /* Сжимаем отступы заголовка */
+    padding-bottom: 4px !important; /* Сжимаем отступы заголовка */
 }
 
 .rz-grid-table thead th .rz-column-title {
     color: #000000 !important;      /* Черный цвет текста */
-    font-size: 1.1rem !important;   /* Еще крупнее */
-    font-weight: 600 !important;    /* Очень жирный */
-    text-transform: uppercase;      /* (Опционально) верхний регистр для важности */
+    font-size: 1.1rem !important;   /* Как ты просил */
+    font-weight: 600 !important;    /* Как ты просил */
+    text-transform: uppercase;      
 }
 
 /* Стили иконки сортировки в заголовке */
 .rz-grid-table thead th .rz-column-title-content .rz-sort-icon {
-    color: #000000 !important;      /* Иконка сортировки тоже черная */
+    color: #000000 !important;
 }
 
-/* Увеличение шрифта содержимого таблицы */
+/* Уменьшение вертикальных отступов в ячейках данных для компактности */
+.rz-grid-table td {
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+}
+
+/* Шрифт данных (не уменьшаем, как просил) */
 .rz-grid-table td .rz-cell-data {
     font-size: 1.1rem !important;
 }
