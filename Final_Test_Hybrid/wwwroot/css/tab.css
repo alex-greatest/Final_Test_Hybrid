@@ -94,3 +94,7 @@
     flex-direction: column;
     overflow: hidden;
 }
+
+.app-tabs-shell .app-tabs-shell-inside {
+    flex: 1;
+}

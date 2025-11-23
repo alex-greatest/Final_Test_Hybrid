@@ -143,19 +143,54 @@
                         </div>
                     </RadzenStack>
                 </RadzenTabsItem>
-                <RadzenTabsItem Text="Orders">
+                <RadzenTabsItem Text="Ошибки">
                     Orders
                 </RadzenTabsItem>
-                <RadzenTabsItem Text="Order Details">
-                    Order Details
+                <RadzenTabsItem Text="GAS">
+                    <div class="app-tabs-shell app-tabs-shell-inside">
+                        <RadzenTabs RenderMode="TabRenderMode.Client" @bind-SelectedIndex="@selectedIndex">
+                            <Tabs>
+                                <RadzenTabsItem Text="Ошибки">
+                                    Orders
+                                </RadzenTabsItem>
+                            </Tabs>
+                        </RadzenTabs>
+                    </div>
                 </RadzenTabsItem>
             </Tabs>
         </RadzenTabs>
     </div>
     <div class="app-bottom-10">
-        <RadzenButton Style="max-height: 45px; min-width: 250px; font-size: 1.5rem; font-weight: 900; color: white"
+        <RadzenButton Style="height: 70%; min-width: 250px; font-size: 1.5rem; font-weight: 900; color: white"
                       Text="Success" ButtonStyle="ButtonStyle.Success" />
-        <img src="images/RedLamp.png" alt="Логотип" style="max-height: 100%; max-width:200px;" />
+        <div class="app-bottom-10-content" style="margin-left: 30px">
+            <div class="status-indicator">
+                <span class="status-label">Air ON</span>
+                <img src="images/RedLamp.png" alt="Логотип" />
+            </div>
+            <div class="status-indicator">
+                <span class="status-label">Air ON</span>
+                <img src="images/RedLamp.png" alt="Логотип" />
+            </div>
+            <div class="status-indicator">
+                <span class="status-label">Air ON</span>
+                <img src="images/RedLamp.png" alt="Логотип" />
+            </div>
+        </div>
+        <div class="app-bottom-10-content" style="margin-left: auto; margin-right: 100px;">
+            <div class="status-indicator">
+                <span class="status-label">Air ON</span>
+                <img src="images/RedLamp.png" alt="Логотип" />
+            </div>
+            <div class="status-indicator">
+                <span class="status-label">Air ON</span>
+                <img src="images/RedLamp.png" alt="Логотип" />
+            </div>
+            <div class="status-indicator">
+                <span class="status-label">Air ON</span>
+                <img src="images/RedLamp.png" alt="Логотип" />
+            </div>
+        </div>
     </div>
 </RadzenStack>
 
