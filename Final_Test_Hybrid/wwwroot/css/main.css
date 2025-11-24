@@ -249,7 +249,10 @@
 .scheme-container {
     width: 100%;
     height: 100%;
+    flex: 1;          /* Занимать доступное пространство */
+    min-height: 0;    /* Разрешить сжиматься меньше контента (важно для Flexbox) */
     display: flex;
+    overflow: hidden; /* Обрезать лишнее */
 }
 
 .scheme-container svg {

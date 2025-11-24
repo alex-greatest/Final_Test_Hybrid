@@ -68,7 +68,8 @@ svg {
 }
 
 .app-bottom-10 {
-    flex: 0 0 7%;
+    height: 80px;       /* Четкая высота */
+    flex: 0 0 80px;     /* Не сжиматься и не растягиваться */
     display: flex;
     align-items: center;
 }
