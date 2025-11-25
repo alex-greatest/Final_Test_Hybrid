@@ -227,13 +227,14 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-left: 20px;
+    row-gap: 5px;
 }
 
 .status-indicator .status-label {
     font-weight: 700;
     color: black;
     font-size: 1.3rem;
+    white-space: nowrap;
 }
 
 .status-indicator img {
@@ -244,6 +245,7 @@
 .app-bottom-10-content {
     display: flex;
     align-items: center;
+    gap: 20px;
 }
 
 .scheme-container {
