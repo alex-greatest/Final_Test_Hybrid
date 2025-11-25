@@ -171,8 +171,9 @@
 /* Стили заголовков таблицы */
 .rz-grid-table thead th {
     background-color: #ffdd00 !important; /* Желтый фон */
-    padding-top: 4px !important;    /* Сжимаем отступы заголовка */
-    padding-bottom: 4px !important; /* Сжимаем отступы заголовка */
+    padding-top: 0px !important;    /* Сжимаем отступы заголовка */
+    padding-bottom: 0px !important; /* Сжимаем отступы заголовка */
+    height: auto !important;
 }
 
 .rz-grid-table thead th .rz-column-title {
