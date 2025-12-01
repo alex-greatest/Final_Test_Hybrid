@@ -49,7 +49,7 @@
     flex-direction: column;
     min-height: 0;
     /* переносим сюда твой padding из Style, чтобы не мешал расчёту высоты */
-    padding: 0 20px;
+    padding: 0;
     overflow: hidden;
 }
 
@@ -97,4 +97,25 @@
 
 .app-tabs-shell .app-tabs-shell-inside {
     flex: 1;
+}
+
+.scheme-tabs.rz-tabview {
+    height: 100%;
+}
+
+.scheme-tabs .rz-tabview-panels {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0 !important; /* No padding - убираем отступы панели */
+    overflow: hidden;
+}
+
+.scheme-tabs .rz-tabview-panel {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0 !important; /* No padding - убираем отступы самой вкладки */
 }
