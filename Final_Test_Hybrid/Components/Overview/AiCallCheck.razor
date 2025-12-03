@@ -1,6 +1,4 @@
-﻿@using Radzen
-@using Radzen.Blazor
-@using Microsoft.JSInterop
+﻿@using Microsoft.JSInterop
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
@@ -35,7 +33,8 @@
         <Columns>
             @foreach (var column in columns)
             {
-                <RadzenDataGridColumn TItem="AiCallCheckItem" Property="@column.Property" Title="@column.Title" Width="@column.Width">
+                <RadzenDataGridColumn TItem="AiCallCheckItem" Property="@column.Property" Title="@column.Title"
+                                      Width="@column.Width">
                     <Template Context="item">
                         @RenderCellDisplay(column, item)
                     </Template>
@@ -46,13 +45,13 @@
                             {
                                 <RadzenNumeric TValue="double" Style="width:100%"
                                                Value="@((double)column.Getter(item))"
-                                               ValueChanged="@((double value) => column.Setter(item, value))" />
+                                               ValueChanged="@((double value) => column.Setter(item, value))"/>
                             }
                             else
                             {
                                 <RadzenTextBox Style="width:100%"
                                                Value="@((string)column.Getter(item))"
-                                               ValueChanged="@((string value) => column.Setter(item, value))" />
+                                               ValueChanged="@((string value) => column.Setter(item, value))"/>
                             }
                         }
                         else
@@ -179,10 +178,10 @@
     private async Task SwitchEditMode(AiCallCheckItem item, string property)
     {
         if (itemToUpdate == item && editingColumn == property) return;
-        
-        if (itemToUpdate != null) 
+
+        if (itemToUpdate != null)
         {
-             await grid.UpdateRow(itemToUpdate);
+            await grid.UpdateRow(itemToUpdate);
         }
 
         itemToUpdate = item;
@@ -211,7 +210,7 @@
     public async ValueTask DisposeAsync()
     {
         await UnregisterOutsideClickHandler();
-        
+
         dotNetHelper?.Dispose();
         dotNetHelper = null;
     }
@@ -224,7 +223,10 @@
         {
             await JSRuntime.InvokeVoidAsync("outsideClickHandler.remove", containerId);
         }
-        catch { /* Ignored */ }
+        catch
+        {
+            /* Ignored */
+        }
     }
 
     private class ColumnDef
@@ -248,4 +250,5 @@
         public double Offset { get; set; }
         public double Calculated { get; set; }
     }
+
 }
