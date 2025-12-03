@@ -24,6 +24,29 @@
     <script src="_framework/blazor.webview.js"></script>
     <script src="_content/Radzen.Blazor/Radzen.Blazor.js?v=@(typeof(Radzen.Colors).Assembly.GetName().Version)"></script>
 
+    <script>
+        window.outsideClickHandler = {
+            add: (elementId, dotNetHelper) => {
+                if (!window._outsideClickHandlers) window._outsideClickHandlers = {};
+                
+                const handler = (e) => {
+                    const element = document.getElementById(elementId);
+                    if (element && !element.contains(e.target)) {
+                        dotNetHelper.invokeMethodAsync('CloseEdit');
+                    }
+                };
+                
+                window._outsideClickHandlers[elementId] = handler;
+                document.addEventListener('click', handler);
+            },
+            remove: (elementId) => {
+                if (window._outsideClickHandlers && window._outsideClickHandlers[elementId]) {
+                    document.removeEventListener('click', window._outsideClickHandlers[elementId]);
+                    delete window._outsideClickHandlers[elementId];
+                }
+            }
+        };
+    </script>
 </body>
 
 </html>

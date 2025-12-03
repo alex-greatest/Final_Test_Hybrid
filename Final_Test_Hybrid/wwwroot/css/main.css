@@ -169,7 +169,7 @@
 }
 
 /* Стили заголовков таблицы */
-.rz-grid-table thead th {
+.tab-content-wrapper .rz-grid-table thead th {
     background-color: #ffdd00 !important; /* Желтый фон */
     padding-top: 0px !important;    /* Сжимаем отступы заголовка */
     padding-bottom: 0px !important; /* Сжимаем отступы заголовка */
@@ -361,7 +361,8 @@
     display: grid;
     grid-template-columns: repeat(3, 0.1fr); /* 3 равные колонки */
     gap: 15px;
-    padding: 15px;
+    padding-top: 35px;
+    padding-left: 35px;
     font-family: 'Segoe UI', sans-serif;
 }
 
@@ -380,4 +381,23 @@
     font-weight: bold;
     text-align: center;
     margin-top: 15px;
+}
+
+.scada-lamp-square {
+    width: 35px;  /* Ширина = Высоте */
+    height: 35px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Эти стили цвета остаются общими, их менять не нужно */
+.lamp-rect {
+    fill: #606060;       /* Выключено */
+    stroke: #333333;
+    transition: fill 0.2s;
+}
+
+.scada-lamp-square.on .lamp-rect {
+    fill: #00ff00;       /* Включено */
+    stroke: #004d00;
 }
