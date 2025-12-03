@@ -3,7 +3,7 @@
 @implements IAsyncDisposable
 
 <style>
-    /* Force inputs inside the grid to match the display font size */
+    /* Scoped styles for Radzen components */
     #@containerId .rz-grid-table td,
     #@containerId .rz-grid-table td .rz-cell-data,
     #@containerId .rz-grid-table td span {
@@ -19,7 +19,7 @@
         font-family: inherit !important;
         color: black !important;
         background-color: white !important;
-        padding: 2px 4px !important; /* Small padding to look like text */
+        padding: 2px 4px !important;
         height: auto !important;
     }
 </style>
@@ -31,45 +31,136 @@
                     RowUpdate="@OnUpdateRow"
                     ColumnWidth="120px">
         <Columns>
-            @foreach (var column in columns)
-            {
-                <RadzenDataGridColumn TItem="AiCallCheckItem" Property="@column.Property" Title="@column.Title"
-                                      Width="@column.Width">
-                    <Template Context="item">
-                        @RenderCellDisplay(column, item)
-                    </Template>
-                    <EditTemplate Context="item">
-                        @if (editingColumn == column.Property)
-                        {
-                            @if (column.IsNumeric)
-                            {
-                                <RadzenNumeric TValue="double" Style="width:100%"
-                                               Value="@((double)column.Getter(item))"
-                                               ValueChanged="@((double value) => column.Setter(item, value))"/>
-                            }
-                            else
-                            {
-                                <RadzenTextBox Style="width:100%"
-                                               Value="@((string)column.Getter(item))"
-                                               ValueChanged="@((string value) => column.Setter(item, value))"/>
-                            }
-                        }
-                        else
-                        {
-                            @RenderCellDisplay(column, item)
-                        }
-                    </EditTemplate>
-                </RadzenDataGridColumn>
-            }
+            <RadzenDataGridColumn TItem="AiCallCheckItem" Property="PlcTag" Title="Тэг ПЛК" Width="150px">
+                <EditTemplate Context="item">
+                    @if (IsEditing(nameof(item.PlcTag)))
+                    {
+                        <RadzenTextBox Style="width:100%" @bind-Value="item.PlcTag" />
+                    }
+                    else
+                    {
+                        @item.PlcTag
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            
+            <RadzenDataGridColumn TItem="AiCallCheckItem" Property="Type" Title="Тип" Width="180px">
+                <EditTemplate Context="item">
+                    @if (IsEditing(nameof(item.Type)))
+                    {
+                        <RadzenTextBox Style="width:100%" @bind-Value="item.Type" />
+                    }
+                    else
+                    {
+                        @item.Type
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
+
+            @* Numeric Columns *@
+            <RadzenDataGridColumn TItem="AiCallCheckItem" Property="Raw" Title="Сырое">
+                <Template Context="item">
+                    @item.Raw.ToString("F3")
+                </Template>
+                <EditTemplate Context="item">
+                    @if (IsEditing(nameof(item.Raw)))
+                    {
+                        <RadzenNumeric TValue="double" Style="width:100%" @bind-Value="item.Raw" />
+                    }
+                    else
+                    {
+                        @item.Raw.ToString("F3")
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="AiCallCheckItem" Property="Min" Title="Мин">
+                <Template Context="item">
+                    @item.Min.ToString("F3")
+                </Template>
+                <EditTemplate Context="item">
+                    @if (IsEditing(nameof(item.Min)))
+                    {
+                        <RadzenNumeric TValue="double" Style="width:100%" @bind-Value="item.Min" />
+                    }
+                    else
+                    {
+                        @item.Min.ToString("F3")
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="AiCallCheckItem" Property="Max" Title="Макс">
+                <Template Context="item">
+                    @item.Max.ToString("F3")
+                </Template>
+                <EditTemplate Context="item">
+                    @if (IsEditing(nameof(item.Max)))
+                    {
+                        <RadzenNumeric TValue="double" Style="width:100%" @bind-Value="item.Max" />
+                    }
+                    else
+                    {
+                        @item.Max.ToString("F3")
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="AiCallCheckItem" Property="Multiplier" Title="Множитель">
+                <Template Context="item">
+                    @item.Multiplier.ToString("F3")
+                </Template>
+                <EditTemplate Context="item">
+                    @if (IsEditing(nameof(item.Multiplier)))
+                    {
+                        <RadzenNumeric TValue="double" Style="width:100%" @bind-Value="item.Multiplier" />
+                    }
+                    else
+                    {
+                        @item.Multiplier.ToString("F3")
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="AiCallCheckItem" Property="Offset" Title="Смещение">
+                <Template Context="item">
+                    @item.Offset.ToString("F3")
+                </Template>
+                <EditTemplate Context="item">
+                    @if (IsEditing(nameof(item.Offset)))
+                    {
+                        <RadzenNumeric TValue="double" Style="width:100%" @bind-Value="item.Offset" />
+                    }
+                    else
+                    {
+                        @item.Offset.ToString("F3")
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="AiCallCheckItem" Property="Calculated" Title="Вычисленное">
+                <Template Context="item">
+                    @item.Calculated.ToString("F3")
+                </Template>
+                <EditTemplate Context="item">
+                    @if (IsEditing(nameof(item.Calculated)))
+                    {
+                        <RadzenNumeric TValue="double" Style="width:100%" @bind-Value="item.Calculated" />
+                    }
+                    else
+                    {
+                        @item.Calculated.ToString("F3")
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
         </Columns>
     </RadzenDataGrid>
 </div>
 
 @code {
     RadzenDataGrid<AiCallCheckItem> grid = null!;
-    List<AiCallCheckItem> items = null!;
-    List<ColumnDef> columns = new();
-
+    List<AiCallCheckItem> items = new();
+    
     AiCallCheckItem? itemToUpdate;
     string? editingColumn;
 
@@ -79,71 +170,12 @@
 
     protected override void OnInitialized()
     {
-        InitializeColumns();
-        InitializeData();
-    }
-
-    private void InitializeData()
-    {
         items = Enumerable.Range(0, 11).Select(i => new AiCallCheckItem
         {
             PlcTag = i == 0 ? "BlrSupply" : "Tag_" + i,
             Type = "S[4.20].HW[4.20] mA",
         }).ToList();
     }
-
-    private void InitializeColumns()
-    {
-        // Text Columns
-        AddTextColumn(nameof(AiCallCheckItem.PlcTag), "Тэг ПЛК", "150px", i => i.PlcTag, (i, v) => i.PlcTag = v ?? "");
-        AddTextColumn(nameof(AiCallCheckItem.Type), "Тип", "180px", i => i.Type, (i, v) => i.Type = v ?? "");
-
-        // Numeric Columns
-        AddNumericColumn(nameof(AiCallCheckItem.Raw), "Сырое", null, i => i.Raw, (i, v) => i.Raw = v);
-        AddNumericColumn(nameof(AiCallCheckItem.Min), "Мин", null, i => i.Min, (i, v) => i.Min = v);
-        AddNumericColumn(nameof(AiCallCheckItem.Max), "Макс", null, i => i.Max, (i, v) => i.Max = v);
-        AddNumericColumn(nameof(AiCallCheckItem.Multiplier), "Множитель", null, i => i.Multiplier, (i, v) => i.Multiplier = v);
-        AddNumericColumn(nameof(AiCallCheckItem.Offset), "Смещение", null, i => i.Offset, (i, v) => i.Offset = v);
-        AddNumericColumn(nameof(AiCallCheckItem.Calculated), "Вычисленное", null, i => i.Calculated, (i, v) => i.Calculated = v);
-    }
-
-    private void AddTextColumn(string prop, string title, string? width, Func<AiCallCheckItem, string> get, Action<AiCallCheckItem, string?> set)
-    {
-        columns.Add(new ColumnDef
-        {
-            Property = prop,
-            Title = title,
-            Width = width,
-            IsNumeric = false,
-            Getter = i => get(i),
-            Setter = (i, v) => set(i, (string?)v)
-        });
-    }
-
-    private void AddNumericColumn(string prop, string title, string? width, Func<AiCallCheckItem, double> get, Action<AiCallCheckItem, double> set)
-    {
-        columns.Add(new ColumnDef
-        {
-            Property = prop,
-            Title = title,
-            Width = width,
-            IsNumeric = true,
-            Getter = i => get(i),
-            Setter = (i, v) => set(i, (double)v)
-        });
-    }
-
-    private RenderFragment RenderCellDisplay(ColumnDef column, AiCallCheckItem item) => builder =>
-    {
-        if (column.IsNumeric)
-        {
-            builder.AddContent(0, ((double)column.Getter(item)).ToString("F3"));
-        }
-        else
-        {
-            builder.AddContent(0, column.Getter(item));
-        }
-    };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -153,21 +185,10 @@
         }
     }
 
-    private async Task RegisterOutsideClickHandler()
+    // Helper to check if a specific column in the current row is being edited
+    private bool IsEditing(string propertyName)
     {
-        dotNetHelper = DotNetObjectReference.Create(this);
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("outsideClickHandler.add", containerId, dotNetHelper);
-            outsideClickHandlerRegistered = true;
-        }
-        catch (JSException ex)
-        {
-            outsideClickHandlerRegistered = false;
-            dotNetHelper?.Dispose();
-            dotNetHelper = null;
-            System.Diagnostics.Debug.WriteLine($"AiCallCheck outsideClick handler registration failed: {ex.Message}");
-        }
+        return editingColumn == propertyName;
     }
 
     async Task OnCellClick(DataGridCellMouseEventArgs<AiCallCheckItem> args)
@@ -179,6 +200,7 @@
     {
         if (itemToUpdate == item && editingColumn == property) return;
 
+        // Commit previous change if any
         if (itemToUpdate != null)
         {
             await grid.UpdateRow(itemToUpdate);
@@ -207,12 +229,21 @@
         // Update logic
     }
 
-    public async ValueTask DisposeAsync()
+    private async Task RegisterOutsideClickHandler()
     {
-        await UnregisterOutsideClickHandler();
-
-        dotNetHelper?.Dispose();
-        dotNetHelper = null;
+        dotNetHelper = DotNetObjectReference.Create(this);
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("outsideClickHandler.add", containerId, dotNetHelper);
+            outsideClickHandlerRegistered = true;
+        }
+        catch (JSException ex)
+        {
+            outsideClickHandlerRegistered = false;
+            dotNetHelper?.Dispose();
+            dotNetHelper = null;
+            System.Diagnostics.Debug.WriteLine($"AiCallCheck outsideClick handler registration failed: {ex.Message}");
+        }
     }
 
     private async Task UnregisterOutsideClickHandler()
@@ -229,14 +260,11 @@
         }
     }
 
-    private class ColumnDef
+    public async ValueTask DisposeAsync()
     {
-        public string Property { get; set; } = "";
-        public string Title { get; set; } = "";
-        public string? Width { get; set; }
-        public bool IsNumeric { get; set; }
-        public Func<AiCallCheckItem, object> Getter { get; set; } = _ => "";
-        public Action<AiCallCheckItem, object> Setter { get; set; } = (_, _) => { };
+        await UnregisterOutsideClickHandler();
+        dotNetHelper?.Dispose();
+        dotNetHelper = null;
     }
 
     public class AiCallCheckItem
@@ -250,5 +278,4 @@
         public double Offset { get; set; }
         public double Calculated { get; set; }
     }
-
 }
