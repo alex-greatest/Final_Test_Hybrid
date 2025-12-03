@@ -263,3 +263,121 @@
     height: 100%;
     object-fit: contain;
 }
+
+
+
+
+/* 1. СЕТКА */
+.panel-grid {
+    display: inline-grid; /* Сетка занимает ровно столько места, сколько нужно, не на весь экран */
+    grid-template-columns: repeat(4, max-content); /* Ширина колонок по тексту (не тянется) */
+    gap: 10px; /* ОЧЕНЬ МАЛЕНЬКИЙ ОТСТУП МЕЖДУ РАМКАМИ */
+    padding: 35px;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    align-items: start;
+}
+
+/* 2. РАМКА (БЛОК) */
+.panel-box {
+    border: 1px solid #888;
+    border-right-color: #fff; /* Эффект вдавленности или выпуклости */
+    border-bottom-color: #fff;
+    background-color: #e0e0e0;
+    width: 300px;  /* Фиксированная ширина */
+    height: 330px; /* Фиксированная высота */
+
+    /* Внутренний отступ минимален */
+    padding: 14px;
+
+    box-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+/* 3. СТРОКА */
+.row-item {
+    display: flex;
+    justify-content: flex-end; /* Все прижато ВПРАВО */
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+/* 4. ТЕКСТ */
+.row-item span {
+    font-size: 20px;
+    font-weight: 700;
+    color: black;
+    text-align: right;
+    line-height: 1.1;
+    margin-right: 8px; /* Расстояние от текста до лампы */
+    white-space: nowrap; /* Текст в одну строку */
+}
+
+/* 5. ЛАМПА */
+.lamp-img {
+    width: 30px;
+    height: 30px;
+    display: block;
+}
+
+
+/* Класс для Radzen TextBox в стиле SCADA */
+.scada-radzen-input {
+    width: 130px !important;            /* Фиксированная ширина */
+    height: 35px !important;           /* Высота под строку */
+
+    /* Цвета как на фото */
+    background-color: #cfcfcf !important;
+    color: black !important;
+
+    /* Вдавленная рамка */
+    border: 1px solid #888 !important;
+    border-right-color: #fff !important;
+    border-bottom-color: #fff !important;
+    border-radius: 0 !important;       /* Убираем скругление Radzen */
+
+    /* Текст */
+    font-weight: 700 !important;
+    font-size: 20px !important;
+    text-align: center !important;     /* Центровка текста */
+
+    /* Убираем стандартные тени и отступы Radzen */
+    box-shadow: none !important;
+    padding: 0 4px !important;
+    margin-left: 8px;                  /* Отступ от надписи */
+}
+
+/* Убираем эффект фокуса (синюю рамку), чтобы выглядело как прибор */
+.scada-radzen-input:focus-within {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: #666 !important;
+}
+
+
+
+
+
+/* Сетка для этого экрана: 3 колонки */
+.calc-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 0.1fr); /* 3 равные колонки */
+    gap: 15px;
+    padding: 15px;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* Заголовки групп (например, Gas Flow Calculations) */
+.group-header {
+    font-size: 20px;
+    font-weight: bold;
+    color: black;
+    margin-bottom: 5px;
+    margin-left: 5px;
+}
+
+/* Специальный стиль для большого числа внизу справа */
+.big-value {
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 15px;
+}

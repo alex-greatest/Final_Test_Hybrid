@@ -1,0 +1,12 @@
+﻿<div class="row-item">
+    <span>@Label</span>
+    
+    <RadzenTextBox Value="@Value" 
+                   ReadOnly="true" 
+                   class="scada-radzen-input" />
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "0.00";
+}
