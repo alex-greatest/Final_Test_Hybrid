@@ -1,3 +1,4 @@
+@using Final_Test_Hybrid.Components.Engineer
 @using Final_Test_Hybrid.Components.Overview
 
 <RadzenStack Orientation="Orientation.Vertical" Gap="0" class="app-stack-vertical">
@@ -147,7 +148,7 @@
                         </RadzenStack>
                     </div>
                 </RadzenTabsItem>
-                <RadzenTabsItem Text="Ошибки">
+                <RadzenTabsItem Text="Обзор">
                     <div class="app-tabs-shell app-tabs-shell-inside">
                         <RadzenTabs RenderMode="TabRenderMode.Client" @bind-SelectedIndex="@innerSelectedIndex"
                                     Style="height: 100%; width: 100%" class="scheme-tabs">
@@ -9389,16 +9390,21 @@
                                 </RadzenTabsItem>
                                 <RadzenTabsItem Text="AI Cal Check">
                                     <div style="height: 100%; padding: 40px;">
-                                        <AiCallCheck />
+                                        <AiCallCheck/>
                                     </div>
                                 </RadzenTabsItem>
                                 <RadzenTabsItem Text="RTD Cal Check">
                                     <div style="height: 100%; padding: 40px;">
-                                        <AiCallCheck />
+                                        <RtdCalCheck/>
                                     </div>
                                 </RadzenTabsItem>
                             </Tabs>
                         </RadzenTabs>
+                    </div>
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Главный экран">
+                    <div style="height: 100%; padding: 0 20px;">
+                        <MainEngineering/>
                     </div>
                 </RadzenTabsItem>
             </Tabs>
