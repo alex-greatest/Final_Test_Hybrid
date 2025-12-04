@@ -121,7 +121,7 @@
         font-weight: bold !important;
         margin-left: 15px !important;
         line-height: 46px !important; /* Match header height */
-        color: #000000;
+        color: #333;
     }
 
     .test-sequence-editor-dialog .rz-dialog-titlebar-close {
@@ -168,7 +168,7 @@
         <RadzenButton Text="Test Log Viewer" Icon="edit_note" Class="eng-btn" />
         
         <!-- Test Sequence Editor: List/Code icon -->
-        <RadzenButton Text="Test Sequence Editor" Icon="playlist_add_check" Class="eng-btn" Click="@OpenTestSequenceEditor" />
+        <RadzenButton Text="Test Sequence Editor" Icon="playlist_add_check" Class="eng-btn" Click="@(async () => await OpenTestSequenceEditor())" />
         
         <!-- View Gas & DHW Charts: Chart icon -->
         <RadzenButton Text="View Gas & DHW Charts" Icon="show_chart" Class="eng-btn" />
@@ -181,6 +181,18 @@
 </div>
 
 @code {
+    string selectedLanguage = "French (fr)";
+    
+    List<string> languages = new List<string> 
+    { 
+        "English (en)", 
+        "French (fr)", 
+        "German (de)",
+        "Spanish (es)",
+        "Italian (it)",
+        "Russian (ru)"
+    };
+
     async Task OpenTestSequenceEditor()
     {
         await DialogService.OpenAsync<TestSequenceEditor>("Test Sequence Editor",
@@ -195,15 +207,4 @@
                    CloseDialogOnOverlayClick = true
                });
     }
-
-    string selectedLanguage = "French (fr)";
-    List<string> languages = new List<string> 
-    { 
-        "English (en)", 
-        "French (fr)", 
-        "German (de)",
-        "Spanish (es)",
-        "Italian (it)",
-        "Russian (ru)"
-    };
 }

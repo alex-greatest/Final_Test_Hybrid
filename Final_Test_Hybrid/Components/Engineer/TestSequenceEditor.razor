@@ -203,22 +203,22 @@
 
     /* Animations */
     .row-animate-new > td {
-        animation: flash-green 1.5s ease-out;
+        animation: flash-green 1.0s ease-out; /* Quick animation */
     }
 
     .row-animate-delete > td {
         animation: fade-out-red 0.5s ease-out forwards;
-        background-color: #ffebee !important;
+        background-color: #ffcdd2 !important;
     }
 
     @@keyframes flash-green {
-        0% { background-color: #d4edda; }
-        100% { background-color: transparent; }
+        0% { background-color: #28a745; color: white; }
+        100% { background-color: transparent; color: inherit; }
     }
 
     @@keyframes fade-out-red {
-        0% { opacity: 1; transform: translateX(0); }
-        100% { opacity: 0; transform: translateX(-10px); }
+        0% { opacity: 1; transform: translateX(0); background-color: #ef9a9a; }
+        100% { opacity: 0; transform: translateX(-20px); background-color: #b71c1c; } /* Move further left */
     }
 </style>
 
@@ -248,6 +248,7 @@
     <!-- Main Grid Area -->
     <div class="area-grid">
         <RadzenDataGrid @ref="grid" Data="@rows" TItem="SequenceRow" 
+                        KeyProperty="Id"
                         Style="height: 100%; width: 100%; border: none;"
                         GridLines="DataGridGridLines.Both"
                         Density="Density.Compact"
@@ -290,7 +291,6 @@
     [Inject] public DialogService DialogService { get; set; }
     [Inject] public NotificationService NotificationService { get; set; }
     [Inject] public ContextMenuService ContextMenuService { get; set; }
-
     RadzenDataGrid<SequenceRow> grid;
     List<SequenceRow> rows = new List<SequenceRow>();
     int columnCount = 4;
@@ -358,8 +358,10 @@
             var newRow = new SequenceRow(columnCount) { CssClass = "row-animate-new" };
             rows.Insert(index + 1, newRow);
             
+            await grid.Reload(); // Show row immediately
+            
             // Cleanup animation class
-            await Task.Delay(1500);
+            await Task.Delay(1000); // Match new CSS animation duration (1.0s)
             newRow.CssClass = "";
             StateHasChanged();
         }
@@ -373,8 +375,10 @@
             var newRow = new SequenceRow(columnCount) { CssClass = "row-animate-new" };
             rows.Insert(index, newRow);
             
+            await grid.Reload(); // Show row immediately
+            
             // Cleanup animation class
-            await Task.Delay(1500);
+            await Task.Delay(1000); // Match new CSS animation duration (1.0s)
             newRow.CssClass = "";
             StateHasChanged();
         }
@@ -386,8 +390,9 @@
         {
             currentRow.CssClass = "row-animate-delete";
             await grid.Reload();
-            await Task.Delay(500); // Wait for fade out
+            await Task.Delay(800); // Match new CSS animation duration (0.8s)
             rows.Remove(currentRow);
+            await grid.Reload(); // Reload grid after removal to update UI correctly
         }
     }
 

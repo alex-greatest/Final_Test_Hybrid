@@ -1,9 +1,11 @@
 using System.Collections.Generic;
+using System;
 
 namespace Final_Test_Hybrid.Models
 {
     public class SequenceRow
     {
+        public Guid Id { get; set; } = Guid.NewGuid();
         public List<string> Columns { get; set; } = new List<string>();
         public string CssClass { get; set; } = "";
 
