@@ -1,0 +1,11 @@
+.panel-box {
+    border: 1px solid #888;
+    border-right-color: #fff; /* Beveled effect */
+    border-bottom-color: #fff;
+    background-color: #e0e0e0;
+    width: 300px;  /* Fixed width */
+    height: 330px; /* Fixed height */
+    padding: 14px; /* Minimal padding */
+    box-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+

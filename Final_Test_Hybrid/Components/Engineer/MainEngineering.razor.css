@@ -1,0 +1,102 @@
+.engineering-container {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 40px;
+    padding: 40px;
+    height: 100%;
+    align-content: flex-start;
+    background-color: #d4d4d4;
+}
+
+.button-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+/* Target Radzen Button directly to override default styles */
+::deep .rz-button.eng-btn {
+    width: 100%;
+    height: 55px !important;
+    /* Industrial Silver Gradient - Darker for more contrast */
+    background-image: linear-gradient(to bottom, #e6e6e6 0%, #cccccc 45%, #999999 50%, #cccccc 100%) !important;
+    background-color: transparent !important;
+    border: 1px solid #666 !important;
+    border-radius: 6px !important;
+    color: #000 !important;
+    font-weight: bold !important;
+    font-size: 14px !important;
+    text-transform: none !important;
+    padding: 0 10px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.5) !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-start !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+::deep .rz-button.eng-btn:hover {
+    background-image: linear-gradient(to bottom, #f2f2f2 0%, #dddddd 45%, #aaaaaa 50%, #dddddd 100%) !important;
+}
+
+::deep .rz-button.eng-btn:active {
+    background-image: none !important;
+    background-color: #bbbbbb !important;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.3) !important;
+    transform: translateY(1px);
+}
+
+/* Orange Button Override */
+::deep .rz-button.eng-btn.active-orange {
+    background-image: linear-gradient(to bottom, #fff8e1 0%, #ffe082 45%, #ffca28 50%, #ffe082 100%) !important;
+    border: 1px solid #f57f17 !important;
+}
+
+::deep .rz-button.eng-btn.active-orange:hover {
+    background-image: linear-gradient(to bottom, #fffde7 0%, #ffe57f 45%, #ffd54f 50%, #ffe57f 100%) !important;
+}
+
+/* Icon styling - Targeting inner elements of Radzen Button */
+::deep .eng-btn .rz-button-icon-left {
+    font-size: 28px !important;
+    margin-right: 15px !important;
+    margin-left: 5px;
+    color: #444;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+}
+
+::deep .eng-btn .rz-button-text {
+    flex: 1;
+    text-align: center;
+    font-size: 15px;
+    color: #222;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+}
+
+/* Specific Icon Colors */
+::deep .btn-icon-red .rz-button-icon-left {
+    color: #c62828 !important;
+}
+
+::deep .btn-icon-green .rz-button-icon-left {
+    color: #2e7d32 !important;
+}
+
+::deep .btn-icon-green-bright .rz-button-icon-left {
+    color: #00c853 !important;
+}
+
+.language-selector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 120px;
+}
+
+.language-label {
+    font-weight: bold;
+    font-size: 14px;
+    color: #333;
+}
+

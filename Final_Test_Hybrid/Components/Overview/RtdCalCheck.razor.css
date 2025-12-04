@@ -1,0 +1,20 @@
+/* RtdCalCheck Styles */
+::deep .rz-grid-table td,
+::deep .rz-grid-table td .rz-cell-data,
+::deep .rz-grid-table td span {
+    font-size: 1.1rem !important;
+    font-weight: bold !important;
+    color: black !important;
+}
+
+::deep .rz-grid-table input,
+::deep .rz-grid-table .rz-inputtext {
+    font-size: 1.1rem !important;
+    font-weight: bold !important;
+    font-family: inherit !important;
+    color: black !important;
+    background-color: white !important;
+    padding: 2px 4px !important;
+    height: auto !important;
+}
+

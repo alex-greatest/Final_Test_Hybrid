@@ -74,4 +74,48 @@ svg {
     align-items: center;
 }
 
+/* --- Test Sequence Editor Dialog Styles (GLOBAL) --- */
+/* Must be global because Dialog renders at root level */
+.test-sequence-editor-dialog .rz-dialog-titlebar {
+    padding: 0 !important;
+    min-height: auto !important;
+    height: 46px !important; /* Increased height again */
+    background-color: #f0f0f0 !important;
+    border-bottom: 1px solid #ccc !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
 
+.test-sequence-editor-dialog .rz-dialog-title {
+    font-size: 26px !important; /* Increased size */
+    font-weight: bold !important;
+    margin-left: 15px !important;
+    line-height: 46px !important; /* Match header height */
+    color: #333;
+}
+
+.test-sequence-editor-dialog .rz-dialog-titlebar-close {
+    width: 66px !important; /* Wider */
+    height: 46px !important; /* Match header height */
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background-color: transparent !important;
+    opacity: 1 !important;
+}
+
+.test-sequence-editor-dialog .rz-dialog-titlebar-close:hover {
+    background-color: #e81123 !important;
+    color: white !important;
+}
+
+/* Force the icon to be huge using transform since font-size might be constrained */
+.test-sequence-editor-dialog .rz-dialog-titlebar-close .rzi {
+    font-size: 20px !important; /* Increased base size */
+    transform: scale(1.4) !important; /* Scale */
+    font-weight: 900 !important;
+    display: block !important;
+}

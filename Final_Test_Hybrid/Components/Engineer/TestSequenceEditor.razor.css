@@ -1,5 +1,6 @@
 /* Prevent scrolling on the dialog content */
-.test-sequence-editor-dialog .rz-dialog-content {
+/* This targets the content wrapper injected by Radzen inside the dialog */
+::deep .test-sequence-editor-dialog .rz-dialog-content {
     padding: 0 !important;
     overflow: hidden !important;
     height: 100% !important; /* Ensure content takes full height */
@@ -121,13 +122,13 @@
 }
 
 /* Scoped manually to editor-layout since we aren't using isolation file */
-.editor-layout .rz-datatable-td {
+::deep .editor-layout .rz-datatable-td {
     padding: 2px !important;
     border-right: 1px solid #e0e0e0;
     border-bottom: 1px solid #e0e0e0;
 }
 
-.editor-layout .rz-grid-table {
+::deep .editor-layout .rz-grid-table {
     border-collapse: collapse;
 }
 
@@ -170,7 +171,7 @@
 }
 
 /* Right Panel Buttons */
-.editor-layout .rz-button.right-panel-btn {
+::deep .editor-layout .rz-button.right-panel-btn {
     width: 100%;
     justify-content: flex-start;
     text-align: left;
@@ -190,22 +191,22 @@
     line-height: 1.3 !important;
 }
 
-.editor-layout .rz-button.right-panel-btn .rz-button-icon-left {
+::deep .editor-layout .rz-button.right-panel-btn .rz-button-icon-left {
     font-size: 24px !important; /* Slightly smaller than 28px */
     margin-right: 10px !important;
     color: #0069c0 !important; /* Blue icon color */
 }
 
-.editor-layout .rz-button.right-panel-btn:hover {
+::deep .editor-layout .rz-button.right-panel-btn:hover {
     background-color: #e0e0e0 !important;
 }
 
 /* Animations */
-.row-animate-new > td {
+::deep .row-animate-new > td {
     animation: flash-green 1.0s ease-out; /* Quick animation */
 }
 
-.row-animate-delete > td {
+::deep .row-animate-delete > td {
     animation: fade-out-red 0.5s ease-out forwards;
     background-color: #ffcdd2 !important;
 }

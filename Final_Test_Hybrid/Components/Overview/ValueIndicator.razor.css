@@ -1,0 +1,50 @@
+.row-item {
+    display: flex;
+    justify-content: flex-end; /* Right aligned */
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.row-item span {
+    font-size: 20px;
+    font-weight: 700;
+    color: black;
+    text-align: right;
+    line-height: 1.1;
+    margin-right: 8px; /* Space between text and input */
+    white-space: nowrap; /* Single line text */
+}
+
+/* Class for Radzen TextBox in SCADA style */
+::deep .scada-radzen-input {
+    width: 130px !important;            /* Fixed width */
+    height: 35px !important;           /* Row height */
+
+    /* Colors */
+    background-color: #cfcfcf !important;
+    color: black !important;
+
+    /* Beveled border */
+    border: 1px solid #888 !important;
+    border-right-color: #fff !important;
+    border-bottom-color: #fff !important;
+    border-radius: 0 !important;       /* Remove Radzen radius */
+
+    /* Text */
+    font-weight: 700 !important;
+    font-size: 20px !important;
+    text-align: center !important;     /* Centered text */
+
+    /* Remove standard Radzen shadows/padding */
+    box-shadow: none !important;
+    padding: 0 4px !important;
+    margin-left: 8px;                  /* Offset from label */
+}
+
+/* Remove focus effect (blue border) */
+::deep .scada-radzen-input:focus-within {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: #666 !important;
+}
+

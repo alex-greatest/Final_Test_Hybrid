@@ -2,28 +2,6 @@
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
-<style>
-    /* Scoped styles for Radzen components */
-    #@containerId .rz-grid-table td,
-    #@containerId .rz-grid-table td .rz-cell-data,
-    #@containerId .rz-grid-table td span {
-        font-size: 1.1rem !important;
-        font-weight: bold !important;
-        color: black !important;
-    }
-
-    #@containerId .rz-grid-table input,
-    #@containerId .rz-grid-table .rz-inputtext {
-        font-size: 1.1rem !important;
-        font-weight: bold !important;
-        font-family: inherit !important;
-        color: black !important;
-        background-color: white !important;
-        padding: 2px 4px !important;
-        height: auto !important;
-    }
-</style>
-
 <div id="@containerId">
     <RadzenDataGrid @ref="grid" Data="@items" TItem="AiCallCheckItem"
                     EditMode="DataGridEditMode.Single"

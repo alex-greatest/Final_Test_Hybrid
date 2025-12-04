@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System;
-
 namespace Final_Test_Hybrid.Models
 {
     public class SequenceRow

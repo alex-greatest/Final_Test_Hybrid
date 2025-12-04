@@ -1,0 +1,35 @@
+.row-item {
+    display: flex;
+    justify-content: flex-end; /* Right aligned */
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.row-item span {
+    font-size: 20px;
+    font-weight: 700;
+    color: black;
+    text-align: right;
+    line-height: 1.1;
+    margin-right: 8px; /* Space between text and lamp */
+    white-space: nowrap; /* Single line text */
+}
+
+.scada-lamp-square {
+    width: 35px;  /* Width = Height */
+    height: 35px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.lamp-rect {
+    fill: #606060;       /* Off */
+    stroke: #333333;
+    transition: fill 0.2s;
+}
+
+.scada-lamp-square.on .lamp-rect {
+    fill: #00ff00;       /* On */
+    stroke: #004d00;
+}
+

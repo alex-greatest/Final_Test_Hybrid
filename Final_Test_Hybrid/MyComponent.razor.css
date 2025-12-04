@@ -1,0 +1,412 @@
+/* ==========================================
+   PART 1: MAIN LAYOUT
+   ========================================== */
+
+/* ===== HEADER CARD ===== */
+/* .header-card is applied to RadzenCard (unscoped), which is inside a scoped div (Line 14) */
+::deep .header-card {
+    border: 2px solid #000;
+    border-radius: 4px;
+}
+
+::deep .header-card.rz-card,
+::deep .header-card .rz-card-body {
+    background: rgb(180, 180, 180) !important;
+    box-shadow: none;
+}
+
+::deep .header-card .rz-card-body {
+    padding: 8px 12px;
+}
+
+
+/* ===== HEADER GRID ===== */
+/* .header-grid is a div in Razor (scoped) */
+.header-grid {
+    display: grid;
+    grid-template-columns: 550px 2fr 1.6fr;
+    column-gap: 16px;
+    align-items: flex-start;
+}
+
+.header-block {
+    display: grid;
+    row-gap: 8px;
+}
+
+.header-block-left {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 13px;
+    row-gap: 11px;
+}
+
+.header-block-middle {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 11px;
+}
+
+.header-block:not(:last-child) {
+    border-right: 1px solid #000;
+    padding-right: 16px;
+}
+
+
+/* ===== FIELD ROWS ===== */
+/* .field-row is a div in Razor (scoped) */
+.field-row {
+    display: grid;
+    grid-template-columns: 90px minmax(0, 1fr);
+    column-gap: 70px;
+    align-items: center;
+}
+
+.field-row-operator {
+    column-gap: 60px;
+}
+
+.field-row.field-row-middle {
+    column-gap: 75px;
+}
+
+
+/* ===== FIELD ROWS (INNER COMPONENTS) ===== */
+/* .rz-label and .rz-textbox are inside Radzen components (unscoped) */
+/* Use .field-row ::deep .child to match: .field-row[b-scope] .child */
+
+.field-row ::deep .rz-label,
+.field-row-parameter ::deep .rz-label {
+    white-space: nowrap;
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.field-row ::deep .rz-textbox,
+.field-row-parameter ::deep .rz-textbox {
+    width: 100%;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: black;
+}
+
+/* Header card inputs */
+::deep .header-card .rz-inputtext {
+    font-size: 1.3rem !important;
+    font-weight: 700 !important;
+    color: #000 !important;
+}
+
+
+/* ===== HEADER RIGHT BUTTONS ===== */
+.header-block-right .buttons-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    align-items: center;
+}
+
+.header-block-right .buttons-row ::deep .rz-button {
+    padding: 10px 24px;
+    min-width: 150px;
+    font-size: 1.3rem;
+    font-weight: 700 !important;
+    border-radius: 6px;
+}
+
+
+/* ===== PARAMETER GRID ===== */
+.header-grid-parameter {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 280px));
+    column-gap: 0;
+    align-items: flex-start;
+}
+
+.header-block-parameter {
+    display: grid;
+    row-gap: 5px;
+}
+
+.field-row-parameter {
+    display: grid;
+    grid-template-columns: minmax(0, 90px) minmax(0, 100px);
+    column-gap: 35px;
+    align-items: center;
+}
+
+/* ===== TAB CONTENT WRAPPER ===== */
+/* Div in Razor (scoped) */
+.tab-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: 5px;
+    border: 2px solid #000;
+    border-radius: 4px;
+    padding: 5px;
+}
+
+/* ===== TABLE ===== */
+/* .rz-grid-table is inside RadzenDataGrid (unscoped) */
+/* Assuming tab-content-wrapper contains the grid */
+
+.tab-content-wrapper ::deep .rz-grid-table thead th {
+    background-color: #ffdd00 !important;
+    padding-top: 0px !important;    
+    padding-bottom: 0px !important; 
+    height: auto !important;
+}
+
+::deep .rz-grid-table-striped tbody > tr:not(.rz-expanded-row-content):nth-child(odd) > td,
+::deep .rz-grid-table-striped tbody > tr:not(.rz-expanded-row-content):nth-child(even) > td {
+    background-color: #ffffff !important;
+}
+
+::deep .rz-grid-table tr:hover > td {
+    background-color: #f0f0f0 !important;
+}
+
+::deep .rz-grid-table thead th .rz-column-title {
+    color: #000000 !important;
+    font-size: 1.1rem !important;   
+    font-weight: 600 !important;    
+    text-transform: uppercase;      
+}
+
+::deep .rz-grid-table thead th .rz-column-title-content .rz-sort-icon {
+    color: #000000 !important;
+}
+
+::deep .rz-grid-table td {
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+}
+
+::deep .rz-grid-table td .rz-cell-data {
+    font-size: 1.1rem !important;
+}
+
+/* ===== SCROLLBAR ===== */
+::deep .rz-data-grid ::-webkit-scrollbar {
+    width: 26px;
+    height: 26px;
+}
+
+::deep .rz-data-grid ::-webkit-scrollbar-track {
+    background-color: #e0e0e0;
+    border-radius: 4px;
+}
+
+::deep .rz-data-grid ::-webkit-scrollbar-thumb {
+    background-color: #a0a0a0;
+    border-radius: 4px;
+    border: 4px solid transparent;
+    background-clip: content-box;
+}
+
+::deep .rz-data-grid ::-webkit-scrollbar-thumb:hover {
+    background-color: #808080;
+}
+
+/* ===== STATUS INDICATORS ===== */
+.status-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    row-gap: 5px;
+}
+
+.status-indicator .status-label {
+    font-weight: 700;
+    color: black;
+    font-size: 1.3rem;
+    white-space: nowrap;
+}
+
+.status-indicator img {
+    max-height: 42px;
+    max-width: 200px;
+}
+
+.app-bottom-10-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.scheme-container {
+    width: 100%;
+    height: 100%;
+    flex: 1;          
+    min-height: 0;    
+    display: flex;
+    overflow: hidden; 
+}
+
+.scheme-container svg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+
+/* ===== GRID & CALC ===== */
+.panel-grid {
+    display: inline-grid; 
+    grid-template-columns: repeat(4, max-content); 
+    gap: 10px; 
+    padding: 35px;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    align-items: start;
+}
+
+.calc-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 0.1fr); 
+    gap: 15px;
+    padding-top: 35px;
+    padding-left: 35px;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.group-header {
+    font-size: 20px;
+    font-weight: bold;
+    color: black;
+    margin-bottom: 5px;
+    margin-left: 5px;
+}
+
+.big-value {
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 15px;
+}
+
+/* ==========================================
+   PART 2: TAB STYLES
+   ========================================== */
+
+/* .app-tabs-shell is a div in Razor (scoped) -> NO ::deep */
+/* .app-tabs-90 is RadzenTabs (unscoped) inside shell -> ::deep required */
+
+.app-tabs-shell,
+::deep .app-tabs-90 {
+    --app-tabs-bg: rgb(180, 180, 180);
+    --app-tabs-active-bg: rgb(106, 106, 106);
+    
+    /* Radzen Override Variables */
+    --rz-tabs-tab-selected-color: black;
+    --rz-tabs-tab-color: black;
+    --rz-tabs-tab-background-color: var(--app-tabs-bg);
+    --rz-tabs-background-color: var(--app-tabs-bg);
+    --rz-tabs-tab-hover-background-color: var(--app-tabs-bg);
+    --rz-tabs-tab-hover-color: white;
+    --rz-tabs-tab-selected-top-border-color: transparent;
+}
+
+/* 3D Shell */
+.app-tabs-shell {
+    background: var(--app-tabs-bg);
+    padding: 4px;
+    border-radius: 4px;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    /* 3D effect borders */
+    border-top: 2px solid #d0d0d0;
+    border-left: 2px solid #d0d0d0;
+    border-bottom: 2px solid #4a4a4a;
+    border-right: 2px solid #4a4a4a;
+}
+
+.app-tabs-shell .app-tabs-shell-inside {
+    flex: 1;
+}
+
+/* Outline removal */
+.app-tabs-shell *:focus,
+.app-tabs-shell *:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Tabs Container */
+::deep .app-tabs-90 {
+    height: 100%;
+    font-size: 1.25rem;
+}
+
+/* Nav */
+::deep .app-tabs-90 .rz-tabview-nav {
+    gap: 2px;
+}
+
+/* Tab Items (li) */
+::deep .app-tabs-90 .rz-tabview-nav li {
+    margin-bottom: 0 !important;
+    border-bottom: 3px solid var(--app-tabs-bg) !important;
+    background-color: var(--app-tabs-bg) !important;
+}
+
+/* Selected Tab */
+::deep .app-tabs-90 .rz-tabview-nav li.rz-tabview-selected {
+    border-bottom-color: black !important;
+    background-color: var(--app-tabs-active-bg) !important;
+}
+
+/* Tab Links */
+::deep .app-tabs-90 .rz-tabview-nav li .rz-tabview-nav-link {
+    background-color: transparent !important; 
+    color: black !important;
+}
+
+::deep .app-tabs-90 .rz-tabview-nav li.rz-tabview-selected .rz-tabview-nav-link {
+    background-color: var(--app-tabs-active-bg) !important;
+    color: black !important;
+}
+
+/* Tab Panels Container */
+::deep .app-tabs-90 .rz-tabview-panels {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: none;
+    border-top: 1px solid rgb(80, 77, 77);
+    padding: 0 !important;
+}
+
+/* Tab Panel */
+::deep .app-tabs-90 .rz-tabview-panel {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0 !important;
+}
+
+/* Top Level Specifics */
+::deep .app-tabs-90 {
+    --rz-tabs-tab-padding-block: 5px;
+    --rz-tabs-tab-padding-inline: 24px;
+}
+
+::deep .app-tabs-90 > .rz-tabview-nav .rz-tabview-title {
+    font-size: 25px;
+}
+
+::deep .app-tabs-90 > .rz-tabview-panels > .rz-tabview-panel {
+    padding: 4px 0 !important;
+}
+
+/* Nested Tabs Specifics */
+::deep .app-tabs-90 .scheme-tabs {
+    --rz-tabs-tab-padding-inline: 12px;
+}
+
+::deep .app-tabs-90 .scheme-tabs .rz-tabview-title {
+    font-size: 25px;
+}
