@@ -17,6 +17,7 @@ namespace Final_Test_Hybrid
             var services = new ServiceCollection();
             SettingConfiguration(services);
             services.AddScoped<IFilePickerService, WinFormsFilePickerService>();
+            services.AddScoped<TestSequenceService>();
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();

@@ -1,10 +1,9 @@
 @using Final_Test_Hybrid.Services
-@using Microsoft.Extensions.Configuration
+@implements IDisposable
 @inject DialogService DialogService
 @inject NotificationService NotificationService
 @inject ContextMenuService ContextMenuService
-@inject IConfiguration Configuration
-@inject IFilePickerService FilePickerService
+@inject TestSequenceService TestSequenceService
 
 <div class="editor-layout">
     <!-- Top Header: Parallel Modules -->
@@ -16,7 +15,6 @@
             
             <span class="top-header-text">Sub Modules to run in parallel</span>
             
-            <!-- Right Line removed as requested -->
             <div style="flex: 1;"></div>
         </div>
     </div>
@@ -31,7 +29,7 @@
 
     <!-- Main Grid Area -->
     <div class="area-grid">
-        <RadzenDataGrid @ref="grid" Data="@rows" TItem="SequenceRow" 
+        <RadzenDataGrid @ref="_grid" Data="@_rows" TItem="SequenceRow" 
                         KeyProperty="Id"
                         Style="height: 100%; width: 100%; border: none;"
                         GridLines="DataGridGridLines.Both"
@@ -42,7 +40,7 @@
                         RowRender="@OnRowRender"
                         CellContextMenu="@OnCellContextMenu">
             <Columns>
-                @for (int i = 0; i < columnCount; i++)
+                @for (var i = 0; i < _columnCount; i++)
                 {
                     var index = i;
                     <RadzenDataGridColumn TItem="SequenceRow" Title="@($"Col {index + 1}")" Sortable="false" Filterable="false">
@@ -62,9 +60,8 @@
         </RadzenDataGrid>
     </div>
 
-    <!-- Right Control Panel (Restored) -->
+    <!-- Right Control Panel -->
     <div class="area-right-panel">
-        <!-- Push buttons to bottom with flex-end on container -->
         <RadzenButton Text="Open" Icon="folder_open" Class="right-panel-btn" Click="@OpenSequence" />
         <RadzenButton Text="Save" Icon="save" Class="right-panel-btn" Click="@SaveSequence" />
         <RadzenButton Text="Save As" Icon="save_as" Class="right-panel-btn" />
@@ -72,22 +69,17 @@
 </div>
 
 @code {
-    RadzenDataGrid<SequenceRow>? grid;
-    List<SequenceRow> rows = new List<SequenceRow>();
-    int columnCount = 4;
-
-    // Simple model for the row moved to Models/SequenceRow.cs
+    private RadzenDataGrid<SequenceRow>? _grid;
+    private List<SequenceRow> _rows = new List<SequenceRow>();
+    private int _columnCount = 4;
+    private bool _disposed;
 
     protected override void OnInitialized()
     {
-        // Initialize with default empty rows (e.g. 20)
-        for (int i = 0; i < 20; i++)
-        {
-            rows.Add(new SequenceRow(columnCount));
-        }
+        _rows = TestSequenceService.InitializeRows(20, _columnCount);
     }
     
-    void OnRowRender(RowRenderEventArgs<SequenceRow> args)
+    private void OnRowRender(RowRenderEventArgs<SequenceRow> args)
     {
         if (!string.IsNullOrEmpty(args.Data.CssClass))
         {
@@ -95,137 +87,148 @@
         }
     }
 
-    void OnCellContextMenu(DataGridCellMouseEventArgs<SequenceRow> args)
+    private void OnCellContextMenu(DataGridCellMouseEventArgs<SequenceRow> args)
     {
-        ContextMenuService.Open(args, new List<ContextMenuItem>
+        var menuItems = new List<ContextMenuItem>
         {
             new ContextMenuItem { Text = "Insert Test Step", Value = 1 },
             new ContextMenuItem { Text = "Insert Row Before", Value = 2 },
             new ContextMenuItem { Text = "Delete Row", Value = 4 },
-        }, 
-        (e) =>
-        {
-             int val = (int)e.Value;
+        };
 
-             InvokeAsync(async () =>
-             {
-                 // Close the context menu explicitly
-                 ContextMenuService.Close();
-
-                 switch (val)
-                 {
-                     case 1:
-                         await InsertRowAfter(args.Data);
-                         break;
-                     case 2:
-                         await InsertRowBefore(args.Data);
-                         break;
-                     case 4:
-                         await DeleteRow(args.Data);
-                         break;
-                 }
-                 
-                 await grid!.Reload();
-                 StateHasChanged();
-             });
-        });
+        ContextMenuService.Open(args, menuItems, (e) => OnMenuItemClick(e, args.Data));
     }
 
-    async Task InsertRowAfter(SequenceRow currentRow)
+    private void OnMenuItemClick(MenuItemEventArgs e, SequenceRow row)
     {
-        if (grid != null)
-        {
-            var index = rows.IndexOf(currentRow);
-            if (index >= 0)
-            {
-                var newRow = new SequenceRow(columnCount) { CssClass = "row-animate-new" };
-                rows.Insert(index + 1, newRow);
-                
-                await grid.Reload(); // Show row immediately
-                
-                // Cleanup animation class
-                await Task.Delay(1000); // Match new CSS animation duration (1.0s)
-                newRow.CssClass = "";
-                StateHasChanged();
-            }
-        }
-    }
-
-    async Task InsertRowBefore(SequenceRow currentRow)
-    {
-        if (grid != null)
-        {
-            var index = rows.IndexOf(currentRow);
-            if (index >= 0)
-            {
-                var newRow = new SequenceRow(columnCount) { CssClass = "row-animate-new" };
-                rows.Insert(index, newRow);
-                
-                await grid.Reload(); // Show row immediately
-                
-                // Cleanup animation class
-                await Task.Delay(1000); // Match new CSS animation duration (1.0s)
-                newRow.CssClass = "";
-                StateHasChanged();
-            }
-        }
-    }
-
-    async Task DeleteRow(SequenceRow currentRow)
-    {
-        if (rows.Count > 0 && grid != null)
-        {
-            currentRow.CssClass = "row-animate-delete";
-            await grid.Reload();
-            await Task.Delay(800); // Match new CSS animation duration (0.8s)
-            rows.Remove(currentRow);
-            await grid.Reload(); // Reload grid after removal to update UI correctly
-        }
-    }
-
-    void OnRowSelect(SequenceRow row)
-    {
-        // Handle row selection
-    }
-
-    void OpenFolder(SequenceRow row, int colIndex)
-    {
-        var rootPath = Configuration["Paths:PathToTestSteps"];
+        ContextMenuService.Close();
+        var actionValue = (int)e.Value;
         
-        if (string.IsNullOrEmpty(rootPath))
+        InvokeAsync(async () => await ExecuteContextAction(actionValue, row));
+    }
+
+    private async Task ExecuteContextAction(int actionValue, SequenceRow row)
+    {
+        if (_disposed)
         {
-            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Configuration Error", Detail = "PathToTestSteps is missing in appsettings.json" });
             return;
         }
 
-        // Fallback if directory doesn't exist
-        if (!System.IO.Directory.Exists(rootPath))
+        switch (actionValue)
         {
-             NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Path Error", Detail = $"Path not found: {rootPath}" });
-             return;
+            case 1:
+                await InsertRowAfter(row);
+                break;
+            case 2:
+                await InsertRowBefore(row);
+                break;
+            case 4:
+                await DeleteRow(row);
+                break;
         }
 
-        string? relativePath = FilePickerService.PickFileRelative(rootPath);
+        await RefreshGrid();
+    }
 
-        if (!string.IsNullOrEmpty(relativePath))
+    private async Task RefreshGrid()
+    {
+        if (_disposed)
         {
-            row.Columns[colIndex] = relativePath;
+            return;
+        }
+
+        if (_grid != null)
+        {
+            await _grid.Reload();
+        }
+        StateHasChanged();
+    }
+
+    private async Task InsertRowAfter(SequenceRow currentRow)
+    {
+        var newRow = TestSequenceService.InsertRowAfter(_rows, currentRow, _columnCount);
+        if (newRow != null)
+        {
+            await RefreshGrid();
+            await Task.Delay(1000);
+            
+            if (_disposed)
+            {
+                return;
+            }
+            
+            newRow.CssClass = "";
             StateHasChanged();
         }
     }
 
-    void OpenSequence()
+    private async Task InsertRowBefore(SequenceRow currentRow)
+    {
+        var newRow = TestSequenceService.InsertRowBefore(_rows, currentRow, _columnCount);
+        if (newRow != null)
+        {
+             await RefreshGrid();
+             await Task.Delay(1000);
+             
+             if (_disposed)
+             {
+                 return;
+             }
+             
+             newRow.CssClass = "";
+             StateHasChanged();
+        }
+    }
+
+    private async Task DeleteRow(SequenceRow currentRow)
+    {
+        if (_rows.Count == 0)
+        {
+            return;
+        }
+
+        TestSequenceService.PrepareForDelete(currentRow);
+        await RefreshGrid();
+        
+        await Task.Delay(800);
+        
+        if (_disposed)
+        {
+            return;
+        }
+        
+        TestSequenceService.RemoveRow(_rows, currentRow);
+        await RefreshGrid(); 
+    }
+
+    private void OnRowSelect(SequenceRow row)
+    {
+        // Handle row selection
+    }
+
+    private void OpenFolder(SequenceRow row, int colIndex)
+    {
+        TestSequenceService.OpenFolder(row, colIndex);
+        StateHasChanged();
+    }
+
+    private void OpenSequence()
     {
          NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Open", Detail = "Open Sequence clicked" });
     }
 
-    void SaveSequence()
+    private void SaveSequence()
     {
          NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Save", Detail = "Sequence saved" });
     }
 
-    void CloseDialog()
+    private void CloseDialog()
     {
         DialogService.Close();
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
     }
 }
