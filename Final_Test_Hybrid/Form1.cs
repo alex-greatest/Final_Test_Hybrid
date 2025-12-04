@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Radzen;
 
@@ -6,6 +7,8 @@ namespace Final_Test_Hybrid
 {
     public partial class Form1 : Form
     {
+        private IConfiguration? _config;
+        
         public Form1()
         {
             InitializeComponent();
@@ -24,12 +27,20 @@ namespace Final_Test_Hybrid
         {
             AppDomain.CurrentDomain.UnhandledException += (_, error) =>
             {
-#if DEBUG
-                MessageBox.Show(text: error.ExceptionObject.ToString(), caption: @"������");
-#else
+                #if DEBUG
+                    MessageBox.Show(text: error.ExceptionObject.ToString(), caption: @"������");
+                #else
                     MessageBox.Show(text: "An error has occurred.", caption: "Error");
-#endif
+                #endif
             };
+        }
+        
+        private void SettingConfiguration(ServiceCollection services)
+        {
+            _config = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .Build();
+            services.AddSingleton(_config);
         }
     }
 }
