@@ -227,9 +227,10 @@
                         Density="Density.Compact"
                         AllowColumnResize="true"
                         AllowAlternatingRows="false"
-                        RowSelect="@OnRowSelect">
+                        RowSelect="@OnRowSelect"
+                        CellContextMenu="@OnCellContextMenu">
             <Columns>
-                @for (int i = 0; i < 4; i++)
+                @for (int i = 0; i < columnCount; i++)
                 {
                     var index = i;
                     <RadzenDataGridColumn TItem="SequenceRow" Title="@($"Col {index + 1}")" Sortable="false" Filterable="false">
@@ -257,10 +258,8 @@
         <RadzenButton Text="Save As" Icon="save_as" Class="right-panel-btn" />
         
         <div style="margin-top: 20px;"></div>
-        <RadzenButton Text="New" Icon="note_add" Class="right-panel-btn" Click="@AddNewRow" />
-        <RadzenButton Text="Remove Row" Icon="delete_sweep" Class="right-panel-btn" Click="@RemoveLastRow" />
+        <!-- Removed New/Remove Row buttons as requested -->
         
-        <div style="margin-top: 20px;"></div>
         <RadzenButton Text="Export" Icon="launch" Class="right-panel-btn" />
         
         <div style="margin-top: 20px;"></div>
@@ -271,14 +270,24 @@
 @code {
     [Inject] public DialogService DialogService { get; set; }
     [Inject] public NotificationService NotificationService { get; set; }
+    [Inject] public ContextMenuService ContextMenuService { get; set; }
 
     RadzenDataGrid<SequenceRow> grid;
     List<SequenceRow> rows = new List<SequenceRow>();
+    int columnCount = 4;
 
     // Simple model for the row
     public class SequenceRow
     {
-        public string[] Columns { get; set; } = new string[4];
+        public List<string> Columns { get; set; } = new List<string>();
+
+        public SequenceRow(int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                Columns.Add("");
+            }
+        }
     }
 
     protected override void OnInitialized()
@@ -286,25 +295,72 @@
         // Initialize with default empty rows (e.g. 20)
         for (int i = 0; i < 20; i++)
         {
-            rows.Add(new SequenceRow());
+            rows.Add(new SequenceRow(columnCount));
         }
     }
 
-    void AddNewRow()
+    void OnCellContextMenu(DataGridCellMouseEventArgs<SequenceRow> args)
     {
-        rows.Add(new SequenceRow());
-        grid.Reload();
+        ContextMenuService.Open(args, new List<ContextMenuItem>
+        {
+            new ContextMenuItem { Text = "Insert Test Step", Value = 1 },
+            new ContextMenuItem { Text = "Insert Row Before", Value = 2 },
+            new ContextMenuItem { Text = "Delete Row", Value = 4 },
+        }, 
+        (e) =>
+        {
+             int val = (int)e.Value;
+
+             InvokeAsync(async () =>
+             {
+                 // Close the context menu explicitly
+                 ContextMenuService.Close();
+
+                 switch (val)
+                 {
+                     case 1:
+                         InsertRowAfter(args.Data);
+                         break;
+                     case 2:
+                         InsertRowBefore(args.Data);
+                         break;
+                     case 4:
+                         DeleteRow(args.Data);
+                         break;
+                 }
+                 
+                 await grid.Reload();
+                 StateHasChanged();
+             });
+        });
     }
 
-    void RemoveLastRow()
+    void InsertRowAfter(SequenceRow currentRow)
+    {
+        var index = rows.IndexOf(currentRow);
+        if (index >= 0)
+        {
+            rows.Insert(index + 1, new SequenceRow(columnCount));
+        }
+    }
+
+    void InsertRowBefore(SequenceRow currentRow)
+    {
+        var index = rows.IndexOf(currentRow);
+        if (index >= 0)
+        {
+            rows.Insert(index, new SequenceRow(columnCount));
+        }
+    }
+
+    void DeleteRow(SequenceRow currentRow)
     {
         if (rows.Count > 0)
         {
-            rows.RemoveAt(rows.Count - 1);
-            grid.Reload();
+            rows.Remove(currentRow);
         }
     }
-    
+
     void OnRowSelect(SequenceRow row)
     {
         // Handle row selection
