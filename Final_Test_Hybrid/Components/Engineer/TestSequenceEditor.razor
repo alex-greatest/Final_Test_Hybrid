@@ -9,7 +9,7 @@
     .editor-layout {
         display: grid;
         /* Left Header | Content | Right Panel */
-        grid-template-columns: 40px 1fr 140px;
+        grid-template-columns: 40px 1fr 160px;
         /* Top Header | Grid */
         grid-template-rows: 40px 1fr;
         height: 100%; 
@@ -118,7 +118,7 @@
         flex-direction: column;
         gap: 10px;
         border-left: 1px solid #999;
-        justify-content: flex-end; /* Align content to bottom */
+        justify-content: center; /* Align content to center */
     }
 
     /* Scoped manually to editor-layout since we aren't using isolation file */
@@ -179,20 +179,46 @@
         color: #000 !important;
         border: 1px solid #999 !important;
         box-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
-        margin-bottom: 5px;
+        margin-bottom: 8px;
         text-transform: none;
         font-weight: normal;
         /* Allow multiline text */
         white-space: normal !important;
         height: auto !important;
-        min-height: 36px;
-        padding-top: 8px !important;
-        padding-bottom: 8px !important;
-        line-height: 1.2 !important;
+        min-height: 48px; /* Slightly smaller than 60px */
+        font-size: 16px !important; /* Slightly smaller than 18px */
+        padding: 10px 16px !important;
+        line-height: 1.3 !important;
+    }
+
+    .editor-layout .rz-button.right-panel-btn .rz-button-icon-left {
+        font-size: 24px !important; /* Slightly smaller than 28px */
+        margin-right: 10px !important;
+        color: #0069c0 !important; /* Blue icon color */
     }
 
     .editor-layout .rz-button.right-panel-btn:hover {
         background-color: #e0e0e0 !important;
+    }
+
+    /* Animations */
+    .row-animate-new > td {
+        animation: flash-green 1.5s ease-out;
+    }
+
+    .row-animate-delete > td {
+        animation: fade-out-red 0.5s ease-out forwards;
+        background-color: #ffebee !important;
+    }
+
+    @@keyframes flash-green {
+        0% { background-color: #d4edda; }
+        100% { background-color: transparent; }
+    }
+
+    @@keyframes fade-out-red {
+        0% { opacity: 1; transform: translateX(0); }
+        100% { opacity: 0; transform: translateX(-10px); }
     }
 </style>
 
@@ -228,6 +254,7 @@
                         AllowColumnResize="true"
                         AllowAlternatingRows="false"
                         RowSelect="@OnRowSelect"
+                        RowRender="@OnRowRender"
                         CellContextMenu="@OnCellContextMenu">
             <Columns>
                 @for (int i = 0; i < columnCount; i++)
@@ -256,14 +283,6 @@
         <RadzenButton Text="Open" Icon="folder_open" Class="right-panel-btn" Click="@OpenSequence" />
         <RadzenButton Text="Save" Icon="save" Class="right-panel-btn" Click="@SaveSequence" />
         <RadzenButton Text="Save As" Icon="save_as" Class="right-panel-btn" />
-        
-        <div style="margin-top: 20px;"></div>
-        <!-- Removed New/Remove Row buttons as requested -->
-        
-        <RadzenButton Text="Export" Icon="launch" Class="right-panel-btn" />
-        
-        <div style="margin-top: 20px;"></div>
-        <RadzenButton Text="Exit" Icon="chevron_left" ButtonStyle="ButtonStyle.Danger" Class="right-panel-btn" Style="background-color: #ffcccc !important; border-color: #ff0000 !important; color: #cc0000 !important;" Click="@CloseDialog" />
     </div>
 </div>
 
@@ -280,6 +299,7 @@
     public class SequenceRow
     {
         public List<string> Columns { get; set; } = new List<string>();
+        public string CssClass { get; set; } = "";
 
         public SequenceRow(int count)
         {
@@ -296,6 +316,14 @@
         for (int i = 0; i < 20; i++)
         {
             rows.Add(new SequenceRow(columnCount));
+        }
+    }
+    
+    void OnRowRender(RowRenderEventArgs<SequenceRow> args)
+    {
+        if (!string.IsNullOrEmpty(args.Data.CssClass))
+        {
+            args.Attributes.Add("class", args.Data.CssClass);
         }
     }
 
@@ -325,7 +353,7 @@
                          InsertRowBefore(args.Data);
                          break;
                      case 4:
-                         DeleteRow(args.Data);
+                         await DeleteRow(args.Data);
                          break;
                  }
                  
@@ -340,7 +368,15 @@
         var index = rows.IndexOf(currentRow);
         if (index >= 0)
         {
-            rows.Insert(index + 1, new SequenceRow(columnCount));
+            var newRow = new SequenceRow(columnCount) { CssClass = "row-animate-new" };
+            rows.Insert(index + 1, newRow);
+            
+            // Cleanup animation class
+            _ = Task.Run(async () => {
+                await Task.Delay(1500);
+                newRow.CssClass = "";
+                await InvokeAsync(StateHasChanged);
+            });
         }
     }
 
@@ -349,14 +385,25 @@
         var index = rows.IndexOf(currentRow);
         if (index >= 0)
         {
-            rows.Insert(index, new SequenceRow(columnCount));
+            var newRow = new SequenceRow(columnCount) { CssClass = "row-animate-new" };
+            rows.Insert(index, newRow);
+            
+            // Cleanup animation class
+            _ = Task.Run(async () => {
+                await Task.Delay(1500);
+                newRow.CssClass = "";
+                await InvokeAsync(StateHasChanged);
+            });
         }
     }
 
-    void DeleteRow(SequenceRow currentRow)
+    async Task DeleteRow(SequenceRow currentRow)
     {
         if (rows.Count > 0)
         {
+            currentRow.CssClass = "row-animate-delete";
+            await grid.Reload();
+            await Task.Delay(500); // Wait for fade out
             rows.Remove(currentRow);
         }
     }
