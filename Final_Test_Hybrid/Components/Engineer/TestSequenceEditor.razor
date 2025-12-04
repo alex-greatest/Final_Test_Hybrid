@@ -1,9 +1,6 @@
-@using Radzen
-@using Radzen.Blazor
-
 <style>
     /* Prevent scrolling on the dialog content */
-    ::deep .test-sequence-editor-dialog .rz-dialog-content {
+    .test-sequence-editor-dialog .rz-dialog-content {
         padding: 0 !important;
         overflow: hidden !important;
         height: 100% !important; /* Ensure content takes full height */
@@ -223,55 +220,22 @@
                         AllowAlternatingRows="false"
                         RowSelect="@OnRowSelect">
             <Columns>
-                <RadzenDataGridColumn TItem="SequenceRow" Title="Col 1" Sortable="false" Filterable="false">
-                    <HeaderTemplate>
-                        <!-- Hide default header content if desired, or leave empty -->
-                    </HeaderTemplate>
-                    <Template Context="data">
-                        <div class="cell-content">
-                            <input class="cell-input" @bind="data.Col1" placeholder="" />
-                            <button class="folder-btn" @onclick="@(() => OpenFolder(data, 0))">
-                                <RadzenIcon Icon="folder_open" Style="font-size: 26px;" />
-                            </button>
-                        </div>
-                    </Template>
-                </RadzenDataGridColumn>
-
-                <RadzenDataGridColumn TItem="SequenceRow" Title="Col 2" Sortable="false" Filterable="false">
-                     <HeaderTemplate></HeaderTemplate>
-                    <Template Context="data">
-                        <div class="cell-content">
-                            <input class="cell-input" @bind="data.Col2" />
-                            <button class="folder-btn" @onclick="@(() => OpenFolder(data, 1))">
-                                <RadzenIcon Icon="folder_open" Style="font-size: 26px;" />
-                            </button>
-                        </div>
-                    </Template>
-                </RadzenDataGridColumn>
-
-                <RadzenDataGridColumn TItem="SequenceRow" Title="Col 3" Sortable="false" Filterable="false">
-                     <HeaderTemplate></HeaderTemplate>
-                    <Template Context="data">
-                        <div class="cell-content">
-                            <input class="cell-input" @bind="data.Col3" />
-                            <button class="folder-btn" @onclick="@(() => OpenFolder(data, 2))">
-                                <RadzenIcon Icon="folder_open" Style="font-size: 26px;" />
-                            </button>
-                        </div>
-                    </Template>
-                </RadzenDataGridColumn>
-
-                <RadzenDataGridColumn TItem="SequenceRow" Title="Col 4" Sortable="false" Filterable="false">
-                     <HeaderTemplate></HeaderTemplate>
-                    <Template Context="data">
-                        <div class="cell-content">
-                            <input class="cell-input" @bind="data.Col4" />
-                            <button class="folder-btn" @onclick="@(() => OpenFolder(data, 3))">
-                                <RadzenIcon Icon="folder_open" Style="font-size: 26px;" />
-                            </button>
-                        </div>
-                    </Template>
-                </RadzenDataGridColumn>
+                @for (int i = 0; i < 4; i++)
+                {
+                    var index = i;
+                    <RadzenDataGridColumn TItem="SequenceRow" Title="@($"Col {index + 1}")" Sortable="false" Filterable="false">
+                        <HeaderTemplate>
+                        </HeaderTemplate>
+                        <Template Context="data">
+                            <div class="cell-content">
+                                <input class="cell-input" @bind="data.Columns[index]" placeholder="" />
+                                <button class="folder-btn" @onclick="@(() => OpenFolder(data, index))">
+                                    <RadzenIcon Icon="folder_open" Style="font-size: 26px;" />
+                                </button>
+                            </div>
+                        </Template>
+                    </RadzenDataGridColumn>
+                }
             </Columns>
         </RadzenDataGrid>
     </div>
@@ -305,10 +269,7 @@
     // Simple model for the row
     public class SequenceRow
     {
-        public string Col1 { get; set; }
-        public string Col2 { get; set; }
-        public string Col3 { get; set; }
-        public string Col4 { get; set; }
+        public string[] Columns { get; set; } = new string[4];
     }
 
     protected override void OnInitialized()
