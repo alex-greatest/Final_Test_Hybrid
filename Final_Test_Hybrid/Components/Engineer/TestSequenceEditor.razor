@@ -1,8 +1,400 @@
-<h3>Test Sequence Editor</h3>
-<p>Content goes here...</p>
+@using Radzen
+@using Radzen.Blazor
+
+<style>
+    .editor-layout {
+        display: grid;
+        grid-template-columns: 40px 1fr 140px;
+        grid-template-rows: 40px 1fr 50px;
+        height: 100vh;
+        width: 100%;
+        background-color: #d4d4d4;
+        font-family: 'Segoe UI', sans-serif;
+        overflow: hidden;
+    }
+
+    /* Header Areas */
+    .area-top-header {
+        grid-column: 2 / 3;
+        grid-row: 1 / 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #e0e0e0;
+        border: 1px solid #999;
+        font-weight: bold;
+        color: #333;
+        position: relative;
+    }
+
+    .area-left-header {
+        grid-column: 1 / 2;
+        grid-row: 2 / 3;
+        background: #e0e0e0;
+        border: 1px solid #999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .vertical-text {
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        white-space: nowrap;
+        font-weight: bold;
+        color: #333;
+        font-size: 16px;
+    }
+
+    /* Grid Area */
+    .area-grid {
+        grid-column: 2 / 3;
+        grid-row: 2 / 3;
+        overflow: auto;
+        background: white;
+        border: 1px solid #999;
+    }
+
+    /* Right Panel */
+    .area-right-panel {
+        grid-column: 3 / 4;
+        grid-row: 1 / 4;
+        background: #d4d4d4;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        border-left: 1px solid #999;
+    }
+
+    /* Bottom Bar */
+    .area-bottom-bar {
+        grid-column: 1 / 3;
+        grid-row: 3 / 4;
+        background: #d4d4d4;
+        border-top: 1px solid #999;
+        display: flex;
+        align-items: center;
+        padding: 0 20px;
+        gap: 30px;
+    }
+
+    /* Input/Cell Styling */
+    /* Scoped manually to editor-layout since we aren't using isolation file */
+    .editor-layout .rz-datatable-td {
+        padding: 2px !important;
+        border-right: 1px solid #e0e0e0;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .editor-layout .rz-grid-table {
+        border-collapse: collapse;
+    }
+
+    .cell-content {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        width: 100%;
+    }
+
+    .folder-btn {
+        color: #555;
+        cursor: pointer;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border: 1px solid #ccc;
+        background: #f0f0f0;
+        border-radius: 3px;
+    }
+
+    .cell-input {
+        flex: 1;
+        border: 1px solid #ccc;
+        background-color: white;
+        height: 24px;
+        font-size: 13px;
+        padding: 0 5px;
+        width: 100%;
+        outline: none;
+    }
+
+    .cell-input:focus {
+        border-color: #007bff;
+    }
+
+    /* Right Panel Buttons */
+    .editor-layout .rz-button.right-panel-btn {
+        width: 100%;
+        justify-content: flex-start;
+        text-align: left;
+        background-color: #f0f0f0 !important;
+        color: #000 !important;
+        border: 1px solid #999 !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
+        margin-bottom: 5px;
+        text-transform: none;
+        font-weight: normal;
+    }
+
+    .editor-layout .rz-button.right-panel-btn:hover {
+        background-color: #e0e0e0 !important;
+    }
+
+    /* Bottom Bar Status */
+    .status-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+    }
+
+    .status-label {
+        font-size: 10px;
+        font-weight: bold;
+        color: #555;
+    }
+
+    .status-lamp {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 1px solid #666;
+        box-shadow: inset 1px 1px 3px rgba(0,0,0,0.3);
+    }
+
+    .lamp-green {
+        background: radial-gradient(circle at 30% 30%, #66ff66, #00cc00);
+        box-shadow: 0 0 5px #00cc00, inset 1px 1px 3px rgba(0,0,0,0.3);
+    }
+
+    .lamp-red {
+        background: radial-gradient(circle at 30% 30%, #ff6666, #cc0000);
+    }
+
+    .status-text-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: bold;
+        color: #444;
+        background: #e8e8e8;
+        padding: 5px 10px;
+        border: 1px solid #bbb;
+        border-radius: 4px;
+    }
+</style>
+
+<div class="editor-layout">
+    <!-- Top Header: Parallel Modules -->
+    <div class="area-top-header">
+        <div style="display: flex; align-items: center; width: 100%; padding: 0 20px;">
+            <span style="flex: 1; height: 2px; background: #666;"></span>
+            <RadzenIcon Icon="arrow_right" Style="color: #666; margin-right: 10px; margin-left: -5px;" />
+            
+            <span style="font-size: 16px; margin: 0 15px;">Sub Modules to run in parallel</span>
+            
+            <span style="flex: 1; height: 2px; background: #666;"></span>
+        </div>
+    </div>
+
+    <!-- Left Header: Sequence Modules -->
+    <div class="area-left-header">
+        <div class="vertical-text">
+            <RadzenIcon Icon="arrow_back" Style="margin-bottom: 10px; transform: rotate(-90deg);" />
+            Sub Modules to run in Sequence
+            <span style="display: inline-block; width: 50px; height: 2px; background: #333; vertical-align: middle; margin: 0 10px;"></span>
+        </div>
+    </div>
+
+    <!-- Main Grid Area -->
+    <div class="area-grid">
+        <RadzenDataGrid @ref="grid" Data="@rows" TItem="SequenceRow" 
+                        Style="height: 100%; width: 100%; border: none;"
+                        GridLines="DataGridGridLines.Both"
+                        Density="Density.Compact"
+                        AllowColumnResize="true"
+                        AllowAlternatingRows="false"
+                        RowSelect="@OnRowSelect">
+            <Columns>
+                <RadzenDataGridColumn TItem="SequenceRow" Title="Col 1" Sortable="false" Filterable="false">
+                    <HeaderTemplate>
+                        <!-- Hide default header content if desired, or leave empty -->
+                    </HeaderTemplate>
+                    <Template Context="data">
+                        <div class="cell-content">
+                            <button class="folder-btn" @onclick="@(() => OpenFolder(data, 0))">
+                                <RadzenIcon Icon="folder_open" Style="font-size: 16px;" />
+                            </button>
+                            <input class="cell-input" @bind="data.Col1" placeholder="" />
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="SequenceRow" Title="Col 2" Sortable="false" Filterable="false">
+                     <HeaderTemplate></HeaderTemplate>
+                    <Template Context="data">
+                        <div class="cell-content">
+                            <button class="folder-btn" @onclick="@(() => OpenFolder(data, 1))">
+                                <RadzenIcon Icon="folder_open" Style="font-size: 16px;" />
+                            </button>
+                            <input class="cell-input" @bind="data.Col2" />
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="SequenceRow" Title="Col 3" Sortable="false" Filterable="false">
+                     <HeaderTemplate></HeaderTemplate>
+                    <Template Context="data">
+                        <div class="cell-content">
+                            <button class="folder-btn" @onclick="@(() => OpenFolder(data, 2))">
+                                <RadzenIcon Icon="folder_open" Style="font-size: 16px;" />
+                            </button>
+                            <input class="cell-input" @bind="data.Col3" />
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="SequenceRow" Title="Col 4" Sortable="false" Filterable="false">
+                     <HeaderTemplate></HeaderTemplate>
+                    <Template Context="data">
+                        <div class="cell-content">
+                            <button class="folder-btn" @onclick="@(() => OpenFolder(data, 3))">
+                                <RadzenIcon Icon="folder_open" Style="font-size: 16px;" />
+                            </button>
+                            <input class="cell-input" @bind="data.Col4" />
+                        </div>
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </div>
+
+    <!-- Right Control Panel -->
+    <div class="area-right-panel">
+        <RadzenButton Text="Open" Icon="folder_open" Class="right-panel-btn" Click="@OpenSequence" />
+        <RadzenButton Text="Save" Icon="save" Class="right-panel-btn" Click="@SaveSequence" />
+        <RadzenButton Text="Save As" Icon="save_as" Class="right-panel-btn" />
+        
+        <div style="margin-top: 20px;"></div>
+        <RadzenButton Text="New" Icon="add_circle_outline" Class="right-panel-btn" Click="@AddNewRow" />
+        <RadzenButton Text="Remove Row" Icon="remove_circle_outline" Class="right-panel-btn" Click="@RemoveLastRow" />
+        
+        <div style="margin-top: 20px;"></div>
+        <RadzenButton Text="Export" Icon="output" Class="right-panel-btn" />
+        
+        <div style="flex: 1;"></div>
+        <RadzenButton Text="Exit" Icon="close" ButtonStyle="ButtonStyle.Danger" Class="right-panel-btn" Style="background-color: #ffcccc !important; border-color: #ff0000 !important; color: #cc0000 !important;" Click="@CloseDialog" />
+    </div>
+
+    <!-- Bottom Status Bar -->
+    <div class="area-bottom-bar">
+        <div class="status-item">
+            <span class="status-label">Air ON</span>
+            <div class="status-lamp lamp-green"></div>
+        </div>
+        
+        <div class="status-item">
+            <span class="status-label">E-STOP</span>
+            <div class="status-lamp lamp-green"></div>
+        </div>
+        
+        <div class="status-item">
+            <span class="status-label">GAS-STOP</span>
+            <div class="status-lamp lamp-green"></div>
+        </div>
+
+        <div style="flex: 1;"></div>
+
+        <div class="status-text-item">
+            <RadzenIcon Icon="link" Style="color: #00cc00;" />
+            <span>Connection to Winted</span>
+        </div>
+
+        <div class="status-text-item">
+            <RadzenIcon Icon="usb" Style="color: #007bff;" />
+            <span>Test Log Enabled</span>
+        </div>
+
+        <RadzenButton Icon="close" Text="EXIT" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Style="margin-left: 10px;" Click="@CloseDialog" />
+    </div>
+</div>
 
 @code {
+    [Inject] public DialogService DialogService { get; set; }
+    [Inject] public NotificationService NotificationService { get; set; }
 
+    RadzenDataGrid<SequenceRow> grid;
+    List<SequenceRow> rows = new List<SequenceRow>();
+
+    // Simple model for the row
+    public class SequenceRow
+    {
+        public string Col1 { get; set; }
+        public string Col2 { get; set; }
+        public string Col3 { get; set; }
+        public string Col4 { get; set; }
+    }
+
+    protected override void OnInitialized()
+    {
+        // Initialize with default empty rows (e.g. 20)
+        for (int i = 0; i < 20; i++)
+        {
+            rows.Add(new SequenceRow());
+        }
+    }
+
+    void AddNewRow()
+    {
+        rows.Add(new SequenceRow());
+        grid.Reload();
+    }
+
+    void RemoveLastRow()
+    {
+        if (rows.Count > 0)
+        {
+            rows.RemoveAt(rows.Count - 1);
+            grid.Reload();
+        }
+    }
+    
+    void OnRowSelect(SequenceRow row)
+    {
+        // Handle row selection
+    }
+
+    void OpenFolder(SequenceRow row, int colIndex)
+    {
+        // Placeholder for file picker logic
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Severity = NotificationSeverity.Info, 
+            Summary = "File Picker", 
+            Detail = $"Open file for Col {colIndex + 1}", 
+            Duration = 2000 
+        });
+    }
+
+    void OpenSequence()
+    {
+         NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Open", Detail = "Open Sequence clicked" });
+    }
+
+    void SaveSequence()
+    {
+         NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Save", Detail = "Sequence saved" });
+    }
+
+    void CloseDialog()
+    {
+        DialogService.Close();
+    }
 }
-
-
