@@ -1,3 +1,11 @@
+@using Final_Test_Hybrid.Services
+@using Microsoft.Extensions.Configuration
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject ContextMenuService ContextMenuService
+@inject IConfiguration Configuration
+@inject IFilePickerService FilePickerService
+
 <style>
     /* Prevent scrolling on the dialog content */
     .test-sequence-editor-dialog .rz-dialog-content {
@@ -288,10 +296,7 @@
 </div>
 
 @code {
-    [Inject] public DialogService DialogService { get; set; }
-    [Inject] public NotificationService NotificationService { get; set; }
-    [Inject] public ContextMenuService ContextMenuService { get; set; }
-    RadzenDataGrid<SequenceRow> grid;
+    RadzenDataGrid<SequenceRow>? grid;
     List<SequenceRow> rows = new List<SequenceRow>();
     int columnCount = 4;
 
@@ -344,7 +349,7 @@
                          break;
                  }
                  
-                 await grid.Reload();
+                 await grid!.Reload();
                  StateHasChanged();
              });
         });
@@ -352,41 +357,47 @@
 
     async Task InsertRowAfter(SequenceRow currentRow)
     {
-        var index = rows.IndexOf(currentRow);
-        if (index >= 0)
+        if (grid != null)
         {
-            var newRow = new SequenceRow(columnCount) { CssClass = "row-animate-new" };
-            rows.Insert(index + 1, newRow);
-            
-            await grid.Reload(); // Show row immediately
-            
-            // Cleanup animation class
-            await Task.Delay(1000); // Match new CSS animation duration (1.0s)
-            newRow.CssClass = "";
-            StateHasChanged();
+            var index = rows.IndexOf(currentRow);
+            if (index >= 0)
+            {
+                var newRow = new SequenceRow(columnCount) { CssClass = "row-animate-new" };
+                rows.Insert(index + 1, newRow);
+                
+                await grid.Reload(); // Show row immediately
+                
+                // Cleanup animation class
+                await Task.Delay(1000); // Match new CSS animation duration (1.0s)
+                newRow.CssClass = "";
+                StateHasChanged();
+            }
         }
     }
 
     async Task InsertRowBefore(SequenceRow currentRow)
     {
-        var index = rows.IndexOf(currentRow);
-        if (index >= 0)
+        if (grid != null)
         {
-            var newRow = new SequenceRow(columnCount) { CssClass = "row-animate-new" };
-            rows.Insert(index, newRow);
-            
-            await grid.Reload(); // Show row immediately
-            
-            // Cleanup animation class
-            await Task.Delay(1000); // Match new CSS animation duration (1.0s)
-            newRow.CssClass = "";
-            StateHasChanged();
+            var index = rows.IndexOf(currentRow);
+            if (index >= 0)
+            {
+                var newRow = new SequenceRow(columnCount) { CssClass = "row-animate-new" };
+                rows.Insert(index, newRow);
+                
+                await grid.Reload(); // Show row immediately
+                
+                // Cleanup animation class
+                await Task.Delay(1000); // Match new CSS animation duration (1.0s)
+                newRow.CssClass = "";
+                StateHasChanged();
+            }
         }
     }
 
     async Task DeleteRow(SequenceRow currentRow)
     {
-        if (rows.Count > 0)
+        if (rows.Count > 0 && grid != null)
         {
             currentRow.CssClass = "row-animate-delete";
             await grid.Reload();
@@ -403,14 +414,28 @@
 
     void OpenFolder(SequenceRow row, int colIndex)
     {
-        // Placeholder for file picker logic
-        NotificationService.Notify(new NotificationMessage 
-        { 
-            Severity = NotificationSeverity.Info, 
-            Summary = "File Picker", 
-            Detail = $"Open file for Col {colIndex + 1}", 
-            Duration = 2000 
-        });
+        var rootPath = Configuration["Paths:PathToTestSteps"];
+        
+        if (string.IsNullOrEmpty(rootPath))
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Configuration Error", Detail = "PathToTestSteps is missing in appsettings.json" });
+            return;
+        }
+
+        // Fallback if directory doesn't exist
+        if (!System.IO.Directory.Exists(rootPath))
+        {
+             NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Path Error", Detail = $"Path not found: {rootPath}" });
+             return;
+        }
+
+        string? relativePath = FilePickerService.PickFileRelative(rootPath);
+
+        if (!string.IsNullOrEmpty(relativePath))
+        {
+            row.Columns[colIndex] = relativePath;
+            StateHasChanged();
+        }
     }
 
     void OpenSequence()

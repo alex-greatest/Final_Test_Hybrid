@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Services;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +15,8 @@ namespace Final_Test_Hybrid
             InitializeComponent();
             HandleException();
             var services = new ServiceCollection();
+            SettingConfiguration(services);
+            services.AddScoped<IFilePickerService, WinFormsFilePickerService>();
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();
@@ -40,7 +43,7 @@ namespace Final_Test_Hybrid
             _config = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .Build();
-            services.AddSingleton(_config);
+            services.AddSingleton<IConfiguration>(_config);
         }
     }
 }
