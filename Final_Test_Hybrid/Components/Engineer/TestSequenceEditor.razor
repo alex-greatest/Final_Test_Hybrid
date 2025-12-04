@@ -162,6 +162,8 @@
         padding: 0 10px;
         width: 100%;
         outline: none;
+        font-weight: bold; /* Bold text */
+        color: black;      /* Black text */
     }
 
     .cell-input:focus {
@@ -180,6 +182,13 @@
         margin-bottom: 5px;
         text-transform: none;
         font-weight: normal;
+        /* Allow multiline text */
+        white-space: normal !important;
+        height: auto !important;
+        min-height: 36px;
+        padding-top: 8px !important;
+        padding-bottom: 8px !important;
+        line-height: 1.2 !important;
     }
 
     .editor-layout .rz-button.right-panel-btn:hover {
@@ -230,7 +239,7 @@
                             <div class="cell-content">
                                 <input class="cell-input" @bind="data.Columns[index]" placeholder="" />
                                 <button class="folder-btn" @onclick="@(() => OpenFolder(data, index))">
-                                    <RadzenIcon Icon="folder_open" Style="font-size: 26px;" />
+                                    <RadzenIcon Icon="folder" Style="font-size: 26px; color: #FFC107;" />
                                 </button>
                             </div>
                         </Template>
@@ -248,14 +257,14 @@
         <RadzenButton Text="Save As" Icon="save_as" Class="right-panel-btn" />
         
         <div style="margin-top: 20px;"></div>
-        <RadzenButton Text="New" Icon="add_circle_outline" Class="right-panel-btn" Click="@AddNewRow" />
-        <RadzenButton Text="Remove Row" Icon="remove_circle_outline" Class="right-panel-btn" Click="@RemoveLastRow" />
+        <RadzenButton Text="New" Icon="note_add" Class="right-panel-btn" Click="@AddNewRow" />
+        <RadzenButton Text="Remove Row" Icon="delete_sweep" Class="right-panel-btn" Click="@RemoveLastRow" />
         
         <div style="margin-top: 20px;"></div>
-        <RadzenButton Text="Export" Icon="output" Class="right-panel-btn" />
+        <RadzenButton Text="Export" Icon="launch" Class="right-panel-btn" />
         
         <div style="margin-top: 20px;"></div>
-        <RadzenButton Text="Exit" Icon="close" ButtonStyle="ButtonStyle.Danger" Class="right-panel-btn" Style="background-color: #ffcccc !important; border-color: #ff0000 !important; color: #cc0000 !important;" Click="@CloseDialog" />
+        <RadzenButton Text="Exit" Icon="chevron_left" ButtonStyle="ButtonStyle.Danger" Class="right-panel-btn" Style="background-color: #ffcccc !important; border-color: #ff0000 !important; color: #cc0000 !important;" Click="@CloseDialog" />
     </div>
 </div>
 
