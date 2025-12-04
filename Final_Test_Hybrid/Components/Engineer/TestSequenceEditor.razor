@@ -295,20 +295,7 @@
     List<SequenceRow> rows = new List<SequenceRow>();
     int columnCount = 4;
 
-    // Simple model for the row
-    public class SequenceRow
-    {
-        public List<string> Columns { get; set; } = new List<string>();
-        public string CssClass { get; set; } = "";
-
-        public SequenceRow(int count)
-        {
-            for (int i = 0; i < count; i++)
-            {
-                Columns.Add("");
-            }
-        }
-    }
+    // Simple model for the row moved to Models/SequenceRow.cs
 
     protected override void OnInitialized()
     {
@@ -347,10 +334,10 @@
                  switch (val)
                  {
                      case 1:
-                         InsertRowAfter(args.Data);
+                         await InsertRowAfter(args.Data);
                          break;
                      case 2:
-                         InsertRowBefore(args.Data);
+                         await InsertRowBefore(args.Data);
                          break;
                      case 4:
                          await DeleteRow(args.Data);
@@ -363,7 +350,7 @@
         });
     }
 
-    void InsertRowAfter(SequenceRow currentRow)
+    async Task InsertRowAfter(SequenceRow currentRow)
     {
         var index = rows.IndexOf(currentRow);
         if (index >= 0)
@@ -372,15 +359,13 @@
             rows.Insert(index + 1, newRow);
             
             // Cleanup animation class
-            _ = Task.Run(async () => {
-                await Task.Delay(1500);
-                newRow.CssClass = "";
-                await InvokeAsync(StateHasChanged);
-            });
+            await Task.Delay(1500);
+            newRow.CssClass = "";
+            StateHasChanged();
         }
     }
 
-    void InsertRowBefore(SequenceRow currentRow)
+    async Task InsertRowBefore(SequenceRow currentRow)
     {
         var index = rows.IndexOf(currentRow);
         if (index >= 0)
@@ -389,11 +374,9 @@
             rows.Insert(index, newRow);
             
             // Cleanup animation class
-            _ = Task.Run(async () => {
-                await Task.Delay(1500);
-                newRow.CssClass = "";
-                await InvokeAsync(StateHasChanged);
-            });
+            await Task.Delay(1500);
+            newRow.CssClass = "";
+            StateHasChanged();
         }
     }
 
