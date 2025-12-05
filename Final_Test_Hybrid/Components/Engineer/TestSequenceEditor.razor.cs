@@ -1,14 +1,18 @@
 using Radzen;
 using Radzen.Blazor;
 using Final_Test_Hybrid.Models;
+using Microsoft.AspNetCore.Components;
+using Final_Test_Hybrid.Services;
 
 namespace Final_Test_Hybrid.Components.Engineer;
 
 public partial class TestSequenceEditor : IDisposable
 {
+    [Inject]
+    public required IFilePickerService FilePickerService { get; set; }
     private RadzenDataGrid<SequenceRow>? _grid;
-    private List<SequenceRow> _rows = new List<SequenceRow>();
-    private int _columnCount = 4;
+    private List<SequenceRow> _rows = [];
+    private readonly int _columnCount = 4;
     private bool _disposed;
 
     protected override void OnInitialized()
@@ -28,9 +32,9 @@ public partial class TestSequenceEditor : IDisposable
     {
         var menuItems = new List<ContextMenuItem>
         {
-            new ContextMenuItem { Text = "Insert Test Step", Value = 1 },
-            new ContextMenuItem { Text = "Insert Row Before", Value = 2 },
-            new ContextMenuItem { Text = "Delete Row", Value = 4 },
+            new() { Text = "Insert Test Step", Value = 1 },
+            new() { Text = "Insert Row Before", Value = 2 },
+            new() { Text = "Delete Row", Value = 4 },
         };
 
         ContextMenuService.Open(args, menuItems, (e) => OnMenuItemClick(e, args.Data));
@@ -57,7 +61,7 @@ public partial class TestSequenceEditor : IDisposable
 
     private async Task RunAction(int actionValue, SequenceRow row)
     {
-        Task task = actionValue switch
+        var task = actionValue switch
         {
             1 => InsertRowAfter(row),
             2 => InsertRowBefore(row),
@@ -139,7 +143,7 @@ public partial class TestSequenceEditor : IDisposable
 
     private async Task PerformDeleteAnimation(SequenceRow currentRow)
     {
-        Task deleteAnimationTask = TestSequenceService.PrepareForDelete(currentRow);
+        var deleteAnimationTask = TestSequenceService.PrepareForDelete(currentRow);
         await RefreshGrid();
         await deleteAnimationTask;
     }
@@ -155,14 +159,140 @@ public partial class TestSequenceEditor : IDisposable
         StateHasChanged();
     }
 
-    private void OpenSequence()
+    private async Task OpenSequence()
     {
-         NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Open", Detail = "Open Sequence clicked" });
+        var defaultPath = TestSequenceService.GetTestsSequencePath();
+        var filePath = FilePickerService.PickFile(defaultPath ?? "", "Excel Files (*.xlsx)|*.xlsx");
+        if (string.IsNullOrEmpty(filePath))
+        {
+            return;
+        }
+
+        await LoadSequenceFromFile(filePath);
+    }
+
+    private async Task LoadSequenceFromFile(string filePath)
+    {
+        TestSequenceService.CurrentFilePath = filePath;
+        TestSequenceService.CurrentFileName = Path.GetFileNameWithoutExtension(filePath);
+        
+        try
+        {
+             await TryLoadFromService(filePath);
+             NotifySuccess(filePath);
+        }
+        catch (Exception ex)
+        {
+             NotifyLoadError(ex);
+        }
+    }
+
+    private void NotifySuccess(string filePath)
+    {
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Severity = NotificationSeverity.Success, 
+            Summary = "Opened", 
+            Detail = $"Sequence loaded from {TestSequenceService.CurrentFileName}" 
+        });
+    }
+
+    private void NotifyLoadError(Exception ex)
+    {
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Severity = NotificationSeverity.Error, 
+            Summary = "Error", 
+            Detail = $"Failed to load: {ex.Message}" 
+        });
+    }
+
+    private async Task TryLoadFromService(string filePath)
+    {
+        _rows = TestSequenceService.LoadFromExcel(filePath, _columnCount);
+        if (_rows.Count == 0)
+        {
+            _rows = TestSequenceService.InitializeRows(20, _columnCount);
+        }
+        await RefreshGrid();
     }
 
     private void SaveSequence()
     {
-         NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Save", Detail = "Sequence saved" });
+        if (string.IsNullOrEmpty(TestSequenceService.CurrentFilePath))
+        {
+            SetDefaultFilePath();
+            return;
+        }
+
+        PerformSave(TestSequenceService.CurrentFilePath);
+    }
+
+    private void SetDefaultFilePath()
+    {
+        var directory = TestSequenceService.GetTestsSequencePath();
+        if (string.IsNullOrEmpty(directory))
+        {
+            SaveSequenceAs();
+            return;
+        }
+
+        var fileName = TestSequenceService.CurrentFileName;
+        if (!fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+        {
+            fileName += ".xlsx";
+        }
+
+        TestSequenceService.CurrentFilePath = Path.Combine(directory, fileName);
+        PerformSave(TestSequenceService.CurrentFilePath);
+    }
+
+    private void SaveSequenceAs()
+    {
+        var defaultPath = TestSequenceService.GetTestsSequencePath();
+        var filePath = FilePickerService.SaveFile("sequence", defaultPath, "Excel Files (*.xlsx)|*.xlsx");
+        if (string.IsNullOrEmpty(filePath))
+        {
+            return;
+        }
+
+        TestSequenceService.CurrentFilePath = filePath;
+        TestSequenceService.CurrentFileName = Path.GetFileNameWithoutExtension(filePath);
+        StateHasChanged(); // Update header
+        PerformSave(filePath);
+    }
+
+    private void PerformSave(string filePath)
+    {
+        try
+        {
+            TestSequenceService.SaveToExcel(filePath, _rows);
+            NotifySaveSuccess();
+        }
+        catch (Exception ex)
+        {
+            NotifySaveError(ex);
+        }
+    }
+
+    private void NotifySaveSuccess()
+    {
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Severity = NotificationSeverity.Success, 
+            Summary = "Saved", 
+            Detail = "Sequence saved successfully" 
+        });
+    }
+
+    private void NotifySaveError(Exception ex)
+    {
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Severity = NotificationSeverity.Error, 
+            Summary = "Error", 
+            Detail = $"Failed to save: {ex.Message}" 
+        });
     }
 
     private void CloseDialog()
@@ -175,4 +305,3 @@ public partial class TestSequenceEditor : IDisposable
         _disposed = true;
     }
 }
-

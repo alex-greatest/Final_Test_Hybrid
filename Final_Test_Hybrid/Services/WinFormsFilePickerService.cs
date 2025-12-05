@@ -2,15 +2,35 @@ namespace Final_Test_Hybrid.Services
 {
     public class WinFormsFilePickerService : IFilePickerService
     {
-        public string? PickFile(string initialDirectory)
+        public string? PickFile(string initialDirectory, string filter = "")
         {
-            return OpenDialog(initialDirectory);
+            return OpenDialog(initialDirectory, filter);
         }
 
         public string? PickFileRelative(string rootPath)
         {
-            var selectedFile = OpenDialog(rootPath);
+            var selectedFile = OpenDialog(rootPath, "");
             return string.IsNullOrEmpty(selectedFile) ? null : ProcessSelection(selectedFile, rootPath);
+        }
+
+        public string? SaveFile(string defaultName, string? initialDirectory = null, string filter = "Excel Files (*.xlsx)|*.xlsx|All files (*.*)|*.*")
+        {
+            using var saveFileDialog = new SaveFileDialog();
+            saveFileDialog.FileName = defaultName;
+            saveFileDialog.Filter = filter;
+
+            var validatedPath = string.IsNullOrEmpty(initialDirectory) ? null : GetValidatedPath(initialDirectory.Replace('/', '\\'));
+            
+            if (!string.IsNullOrEmpty(validatedPath))
+            {
+                saveFileDialog.InitialDirectory = validatedPath;
+            }
+            else
+            {
+                saveFileDialog.RestoreDirectory = true;
+            }
+
+            return saveFileDialog.ShowDialog() == DialogResult.OK ? saveFileDialog.FileName : null;
         }
 
         private string? ProcessSelection(string selectedFile, string rootPath)
@@ -20,20 +40,14 @@ namespace Final_Test_Hybrid.Services
 
         private string? ValidateAndGetRelativePath(string selectedFile, string rootPath)
         {
-            // Normalize paths for robust comparison
-            var absRoot = System.IO.Path.GetFullPath(rootPath);
-            var absSelected = System.IO.Path.GetFullPath(selectedFile);
-            
-            // Add directory separator to root to ensure we only match inside the folder
-            var rootCheck = absRoot.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar) 
-                               + System.IO.Path.DirectorySeparatorChar;
-            
-            // Check if selected file starts with the root path
+            var absRoot = Path.GetFullPath(rootPath);
+            var absSelected = Path.GetFullPath(selectedFile);
+            var rootCheck = absRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) 
+                               + Path.DirectorySeparatorChar;
             if (absSelected.StartsWith(rootCheck, StringComparison.OrdinalIgnoreCase))
             {
                 return Path.GetRelativePath(absRoot, absSelected);
             }
-      
             ShowInvalidPathMessage(absRoot);
             return null;
         }
@@ -47,23 +61,28 @@ namespace Final_Test_Hybrid.Services
                 MessageBoxIcon.Warning);
         }
 
-        private string? OpenDialog(string initialDirectory)
+        private string? OpenDialog(string initialDirectory, string filter)
         {
             using var openFileDialog = new OpenFileDialog();
-            ConfigureFileDialog(openFileDialog, initialDirectory);
+            ConfigureFileDialog(openFileDialog, initialDirectory, filter);
             return openFileDialog.ShowDialog() == DialogResult.OK ? openFileDialog.FileName : null;
         }
 
-        private void ConfigureFileDialog(OpenFileDialog dialog, string initialDirectory)
+        private void ConfigureFileDialog(OpenFileDialog dialog, string initialDirectory, string filter)
         {
-            // Normalize path separators to Windows style
+            if (!string.IsNullOrEmpty(filter))
+            {
+                dialog.Filter = filter;
+            }
+
             var path = initialDirectory?.Replace('/', '\\') ?? string.Empty;
             var validatedPath = GetValidatedPath(path);
+            
             if (!string.IsNullOrEmpty(validatedPath))
             {
                 dialog.InitialDirectory = validatedPath;
             }
-            // RestoreDirectory attempts to keep the directory, but Windows often overrides this behavior based on user history
+            
             dialog.RestoreDirectory = true;
         }
 
@@ -75,8 +94,7 @@ namespace Final_Test_Hybrid.Services
 
         private string EnsureAbsolutePath(string path)
         {
-            // Ensure absolute path
-            if (!string.IsNullOrEmpty(path) && !System.IO.Path.IsPathRooted(path)) 
+            if (!string.IsNullOrEmpty(path) && !Path.IsPathRooted(path)) 
             {
                 return Path.GetFullPath(path);
             }
@@ -85,11 +103,7 @@ namespace Final_Test_Hybrid.Services
 
         private string? CheckPathExists(string path)
         {
-            if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
-            {
-                return path;
-            }
-            return null;
+            return !string.IsNullOrEmpty(path) && Directory.Exists(path) ? path : null;
         }
     }
 }

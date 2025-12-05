@@ -14,7 +14,9 @@
             
             <span class="top-header-text">Sub Modules to run in parallel</span>
             
-            <div style="flex: 1;"></div>
+            <div style="flex: 1; text-align: center;">
+                <span class="current-file-text">File: @TestSequenceService.CurrentFileName</span>
+            </div>
         </div>
     </div>
 
@@ -63,6 +65,6 @@
     <div class="area-right-panel">
         <RadzenButton Text="Open" Icon="folder_open" Class="right-panel-btn" Click="@OpenSequence" />
         <RadzenButton Text="Save" Icon="save" Class="right-panel-btn" Click="@SaveSequence" />
-        <RadzenButton Text="Save As" Icon="save_as" Class="right-panel-btn" />
+        <RadzenButton Text="Save As" Icon="save_as" Class="right-panel-btn" Click="@(() => SaveSequenceAs())" />
     </div>
 </div>

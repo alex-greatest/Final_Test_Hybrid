@@ -119,3 +119,21 @@ svg {
     font-weight: 900 !important;
     display: block !important;
 }
+
+/* Fix Radzen Notification clipping */
+.rz-notification-message {
+    width: 450px !important; /* Increase width */
+    max-width: 90vw;
+    white-space: normal; /* Allow text wrap */
+    overflow: visible;
+}
+
+.rz-notification-message-text {
+    white-space: normal !important; /* Force text wrap */
+    overflow: visible !important;
+}
+
+/* Ensure notifications are on top */
+.rz-notification-container {
+    z-index: 99999 !important;
+}
