@@ -265,7 +265,26 @@ public partial class TestSequenceEditor
 
     private string GetSaveErrorMessage(Exception ex)
     {
-        return ex.Message.Contains("being used by another process") ? "Файл открыт в Excel! Пожалуйста, закройте его." : "Произошла ошибка при сохранении файла.";
+        if (IsFileLockedException(ex))
+        {
+            return "Файл занят другим процессом (возможно открыт в Excel). Закройте его и повторите попытку.";
+        }
+        
+        return $"Произошла ошибка при сохранении файла: {ex.Message}";
+    }
+
+    private bool IsFileLockedException(Exception ex)
+    {
+        const int ERROR_SHARING_VIOLATION = unchecked((int)0x80070020);
+        const int ERROR_LOCK_VIOLATION = unchecked((int)0x80070021);
+        
+        return ex switch
+        {
+            IOException ioEx when ioEx.HResult == ERROR_SHARING_VIOLATION => true,
+            IOException ioEx when ioEx.HResult == ERROR_LOCK_VIOLATION => true,
+            _ when ex.InnerException != null => IsFileLockedException(ex.InnerException),
+            _ => false
+        };
     }
 
     private void CloseDialog()
