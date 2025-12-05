@@ -75,22 +75,22 @@ namespace Final_Test_Hybrid.Services
 
         private bool ValidatePathConfigured(string? path)
         {
-            if (!string.IsNullOrEmpty(path))
+            if (string.IsNullOrEmpty(path))
             {
-                return true;
+                NotifyError("Configuration Error", "PathToTestSteps is missing in appsettings.json");
+                return false;
             }
-            NotifyError("Configuration Error", "PathToTestSteps is missing in appsettings.json");
-            return false;
+            return true;
         }
 
         private bool ValidatePathExists(string path)
         {
-            if (Directory.Exists(path))
+            if (!Directory.Exists(path))
             {
-                return true;
+                NotifyError("Path Error", $"Path not found: {path}");
+                return false;
             }
-            NotifyError("Path Error", $"Path not found: {path}");
-            return false;
+            return true;
         }
 
         private void UpdateRowColumn(SequenceRow row, int colIndex, string? relativePath)
