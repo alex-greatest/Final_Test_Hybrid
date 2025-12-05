@@ -84,10 +84,9 @@ public partial class TestSequenceEditor
     {
         NotificationService.ShowSuccess(
             "Открыто", 
-            $"Последовательность загружена из {TestSequenceService.CurrentFileName}", 
+            $"Загружено: {TestSequenceService.CurrentFileName}", 
             duration: 4000,
-            closeOnClick: true,
-            style: "width: 400px; white-space: pre-wrap;"
+            closeOnClick: true
         );
     }
 
@@ -97,19 +96,17 @@ public partial class TestSequenceEditor
             "Ошибка", 
             message, 
             duration: 10000,
-            closeOnClick: true,
-            style: "width: 400px; white-space: pre-wrap;"
+            closeOnClick: true
         );
     }
 
     private void NotifyLoadError(Exception ex)
     {
         NotificationService.ShowError(
-            "Ошибка", 
-            $"Не удалось загрузить: {ex.Message}", 
+            "Ошибка загрузки", 
+            ex.Message, 
             duration: 10000,
-            closeOnClick: true,
-            style: "width: 400px; white-space: pre-wrap;"
+            closeOnClick: true
         );
     }
 
@@ -244,10 +241,9 @@ public partial class TestSequenceEditor
     {
         NotificationService.ShowSuccess(
             "Сохранено", 
-            "Последовательность успешно сохранена", 
+            "Последовательность сохранена", 
             duration: 4000,
-            closeOnClick: true,
-            style: "width: 400px; white-space: pre-wrap;"
+            closeOnClick: true
         );
     }
 
@@ -258,8 +254,7 @@ public partial class TestSequenceEditor
             "Ошибка сохранения",
             message,
             duration: 10000,
-            closeOnClick: true,
-            style: "width: 400px; white-space: pre-wrap;"
+            closeOnClick: true
         );
     }
 
@@ -267,7 +262,7 @@ public partial class TestSequenceEditor
     {
         if (IsFileLockedException(ex))
         {
-            return "Файл занят другим процессом (возможно открыт в Excel). Закройте его и повторите попытку.";
+            return "Закройте файл в Excel";
         }
         
         return $"Произошла ошибка при сохранении файла: {ex.Message}";
