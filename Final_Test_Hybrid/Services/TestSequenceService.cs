@@ -1,6 +1,5 @@
 using Final_Test_Hybrid.Models;
 using Microsoft.Extensions.Configuration;
-using Radzen;
 
 namespace Final_Test_Hybrid.Services
 {
@@ -8,7 +7,7 @@ namespace Final_Test_Hybrid.Services
         IFilePickerService filePickerService,
         ISequenceExcelService sequenceExcelService,
         IConfiguration configuration,
-        NotificationService notificationService)
+        INotificationService notificationService)
     {
         public string CurrentFileName { get; set; } = "sequence";
         public string? CurrentFilePath { get; set; }
@@ -78,24 +77,19 @@ namespace Final_Test_Hybrid.Services
         public string? GetTestsSequencePath()
         {
             var path = configuration["Paths:PathToTestsSequence"];
-            
-            if (string.IsNullOrEmpty(path))
-            {
-                NotifyError("Configuration Error", "PathToTestsSequence is missing in appsettings.json");
-                return null;
-            }
 
-            return GetOrCreateDirectory(path);
+            if (!string.IsNullOrEmpty(path))
+            {
+                return GetOrCreateDirectory(path);
+            }
+            notificationService.ShowError("Configuration Error", "PathToTestsSequence is missing in appsettings.json");
+            return null;
+
         }
 
         private string? GetOrCreateDirectory(string path)
         {
-            if (Directory.Exists(path))
-            {
-                return path;
-            }
-
-            return TryCreateDirectory(path);
+            return Directory.Exists(path) ? path : TryCreateDirectory(path);
         }
 
         private string? TryCreateDirectory(string path)
@@ -107,7 +101,7 @@ namespace Final_Test_Hybrid.Services
             }
             catch (Exception ex)
             {
-                NotifyError("Path Error", $"Could not create directory: {path}. {ex.Message}");
+                notificationService.ShowError("Path Error", $"Could not create directory: {path}. {ex.Message}");
                 return null;
             }
         }
@@ -130,7 +124,7 @@ namespace Final_Test_Hybrid.Services
             {
                 return true;
             }
-            NotifyError("Configuration Error", "PathToTestSteps is missing in appsettings.json");
+            notificationService.ShowError("Configuration Error", "PathToTestSteps is missing in appsettings.json");
             return false;
         }
 
@@ -140,7 +134,7 @@ namespace Final_Test_Hybrid.Services
             {
                 return true;
             }
-            NotifyError("Path Error", $"Path not found: {path}");
+            notificationService.ShowError("Path Error", $"Path not found: {path}");
             return false;
         }
 
@@ -151,16 +145,6 @@ namespace Final_Test_Hybrid.Services
                 return;
             }
             row.Columns[colIndex] = relativePath;
-        }
-
-        private void NotifyError(string summary, string detail)
-        {
-            notificationService.Notify(new NotificationMessage 
-            { 
-                Severity = NotificationSeverity.Error, 
-                Summary = summary, 
-                Detail = detail 
-            });
         }
     }
 }

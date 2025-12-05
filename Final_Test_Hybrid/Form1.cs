@@ -18,6 +18,7 @@ namespace Final_Test_Hybrid
             SettingConfiguration(services);
             services.AddScoped<IFilePickerService, WinFormsFilePickerService>();
             services.AddScoped<ISequenceExcelService, SequenceExcelService>();
+            services.AddScoped<INotificationService, NotificationServiceWrapper>();
             services.AddScoped<TestSequenceService>();
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
