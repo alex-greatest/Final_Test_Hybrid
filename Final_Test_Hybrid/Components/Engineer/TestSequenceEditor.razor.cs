@@ -9,6 +9,7 @@ public partial class TestSequenceEditor : IDisposable
 {
     [Inject]
     public required IFilePickerService FilePickerService { get; set; }
+
     private RadzenDataGrid<SequenceRow>? _grid;
     private List<SequenceRow> _rows = [];
     private readonly int _columnCount = 4;

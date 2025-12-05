@@ -29,7 +29,7 @@ public partial class TestSequenceEditor
         {
             return;
         }
-        InvokeAsync(async () => await ExecuteContextAction((SequenceContextAction)actionValue, row));
+        _ = InvokeAsync(() => ExecuteContextAction((SequenceContextAction)actionValue, row));
     }
 
     private async Task ExecuteContextAction(SequenceContextAction action, SequenceRow row)
@@ -38,14 +38,8 @@ public partial class TestSequenceEditor
         {
             return;
         }
-        await RunAction(action, row);
+        await GetActionTask(action, row);
         await RefreshGrid();
-    }
-
-    private async Task RunAction(SequenceContextAction action, SequenceRow row)
-    {
-        var task = GetActionTask(action, row);
-        await task;
     }
 
     private Task GetActionTask(SequenceContextAction action, SequenceRow row)
@@ -91,6 +85,11 @@ public partial class TestSequenceEditor
     private async Task ProceedWithDelete(SequenceRow currentRow)
     {
         await PerformDeleteAnimation(currentRow);
+        await RemoveRowAndRefreshIfNotDisposed(currentRow);
+    }
+
+    private async Task RemoveRowAndRefreshIfNotDisposed(SequenceRow currentRow)
+    {
         if (_disposed)
         {
             return;
@@ -103,10 +102,15 @@ public partial class TestSequenceEditor
     {
         TestSequenceService.PrepareForDelete(currentRow);
         await RefreshGrid();
+        await DelayIfNotDisposed(500);
+    }
+
+    private async Task DelayIfNotDisposed(int milliseconds)
+    {
         if (_disposed)
         {
             return;
         }
-        await Task.Delay(500);
+        await Task.Delay(milliseconds);
     }
 }

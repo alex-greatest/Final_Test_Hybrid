@@ -7,10 +7,11 @@ public partial class TestSequenceEditor
 {
     private void OnRowRender(RowRenderEventArgs<SequenceRow> args)
     {
-        if (!string.IsNullOrEmpty(args.Data.CssClass))
+        if (string.IsNullOrEmpty(args.Data.CssClass))
         {
-            args.Attributes.Add("class", args.Data.CssClass);
+            return;
         }
+        args.Attributes.Add("class", args.Data.CssClass);
     }
 
     private async Task RefreshGrid()
@@ -24,35 +25,55 @@ public partial class TestSequenceEditor
 
     private async Task ReloadGrid()
     {
-        if (_grid == null || _disposed)
+        if (ShouldSkipGridReload())
         {
-             return;
+            return;
         }
-        await _grid.Reload();
-        if (!_disposed)
+        await _grid!.Reload();
+        InvokeStateHasChangedIfNotDisposed();
+    }
+
+    private bool ShouldSkipGridReload()
+    {
+        return _grid == null || _disposed;
+    }
+
+    private void InvokeStateHasChangedIfNotDisposed()
+    {
+        if (_disposed)
         {
-            StateHasChanged();
+            return;
         }
+        StateHasChanged();
     }
 
     private async Task AnimateNewRow(SequenceRow newRow)
     {
         await RefreshGrid();
+        await WaitForAnimationIfNotDisposed();
+        ClearRowCssClassIfNotDisposed(newRow);
+    }
+
+    private async Task WaitForAnimationIfNotDisposed()
+    {
         if (_disposed)
         {
             return;
         }
         await Task.Delay(1000);
+    }
+
+    private void ClearRowCssClassIfNotDisposed(SequenceRow row)
+    {
         if (_disposed)
         {
             return;
         }
-        newRow.CssClass = "";
+        row.CssClass = "";
         StateHasChanged();
     }
 
     private void OnRowSelect(SequenceRow row)
     {
-        // Handle row selection
     }
 }
