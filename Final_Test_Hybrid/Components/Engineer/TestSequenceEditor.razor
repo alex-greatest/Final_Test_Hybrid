@@ -6,6 +6,13 @@
 @inject TestSequenceService TestSequenceService
 
 <div class="editor-layout">
+    @if (_isLoading)
+    {
+        <div class="spinner-overlay">
+            <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large" />
+        </div>
+    }
+
     <!-- Top Header: Parallel Modules -->
     <div class="area-top-header">
         <div class="top-header-content">
@@ -64,8 +71,8 @@
 
     <!-- Right Control Panel -->
     <div class="area-right-panel">
-        <RadzenButton Text="Open" Icon="folder_open" Class="right-panel-btn" Click="@OpenSequence" />
-        <RadzenButton Text="Save" Icon="save" Class="right-panel-btn" Click="@SaveSequence" />
-        <RadzenButton Text="Save As" Icon="save_as" Class="right-panel-btn" Click="@SaveSequenceAs" />
+        <RadzenButton Text="Open" Icon="folder_open" Class="right-panel-btn" Click="@OpenSequence" Disabled="@_isLoading" />
+        <RadzenButton Text="Save" Icon="save" Class="right-panel-btn" Click="@SaveSequence" Disabled="@_isLoading" />
+        <RadzenButton Text="Save As" Icon="save_as" Class="right-panel-btn" Click="@SaveSequenceAs" Disabled="@_isLoading" />
     </div>
 </div>

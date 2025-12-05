@@ -21,6 +21,7 @@
     background-color: #d4d4d4;
     font-family: 'Segoe UI', sans-serif;
     overflow: hidden;
+    position: relative; /* For absolute positioning of spinner */
 }
 
 /* Header Areas */
@@ -226,4 +227,18 @@
 @keyframes fade-out-red {
     0% { opacity: 1; transform: translateX(0); background-color: #ef9a9a; }
     100% { opacity: 0; transform: translateX(-20px); background-color: #b71c1c; } /* Move further left */
+}
+
+/* Spinner Overlay */
+.spinner-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.3); /* Semi-transparent background */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Ensure it's on top */
 }
