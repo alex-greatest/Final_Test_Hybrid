@@ -1,9 +1,7 @@
-﻿@using Microsoft.JSInterop
-@inject IJSRuntime JSRuntime
-@implements IAsyncDisposable
+﻿@inherits Final_Test_Hybrid.Components.Base.GridInplaceEditorBase<AiCallCheck.AiCallCheckItem>
 
-<div id="@containerId">
-    <RadzenDataGrid @ref="grid" Data="@items" TItem="AiCallCheckItem"
+<div id="@ContainerId">
+    <RadzenDataGrid @ref="Grid" Data="@Items" TItem="AiCallCheckItem"
                     EditMode="DataGridEditMode.Single"
                     CellClick="@OnCellClick"
                     RowUpdate="@OnUpdateRow"
@@ -13,7 +11,7 @@
                 <EditTemplate Context="item">
                     @if (IsEditing(nameof(item.PlcTag)))
                     {
-                        <RadzenTextBox Style="width:100%" @bind-Value="item.PlcTag" />
+                        <RadzenTextBox class="w-full" @bind-Value="item.PlcTag" />
                     }
                     else
                     {
@@ -26,7 +24,7 @@
                 <EditTemplate Context="item">
                     @if (IsEditing(nameof(item.Type)))
                     {
-                        <RadzenTextBox Style="width:100%" @bind-Value="item.Type" />
+                        <RadzenTextBox class="w-full" @bind-Value="item.Type" />
                     }
                     else
                     {
@@ -43,7 +41,7 @@
                 <EditTemplate Context="item">
                     @if (IsEditing(nameof(item.Raw)))
                     {
-                        <RadzenNumeric TValue="double" Style="width:100%" @bind-Value="item.Raw" />
+                        <RadzenNumeric TValue="double" class="w-full" @bind-Value="item.Raw" />
                     }
                     else
                     {
@@ -59,7 +57,7 @@
                 <EditTemplate Context="item">
                     @if (IsEditing(nameof(item.Min)))
                     {
-                        <RadzenNumeric TValue="double" Style="width:100%" @bind-Value="item.Min" />
+                        <RadzenNumeric TValue="double" class="w-full" @bind-Value="item.Min" />
                     }
                     else
                     {
@@ -75,7 +73,7 @@
                 <EditTemplate Context="item">
                     @if (IsEditing(nameof(item.Max)))
                     {
-                        <RadzenNumeric TValue="double" Style="width:100%" @bind-Value="item.Max" />
+                        <RadzenNumeric TValue="double" class="w-full" @bind-Value="item.Max" />
                     }
                     else
                     {
@@ -91,7 +89,7 @@
                 <EditTemplate Context="item">
                     @if (IsEditing(nameof(item.Multiplier)))
                     {
-                        <RadzenNumeric TValue="double" Style="width:100%" @bind-Value="item.Multiplier" />
+                        <RadzenNumeric TValue="double" class="w-full" @bind-Value="item.Multiplier" />
                     }
                     else
                     {
@@ -107,7 +105,7 @@
                 <EditTemplate Context="item">
                     @if (IsEditing(nameof(item.Offset)))
                     {
-                        <RadzenNumeric TValue="double" Style="width:100%" @bind-Value="item.Offset" />
+                        <RadzenNumeric TValue="double" class="w-full" @bind-Value="item.Offset" />
                     }
                     else
                     {
@@ -123,7 +121,7 @@
                 <EditTemplate Context="item">
                     @if (IsEditing(nameof(item.Calculated)))
                     {
-                        <RadzenNumeric TValue="double" Style="width:100%" @bind-Value="item.Calculated" />
+                        <RadzenNumeric TValue="double" class="w-full" @bind-Value="item.Calculated" />
                     }
                     else
                     {

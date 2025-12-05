@@ -1,5 +1,3 @@
-@inject DialogService DialogService
-
 <div class="engineering-container">
     <div class="button-stack">
         <!-- Hand Program: Hammer icon (Reddish) -->
@@ -29,32 +27,3 @@
         <RadzenDropDown Data="@languages" @bind-Value="selectedLanguage" Style="width: 250px;" />
     </div>
 </div>
-
-@code {
-    string selectedLanguage = "French (fr)";
-    
-    List<string> languages = new List<string> 
-    { 
-        "English (en)", 
-        "French (fr)", 
-        "German (de)",
-        "Spanish (es)",
-        "Italian (it)",
-        "Russian (ru)"
-    };
-
-    async Task OpenTestSequenceEditor()
-    {
-        await DialogService.OpenAsync<TestSequenceEditor>("Test Sequence Editor",
-               new Dictionary<string, object>(),
-               new DialogOptions() 
-               { 
-                   Width = "95vw", 
-                   Height = "95vh", 
-                   Resizable = true, 
-                   Draggable = true,
-                   CssClass = "test-sequence-editor-dialog",
-                   CloseDialogOnOverlayClick = true
-               });
-    }
-}
