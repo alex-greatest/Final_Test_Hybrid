@@ -32,9 +32,9 @@ public partial class TestSequenceEditor : IDisposable
     {
         var menuItems = new List<ContextMenuItem>
         {
-            new() { Text = "Insert Test Step", Value = 1 },
-            new() { Text = "Insert Row Before", Value = 2 },
-            new() { Text = "Delete Row", Value = 4 },
+            new() { Text = "Insert Test Step", Value = (int)SequenceContextAction.InsertStep },
+            new() { Text = "Insert Row Before", Value = (int)SequenceContextAction.InsertRowBefore },
+            new() { Text = "Delete Row", Value = (int)SequenceContextAction.DeleteRow },
         };
 
         ContextMenuService.Open(args, menuItems, (e) => OnMenuItemClick(e, args.Data));
@@ -43,29 +43,29 @@ public partial class TestSequenceEditor : IDisposable
     private void OnMenuItemClick(MenuItemEventArgs e, SequenceRow row)
     {
         ContextMenuService.Close();
-        var actionValue = (int)e.Value;
+        if (e.Value is not int actionValue) return;
 
-        InvokeAsync(async () => await ExecuteContextAction(actionValue, row));
+        InvokeAsync(async () => await ExecuteContextAction((SequenceContextAction)actionValue, row));
     }
 
-    private async Task ExecuteContextAction(int actionValue, SequenceRow row)
+    private async Task ExecuteContextAction(SequenceContextAction action, SequenceRow row)
     {
         if (_disposed)
         {
             return;
         }
 
-        await RunAction(actionValue, row);
+        await RunAction(action, row);
         await RefreshGrid();
     }
 
-    private async Task RunAction(int actionValue, SequenceRow row)
+    private async Task RunAction(SequenceContextAction action, SequenceRow row)
     {
-        var task = actionValue switch
+        var task = action switch
         {
-            1 => InsertRowAfter(row),
-            2 => InsertRowBefore(row),
-            4 => DeleteRow(row),
+            SequenceContextAction.InsertStep => InsertRowAfter(row),
+            SequenceContextAction.InsertRowBefore => InsertRowBefore(row),
+            SequenceContextAction.DeleteRow => DeleteRow(row),
             _ => Task.CompletedTask
         };
         await task;
@@ -143,9 +143,9 @@ public partial class TestSequenceEditor : IDisposable
 
     private async Task PerformDeleteAnimation(SequenceRow currentRow)
     {
-        var deleteAnimationTask = TestSequenceService.PrepareForDelete(currentRow);
+        TestSequenceService.PrepareForDelete(currentRow);
         await RefreshGrid();
-        await deleteAnimationTask;
+        await Task.Delay(500);
     }
 
     private void OnRowSelect(SequenceRow row)
@@ -155,20 +155,37 @@ public partial class TestSequenceEditor : IDisposable
 
     private void OpenFolder(SequenceRow row, int colIndex)
     {
-        TestSequenceService.OpenFolder(row, colIndex);
-        StateHasChanged();
+        try
+        {
+            var rootPath = TestSequenceService.GetValidRootPath();
+            var relativePath = FilePickerService.PickFileRelative(rootPath);
+            TestSequenceService.UpdateCell(row, colIndex, relativePath);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+             NotifyError(ex.Message);
+        }
     }
 
     private async Task OpenSequence()
     {
-        var defaultPath = TestSequenceService.GetTestsSequencePath();
-        var filePath = FilePickerService.PickFile(defaultPath ?? "", "Excel Files (*.xlsx)|*.xlsx");
-        if (string.IsNullOrEmpty(filePath))
+        try
         {
-            return;
-        }
+            var defaultPath = TestSequenceService.GetTestsSequencePath();
+            var filePath = FilePickerService.PickFile(defaultPath, "Excel Files (*.xlsx)|*.xlsx");
+            
+            if (string.IsNullOrEmpty(filePath))
+            {
+                return;
+            }
 
-        await LoadSequenceFromFile(filePath);
+            await LoadSequenceFromFile(filePath);
+        }
+        catch (Exception ex)
+        {
+            NotifyError(ex.Message);
+        }
     }
 
     private async Task LoadSequenceFromFile(string filePath)
@@ -194,6 +211,16 @@ public partial class TestSequenceEditor : IDisposable
             Severity = NotificationSeverity.Success, 
             Summary = "Opened", 
             Detail = $"Sequence loaded from {TestSequenceService.CurrentFileName}" 
+        });
+    }
+
+    private void NotifyError(string message)
+    {
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Severity = NotificationSeverity.Error, 
+            Summary = "Error", 
+            Detail = message 
         });
     }
 
@@ -230,36 +257,45 @@ public partial class TestSequenceEditor : IDisposable
 
     private void SetDefaultFilePath()
     {
-        var directory = TestSequenceService.GetTestsSequencePath();
-        if (string.IsNullOrEmpty(directory))
+        try 
         {
-            SaveSequenceAs();
-            return;
-        }
+            var directory = TestSequenceService.GetTestsSequencePath();
+            var fileName = TestSequenceService.CurrentFileName;
+            if (!fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+            {
+                fileName += ".xlsx";
+            }
 
-        var fileName = TestSequenceService.CurrentFileName;
-        if (!fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+            TestSequenceService.CurrentFilePath = Path.Combine(directory, fileName);
+            PerformSave(TestSequenceService.CurrentFilePath);
+        }
+        catch (Exception ex)
         {
-            fileName += ".xlsx";
+             NotifyError(ex.Message);
         }
-
-        TestSequenceService.CurrentFilePath = Path.Combine(directory, fileName);
-        PerformSave(TestSequenceService.CurrentFilePath);
     }
 
     private void SaveSequenceAs()
     {
-        var defaultPath = TestSequenceService.GetTestsSequencePath();
-        var filePath = FilePickerService.SaveFile("sequence", defaultPath, "Excel Files (*.xlsx)|*.xlsx");
-        if (string.IsNullOrEmpty(filePath))
+        try
         {
-            return;
-        }
+            var defaultPath = TestSequenceService.GetTestsSequencePath();
+            var filePath = FilePickerService.SaveFile("sequence", defaultPath, "Excel Files (*.xlsx)|*.xlsx");
+            
+            if (string.IsNullOrEmpty(filePath))
+            {
+                return;
+            }
 
-        TestSequenceService.CurrentFilePath = filePath;
-        TestSequenceService.CurrentFileName = Path.GetFileNameWithoutExtension(filePath);
-        StateHasChanged(); // Update header
-        PerformSave(filePath);
+            TestSequenceService.CurrentFilePath = filePath;
+            TestSequenceService.CurrentFileName = Path.GetFileNameWithoutExtension(filePath);
+            StateHasChanged(); // Update header
+            PerformSave(filePath);
+        }
+        catch (Exception ex)
+        {
+             NotifyError(ex.Message);
+        }
     }
 
     private void PerformSave(string filePath)

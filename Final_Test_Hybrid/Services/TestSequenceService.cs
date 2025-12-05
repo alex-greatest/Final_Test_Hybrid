@@ -4,22 +4,17 @@ using Microsoft.Extensions.Configuration;
 namespace Final_Test_Hybrid.Services
 {
     public class TestSequenceService(
-        IFilePickerService filePickerService,
         ISequenceExcelService sequenceExcelService,
-        IConfiguration configuration,
-        INotificationService notificationService)
+        IConfiguration configuration)
     {
         public string CurrentFileName { get; set; } = "sequence";
         public string? CurrentFilePath { get; set; }
         
         public List<SequenceRow> InitializeRows(int count, int columnCount)
         {
-            var rows = new List<SequenceRow>();
-            for (var i = 0; i < count; i++)
-            {
-                rows.Add(new SequenceRow(columnCount));
-            }
-            return rows;
+            return Enumerable.Range(0, count)
+                .Select(_ => new SequenceRow(columnCount))
+                .ToList();
         }
 
         public SequenceRow? InsertRowAfter(List<SequenceRow> rows, SequenceRow currentRow, int columnCount)
@@ -41,27 +36,14 @@ namespace Final_Test_Hybrid.Services
             return newRow;
         }
 
-        public async Task PrepareForDelete(SequenceRow row)
+        public void PrepareForDelete(SequenceRow row)
         {
             row.CssClass = "row-animate-delete";
-            await Task.Delay(500);
         }
 
         public void RemoveRow(List<SequenceRow> rows, SequenceRow row)
         {
             rows.Remove(row);
-        }
-
-        public void OpenFolder(SequenceRow row, int colIndex)
-        {
-            var rootPath = GetValidRootPath();
-            if (rootPath == null)
-            {
-                return;
-            }
-
-            var relativePath = filePickerService.PickFileRelative(rootPath);
-            UpdateRowColumn(row, colIndex, relativePath);
         }
 
         public void SaveToExcel(string path, List<SequenceRow> rows)
@@ -74,25 +56,18 @@ namespace Final_Test_Hybrid.Services
             return sequenceExcelService.LoadSequence(path, columnCount);
         }
 
-        public string? GetTestsSequencePath()
+        public string GetTestsSequencePath()
         {
-            var path = configuration["Paths:PathToTestsSequence"];
-
-            if (!string.IsNullOrEmpty(path))
-            {
-                return GetOrCreateDirectory(path);
-            }
-            notificationService.ShowError("Configuration Error", "PathToTestsSequence is missing in appsettings.json");
-            return null;
-
+            var path = GetRequiredConfigPath("Paths:PathToTestsSequence");
+            return GetOrCreateDirectory(path);
         }
 
-        private string? GetOrCreateDirectory(string path)
+        private string GetOrCreateDirectory(string path)
         {
-            return Directory.Exists(path) ? path : TryCreateDirectory(path);
+            return Directory.Exists(path) ? path : CreateDirectory(path);
         }
 
-        private string? TryCreateDirectory(string path)
+        private string CreateDirectory(string path)
         {
             try
             {
@@ -101,44 +76,36 @@ namespace Final_Test_Hybrid.Services
             }
             catch (Exception ex)
             {
-                notificationService.ShowError("Path Error", $"Could not create directory: {path}. {ex.Message}");
-                return null;
+                throw new IOException($"Path Error: Could not create directory: {path}. {ex.Message}", ex);
             }
         }
 
-        private string? GetValidRootPath()
+        public string GetValidRootPath()
         {
-            var path = configuration["Paths:PathToTestSteps"];
-            
-            return !ValidatePathConfigured(path) ? null : CheckPathExists(path!);
+            var path = GetRequiredConfigPath("Paths:PathToTestSteps");
+            ValidatePathExists(path);
+            return path;
         }
 
-        private string? CheckPathExists(string path)
+        private string GetRequiredConfigPath(string key)
         {
-            return !ValidatePathExists(path) ? null : path;
-        }
-
-        private bool ValidatePathConfigured(string? path)
-        {
-            if (!string.IsNullOrEmpty(path))
+            var path = configuration[key];
+            if (string.IsNullOrEmpty(path))
             {
-                return true;
+                throw new InvalidOperationException($"Configuration Error: {key} is missing in appsettings.json");
             }
-            notificationService.ShowError("Configuration Error", "PathToTestSteps is missing in appsettings.json");
-            return false;
+            return path;
         }
 
-        private bool ValidatePathExists(string path)
+        private void ValidatePathExists(string path)
         {
-            if (Directory.Exists(path))
+            if (!Directory.Exists(path))
             {
-                return true;
+                throw new DirectoryNotFoundException($"Path Error: Path not found: {path}");
             }
-            notificationService.ShowError("Path Error", $"Path not found: {path}");
-            return false;
         }
 
-        private void UpdateRowColumn(SequenceRow row, int colIndex, string? relativePath)
+        public void UpdateCell(SequenceRow row, int colIndex, string? relativePath)
         {
             if (string.IsNullOrEmpty(relativePath))
             {

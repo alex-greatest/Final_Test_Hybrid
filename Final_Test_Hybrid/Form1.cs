@@ -2,6 +2,7 @@ using Final_Test_Hybrid.Services;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Radzen;
 
 namespace Final_Test_Hybrid
@@ -16,6 +17,7 @@ namespace Final_Test_Hybrid
             HandleException();
             var services = new ServiceCollection();
             SettingConfiguration(services);
+            SettingDevTools(services);
             services.AddScoped<IFilePickerService, WinFormsFilePickerService>();
             services.AddScoped<ISequenceExcelService, SequenceExcelService>();
             services.AddScoped<INotificationService, NotificationServiceWrapper>();
@@ -47,6 +49,26 @@ namespace Final_Test_Hybrid
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .Build();
             services.AddSingleton<IConfiguration>(_config);
+        }
+        
+        private void SettingDevTools(ServiceCollection services)
+        {
+#if DEBUG
+            services.AddBlazorWebViewDeveloperTools();
+            services.AddLogging(logging =>
+            {
+                logging.SetMinimumLevel(LogLevel.Information);
+                logging.AddDebug();
+                logging.AddConsole();
+                logging.AddFile(_config?.GetSection("Logging")!);
+            });
+#else
+                services.AddLogging(logging =>
+                {
+                    logging.SetMinimumLevel(LogLevel.Error);
+                    logging.AddFile(_config?.GetSection("Logging"));
+                });
+#endif
         }
     }
 }
