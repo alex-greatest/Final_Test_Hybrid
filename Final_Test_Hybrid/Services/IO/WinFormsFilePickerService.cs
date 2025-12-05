@@ -1,6 +1,8 @@
-namespace Final_Test_Hybrid.Services
+using Microsoft.Extensions.Logging;
+
+namespace Final_Test_Hybrid.Services.IO
 {
-    public class WinFormsFilePickerService : IFilePickerService
+    public class WinFormsFilePickerService(ILogger<WinFormsFilePickerService> logger) : IFilePickerService
     {
         public string? PickFile(string initialDirectory, string filter = "")
         {
@@ -13,7 +15,7 @@ namespace Final_Test_Hybrid.Services
             return string.IsNullOrEmpty(selectedFile) ? null : ProcessSelection(selectedFile, rootPath);
         }
 
-        public string? SaveFile(string defaultName, string? initialDirectory = null, string filter = "Excel Files (*.xlsx)|*.xlsx|All files (*.*)|*.*")
+        public string? SaveFile(string defaultName, string? initialDirectory = null, string filter = "Файлы Excel (*.xlsx)|*.xlsx|Все файлы (*.*)|*.*")
         {
             using var saveFileDialog = new SaveFileDialog();
             saveFileDialog.FileName = defaultName;
@@ -54,6 +56,7 @@ namespace Final_Test_Hybrid.Services
 
         private void ShowInvalidPathMessage(string absRoot)
         {
+            logger.LogWarning("Попытка выбора файла вне разрешенной директории: {RootPath}", absRoot);
             MessageBox.Show(
                 $"Выбранный файл находится за пределами разрешенной папки:\n{absRoot}\n\nПожалуйста, выберите файл внутри этой директории.", 
                 "Недопустимый выбор", 

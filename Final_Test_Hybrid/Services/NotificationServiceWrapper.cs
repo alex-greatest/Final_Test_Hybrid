@@ -52,12 +52,13 @@ namespace Final_Test_Hybrid.Services
             try
             {
                 var messages = notificationService.Messages;
-                if (messages == null) return;
-
+                if (messages == null)
+                {
+                    return;
+                }
                 var existingMessages = messages
                     .Where(m => m.Payload is string payloadId && payloadId == id)
                     .ToList();
-
                 foreach (var msg in existingMessages)
                 {
                     messages.Remove(msg);

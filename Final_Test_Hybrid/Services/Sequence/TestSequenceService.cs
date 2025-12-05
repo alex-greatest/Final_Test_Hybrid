@@ -1,11 +1,13 @@
 using Final_Test_Hybrid.Models;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
-namespace Final_Test_Hybrid.Services
+namespace Final_Test_Hybrid.Services.Sequence
 {
     public class TestSequenceService(
         ISequenceExcelService sequenceExcelService,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ILogger<TestSequenceService> logger)
     {
         public string CurrentFileName { get; set; } = "sequence";
         public string? CurrentFilePath { get; set; }
@@ -76,7 +78,8 @@ namespace Final_Test_Hybrid.Services
             }
             catch (Exception ex)
             {
-                throw new IOException($"Path Error: Could not create directory: {path}. {ex.Message}", ex);
+                logger.LogError(ex, "Ошибка пути: Не удалось создать директорию: {Path}", path);
+                throw new IOException($"Ошибка пути: Не удалось создать директорию: {path}. {ex.Message}", ex);
             }
         }
 
@@ -90,19 +93,22 @@ namespace Final_Test_Hybrid.Services
         private string GetRequiredConfigPath(string key)
         {
             var path = configuration[key];
-            if (string.IsNullOrEmpty(path))
+            if (!string.IsNullOrEmpty(path))
             {
-                throw new InvalidOperationException($"Configuration Error: {key} is missing in appsettings.json");
+                return path;
             }
-            return path;
+            logger.LogError("Ошибка конфигурации: {Key} отсутствует в appsettings.json", key);
+            throw new InvalidOperationException($"Ошибка конфигурации: {key} отсутствует в appsettings.json");
         }
 
         private void ValidatePathExists(string path)
         {
-            if (!Directory.Exists(path))
+            if (Directory.Exists(path))
             {
-                throw new DirectoryNotFoundException($"Path Error: Path not found: {path}");
+                return;
             }
+            logger.LogError("Ошибка пути: Путь не найден: {Path}", path);
+            throw new DirectoryNotFoundException($"Ошибка пути: Путь не найден: {path}");
         }
 
         public void UpdateCell(SequenceRow row, int colIndex, string? relativePath)

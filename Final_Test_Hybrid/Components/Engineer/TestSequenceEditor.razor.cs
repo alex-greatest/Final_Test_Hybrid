@@ -1,8 +1,11 @@
 using Radzen;
 using Radzen.Blazor;
 using Final_Test_Hybrid.Models;
+using Final_Test_Hybrid.Models.Enum;
 using Microsoft.AspNetCore.Components;
-using Final_Test_Hybrid.Services;
+using Final_Test_Hybrid.Services.IO;
+using Final_Test_Hybrid.Services.UI;
+using Final_Test_Hybrid.Services.Sequence;
 
 namespace Final_Test_Hybrid.Components.Engineer;
 
@@ -32,9 +35,9 @@ public partial class TestSequenceEditor : IDisposable
     {
         var menuItems = new List<ContextMenuItem>
         {
-            new() { Text = "Insert Test Step", Value = (int)SequenceContextAction.InsertStep },
-            new() { Text = "Insert Row Before", Value = (int)SequenceContextAction.InsertRowBefore },
-            new() { Text = "Delete Row", Value = (int)SequenceContextAction.DeleteRow },
+            new() { Text = "Вставить шаг теста", Value = (int)SequenceContextAction.InsertStep },
+            new() { Text = "Вставить строку перед", Value = (int)SequenceContextAction.InsertRowBefore },
+            new() { Text = "Удалить строку", Value = (int)SequenceContextAction.DeleteRow },
         };
 
         ContextMenuService.Open(args, menuItems, (e) => OnMenuItemClick(e, args.Data));
@@ -206,32 +209,35 @@ public partial class TestSequenceEditor : IDisposable
 
     private void NotifySuccess(string filePath)
     {
-        NotificationService.Notify(new NotificationMessage 
-        { 
-            Severity = NotificationSeverity.Success, 
-            Summary = "Opened", 
-            Detail = $"Sequence loaded from {TestSequenceService.CurrentFileName}" 
-        });
+        NotificationService.ShowSuccess(
+            "Открыто", 
+            $"Последовательность загружена из {TestSequenceService.CurrentFileName}", 
+            duration: 4000,
+            closeOnClick: true,
+            style: "width: 400px; white-space: pre-wrap;"
+        );
     }
 
     private void NotifyError(string message)
     {
-        NotificationService.Notify(new NotificationMessage 
-        { 
-            Severity = NotificationSeverity.Error, 
-            Summary = "Error", 
-            Detail = message 
-        });
+        NotificationService.ShowError(
+            "Ошибка", 
+            message, 
+            duration: 10000,
+            closeOnClick: true,
+            style: "width: 400px; white-space: pre-wrap;"
+        );
     }
 
     private void NotifyLoadError(Exception ex)
     {
-        NotificationService.Notify(new NotificationMessage 
-        { 
-            Severity = NotificationSeverity.Error, 
-            Summary = "Error", 
-            Detail = $"Failed to load: {ex.Message}" 
-        });
+        NotificationService.ShowError(
+            "Ошибка", 
+            $"Не удалось загрузить: {ex.Message}", 
+            duration: 10000,
+            closeOnClick: true,
+            style: "width: 400px; white-space: pre-wrap;"
+        );
     }
 
     private async Task TryLoadFromService(string filePath)
@@ -313,32 +319,31 @@ public partial class TestSequenceEditor : IDisposable
 
     private void NotifySaveSuccess()
     {
-        NotificationService.Notify(new NotificationMessage 
-        { 
-            Severity = NotificationSeverity.Success, 
-            Summary = "Saved", 
-            Detail = "Sequence saved successfully" 
-        });
+        NotificationService.ShowSuccess(
+            "Сохранено", 
+            "Последовательность успешно сохранена", 
+            duration: 4000,
+            closeOnClick: true,
+            style: "width: 400px; white-space: pre-wrap;"
+        );
     }
 
     private void NotifySaveError(Exception ex)
     {
-        var message = "An error occurred while saving the file.";
+        var message = "Произошла ошибка при сохранении файла.";
         
         if (ex.Message.Contains("being used by another process"))
         {
-            message = "File is open in Excel! Please close it.";
+            message = "Файл открыт в Excel! Пожалуйста, закройте его.";
         }
 
-        NotificationService.Notify(new NotificationMessage 
-        { 
-            Severity = NotificationSeverity.Error, 
-            Summary = "Save Failed",
-            Detail = message,
-            Style = "width: 400px; white-space: pre-wrap;",
-            Duration = 10000,
-            CloseOnClick = true 
-        });
+        NotificationService.ShowError(
+            "Ошибка сохранения",
+            message,
+            duration: 10000,
+            closeOnClick: true,
+            style: "width: 400px; white-space: pre-wrap;"
+        );
     }
 
     private void CloseDialog()

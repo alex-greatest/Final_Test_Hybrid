@@ -8,14 +8,11 @@ namespace Final_Test_Hybrid.Components.Base;
 public abstract class GridInplaceEditorBase<TItem> : ComponentBase, IAsyncDisposable where TItem : class
 {
     [Inject]
-    protected IJSRuntime JSRuntime { get; set; } = default!;
-
+    protected IJSRuntime JsRuntime { get; set; } = null!;
     protected RadzenDataGrid<TItem> Grid { get; set; } = null!;
     protected List<TItem> Items { get; set; } = [];
-
-    protected TItem? ItemToUpdate;
-    protected string? EditingColumn;
-
+    private TItem? _itemToUpdate;
+    private string? _editingColumn;
     protected string ContainerId { get; set; } = $"grid-editor-{Guid.NewGuid()}";
     private DotNetObjectReference<GridInplaceEditorBase<TItem>>? _dotNetHelper;
     private bool _outsideClickHandlerRegistered;
@@ -30,7 +27,7 @@ public abstract class GridInplaceEditorBase<TItem> : ComponentBase, IAsyncDispos
 
     protected bool IsEditing(string propertyName)
     {
-        return EditingColumn == propertyName;
+        return _editingColumn == propertyName;
     }
 
     protected async Task OnCellClick(DataGridCellMouseEventArgs<TItem> args)
@@ -40,7 +37,7 @@ public abstract class GridInplaceEditorBase<TItem> : ComponentBase, IAsyncDispos
 
     private async Task SwitchEditMode(TItem item, string property)
     {
-        if (ItemToUpdate == item && EditingColumn == property)
+        if (_itemToUpdate == item && _editingColumn == property)
         {
             return;
         }
@@ -52,32 +49,32 @@ public abstract class GridInplaceEditorBase<TItem> : ComponentBase, IAsyncDispos
     {
         await CommitPreviousChanges();
 
-        ItemToUpdate = item;
-        EditingColumn = property;
+        _itemToUpdate = item;
+        _editingColumn = property;
 
         await Grid.EditRow(item);
     }
 
     private async Task CommitPreviousChanges()
     {
-        if (ItemToUpdate == null)
+        if (_itemToUpdate == null)
         {
             return;
         }
-        await Grid.UpdateRow(ItemToUpdate);
+        await Grid.UpdateRow(_itemToUpdate);
     }
 
     [JSInvokable]
     public async Task CloseEdit()
     {
-        if (ItemToUpdate == null)
+        if (_itemToUpdate == null)
         {
             return;
         }
 
-        await Grid.UpdateRow(ItemToUpdate);
-        ItemToUpdate = null;
-        EditingColumn = null;
+        await Grid.UpdateRow(_itemToUpdate);
+        _itemToUpdate = null;
+        _editingColumn = null;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -96,7 +93,7 @@ public abstract class GridInplaceEditorBase<TItem> : ComponentBase, IAsyncDispos
     {
         try
         {
-            await JSRuntime.InvokeVoidAsync("outsideClickHandler.add", ContainerId, _dotNetHelper);
+            await JsRuntime.InvokeVoidAsync("outsideClickHandler.add", ContainerId, _dotNetHelper);
             _outsideClickHandlerRegistered = true;
         }
         catch (JSException)
@@ -121,7 +118,7 @@ public abstract class GridInplaceEditorBase<TItem> : ComponentBase, IAsyncDispos
     {
         try
         {
-            await JSRuntime.InvokeVoidAsync("outsideClickHandler.remove", ContainerId);
+            await JsRuntime.InvokeVoidAsync("outsideClickHandler.remove", ContainerId);
         }
         catch
         {

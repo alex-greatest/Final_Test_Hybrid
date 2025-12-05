@@ -1,6 +1,6 @@
 using Final_Test_Hybrid.Models;
 
-namespace Final_Test_Hybrid.Services;
+namespace Final_Test_Hybrid.Services.Sequence;
 
 public interface ISequenceExcelService
 {

@@ -1,30 +1,47 @@
 using Final_Test_Hybrid.Models;
+using Microsoft.Extensions.Logging;
 using OfficeOpenXml;
 using FileInfo = System.IO.FileInfo;
 
-namespace Final_Test_Hybrid.Services;
+namespace Final_Test_Hybrid.Services.Sequence;
 
-public class SequenceExcelService : ISequenceExcelService
+public class SequenceExcelService(ILogger<SequenceExcelService> logger) : ISequenceExcelService
 {
     public void SaveSequence(string path, List<SequenceRow> rows)
     {
-        EnsureDirectoryExists(path);
+        try
+        {
+            EnsureDirectoryExists(path);
 
-        using var package = new ExcelPackage();
-        var worksheet = package.Workbook.Worksheets.Add("Sequence");
+            using var package = new ExcelPackage();
+            var worksheet = package.Workbook.Worksheets.Add("Sequence");
 
-        CreateHeader(worksheet);
-        PopulateData(worksheet, rows);
-        FormatWorksheet(worksheet);
+            CreateHeader(worksheet);
+            PopulateData(worksheet, rows);
+            FormatWorksheet(worksheet);
 
-        package.SaveAs(new FileInfo(path));
+            package.SaveAs(new FileInfo(path));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка сохранения последовательности в файл: {Path}", path);
+            throw;
+        }
     }
 
     public List<SequenceRow> LoadSequence(string path, int columnCount)
     {
-        using var package = new ExcelPackage(new FileInfo(path));
-        var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-        return worksheet == null ? [] : ParseWorksheet(worksheet, columnCount);
+        try
+        {
+            using var package = new ExcelPackage(new FileInfo(path));
+            var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+            return worksheet == null ? [] : ParseWorksheet(worksheet, columnCount);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка загрузки последовательности из файла: {Path}", path);
+            throw;
+        }
     }
 
     private void FormatWorksheet(ExcelWorksheet worksheet)
