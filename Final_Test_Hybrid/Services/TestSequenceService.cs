@@ -38,9 +38,10 @@ namespace Final_Test_Hybrid.Services
             return newRow;
         }
 
-        public void PrepareForDelete(SequenceRow row)
+        public async Task PrepareForDelete(SequenceRow row)
         {
             row.CssClass = "row-animate-delete";
+            await Task.Delay(500);
         }
 
         public void RemoveRow(List<SequenceRow> rows, SequenceRow row)

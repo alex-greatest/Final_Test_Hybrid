@@ -1,11 +1,15 @@
 /* Prevent scrolling on the dialog content */
 /* This targets the content wrapper injected by Radzen inside the dialog */
+/* NOTE: This is one of the few places we might need ::deep starting from root if the dialog is appended elsewhere, 
+   but typically global dialog styles are in app.css. 
+   If this file is scoped, ::deep works if the dialog content is rendered WITHIN this component's tree. */
 ::deep .test-sequence-editor-dialog .rz-dialog-content {
     padding: 0 !important;
     overflow: hidden !important;
     height: 100% !important; /* Ensure content takes full height */
 }
 
+/* Main Layout - scoped div */
 .editor-layout {
     display: grid;
     /* Left Header | Content | Right Panel */
@@ -62,7 +66,7 @@
     margin-left: -1px;
 }
 
-/* Arrow styles for vertical text - using specific classes to avoid confusion */
+/* Arrow styles for vertical text */
 .left-header-line {
     width: 3px;
     background: #000;
@@ -121,14 +125,15 @@
     justify-content: center; /* Align content to center */
 }
 
-/* Scoped manually to editor-layout since we aren't using isolation file */
-::deep .editor-layout .rz-datatable-td {
+/* Radzen DataGrid overrides */
+/* .editor-layout is scoped, but .rz-datatable-td is inside RadzenDataGrid (unscoped child) */
+.editor-layout ::deep .rz-datatable-td {
     padding: 2px !important;
     border-right: 1px solid #e0e0e0;
     border-bottom: 1px solid #e0e0e0;
 }
 
-::deep .editor-layout .rz-grid-table {
+.editor-layout ::deep .rz-grid-table {
     border-collapse: collapse;
 }
 
@@ -171,7 +176,8 @@
 }
 
 /* Right Panel Buttons */
-::deep .editor-layout .rz-button.right-panel-btn {
+/* .rz-button is inside .area-right-panel (scoped) but is a component */
+.area-right-panel ::deep .rz-button.right-panel-btn {
     width: 100%;
     justify-content: flex-start;
     text-align: left;
@@ -191,17 +197,18 @@
     line-height: 1.3 !important;
 }
 
-::deep .editor-layout .rz-button.right-panel-btn .rz-button-icon-left {
+.area-right-panel ::deep .rz-button.right-panel-btn .rz-button-icon-left {
     font-size: 24px !important; /* Slightly smaller than 28px */
     margin-right: 10px !important;
     color: #0069c0 !important; /* Blue icon color */
 }
 
-::deep .editor-layout .rz-button.right-panel-btn:hover {
+.area-right-panel ::deep .rz-button.right-panel-btn:hover {
     background-color: #e0e0e0 !important;
 }
 
 /* Animations */
+/* .row-animate-new is applied to TR by RadzenRowRender (inside grid) */
 ::deep .row-animate-new > td {
     animation: flash-green 1.0s ease-out; /* Quick animation */
 }
@@ -220,4 +227,3 @@
     0% { opacity: 1; transform: translateX(0); background-color: #ef9a9a; }
     100% { opacity: 0; transform: translateX(-20px); background-color: #b71c1c; } /* Move further left */
 }
-

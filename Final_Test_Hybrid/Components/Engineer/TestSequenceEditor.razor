@@ -187,10 +187,10 @@
             return;
         }
 
-        TestSequenceService.PrepareForDelete(currentRow);
+        Task deleteAnimationTask = TestSequenceService.PrepareForDelete(currentRow);
         await RefreshGrid();
         
-        await Task.Delay(800);
+        await deleteAnimationTask;
         
         if (_disposed)
         {
