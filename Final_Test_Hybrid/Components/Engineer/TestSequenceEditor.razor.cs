@@ -287,11 +287,21 @@ public partial class TestSequenceEditor : IDisposable
 
     private void NotifySaveError(Exception ex)
     {
+        var message = "An error occurred while saving the file.";
+        
+        // Простая эвристика для распространенной ошибки
+        if (ex.Message.Contains("being used by another process"))
+        {
+            message = "File is open in Excel! Please close it.";
+        }
+
         NotificationService.Notify(new NotificationMessage 
         { 
             Severity = NotificationSeverity.Error, 
-            Summary = "Error", 
-            Detail = $"Failed to save: {ex.Message}" 
+            Summary = "Save Failed", 
+            Detail = message,
+            Style = "width: 400px; white-space: pre-wrap;", // Убрали лишнюю ширину, так как текст короткий
+            Duration = 5000
         });
     }
 

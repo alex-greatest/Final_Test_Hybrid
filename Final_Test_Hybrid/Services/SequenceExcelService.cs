@@ -15,6 +15,7 @@ public class SequenceExcelService : ISequenceExcelService
 
         CreateHeader(worksheet);
         PopulateData(worksheet, rows);
+        FormatWorksheet(worksheet);
 
         package.SaveAs(new FileInfo(path));
     }
@@ -24,6 +25,12 @@ public class SequenceExcelService : ISequenceExcelService
         using var package = new ExcelPackage(new FileInfo(path));
         var worksheet = package.Workbook.Worksheets.FirstOrDefault();
         return worksheet == null ? [] : ParseWorksheet(worksheet, columnCount);
+    }
+
+    private void FormatWorksheet(ExcelWorksheet worksheet)
+    {
+        worksheet.Cells.Style.Font.Size = 14;
+        worksheet.Cells.AutoFitColumns();
     }
 
     private void EnsureDirectoryExists(string path)
@@ -90,4 +97,3 @@ public class SequenceExcelService : ISequenceExcelService
         return newRow;
     }
 }
-

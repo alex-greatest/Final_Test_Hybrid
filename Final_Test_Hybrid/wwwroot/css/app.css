@@ -122,18 +122,34 @@ svg {
 
 /* Fix Radzen Notification clipping */
 .rz-notification-message {
-    width: 450px !important; /* Increase width */
-    max-width: 90vw;
-    white-space: normal; /* Allow text wrap */
-    overflow: visible;
+    width: 600px !important; /* Significantly wider */
+    max-width: 95vw; /* Use almost full screen width on mobile */
+    white-space: pre-wrap !important; /* Preserve formatting but wrap */
+    word-break: break-all !important; /* Force break on long words like paths */
+    overflow-wrap: break-word !important;
+    height: auto !important; /* Allow height to grow */
 }
 
 .rz-notification-message-text {
-    white-space: normal !important; /* Force text wrap */
-    overflow: visible !important;
+    white-space: pre-wrap !important;
+    word-break: break-all !important;
+    overflow-wrap: break-word !important;
 }
 
-/* Ensure notifications are on top */
+/* Ensure notifications are on top and slightly shifted left */
 .rz-notification-container {
     z-index: 99999 !important;
+    right: 30px !important; /* Move away from the very edge */
+}
+
+/* Make close button more visible and larger */
+.rz-notification-close {
+    opacity: 1 !important;
+    font-size: 1.2rem !important;
+    padding: 5px !important;
+}
+
+.rz-notification-close:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
 }
