@@ -1,18 +1,18 @@
-using Radzen;
 using Final_Test_Hybrid.Models;
 using Final_Test_Hybrid.Models.Enum;
+using Radzen;
 
-namespace Final_Test_Hybrid.Components.Engineer;
+namespace Final_Test_Hybrid.Components.Engineer.Sequence;
 
 public partial class TestSequenceEditor
 {
     private void OnCellContextMenu(DataGridCellMouseEventArgs<SequenceRow> args)
     {
         var menuItems = GetContextMenuItems();
-        ContextMenuService.Open(args, menuItems, (e) => OnMenuItemClick(e, args.Data));
+        ContextMenuService.Open(args, menuItems, e => OnMenuItemClick(e, args.Data));
     }
 
-    private List<ContextMenuItem> GetContextMenuItems()
+    private static List<ContextMenuItem> GetContextMenuItems()
     {
         return
         [
@@ -38,11 +38,10 @@ public partial class TestSequenceEditor
         {
             return;
         }
-        await GetActionTask(action, row);
-        await RefreshGrid();
+        await ExecuteAction(action, row);
     }
 
-    private Task GetActionTask(SequenceContextAction action, SequenceRow row)
+    private Task ExecuteAction(SequenceContextAction action, SequenceRow row)
     {
         return action switch
         {
@@ -79,16 +78,13 @@ public partial class TestSequenceEditor
         {
             return;
         }
-        await ProceedWithDelete(currentRow);
+        TestSequenceService.PrepareForDelete(currentRow);
+        await RefreshGrid();
+        await DelayAsync(500);
+        await RemoveAndRefresh(currentRow);
     }
 
-    private async Task ProceedWithDelete(SequenceRow currentRow)
-    {
-        await PerformDeleteAnimation(currentRow);
-        await RemoveRowAndRefreshIfNotDisposed(currentRow);
-    }
-
-    private async Task RemoveRowAndRefreshIfNotDisposed(SequenceRow currentRow)
+    private async Task RemoveAndRefresh(SequenceRow currentRow)
     {
         if (_disposed)
         {
@@ -96,21 +92,5 @@ public partial class TestSequenceEditor
         }
         TestSequenceService.RemoveRow(_rows, currentRow);
         await RefreshGrid();
-    }
-
-    private async Task PerformDeleteAnimation(SequenceRow currentRow)
-    {
-        TestSequenceService.PrepareForDelete(currentRow);
-        await RefreshGrid();
-        await DelayIfNotDisposed(500);
-    }
-
-    private async Task DelayIfNotDisposed(int milliseconds)
-    {
-        if (_disposed)
-        {
-            return;
-        }
-        await Task.Delay(milliseconds);
     }
 }

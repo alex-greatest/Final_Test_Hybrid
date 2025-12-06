@@ -1,7 +1,7 @@
 using Final_Test_Hybrid.Models;
 using Microsoft.JSInterop;
 
-namespace Final_Test_Hybrid.Components.Engineer;
+namespace Final_Test_Hybrid.Components.Engineer.Sequence;
 
 public partial class TestSequenceEditor
 {
@@ -9,7 +9,7 @@ public partial class TestSequenceEditor
     {
         try
         {
-            await NewSequenceWithDialog();
+            await CreateNewSequenceAsync();
         }
         catch (Exception ex)
         {
@@ -22,17 +22,17 @@ public partial class TestSequenceEditor
         }
     }
 
-    private async Task NewSequenceWithDialog()
+    private async Task CreateNewSequenceAsync()
     {
         await Task.Yield();
         if (_disposed)
         {
             return;
         }
-        await TryPickAndCreateNew();
+        await TryPickAndCreateFile();
     }
 
-    private async Task TryPickAndCreateNew()
+    private async Task TryPickAndCreateFile()
     {
         var filePath = PickNewFile();
         if (string.IsNullOrEmpty(filePath))
@@ -41,7 +41,7 @@ public partial class TestSequenceEditor
         }
         _isLoading = true;
         await Task.Yield();
-        await CreateNewSequenceFile(filePath);
+        await CreateSequenceFile(filePath);
     }
 
     private string? PickNewFile()
@@ -50,33 +50,26 @@ public partial class TestSequenceEditor
         return FilePickerService.SaveFile("new_sequence", defaultPath, "Excel Files (*.xlsx)|*.xlsx");
     }
 
-    private async Task CreateNewSequenceFile(string filePath)
+    private async Task CreateSequenceFile(string filePath)
     {
         _rows = TestSequenceService.InitializeRows(20, _columnCount);
         TestSequenceService.CurrentFilePath = filePath;
         TestSequenceService.CurrentFileName = Path.GetFileNameWithoutExtension(filePath);
-        TestSequenceService.SaveToExcel(filePath, _rows);
+        await TestSequenceService.SaveToExcelAsync(filePath, _rows);
         _isFileActive = true;
         await RefreshGrid();
         await UpdateDialogTitleAsync();
-        NotifyNewFileCreated();
-    }
-
-    private void NotifyNewFileCreated()
-    {
-        NotificationService.ShowSuccess(
-            "Создано",
-            $"Файл создан: {TestSequenceService.CurrentFileName}",
-            duration: 4000,
-            closeOnClick: true
-        );
+        NotifySuccess("Создано", $"Файл создан: {TestSequenceService.CurrentFileName}");
     }
 
     private void OpenFolder(SequenceRow row, int colIndex)
     {
         try
         {
-            PickAndUpdateCell(row, colIndex);
+            var rootPath = TestSequenceService.GetValidRootPath();
+            var relativePath = FilePickerService.PickFileRelative(rootPath);
+            TestSequenceService.UpdateCell(row, colIndex, relativePath);
+            StateHasChanged();
         }
         catch (Exception ex)
         {
@@ -84,19 +77,11 @@ public partial class TestSequenceEditor
         }
     }
 
-    private void PickAndUpdateCell(SequenceRow row, int colIndex)
-    {
-        var rootPath = TestSequenceService.GetValidRootPath();
-        var relativePath = FilePickerService.PickFileRelative(rootPath);
-        TestSequenceService.UpdateCell(row, colIndex, relativePath);
-        StateHasChanged();
-    }
-
     private async Task OpenSequence()
     {
         try
         {
-            await OpenSequenceWithSpinner();
+            await LoadSequenceAsync();
         }
         catch (Exception ex)
         {
@@ -109,17 +94,17 @@ public partial class TestSequenceEditor
         }
     }
 
-    private async Task OpenSequenceWithSpinner()
+    private async Task LoadSequenceAsync()
     {
         await Task.Yield();
         if (_disposed)
         {
             return;
         }
-        await TryPickAndLoadSequence();
+        await TryPickAndLoadFile();
     }
 
-    private async Task TryPickAndLoadSequence()
+    private async Task TryPickAndLoadFile()
     {
         var filePath = PickSequenceFile();
         if (string.IsNullOrEmpty(filePath))
@@ -128,7 +113,7 @@ public partial class TestSequenceEditor
         }
         _isLoading = true;
         await Task.Yield();
-        await LoadSequenceFromFile(filePath);
+        await LoadFromFile(filePath);
     }
 
     private string? PickSequenceFile()
@@ -137,25 +122,27 @@ public partial class TestSequenceEditor
         return FilePickerService.PickFile(defaultPath, "Excel Files (*.xlsx)|*.xlsx");
     }
 
-    private async Task LoadSequenceFromFile(string filePath)
+    private async Task LoadFromFile(string filePath)
     {
         TestSequenceService.CurrentFilePath = filePath;
         TestSequenceService.CurrentFileName = Path.GetFileNameWithoutExtension(filePath);
         _isFileActive = true;
         await UpdateDialogTitleAsync();
-        await TryLoadAndNotify(filePath);
+        await LoadRowsFromExcel(filePath);
     }
 
-    private async Task TryLoadAndNotify(string filePath)
+    private async Task LoadRowsFromExcel(string filePath)
     {
         try
         {
-            await TryLoadFromService(filePath);
+            _rows = await TestSequenceService.LoadFromExcelAsync(filePath, _columnCount);
+            _rows = _rows.Count == 0 ? TestSequenceService.InitializeRows(20, _columnCount) : _rows;
+            await RefreshGrid();
             NotifySuccessIfNotDisposed();
         }
         catch (Exception ex)
         {
-            NotifyLoadErrorIfNotDisposed(ex);
+            NotifyErrorIfNotDisposed(ex.Message);
         }
     }
 
@@ -165,64 +152,39 @@ public partial class TestSequenceEditor
         {
             return;
         }
-        NotifySuccess();
+        NotifySuccess("Открыто", $"Загружено: {TestSequenceService.CurrentFileName}");
     }
 
-    private void NotifyLoadErrorIfNotDisposed(Exception ex)
+    private void NotifyErrorIfNotDisposed(string message)
     {
         if (_disposed)
         {
             return;
         }
-        NotifyLoadError(ex);
+        NotifyError(message);
     }
 
-    private void NotifySuccess()
+    private void NotifySuccess(string title, string message)
     {
-        NotificationService.ShowSuccess(
-            "Открыто",
-            $"Загружено: {TestSequenceService.CurrentFileName}",
-            duration: 4000,
-            closeOnClick: true
-        );
+        NotificationService.ShowSuccess(title, message, duration: 4000, closeOnClick: true);
     }
 
     private void NotifyError(string message)
     {
-        NotificationService.ShowError(
-            "Ошибка",
-            message,
-            duration: 10000,
-            closeOnClick: true
-        );
-    }
-
-    private void NotifyLoadError(Exception ex)
-    {
-        NotificationService.ShowError(
-            "Ошибка загрузки",
-            ex.Message,
-            duration: 10000,
-            closeOnClick: true
-        );
-    }
-
-    private async Task TryLoadFromService(string filePath)
-    {
-        _rows = TestSequenceService.LoadFromExcel(filePath, _columnCount);
-        _rows = _rows.Count == 0
-            ? TestSequenceService.InitializeRows(20, _columnCount)
-            : _rows;
-        await RefreshGrid();
+        NotificationService.ShowError("Ошибка", message, duration: 10000, closeOnClick: true);
     }
 
     private async Task UpdateDialogTitleAsync()
     {
-        const string baseName = "Редактор Тестовой Последовательности";
-        var title = string.IsNullOrEmpty(TestSequenceService.CurrentFileName)
-            ? baseName
-            : $"{TestSequenceService.CurrentFileName}.xlsx - {baseName}";
-        await JSRuntime.InvokeVoidAsync("updateDialogTitle", title);
+        var title = BuildDialogTitle();
+        await JsRuntime.InvokeVoidAsync("updateDialogTitle", title);
     }
 
+    private string BuildDialogTitle()
+    {
+        const string baseName = "Редактор Тестовой Последовательности";
+        return string.IsNullOrEmpty(TestSequenceService.CurrentFileName)
+            ? baseName
+            : $"{TestSequenceService.CurrentFileName}.xlsx - {baseName}";
+    }
 }

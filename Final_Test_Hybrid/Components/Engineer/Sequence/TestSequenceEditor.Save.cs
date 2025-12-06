@@ -1,4 +1,4 @@
-namespace Final_Test_Hybrid.Components.Engineer;
+namespace Final_Test_Hybrid.Components.Engineer.Sequence;
 
 public partial class TestSequenceEditor
 {
@@ -6,7 +6,7 @@ public partial class TestSequenceEditor
     {
         try
         {
-            await SaveSequenceWithSpinner();
+            await SaveCurrentSequenceAsync();
         }
         finally
         {
@@ -15,7 +15,7 @@ public partial class TestSequenceEditor
         }
     }
 
-    private async Task SaveSequenceWithSpinner()
+    private async Task SaveCurrentSequenceAsync()
     {
         _isLoading = true;
         await Task.Yield();
@@ -23,30 +23,15 @@ public partial class TestSequenceEditor
         {
             return;
         }
-        SaveToCurrentOrDefaultPath();
+        var filePath = GetOrGenerateFilePath();
+        await PerformSaveAsync(filePath);
     }
 
-    private void SaveToCurrentOrDefaultPath()
+    private string GetOrGenerateFilePath()
     {
-        if (string.IsNullOrEmpty(TestSequenceService.CurrentFilePath))
-        {
-            SaveToDefaultPath();
-            return;
-        }
-        PerformSave(TestSequenceService.CurrentFilePath);
-    }
-
-    private void SaveToDefaultPath()
-    {
-        try
-        {
-            var filePath = GenerateDefaultFilePath();
-            PerformSave(filePath);
-        }
-        catch (Exception ex)
-        {
-            NotifyError(ex.Message);
-        }
+        return string.IsNullOrEmpty(TestSequenceService.CurrentFilePath)
+            ? GenerateDefaultFilePath()
+            : TestSequenceService.CurrentFilePath;
     }
 
     private string GenerateDefaultFilePath()
@@ -60,16 +45,15 @@ public partial class TestSequenceEditor
 
     private static string EnsureXlsxExtension(string? fileName)
     {
-        return fileName != null && fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)
-            ? fileName
-            : fileName + ".xlsx";
+        var hasExtension = fileName != null && fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase);
+        return hasExtension ? fileName! : fileName + ".xlsx";
     }
 
     private async Task SaveSequenceAs()
     {
         try
         {
-            await SaveSequenceAsWithSpinner();
+            await SaveSequenceAsAsync();
         }
         catch (Exception ex)
         {
@@ -82,7 +66,7 @@ public partial class TestSequenceEditor
         }
     }
 
-    private async Task SaveSequenceAsWithSpinner()
+    private async Task SaveSequenceAsAsync()
     {
         await Task.Yield();
         if (_disposed)
@@ -103,7 +87,7 @@ public partial class TestSequenceEditor
         await Task.Yield();
         UpdateCurrentFile(filePath);
         await UpdateDialogTitleAsync();
-        PerformSave(filePath);
+        await PerformSaveAsync(filePath);
     }
 
     private string? PickSaveFile()
@@ -119,12 +103,12 @@ public partial class TestSequenceEditor
         StateHasChanged();
     }
 
-    private void PerformSave(string filePath)
+    private async Task PerformSaveAsync(string filePath)
     {
         try
         {
-            TestSequenceService.SaveToExcel(filePath, _rows);
-            NotifySaveSuccess();
+            await TestSequenceService.SaveToExcelAsync(filePath, _rows);
+            NotifySuccess("Сохранено", "Последовательность сохранена");
         }
         catch (Exception ex)
         {
@@ -132,25 +116,10 @@ public partial class TestSequenceEditor
         }
     }
 
-    private void NotifySaveSuccess()
-    {
-        NotificationService.ShowSuccess(
-            "Сохранено",
-            "Последовательность сохранена",
-            duration: 4000,
-            closeOnClick: true
-        );
-    }
-
     private void NotifySaveError(Exception ex)
     {
         var message = GetSaveErrorMessage(ex);
-        NotificationService.ShowError(
-            "Ошибка сохранения",
-            message,
-            duration: 10000,
-            closeOnClick: true
-        );
+        NotificationService.ShowError("Ошибка сохранения", message, duration: 10000, closeOnClick: true);
     }
 
     private string GetSaveErrorMessage(Exception ex)
@@ -160,7 +129,7 @@ public partial class TestSequenceEditor
             : $"Произошла ошибка при сохранении файла: {ex.Message}";
     }
 
-    private bool IsFileLockedException(Exception? ex)
+    private static bool IsFileLockedException(Exception? ex)
     {
         return GetExceptionChain(ex).Any(IsLockException);
     }
@@ -179,11 +148,6 @@ public partial class TestSequenceEditor
     {
         const int sharingViolation = unchecked((int)0x80070020);
         const int lockViolation = unchecked((int)0x80070021);
-        return ex is IOException ioEx && IsLockError(ioEx.HResult, sharingViolation, lockViolation);
-    }
-
-    private static bool IsLockError(int hResult, int sharingViolation, int lockViolation)
-    {
-        return hResult == sharingViolation || hResult == lockViolation;
+        return ex is IOException ioEx && (ioEx.HResult == sharingViolation || ioEx.HResult == lockViolation);
     }
 }

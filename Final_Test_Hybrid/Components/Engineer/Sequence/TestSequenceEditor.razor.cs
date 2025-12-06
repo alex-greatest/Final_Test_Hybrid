@@ -1,33 +1,38 @@
-using Radzen.Blazor;
 using Final_Test_Hybrid.Models;
+using Final_Test_Hybrid.Services.IO;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
-using Final_Test_Hybrid.Services.IO;
+using Radzen.Blazor;
 
-namespace Final_Test_Hybrid.Components.Engineer;
+namespace Final_Test_Hybrid.Components.Engineer.Sequence;
 
-public partial class TestSequenceEditor : IDisposable
+public partial class TestSequenceEditor : IAsyncDisposable
 {
     [Inject]
     public required IFilePickerService FilePickerService { get; set; }
     [Inject]
-    public required IJSRuntime JSRuntime { get; set; }
+    public required IJSRuntime JsRuntime { get; set; }
     private RadzenDataGrid<SequenceRow>? _grid;
     private List<SequenceRow> _rows = [];
+    private readonly CancellationTokenSource _cts = new();
     private readonly int _columnCount = 4;
     private bool _disposed;
-    private bool _isLoading;
+    private bool _isLoading = true;
     private bool _isFileActive;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        await Task.Yield();
         _rows = TestSequenceService.InitializeRows(20, _columnCount);
         _isFileActive = !string.IsNullOrEmpty(TestSequenceService.CurrentFilePath);
+        _isLoading = false;
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         _disposed = true;
+        await _cts.CancelAsync();
+        _cts.Dispose();
         ResetServiceState();
     }
 

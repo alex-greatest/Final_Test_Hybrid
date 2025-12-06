@@ -65,9 +65,9 @@
 
     <!-- Right Control Panel -->
     <div class="area-right-panel">
-        <RadzenButton Text="New" Icon="note_add" Class="right-panel-btn" Click="@NewSequence" Disabled="@_isLoading" />
-        <RadzenButton Text="Open" Icon="folder_open" Class="right-panel-btn" Click="@OpenSequence" Disabled="@_isLoading" />
-        <RadzenButton Text="Save" Icon="save" Class="right-panel-btn" Click="@SaveSequence" Disabled="@(_isLoading || !_isFileActive)" />
-        <RadzenButton Text="Save As" Icon="save_as" Class="right-panel-btn" Click="@SaveSequenceAs" Disabled="@(_isLoading || !_isFileActive)" />
+        <RadzenButton Text="Создать" Icon="note_add" Class="right-panel-btn" Click="@NewSequence" Disabled="@_isLoading" />
+        <RadzenButton Text="Открыть" Icon="folder_open" Class="right-panel-btn" Click="@OpenSequence" Disabled="@_isLoading" />
+        <RadzenButton Text="Сохранить" Icon="save" Class="right-panel-btn" Click="@SaveSequence" Disabled="@(_isLoading || !_isFileActive)" />
+        <RadzenButton Text="Сохранить как" Icon="save_as" Class="right-panel-btn" Click="@SaveSequenceAs" Disabled="@(_isLoading || !_isFileActive)" />
     </div>
 </div>

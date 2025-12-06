@@ -36,6 +36,16 @@ public class SequenceExcelService(ILogger<SequenceExcelService> logger) : ISeque
         }
     }
 
+    public async Task SaveSequenceAsync(string path, List<SequenceRow> rows)
+    {
+        await Task.Run(() => SaveSequence(path, rows)).ConfigureAwait(false);
+    }
+
+    public async Task<List<SequenceRow>> LoadSequenceAsync(string path, int columnCount)
+    {
+        return await Task.Run(() => LoadSequence(path, columnCount)).ConfigureAwait(false);
+    }
+
     private void SaveWorkbook(string path, List<SequenceRow> rows)
     {
         using var package = new ExcelPackage();

@@ -20,7 +20,7 @@ public partial class MainEngineering
 
     private async Task OpenTestSequenceEditor()
     {
-        await DialogService.OpenAsync<TestSequenceEditor>("Редактор Тестовой Последовательности",
+        await DialogService.OpenAsync<Sequence.TestSequenceEditor>("Редактор шагов теста",
                new Dictionary<string, object>(),
                new DialogOptions
                { 
@@ -29,7 +29,7 @@ public partial class MainEngineering
                    Resizable = true, 
                    Draggable = true,
                    CssClass = "test-sequence-editor-dialog",
-                   CloseDialogOnOverlayClick = true
+                   CloseDialogOnOverlayClick = false
                });
     }
 }

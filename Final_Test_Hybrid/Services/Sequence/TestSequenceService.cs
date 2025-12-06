@@ -58,6 +58,16 @@ public class TestSequenceService(
         return sequenceExcelService.LoadSequence(path, columnCount);
     }
 
+    public async Task SaveToExcelAsync(string path, List<SequenceRow> rows)
+    {
+        await sequenceExcelService.SaveSequenceAsync(path, rows).ConfigureAwait(false);
+    }
+
+    public async Task<List<SequenceRow>> LoadFromExcelAsync(string path, int columnCount)
+    {
+        return await sequenceExcelService.LoadSequenceAsync(path, columnCount).ConfigureAwait(false);
+    }
+
     public string GetTestsSequencePath()
     {
         var path = GetRequiredConfigPath("Paths:PathToTestsSequence");
