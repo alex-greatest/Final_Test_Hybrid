@@ -5,6 +5,8 @@ namespace Final_Test_Hybrid.Services.Settings.IO
 {
     public class WinFormsFilePickerService(ILogger<WinFormsFilePickerService> logger) : IFilePickerService
     {
+        private const string DefaultExcelFilter = "Файлы Excel (*.xlsx)|*.xlsx|Все файлы (*.*)|*.*";
+
         public string? PickFile(string initialDirectory, string filter = "")
         {
             return OpenDialog(initialDirectory, filter);
@@ -16,14 +18,12 @@ namespace Final_Test_Hybrid.Services.Settings.IO
             return string.IsNullOrEmpty(selectedFile) ? null : ProcessSelection(selectedFile, rootPath);
         }
 
-        public string? SaveFile(string defaultName, string? initialDirectory = null, string filter = "Файлы Excel (*.xlsx)|*.xlsx|Все файлы (*.*)|*.*")
+        public string? SaveFile(string defaultName, string? initialDirectory = null, string filter = DefaultExcelFilter)
         {
             using var saveFileDialog = new SaveFileDialog();
             saveFileDialog.FileName = defaultName;
             saveFileDialog.Filter = filter;
-
-            var validatedPath = string.IsNullOrEmpty(initialDirectory) ? null : GetValidatedPath(initialDirectory.Replace('/', '\\'));
-            
+            var validatedPath = GetValidatedPath(NormalizePath(initialDirectory));
             if (!string.IsNullOrEmpty(validatedPath))
             {
                 saveFileDialog.InitialDirectory = validatedPath;
@@ -32,7 +32,6 @@ namespace Final_Test_Hybrid.Services.Settings.IO
             {
                 saveFileDialog.RestoreDirectory = true;
             }
-
             return saveFileDialog.ShowDialog() == DialogResult.OK ? saveFileDialog.FileName : null;
         }
 
@@ -74,20 +73,34 @@ namespace Final_Test_Hybrid.Services.Settings.IO
 
         private void ConfigureFileDialog(OpenFileDialog dialog, string initialDirectory, string filter)
         {
-            if (!string.IsNullOrEmpty(filter))
-            {
-                dialog.Filter = filter;
-            }
-
-            var path = initialDirectory?.Replace('/', '\\') ?? string.Empty;
-            var validatedPath = GetValidatedPath(path);
-            
-            if (!string.IsNullOrEmpty(validatedPath))
-            {
-                dialog.InitialDirectory = validatedPath;
-            }
-            
+            ApplyFilter(dialog, filter);
+            ApplyInitialDirectory(dialog, initialDirectory);
             dialog.RestoreDirectory = true;
+        }
+
+        private void ApplyFilter(OpenFileDialog dialog, string filter)
+        {
+            if (string.IsNullOrEmpty(filter))
+            {
+                return;
+            }
+            dialog.Filter = filter;
+        }
+
+        private void ApplyInitialDirectory(OpenFileDialog dialog, string initialDirectory)
+        {
+            var path = NormalizePath(initialDirectory);
+            var validatedPath = GetValidatedPath(path);
+            if (string.IsNullOrEmpty(validatedPath))
+            {
+                return;
+            }
+            dialog.InitialDirectory = validatedPath;
+        }
+
+        private string NormalizePath(string? path)
+        {
+            return path?.Replace('/', '\\') ?? string.Empty;
         }
 
         private string? GetValidatedPath(string path)
@@ -98,11 +111,11 @@ namespace Final_Test_Hybrid.Services.Settings.IO
 
         private string EnsureAbsolutePath(string path)
         {
-            if (!string.IsNullOrEmpty(path) && !Path.IsPathRooted(path)) 
+            if (string.IsNullOrEmpty(path) || Path.IsPathRooted(path))
             {
-                return Path.GetFullPath(path);
+                return path;
             }
-            return path;
+            return Path.GetFullPath(path);
         }
 
         private string? CheckPathExists(string path)
