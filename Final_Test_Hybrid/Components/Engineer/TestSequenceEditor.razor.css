@@ -48,7 +48,13 @@
     font-size: 24px;
     margin: 0 15px;
     font-weight: bold;
-    color: #000; /* Explicit black */
+    color: #000;
+}
+
+.current-file-text {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
 }
 
 /* Arrow styles */
@@ -168,12 +174,23 @@
     padding: 0 10px;
     width: 100%;
     outline: none;
-    font-weight: bold; /* Bold text */
-    color: black;      /* Black text */
+    font-weight: bold;
+    color: black;
 }
 
 .cell-input:focus {
     border-color: #007bff;
+}
+
+.cell-input:disabled {
+    background-color: #e9ecef;
+    color: #6c757d;
+    cursor: not-allowed;
+}
+
+.folder-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* Right Panel Buttons */

@@ -4,6 +4,72 @@ namespace Final_Test_Hybrid.Components.Engineer;
 
 public partial class TestSequenceEditor
 {
+    private async Task NewSequence()
+    {
+        try
+        {
+            await NewSequenceWithDialog();
+        }
+        catch (Exception ex)
+        {
+            NotifyError(ex.Message);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task NewSequenceWithDialog()
+    {
+        await Task.Yield();
+        if (_disposed)
+        {
+            return;
+        }
+        await TryPickAndCreateNew();
+    }
+
+    private async Task TryPickAndCreateNew()
+    {
+        var filePath = PickNewFile();
+        if (string.IsNullOrEmpty(filePath))
+        {
+            return;
+        }
+        _isLoading = true;
+        await Task.Yield();
+        await CreateNewSequenceFile(filePath);
+    }
+
+    private string? PickNewFile()
+    {
+        var defaultPath = TestSequenceService.GetTestsSequencePath();
+        return FilePickerService.SaveFile("new_sequence", defaultPath, "Excel Files (*.xlsx)|*.xlsx");
+    }
+
+    private async Task CreateNewSequenceFile(string filePath)
+    {
+        _rows = TestSequenceService.InitializeRows(20, _columnCount);
+        TestSequenceService.CurrentFilePath = filePath;
+        TestSequenceService.CurrentFileName = Path.GetFileNameWithoutExtension(filePath);
+        TestSequenceService.SaveToExcel(filePath, _rows);
+        _isFileActive = true;
+        await RefreshGrid();
+        NotifyNewFileCreated();
+    }
+
+    private void NotifyNewFileCreated()
+    {
+        NotificationService.ShowSuccess(
+            "Создано",
+            $"Файл создан: {TestSequenceService.CurrentFileName}",
+            duration: 4000,
+            closeOnClick: true
+        );
+    }
+
     private void OpenFolder(SequenceRow row, int colIndex)
     {
         try
@@ -73,6 +139,7 @@ public partial class TestSequenceEditor
     {
         TestSequenceService.CurrentFilePath = filePath;
         TestSequenceService.CurrentFileName = Path.GetFileNameWithoutExtension(filePath);
+        _isFileActive = true;
         await TryLoadAndNotify(filePath);
     }
 

@@ -23,7 +23,7 @@
             <span class="top-header-text">Sub Modules to run in parallel</span>
             
             <div style="flex: 1; text-align: center;">
-                <span class="current-file-text">File: @TestSequenceService.CurrentFileName</span>
+                <span class="current-file-text">File: @(TestSequenceService.CurrentFileName ?? "—")</span>
             </div>
         </div>
     </div>
@@ -57,8 +57,8 @@
                         </HeaderTemplate>
                         <Template Context="data">
                             <div class="cell-content">
-                                <input class="cell-input" @bind="data.Columns[index]" placeholder="" />
-                                <button class="folder-btn" @onclick="@(() => OpenFolder(data, index))">
+                                <input class="cell-input" @bind="data.Columns[index]" placeholder="" disabled="@(!_isFileActive)" />
+                                <button class="folder-btn" @onclick="@(() => OpenFolder(data, index))" disabled="@(!_isFileActive)">
                                     <RadzenIcon Icon="folder" Style="font-size: 26px; color: #FFC107;" />
                                 </button>
                             </div>
@@ -71,8 +71,9 @@
 
     <!-- Right Control Panel -->
     <div class="area-right-panel">
+        <RadzenButton Text="New" Icon="note_add" Class="right-panel-btn" Click="@NewSequence" Disabled="@_isLoading" />
         <RadzenButton Text="Open" Icon="folder_open" Class="right-panel-btn" Click="@OpenSequence" Disabled="@_isLoading" />
-        <RadzenButton Text="Save" Icon="save" Class="right-panel-btn" Click="@SaveSequence" Disabled="@_isLoading" />
-        <RadzenButton Text="Save As" Icon="save_as" Class="right-panel-btn" Click="@SaveSequenceAs" Disabled="@_isLoading" />
+        <RadzenButton Text="Save" Icon="save" Class="right-panel-btn" Click="@SaveSequence" Disabled="@(_isLoading || !_isFileActive)" />
+        <RadzenButton Text="Save As" Icon="save_as" Class="right-panel-btn" Click="@SaveSequenceAs" Disabled="@(_isLoading || !_isFileActive)" />
     </div>
 </div>

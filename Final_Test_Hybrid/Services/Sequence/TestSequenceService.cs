@@ -9,7 +9,7 @@ public class TestSequenceService(
     IConfiguration configuration,
     ILogger<TestSequenceService> logger)
 {
-    public string CurrentFileName { get; set; } = "sequence";
+    public string? CurrentFileName { get; set; }
     public string? CurrentFilePath { get; set; }
 
     public List<SequenceRow> InitializeRows(int count, int columnCount)
