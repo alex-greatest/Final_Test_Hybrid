@@ -22,7 +22,7 @@ public partial class MainEngineering
 
     private async Task OpenTestSequenceEditor()
     {
-        await DialogService.OpenAsync<TestSequenceEditor>("Test Sequence Editor",
+        await DialogService.OpenAsync<TestSequenceEditor>("Редактор Тестовой Последовательности",
                new Dictionary<string, object>(),
                new DialogOptions
                { 

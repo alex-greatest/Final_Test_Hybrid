@@ -45,6 +45,13 @@
                 }
             }
         };
+
+        window.updateDialogTitle = (title) => {
+            const titleElement = document.querySelector('.rz-dialog-titlebar .rz-dialog-title');
+            if (titleElement) {
+                titleElement.textContent = title;
+            }
+        };
     </script>
 </body>
 

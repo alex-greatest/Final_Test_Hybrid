@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models;
+using Microsoft.JSInterop;
 
 namespace Final_Test_Hybrid.Components.Engineer;
 
@@ -57,6 +58,7 @@ public partial class TestSequenceEditor
         TestSequenceService.SaveToExcel(filePath, _rows);
         _isFileActive = true;
         await RefreshGrid();
+        await UpdateDialogTitleAsync();
         NotifyNewFileCreated();
     }
 
@@ -140,6 +142,7 @@ public partial class TestSequenceEditor
         TestSequenceService.CurrentFilePath = filePath;
         TestSequenceService.CurrentFileName = Path.GetFileNameWithoutExtension(filePath);
         _isFileActive = true;
+        await UpdateDialogTitleAsync();
         await TryLoadAndNotify(filePath);
     }
 
@@ -211,6 +214,15 @@ public partial class TestSequenceEditor
             ? TestSequenceService.InitializeRows(20, _columnCount)
             : _rows;
         await RefreshGrid();
+    }
+
+    private async Task UpdateDialogTitleAsync()
+    {
+        const string baseName = "Редактор Тестовой Последовательности";
+        var title = string.IsNullOrEmpty(TestSequenceService.CurrentFileName)
+            ? baseName
+            : $"{TestSequenceService.CurrentFileName}.xlsx - {baseName}";
+        await JSRuntime.InvokeVoidAsync("updateDialogTitle", title);
     }
 
     private void CloseDialog()

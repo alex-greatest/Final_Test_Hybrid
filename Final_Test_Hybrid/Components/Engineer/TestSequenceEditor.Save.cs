@@ -58,9 +58,9 @@ public partial class TestSequenceEditor
         return fullPath;
     }
 
-    private static string EnsureXlsxExtension(string fileName)
+    private static string EnsureXlsxExtension(string? fileName)
     {
-        return fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)
+        return fileName != null && fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)
             ? fileName
             : fileName + ".xlsx";
     }
