@@ -84,22 +84,23 @@ public partial class TestSequenceEditor
 
     private async Task SaveSequenceAsWithSpinner()
     {
-        _isLoading = true;
         await Task.Yield();
         if (_disposed)
         {
             return;
         }
-        TryPickAndSaveAs();
+        await TryPickAndSaveAs();
     }
 
-    private void TryPickAndSaveAs()
+    private async Task TryPickAndSaveAs()
     {
         var filePath = PickSaveFile();
         if (string.IsNullOrEmpty(filePath))
         {
             return;
         }
+        _isLoading = true;
+        await Task.Yield();
         UpdateCurrentFile(filePath);
         PerformSave(filePath);
     }

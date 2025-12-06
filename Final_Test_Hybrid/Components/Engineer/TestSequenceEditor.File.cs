@@ -43,7 +43,6 @@ public partial class TestSequenceEditor
 
     private async Task OpenSequenceWithSpinner()
     {
-        _isLoading = true;
         await Task.Yield();
         if (_disposed)
         {
@@ -59,6 +58,8 @@ public partial class TestSequenceEditor
         {
             return;
         }
+        _isLoading = true;
+        await Task.Yield();
         await LoadSequenceFromFile(filePath);
     }
 
