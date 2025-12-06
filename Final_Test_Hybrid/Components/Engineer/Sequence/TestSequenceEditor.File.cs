@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models;
+using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
 namespace Final_Test_Hybrid.Components.Engineer.Sequence;
@@ -13,7 +14,8 @@ public partial class TestSequenceEditor
         }
         catch (Exception ex)
         {
-            NotifyError(ex.Message);
+            Logger.LogError(ex, "Ошибка создания файла последовательности");
+            NotifyError("Не удалось создать файл");
         }
         finally
         {
@@ -73,7 +75,8 @@ public partial class TestSequenceEditor
         }
         catch (Exception ex)
         {
-            NotifyError(ex.Message);
+            Logger.LogError(ex, "Ошибка выбора файла");
+            NotifyError("Не удалось выбрать файл");
         }
     }
 
@@ -85,7 +88,8 @@ public partial class TestSequenceEditor
         }
         catch (Exception ex)
         {
-            NotifyError(ex.Message);
+            Logger.LogError(ex, "Ошибка открытия файла последовательности");
+            NotifyError("Не удалось открыть файл");
         }
         finally
         {
@@ -142,7 +146,8 @@ public partial class TestSequenceEditor
         }
         catch (Exception ex)
         {
-            NotifyErrorIfNotDisposed(ex.Message);
+            Logger.LogError(ex, "Ошибка загрузки данных из Excel: {FilePath}", filePath);
+            NotifyErrorIfNotDisposed("Не удалось загрузить данные");
         }
     }
 

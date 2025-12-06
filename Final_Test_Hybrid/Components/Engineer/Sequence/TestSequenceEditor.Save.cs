@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace Final_Test_Hybrid.Components.Engineer.Sequence;
 
 public partial class TestSequenceEditor
@@ -7,6 +9,11 @@ public partial class TestSequenceEditor
         try
         {
             await SaveCurrentSequenceAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Ошибка сохранения файла последовательности");
+            NotifyError("Не удалось сохранить файл");
         }
         finally
         {
@@ -57,7 +64,8 @@ public partial class TestSequenceEditor
         }
         catch (Exception ex)
         {
-            NotifyError(ex.Message);
+            Logger.LogError(ex, "Ошибка сохранения файла последовательности");
+            NotifyError("Не удалось сохранить файл");
         }
         finally
         {
@@ -112,21 +120,24 @@ public partial class TestSequenceEditor
         }
         catch (Exception ex)
         {
-            NotifySaveError(ex);
+            LogAndNotifySaveError(ex, filePath);
         }
     }
 
-    private void NotifySaveError(Exception ex)
+    private void LogAndNotifySaveError(Exception ex, string filePath)
     {
-        var message = GetSaveErrorMessage(ex);
+        Logger.LogError(ex, "Ошибка сохранения в Excel: {FilePath}", filePath);
+        var message = GetUserFriendlyMessage(ex);
         NotificationService.ShowError("Ошибка сохранения", message, duration: 10000, closeOnClick: true);
     }
 
-    private string GetSaveErrorMessage(Exception ex)
+    private string GetUserFriendlyMessage(Exception ex)
     {
-        return IsFileLockedException(ex)
-            ? "Закройте файл в Excel"
-            : $"Произошла ошибка при сохранении файла: {ex.Message}";
+        if (IsFileLockedException(ex))
+        {
+            return "Файл занят. Закройте его в Excel";
+        }
+        return "Не удалось сохранить файл";
     }
 
     private static bool IsFileLockedException(Exception? ex)

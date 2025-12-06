@@ -1,8 +1,10 @@
 @using Final_Test_Hybrid.Services.Sequence
 @using Final_Test_Hybrid.Services.UI
+@using Microsoft.Extensions.Logging
 @inject INotificationService NotificationService
 @inject ContextMenuService ContextMenuService
 @inject TestSequenceService TestSequenceService
+@inject ILogger<TestSequenceEditor> Logger
 
 <div class="editor-layout">
     @if (_isLoading)
