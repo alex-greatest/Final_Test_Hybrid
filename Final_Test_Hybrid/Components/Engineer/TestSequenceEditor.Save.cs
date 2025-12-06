@@ -102,6 +102,7 @@ public partial class TestSequenceEditor
         _isLoading = true;
         await Task.Yield();
         UpdateCurrentFile(filePath);
+        await UpdateDialogTitleAsync();
         PerformSave(filePath);
     }
 

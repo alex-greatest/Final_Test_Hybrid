@@ -151,7 +151,7 @@ public partial class TestSequenceEditor
         try
         {
             await TryLoadFromService(filePath);
-            NotifySuccessIfNotDisposed(filePath);
+            NotifySuccessIfNotDisposed();
         }
         catch (Exception ex)
         {
@@ -159,13 +159,13 @@ public partial class TestSequenceEditor
         }
     }
 
-    private void NotifySuccessIfNotDisposed(string filePath)
+    private void NotifySuccessIfNotDisposed()
     {
         if (_disposed)
         {
             return;
         }
-        NotifySuccess(filePath);
+        NotifySuccess();
     }
 
     private void NotifyLoadErrorIfNotDisposed(Exception ex)
@@ -177,7 +177,7 @@ public partial class TestSequenceEditor
         NotifyLoadError(ex);
     }
 
-    private void NotifySuccess(string filePath)
+    private void NotifySuccess()
     {
         NotificationService.ShowSuccess(
             "Открыто",
@@ -225,8 +225,4 @@ public partial class TestSequenceEditor
         await JSRuntime.InvokeVoidAsync("updateDialogTitle", title);
     }
 
-    private void CloseDialog()
-    {
-        DialogService.Close();
-    }
 }

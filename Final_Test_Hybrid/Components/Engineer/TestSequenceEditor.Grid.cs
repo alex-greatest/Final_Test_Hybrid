@@ -72,8 +72,4 @@ public partial class TestSequenceEditor
         row.CssClass = "";
         StateHasChanged();
     }
-
-    private void OnRowSelect(SequenceRow row)
-    {
-    }
 }

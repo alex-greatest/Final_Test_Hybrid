@@ -7,9 +7,7 @@ public partial class MainEngineering
 {
     [Inject]
     public required DialogService DialogService { get; set; }
-
     private string selectedLanguage = "French (fr)";
-    
     private readonly List<string> languages =
     [
         "English (en)",
@@ -35,5 +33,3 @@ public partial class MainEngineering
                });
     }
 }
-
-

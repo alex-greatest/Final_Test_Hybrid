@@ -12,7 +12,6 @@ public partial class TestSequenceEditor : IDisposable
     public required IFilePickerService FilePickerService { get; set; }
     [Inject]
     public required IJSRuntime JSRuntime { get; set; }
-
     private RadzenDataGrid<SequenceRow>? _grid;
     private List<SequenceRow> _rows = [];
     private readonly int _columnCount = 4;
@@ -29,5 +28,12 @@ public partial class TestSequenceEditor : IDisposable
     public void Dispose()
     {
         _disposed = true;
+        ResetServiceState();
+    }
+
+    private void ResetServiceState()
+    {
+        TestSequenceService.CurrentFilePath = null;
+        TestSequenceService.CurrentFileName = null;
     }
 }

@@ -1,6 +1,5 @@
 @using Final_Test_Hybrid.Services.Sequence
 @using Final_Test_Hybrid.Services.UI
-@inject DialogService DialogService
 @inject INotificationService NotificationService
 @inject ContextMenuService ContextMenuService
 @inject TestSequenceService TestSequenceService
@@ -41,7 +40,6 @@
                         Density="Density.Compact"
                         AllowColumnResize="true"
                         AllowAlternatingRows="false"
-                        RowSelect="@OnRowSelect"
                         RowRender="@OnRowRender"
                         CellContextMenu="@OnCellContextMenu">
             <Columns>
