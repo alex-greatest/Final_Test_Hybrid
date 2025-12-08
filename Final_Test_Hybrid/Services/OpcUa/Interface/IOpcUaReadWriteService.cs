@@ -1,4 +1,4 @@
-namespace Final_Test_Hybrid.Services.OpcUa
+namespace Final_Test_Hybrid.Services.OpcUa.Interface
 {
     public interface IOpcUaReadWriteService
     {

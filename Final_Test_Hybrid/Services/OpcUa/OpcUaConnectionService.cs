@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Services.OpcUa.Interface;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Opc.Ua;
@@ -100,10 +101,18 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         private async Task TryReconnectIfNeededAsync(CancellationToken ct)
         {
-            if (Session is not { Connected: true })
+            bool reconnecting;
+            lock (_reconnectLock)
             {
-                await TryConnectAsync(ct);
+                reconnecting = _reconnectHandler != null;
             }
+
+            if (reconnecting || Session is { Connected: true })
+            {
+                return;
+            }
+
+            await TryConnectAsync(ct);
         }
 
         private async Task TryConnectAsync(CancellationToken ct)

@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Services.OpcUa.Interface;
 using Microsoft.Extensions.Logging;
 using Opc.Ua;
 
