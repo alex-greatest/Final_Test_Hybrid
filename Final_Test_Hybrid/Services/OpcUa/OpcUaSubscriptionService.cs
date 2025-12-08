@@ -40,9 +40,21 @@ namespace Final_Test_Hybrid.Services.OpcUa
             ObjectDisposedException.ThrowIf(_disposed, this);
             EnsureConnectionEventsAttached();
 
-            await _connectionChangeGate.WaitAsync();
             try
             {
+                await _connectionChangeGate.WaitAsync();
+            }
+            catch (ObjectDisposedException)
+            {
+                return false;
+            }
+
+            try
+            {
+                if (_disposed)
+                {
+                    return false;
+                }
                 _callbacks[nodeId] = callback;
                 var session = connectionService.Session;
                 if (session is not { Connected: true })
@@ -78,7 +90,15 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         public async Task UnsubscribeAsync(string nodeId)
         {
-            await _connectionChangeGate.WaitAsync();
+            try
+            {
+                await _connectionChangeGate.WaitAsync();
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
+
             try
             {
                 _callbacks.TryRemove(nodeId, out _);

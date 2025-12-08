@@ -22,7 +22,7 @@ namespace Final_Test_Hybrid.Services.OpcUa
         private Opc.Ua.ApplicationConfiguration? _appConfig;
         private CancellationTokenSource? _cts;
         private Task? _connectLoopTask;
-        private bool _lastConnectionState;
+        private int _lastConnectionState; // 0 = false, 1 = true
         private int _currentDelayMs;
 
         public async Task StartAsync(CancellationToken ct = default)
@@ -39,7 +39,6 @@ namespace Final_Test_Hybrid.Services.OpcUa
         public async Task StopAsync()
         {
             await CancelConnectionAsync();
-            DisposeReconnectHandler();
             await _sessionLock.WaitAsync();
             try
             {
@@ -82,11 +81,14 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         private async Task ConnectLoopAsync(CancellationToken ct)
         {
+            _currentDelayMs = _settings.ReconnectIntervalMs;
             while (!ct.IsCancellationRequested)
             {
                 try
                 {
-                    await RunConnectLoopIterationsAsync(ct);
+                    var connected = await TryReconnectIfNeededAsync(ct);
+                    UpdateBackoffDelay(connected);
+                    await Task.Delay(_currentDelayMs, ct);
                 }
                 catch (OperationCanceledException)
                 {
@@ -95,20 +97,9 @@ namespace Final_Test_Hybrid.Services.OpcUa
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Connection loop failed, restarting in {Delay}ms", _settings.ReconnectIntervalMs);
-                    await SafeDelayAsync(_settings.ReconnectIntervalMs, ct);
+                    logger.LogError(ex, "Connection loop iteration failed");
+                    await SafeDelayAsync(_currentDelayMs, ct);
                 }
-            }
-        }
-
-        private async Task RunConnectLoopIterationsAsync(CancellationToken ct)
-        {
-            _currentDelayMs = _settings.ReconnectIntervalMs;
-            while (!ct.IsCancellationRequested)
-            {
-                var connected = await TryReconnectIfNeededAsync(ct);
-                UpdateBackoffDelay(connected);
-                await Task.Delay(_currentDelayMs, ct);
             }
         }
 
@@ -252,11 +243,12 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         private void NotifyConnectionChanged(bool connected)
         {
-            if (_lastConnectionState == connected)
+            var newValue = connected ? 1 : 0;
+            var old = Interlocked.Exchange(ref _lastConnectionState, newValue);
+            if (old == newValue)
             {
                 return;
             }
-            _lastConnectionState = connected;
             ConnectionChanged?.Invoke(this, connected);
         }
 

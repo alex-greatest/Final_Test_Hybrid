@@ -65,20 +65,35 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         private T? GetValueOrDefault<T>(string nodeId, DataValue value)
         {
-            if (!StatusCode.IsBad(value.StatusCode))
+            if (StatusCode.IsBad(value.StatusCode))
             {
-                return value.Value is T typedValue
-                    ? typedValue
-                    : LogAndReturnDefault<T>(nodeId);
+                logger.LogWarning("Read node {NodeId} returned bad status {Status}", nodeId, value.StatusCode);
+                return default;
             }
-            logger.LogWarning("Read node {NodeId} returned bad status {Status}", nodeId, value.StatusCode);
-            return default;
+
+            if (value.Value is T typedValue)
+            {
+                return typedValue;
+            }
+
+            return TryConvertValue<T>(nodeId, value.Value);
         }
 
-        private T? LogAndReturnDefault<T>(string nodeId)
+        private T? TryConvertValue<T>(string nodeId, object? rawValue)
         {
-            logger.LogWarning("Cannot cast value from node {NodeId} to type {Type}", nodeId, typeof(T).Name);
-            return default;
+            if (rawValue == null)
+            {
+                return default;
+            }
+            try
+            {
+                return (T)Convert.ChangeType(rawValue, typeof(T));
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Cannot convert value from node {NodeId} to type {Type}", nodeId, typeof(T).Name);
+                return default;
+            }
         }
 
         public async Task WriteNodeAsync<T>(string nodeId, T value, CancellationToken ct = default)
