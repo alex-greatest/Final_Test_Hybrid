@@ -17,6 +17,7 @@ namespace Final_Test_Hybrid.Services.OpcUa
         private readonly ConcurrentDictionary<string, Action<object?>> _callbacks = new();
         private readonly Lock _connectionEventsLock = new();
         private readonly SemaphoreSlim _connectionChangeGate = new(1, 1);
+        private readonly CancellationTokenSource _disposeCts = new();
         private bool _connectionEventsAttached;
         private bool _disposed;
 
@@ -38,14 +39,23 @@ namespace Final_Test_Hybrid.Services.OpcUa
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             EnsureConnectionEventsAttached();
-            _callbacks[nodeId] = callback;
-            var session = connectionService.Session;
-            if (session is not { Connected: true })
+
+            await _connectionChangeGate.WaitAsync();
+            try
             {
-                return;
+                _callbacks[nodeId] = callback;
+                var session = connectionService.Session;
+                if (session is not { Connected: true })
+                {
+                    return;
+                }
+                await RemoveExistingSubscriptionAsync(nodeId);
+                await CreateAndAddSubscriptionAsync(nodeId, callback, session);
             }
-            await RemoveExistingSubscriptionAsync(nodeId);
-            await CreateAndAddSubscriptionAsync(nodeId, callback, session);
+            finally
+            {
+                _connectionChangeGate.Release();
+            }
         }
 
         private async Task CreateAndAddSubscriptionAsync(string nodeId, Action<object?> callback, Session session)
@@ -66,12 +76,20 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         public async Task UnsubscribeAsync(string nodeId)
         {
-            _callbacks.TryRemove(nodeId, out _);
-            if (!_subscriptions.TryRemove(nodeId, out var subscription))
+            await _connectionChangeGate.WaitAsync();
+            try
             {
-                return;
+                _callbacks.TryRemove(nodeId, out _);
+                if (!_subscriptions.TryRemove(nodeId, out var subscription))
+                {
+                    return;
+                }
+                await RemoveSubscriptionSafelyAsync(nodeId, subscription);
             }
-            await RemoveSubscriptionSafelyAsync(nodeId, subscription);
+            finally
+            {
+                _connectionChangeGate.Release();
+            }
         }
 
         private async Task RemoveSubscriptionSafelyAsync(string nodeId, Subscription subscription)
@@ -96,6 +114,7 @@ namespace Final_Test_Hybrid.Services.OpcUa
             }
             _disposed = true;
             logger.LogInformation("Disposing OpcUaSubscriptionService with {Count} active subscriptions", _subscriptions.Count);
+            await _disposeCts.CancelAsync();
             DetachConnectionEvents();
             await _connectionChangeGate.WaitAsync();
             try
@@ -106,6 +125,7 @@ namespace Final_Test_Hybrid.Services.OpcUa
             {
                 _connectionChangeGate.Release();
                 _connectionChangeGate.Dispose();
+                _disposeCts.Dispose();
             }
         }
 
@@ -186,12 +206,11 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         private async Task RemoveSubscriptionFromSessionAsync(Subscription subscription)
         {
-            if (subscription.Session is not { Connected: true } session)
+            if (subscription.Session is not { Connected: true })
             {
                 return;
             }
-            await subscription.DeleteAsync(true);
-            await session.RemoveSubscriptionAsync(subscription);
+            await subscription.DeleteAsync(true); // true = removes from session automatically
         }
 
         private async Task RemoveExistingSubscriptionAsync(string nodeId)
@@ -244,13 +263,29 @@ namespace Final_Test_Hybrid.Services.OpcUa
             {
                 return;
             }
-            logger.LogDebug("Connection state changed: Connected={Connected}, ActiveSubscriptions={Count}", connected, _callbacks.Count);
-            await HandleConnectionChangeSafelyAsync(connected);
+
+            try
+            {
+                logger.LogDebug("Connection state changed: Connected={Connected}, ActiveSubscriptions={Count}", connected, _callbacks.Count);
+                await HandleConnectionChangeSafelyAsync(connected);
+            }
+            catch (OperationCanceledException)
+            {
+                // Normal cancellation during dispose
+            }
+            catch (ObjectDisposedException)
+            {
+                // Service was disposed during event handling
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unhandled error in connection change handler");
+            }
         }
 
         private async Task HandleConnectionChangeSafelyAsync(bool connected)
         {
-            await _connectionChangeGate.WaitAsync();
+            await _connectionChangeGate.WaitAsync(_disposeCts.Token);
             try
             {
                 if (connected)
