@@ -18,6 +18,7 @@ namespace Final_Test_Hybrid.Services.OpcUa
         private readonly Lock _connectionEventsLock = new();
         private readonly SemaphoreSlim _connectionChangeGate = new(1, 1);
         private bool _connectionEventsAttached;
+        private bool _disposed;
 
         public OpcUaSubscriptionService(
             IOpcUaConnectionService connectionService,
@@ -35,6 +36,7 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         public async Task SubscribeAsync(string nodeId, Action<object?> callback)
         {
+            ObjectDisposedException.ThrowIf(_disposed, this);
             EnsureConnectionEventsAttached();
             _callbacks[nodeId] = callback;
             var session = connectionService.Session;
@@ -43,6 +45,11 @@ namespace Final_Test_Hybrid.Services.OpcUa
                 return;
             }
             await RemoveExistingSubscriptionAsync(nodeId);
+            await CreateAndAddSubscriptionAsync(nodeId, callback, session);
+        }
+
+        private async Task CreateAndAddSubscriptionAsync(string nodeId, Action<object?> callback, Session session)
+        {
             try
             {
                 var subscription = CreateSubscription(session);
@@ -64,6 +71,11 @@ namespace Final_Test_Hybrid.Services.OpcUa
             {
                 return;
             }
+            await RemoveSubscriptionSafelyAsync(nodeId, subscription);
+        }
+
+        private async Task RemoveSubscriptionSafelyAsync(string nodeId, Subscription subscription)
+        {
             try
             {
                 await RemoveSubscriptionFromSessionAsync(subscription);
@@ -78,14 +90,36 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         public async ValueTask DisposeAsync()
         {
+            if (_disposed)
+            {
+                return;
+            }
+            _disposed = true;
+            logger.LogInformation("Disposing OpcUaSubscriptionService with {Count} active subscriptions", _subscriptions.Count);
             DetachConnectionEvents();
+            await _connectionChangeGate.WaitAsync();
+            try
+            {
+                await DisposeAllSubscriptionsAsync();
+            }
+            finally
+            {
+                _connectionChangeGate.Release();
+                _connectionChangeGate.Dispose();
+            }
+        }
+
+        private async Task DisposeAllSubscriptionsAsync(bool clearCallbacks = true)
+        {
             foreach (var subscription in _subscriptions.Values.ToArray())
             {
                 await SafeRemoveSubscriptionAsync(subscription);
             }
             _subscriptions.Clear();
-            _callbacks.Clear();
-            _connectionChangeGate.Dispose();
+            if (clearCallbacks)
+            {
+                _callbacks.Clear();
+            }
         }
 
         private async Task SafeRemoveSubscriptionAsync(Subscription subscription)
@@ -120,8 +154,11 @@ namespace Final_Test_Hybrid.Services.OpcUa
             {
                 try
                 {
-                    var value = ((MonitoredItemNotification)e.NotificationValue).Value.Value;
-                    callback(value);
+                    if (e.NotificationValue is not MonitoredItemNotification notification)
+                    {
+                        return;
+                    }
+                    callback(notification.Value.Value);
                 }
                 catch (Exception ex)
                 {
@@ -203,41 +240,40 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         private async void OnConnectionChanged(object? sender, bool connected)
         {
-            try
+            if (_disposed)
             {
-                await HandleConnectionChangeAsync(connected);
+                return;
             }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Unhandled error in connection change handler");
-            }
+            logger.LogDebug("Connection state changed: Connected={Connected}, ActiveSubscriptions={Count}", connected, _callbacks.Count);
+            await HandleConnectionChangeSafelyAsync(connected);
         }
 
-        private async Task HandleConnectionChangeAsync(bool connected)
+        private async Task HandleConnectionChangeSafelyAsync(bool connected)
         {
             await _connectionChangeGate.WaitAsync();
             try
             {
-                await ProcessConnectionStateAsync(connected);
+                if (connected)
+                {
+                    await ResubscribeAllAsync();
+                }
+                else
+                {
+                    await DropAllSubscriptionsAsync();
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                logger.LogDebug("Connection change handling aborted: service was disposed during operation");
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error handling connection change (connected={Connected})", connected);
+                logger.LogError(ex, "Error handling connection change. Connected={Connected}, SubscriptionCount={Count}", connected, _subscriptions.Count);
             }
             finally
             {
                 _connectionChangeGate.Release();
             }
-        }
-
-        private async Task ProcessConnectionStateAsync(bool connected)
-        {
-            if (connected)
-            {
-                await ResubscribeAllAsync();
-                return;
-            }
-            await DropAllSubscriptionsAsync();
         }
 
         private async Task ResubscribeAllAsync()
@@ -248,34 +284,14 @@ namespace Final_Test_Hybrid.Services.OpcUa
             }
             foreach (var kvp in _callbacks.ToArray())
             {
-                await SubscribeInternalAsync(kvp.Key, kvp.Value, session);
-            }
-        }
-
-        private async Task SubscribeInternalAsync(string nodeId, Action<object?> callback, Session session)
-        {
-            await RemoveExistingSubscriptionAsync(nodeId);
-            var subscription = CreateSubscription(session);
-            var monitoredItem = CreateMonitoredItem(nodeId, callback, subscription);
-            try
-            {
-                await AddSubscriptionToSessionAsync(session, subscription, monitoredItem);
-                _subscriptions[nodeId] = subscription;
-                logger.LogInformation("Subscribed to node {NodeId}", nodeId);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to subscribe to node {NodeId}", nodeId);
+                await RemoveExistingSubscriptionAsync(kvp.Key);
+                await CreateAndAddSubscriptionAsync(kvp.Key, kvp.Value, session);
             }
         }
 
         private async Task DropAllSubscriptionsAsync()
         {
-            foreach (var subscription in _subscriptions.Values.ToArray())
-            {
-                await SafeRemoveSubscriptionAsync(subscription);
-            }
-            _subscriptions.Clear();
+            await DisposeAllSubscriptionsAsync(clearCallbacks: false);
         }
     }
 }

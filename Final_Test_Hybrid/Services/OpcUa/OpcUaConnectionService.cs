@@ -190,12 +190,12 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         private void UpdateSessionIfReconnected()
         {
-            if (_reconnectHandler?.Session == null)
+            if (_reconnectHandler?.Session is not Session newSession)
             {
                 return;
             }
             Session?.KeepAlive -= OnSessionKeepAlive;
-            Session = (Session)_reconnectHandler.Session;
+            Session = newSession;
             logger.LogInformation("Reconnected to OPC UA server");
             Session.KeepAlive += OnSessionKeepAlive;
             NotifyConnectionChanged(true);
@@ -280,7 +280,11 @@ namespace Final_Test_Hybrid.Services.OpcUa
                 identity: new UserIdentity(new AnonymousIdentityToken()),
                 preferredLocales: null,
                 ct).ConfigureAwait(false);
-            return (Session)session;
+            return session switch
+            {
+                Session s => s,
+                _ => throw new InvalidOperationException($"SessionFactory returned unexpected type: {session.GetType().Name}")
+            };
         }
     }
 }

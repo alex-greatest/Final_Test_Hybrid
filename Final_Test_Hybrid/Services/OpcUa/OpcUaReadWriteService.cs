@@ -9,7 +9,7 @@ namespace Final_Test_Hybrid.Services.OpcUa
         ILogger<OpcUaReadWriteService> logger)
         : IOpcUaReadWriteService
     {
-        public async Task<T?> ReadNodeAsync<T>(string nodeId)
+        public async Task<T?> ReadNodeAsync<T>(string nodeId, CancellationToken ct = default)
         {
             var session = connection.Session;
             if (session is not { Connected: true })
@@ -20,7 +20,7 @@ namespace Final_Test_Hybrid.Services.OpcUa
             try
             {
                 var node = new NodeId(nodeId);
-                var value = await session.ReadValueAsync(node);
+                var value = await session.ReadValueAsync(node, ct);
                 return GetValueOrDefault<T>(nodeId, value);
             }
             catch (Exception ex)
@@ -37,10 +37,18 @@ namespace Final_Test_Hybrid.Services.OpcUa
                 logger.LogWarning("Read node {NodeId} returned bad status {Status}", nodeId, value.StatusCode);
                 return default;
             }
-            return (T?)value.Value;
+            return value.Value is T typedValue
+                ? typedValue
+                : LogAndReturnDefault<T>(nodeId);
         }
 
-        public async Task WriteNodeAsync<T>(string nodeId, T value)
+        private T? LogAndReturnDefault<T>(string nodeId)
+        {
+            logger.LogWarning("Cannot cast value from node {NodeId} to type {Type}", nodeId, typeof(T).Name);
+            return default;
+        }
+
+        public async Task WriteNodeAsync<T>(string nodeId, T value, CancellationToken ct = default)
         {
             var session = connection.Session;
             if (session is not { Connected: true })
@@ -53,7 +61,7 @@ namespace Final_Test_Hybrid.Services.OpcUa
                 var node = new NodeId(nodeId);
                 var writeValue = CreateWriteValue(node, value);
                 var request = new WriteValueCollection { writeValue };
-                var response = await session.WriteAsync(null, request, CancellationToken.None);
+                var response = await session.WriteAsync(null, request, ct);
                 LogWriteResult(nodeId, response.Results);
             }
             catch (Exception ex)
