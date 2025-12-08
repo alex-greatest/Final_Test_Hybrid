@@ -1,3 +1,4 @@
+@using Final_Test_Hybrid.Components.Indicators
 @using Final_Test_Hybrid.Components.Engineer
 @using Final_Test_Hybrid.Components.Overview
 
@@ -9464,10 +9465,7 @@
         <div
             style="flex: 1; display: flex; align-items: center; min-width: 0; justify-content: flex-end; height: 100%;">
             <div class="app-bottom-10-content" style="margin-right: 100px;">
-                <div class="status-indicator">
-                    <span class="status-label">Air ON</span>
-                    <img src="images/RedLamp.png" alt="Логотип"/>
-                </div>
+                <PlcIndicator />
                 <div class="status-indicator">
                     <span class="status-label">Air ON</span>
                     <img src="images/RedLamp.png" alt="Логотип"/>
@@ -9482,7 +9480,6 @@
 </RadzenStack>
 
 @code {
-
     private List<Order> _orders = Enumerable.Range(1, 30)
         .Select(_ => new Order())
         .ToList();

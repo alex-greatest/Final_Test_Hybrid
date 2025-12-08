@@ -14,6 +14,7 @@ namespace Final_Test_Hybrid.Services.OpcUa
     {
         public bool IsConnected => Session?.Connected == true;
         public Session? Session { get; private set; }
+        public event EventHandler<bool>? ConnectionChanged;
         private readonly OpcUaSettings _settings = settings.Value;
         private readonly SemaphoreSlim _sessionLock = new(1, 1);
         private readonly Lock _reconnectLock = new();
@@ -22,7 +23,6 @@ namespace Final_Test_Hybrid.Services.OpcUa
         private CancellationTokenSource? _cts;
         private Task? _connectLoopTask;
         private bool _lastConnectionState;
-        public event EventHandler<bool>? ConnectionChanged;
 
         public async Task StartAsync(CancellationToken ct = default)
         {
@@ -101,18 +101,19 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         private async Task TryReconnectIfNeededAsync(CancellationToken ct)
         {
-            bool reconnecting;
-            lock (_reconnectLock)
-            {
-                reconnecting = _reconnectHandler != null;
-            }
-
-            if (reconnecting || Session is { Connected: true })
+            if (IsReconnectingOrConnected())
             {
                 return;
             }
-
             await TryConnectAsync(ct);
+        }
+
+        private bool IsReconnectingOrConnected()
+        {
+            lock (_reconnectLock)
+            {
+                return _reconnectHandler != null || Session is { Connected: true };
+            }
         }
 
         private async Task TryConnectAsync(CancellationToken ct)
@@ -239,7 +240,14 @@ namespace Final_Test_Hybrid.Services.OpcUa
                 return;
             }
             Session.KeepAlive -= OnSessionKeepAlive;
-            await Session.CloseAsync();
+            try
+            {
+                await Session.CloseAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Error closing session");
+            }
             Session.Dispose();
             Session = null;
         }

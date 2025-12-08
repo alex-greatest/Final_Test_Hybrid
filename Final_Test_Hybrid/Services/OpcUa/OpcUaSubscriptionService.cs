@@ -16,6 +16,7 @@ namespace Final_Test_Hybrid.Services.OpcUa
         private readonly ConcurrentDictionary<string, Subscription> _subscriptions = new();
         private readonly ConcurrentDictionary<string, Action<object?>> _callbacks = new();
         private readonly Lock _connectionEventsLock = new();
+        private readonly SemaphoreSlim _connectionChangeGate = new(1, 1);
         private bool _connectionEventsAttached;
 
         public OpcUaSubscriptionService(
@@ -84,6 +85,7 @@ namespace Final_Test_Hybrid.Services.OpcUa
             }
             _subscriptions.Clear();
             _callbacks.Clear();
+            _connectionChangeGate.Dispose();
         }
 
         private async Task SafeRemoveSubscriptionAsync(Subscription subscription)
@@ -133,7 +135,16 @@ namespace Final_Test_Hybrid.Services.OpcUa
         {
             subscription.AddItem(monitoredItem);
             session.AddSubscription(subscription);
-            await subscription.CreateAsync();
+            try
+            {
+                await subscription.CreateAsync();
+            }
+            catch
+            {
+                await session.RemoveSubscriptionAsync(subscription);
+                subscription.Dispose();
+                throw;
+            }
         }
 
         private async Task RemoveSubscriptionFromSessionAsync(Subscription subscription)
@@ -148,12 +159,20 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         private async Task RemoveExistingSubscriptionAsync(string nodeId)
         {
-            if (!_subscriptions.TryRemove(nodeId, out var existing))
+            if (!_subscriptions.TryGetValue(nodeId, out var existing))
             {
                 return;
             }
-            await RemoveSubscriptionFromSessionAsync(existing);
-            existing.Dispose();
+            try
+            {
+                await RemoveSubscriptionFromSessionAsync(existing);
+                existing.Dispose();
+                _subscriptions.TryRemove(nodeId, out _);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to remove existing subscription for node {NodeId}", nodeId);
+            }
         }
 
         private void EnsureConnectionEventsAttached()
@@ -182,28 +201,43 @@ namespace Final_Test_Hybrid.Services.OpcUa
             }
         }
 
-        private void OnConnectionChanged(object? sender, bool connected)
+        private async void OnConnectionChanged(object? sender, bool connected)
         {
-            _ = HandleConnectionChangeAsync(connected);
+            try
+            {
+                await HandleConnectionChangeAsync(connected);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unhandled error in connection change handler");
+            }
         }
 
         private async Task HandleConnectionChangeAsync(bool connected)
         {
+            await _connectionChangeGate.WaitAsync();
             try
             {
-                if (connected)
-                {
-                    await ResubscribeAllAsync();
-                }
-                else
-                {
-                    await DropAllSubscriptionsAsync();
-                }
+                await ProcessConnectionStateAsync(connected);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error handling connection change (connected={Connected})", connected);
             }
+            finally
+            {
+                _connectionChangeGate.Release();
+            }
+        }
+
+        private async Task ProcessConnectionStateAsync(bool connected)
+        {
+            if (connected)
+            {
+                await ResubscribeAllAsync();
+                return;
+            }
+            await DropAllSubscriptionsAsync();
         }
 
         private async Task ResubscribeAllAsync()
@@ -223,9 +257,16 @@ namespace Final_Test_Hybrid.Services.OpcUa
             await RemoveExistingSubscriptionAsync(nodeId);
             var subscription = CreateSubscription(session);
             var monitoredItem = CreateMonitoredItem(nodeId, callback, subscription);
-            await AddSubscriptionToSessionAsync(session, subscription, monitoredItem);
-            _subscriptions[nodeId] = subscription;
-            logger.LogInformation("Subscribed to node {NodeId}", nodeId);
+            try
+            {
+                await AddSubscriptionToSessionAsync(session, subscription, monitoredItem);
+                _subscriptions[nodeId] = subscription;
+                logger.LogInformation("Subscribed to node {NodeId}", nodeId);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to subscribe to node {NodeId}", nodeId);
+            }
         }
 
         private async Task DropAllSubscriptionsAsync()

@@ -1,0 +1,30 @@
+@using Final_Test_Hybrid.Services
+@using Final_Test_Hybrid.Services.OpcUa.Interface
+@inject IOpcUaConnectionService OpcUaConnection
+@implements IDisposable
+
+<div class="status-indicator">
+    <span class="status-label">PLC</span>
+    <img src="@IndicatorHelper.GetLampImagePath(_isConnected)" alt="PLC Status"/>
+</div>
+
+@code {
+    private bool _isConnected;
+
+    protected override void OnInitialized()
+    {
+        _isConnected = OpcUaConnection.IsConnected;
+        OpcUaConnection.ConnectionChanged += OnConnectionChanged;
+    }
+
+    private void OnConnectionChanged(object? sender, bool connected)
+    {
+        _isConnected = connected;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        OpcUaConnection.ConnectionChanged -= OnConnectionChanged;
+    }
+}

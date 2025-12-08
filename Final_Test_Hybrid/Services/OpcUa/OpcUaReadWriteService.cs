@@ -32,12 +32,12 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         private T? GetValueOrDefault<T>(string nodeId, DataValue value)
         {
-            if (!StatusCode.IsBad(value.StatusCode))
+            if (StatusCode.IsBad(value.StatusCode))
             {
-                return (T?)value.Value;
+                logger.LogWarning("Read node {NodeId} returned bad status {Status}", nodeId, value.StatusCode);
+                return default;
             }
-            logger.LogWarning("Read node {NodeId} returned bad status {Status}", nodeId, value.StatusCode);
-            return default;
+            return (T?)value.Value;
         }
 
         public async Task WriteNodeAsync<T>(string nodeId, T value)
