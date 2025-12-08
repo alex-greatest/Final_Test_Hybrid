@@ -8,15 +8,16 @@ namespace Final_Test_Hybrid.Services.OpcUa
     public class OpcUaConnectionService(ILogger<OpcUaConnectionService> logger, IOptions<OpcUaSettings> settings)
         : IOpcUaConnectionService
     {
-        public bool IsConnected => _session?.Connected == true;
-        public Session? Session => _session;
-        public event EventHandler<bool>? ConnectionChanged;
+        public bool IsConnected => Session?.Connected == true;
+        public Session? Session { get; private set; }
         private readonly OpcUaSettings _settings = settings.Value;
-        private Session? _session;
+        private readonly SemaphoreSlim _sessionLock = new(1, 1);
+        private readonly object _reconnectLock = new();
         private SessionReconnectHandler? _reconnectHandler;
         private Opc.Ua.ApplicationConfiguration? _appConfig;
         private CancellationTokenSource? _cts;
         private bool _lastConnectionState;
+        public event EventHandler<bool>? ConnectionChanged;
 
         [Obsolete("Obsolete")]
         public async Task StartAsync(CancellationToken ct = default)
@@ -30,13 +31,22 @@ namespace Final_Test_Hybrid.Services.OpcUa
         {
             await CancelConnectionAsync();
             DisposeReconnectHandler();
-            await CloseSessionAsync();
+            await _sessionLock.WaitAsync();
+            try
+            {
+                await CloseSessionAsync();
+            }
+            finally
+            {
+                _sessionLock.Release();
+            }
             NotifyConnectionChanged(false);
         }
 
         public async ValueTask DisposeAsync()
         {
             await StopAsync();
+            _sessionLock.Dispose();
             GC.SuppressFinalize(this);
         }
 
@@ -72,9 +82,10 @@ namespace Final_Test_Hybrid.Services.OpcUa
             }
         }
 
+        [Obsolete("Obsolete")]
         private async Task TryReconnectIfNeededAsync(CancellationToken ct)
         {
-            if (_session == null || !_session.Connected)
+            if (Session is not { Connected: true })
             {
                 await TryConnectAsync(ct);
             }
@@ -83,12 +94,14 @@ namespace Final_Test_Hybrid.Services.OpcUa
         [Obsolete("Obsolete")]
         private async Task TryConnectAsync(CancellationToken ct)
         {
+            await _sessionLock.WaitAsync(ct);
             try
             {
+                await CloseSessionAsync();
                 logger.LogInformation("Connecting to OPC UA server: {Endpoint}", _settings.EndpointUrl);
                 var endpoint = await CoreClientUtils.SelectEndpointAsync(_appConfig, _settings.EndpointUrl, useSecurity: false, ct: ct);
                 var configEndpoint = new ConfiguredEndpoint(null, endpoint);
-                _session = await Session.Create(
+                Session = await Session.Create(
                     _appConfig,
                     configEndpoint,
                     updateBeforeConnect: false,
@@ -97,14 +110,22 @@ namespace Final_Test_Hybrid.Services.OpcUa
                     identity: new UserIdentity(new AnonymousIdentityToken()),
                     preferredLocales: null,
                     ct);
-                _session.KeepAlive += OnSessionKeepAlive;
+                Session.KeepAlive += OnSessionKeepAlive;
                 logger.LogInformation("Connected to OPC UA server");
                 NotifyConnectionChanged(true);
+            }
+            catch (OperationCanceledException)
+            {
+                // Cancellation is expected during shutdown
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to connect to OPC UA server");
                 NotifyConnectionChanged(false);
+            }
+            finally
+            {
+                _sessionLock.Release();
             }
         }
 
@@ -126,16 +147,19 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         private void StartReconnectIfNeeded()
         {
-            if (_reconnectHandler != null)
+            lock (_reconnectLock)
             {
-                return;
+                if (_reconnectHandler != null)
+                {
+                    return;
+                }
+                logger.LogInformation("Reconnecting...");
+                _reconnectHandler = new SessionReconnectHandler();
+                _reconnectHandler.BeginReconnect(
+                    Session,
+                    _settings.ReconnectIntervalMs,
+                    OnReconnectComplete);
             }
-            logger.LogInformation("Reconnecting...");
-            _reconnectHandler = new SessionReconnectHandler();
-            _reconnectHandler.BeginReconnect(
-                _session,
-                _settings.ReconnectIntervalMs,
-                OnReconnectComplete);
         }
 
         private void OnReconnectComplete(object? sender, EventArgs e)
@@ -146,12 +170,13 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         private void UpdateSessionIfReconnected()
         {
-            if (_reconnectHandler?.Session != null)
+            if (_reconnectHandler?.Session == null)
             {
-                _session = (Session)_reconnectHandler.Session;
-                logger.LogInformation("Reconnected to OPC UA server");
-                NotifyConnectionChanged(true);
+                return;
             }
+            Session = (Session)_reconnectHandler.Session;
+            logger.LogInformation("Reconnected to OPC UA server");
+            NotifyConnectionChanged(true);
         }
 
         private void NotifyConnectionChanged(bool connected)
@@ -166,23 +191,34 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         private async Task CancelConnectionAsync()
         {
-            await _cts?.CancelAsync()!;
+            if (_cts == null)
+            {
+                return;
+            }
+            await _cts.CancelAsync();
+            _cts.Dispose();
+            _cts = null;
         }
 
         private void DisposeReconnectHandler()
         {
-            _reconnectHandler?.Dispose();
-            _reconnectHandler = null;
+            lock (_reconnectLock)
+            {
+                _reconnectHandler?.Dispose();
+                _reconnectHandler = null;
+            }
         }
 
         private async Task CloseSessionAsync()
         {
-            if (_session != null)
+            if (Session == null)
             {
-                await _session.CloseAsync();
-                _session.Dispose();
-                _session = null;
+                return;
             }
+            Session.KeepAlive -= OnSessionKeepAlive;
+            await Session.CloseAsync();
+            Session.Dispose();
+            Session = null;
         }
     }
 }

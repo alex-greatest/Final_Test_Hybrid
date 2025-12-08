@@ -6,6 +6,7 @@ namespace Final_Test_Hybrid.Services.OpcUa
         public string ApplicationName { get; set; } = "FinalTestHybrid";
         public int ReconnectIntervalMs { get; set; } = 5000;
         public int SessionTimeoutMs { get; set; } = 60000;
+        public int PublishingIntervalMs { get; set; } = 1000;
     }
 }
 

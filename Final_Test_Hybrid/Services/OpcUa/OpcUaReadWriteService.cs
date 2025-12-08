@@ -1,39 +1,51 @@
+using Microsoft.Extensions.Logging;
 using Opc.Ua;
 
 namespace Final_Test_Hybrid.Services.OpcUa
 {
-    public class OpcUaReadWriteService(IOpcUaConnectionService connection)
+    public class OpcUaReadWriteService(
+        IOpcUaConnectionService connection,
+        ILogger<OpcUaReadWriteService> logger)
         : IOpcUaReadWriteService
     {
         public async Task<T?> ReadNodeAsync<T>(string nodeId)
         {
-            if (!IsSessionConnected())
+            var session = connection.Session;
+            if (session is not { Connected: true })
             {
                 return default;
             }
-            var node = new NodeId(nodeId);
-            var session = connection.Session;
-            var value = await session.ReadValueAsync(node);
-            return (T?)value.Value;
+            try
+            {
+                var node = new NodeId(nodeId);
+                var value = await session.ReadValueAsync(node);
+                return (T?)value.Value;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to read node {NodeId}", nodeId);
+                return default;
+            }
         }
 
         public async Task WriteNodeAsync<T>(string nodeId, T value)
         {
-            if (!IsSessionConnected())
+            var session = connection.Session;
+            if (session is not { Connected: true })
             {
                 return;
             }
-            var node = new NodeId(nodeId);
-            var writeValue = CreateWriteValue(node, value);
-            var request = new WriteValueCollection { writeValue };
-            var session = connection.Session;
-            await session.WriteAsync(null, request, CancellationToken.None);
-        }
-
-        private bool IsSessionConnected()
-        {
-            var session = connection.Session;
-            return session != null && session.Connected;
+            try
+            {
+                var node = new NodeId(nodeId);
+                var writeValue = CreateWriteValue(node, value);
+                var request = new WriteValueCollection { writeValue };
+                await session.WriteAsync(null, request, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to write node {NodeId}", nodeId);
+            }
         }
 
         private WriteValue CreateWriteValue<T>(NodeId node, T value)

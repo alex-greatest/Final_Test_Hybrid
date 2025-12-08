@@ -1,47 +1,88 @@
+using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Opc.Ua;
 using Opc.Ua.Client;
 
 namespace Final_Test_Hybrid.Services.OpcUa
 {
-    public class OpcUaSubscriptionService(IOpcUaConnectionService connectionService) : IOpcUaSubscriptionService
+    public class OpcUaSubscriptionService(
+        IOpcUaConnectionService connectionService,
+        IOptions<OpcUaSettings> settings,
+        ILogger<OpcUaSubscriptionService> logger) : IOpcUaSubscriptionService
     {
-        private readonly Dictionary<string, Subscription> _subscriptions = [];
+        private readonly OpcUaSettings _settings = settings.Value;
+        private readonly ConcurrentDictionary<string, Subscription> _subscriptions = new();
 
+        [Obsolete("Obsolete")]
         public async Task SubscribeAsync(string nodeId, Action<object?> callback)
         {
-            if (!IsSessionConnected())
+            var session = connectionService.Session;
+            if (session is not { Connected: true })
             {
                 return;
             }
-            var subscription = CreateSubscription();
-            var monitoredItem = CreateMonitoredItem(nodeId, callback, subscription);
-            await AddSubscriptionToSessionAsync(subscription, monitoredItem);
-            _subscriptions[nodeId] = subscription;
+            if (_subscriptions.ContainsKey(nodeId))
+            {
+                await UnsubscribeAsync(nodeId);
+            }
+            try
+            {
+                var subscription = CreateSubscription(session);
+                var monitoredItem = CreateMonitoredItem(nodeId, callback, subscription);
+                await AddSubscriptionToSessionAsync(session, subscription, monitoredItem);
+                _subscriptions[nodeId] = subscription;
+                logger.LogInformation("Subscribed to node {NodeId}", nodeId);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to subscribe to node {NodeId}", nodeId);
+            }
         }
 
+        [Obsolete("Obsolete")]
         public async Task UnsubscribeAsync(string nodeId)
         {
-            if (!TryGetSubscription(nodeId, out var subscription))
+            if (!_subscriptions.TryRemove(nodeId, out var subscription))
             {
                 return;
             }
-            await RemoveSubscriptionFromSessionAsync(subscription);
-            subscription.Dispose();
-            _subscriptions.Remove(nodeId);
+            try
+            {
+                await RemoveSubscriptionFromSessionAsync(subscription);
+                subscription.Dispose();
+                logger.LogInformation("Unsubscribed from node {NodeId}", nodeId);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to unsubscribe from node {NodeId}", nodeId);
+            }
         }
 
-        private bool IsSessionConnected()
+        [Obsolete("Obsolete")]
+        public async ValueTask DisposeAsync()
         {
-            var session = connectionService.Session;
-            return session != null && session.Connected;
+            foreach (var subscription in _subscriptions.Values)
+            {
+                try
+                {
+                    await RemoveSubscriptionFromSessionAsync(subscription);
+                    subscription.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error disposing subscription");
+                }
+            }
+            _subscriptions.Clear();
+            GC.SuppressFinalize(this);
         }
 
-        private Subscription CreateSubscription()
+        private Subscription CreateSubscription(Session session)
         {
-            var session = connectionService.Session;
             return new Subscription(session.DefaultSubscription)
             {
-                PublishingInterval = 1000
+                PublishingInterval = _settings.PublishingIntervalMs
             };
         }
 
@@ -60,26 +101,21 @@ namespace Final_Test_Hybrid.Services.OpcUa
             return monitoredItem;
         }
 
-        private async Task AddSubscriptionToSessionAsync(Subscription subscription, MonitoredItem monitoredItem)
+        private async Task AddSubscriptionToSessionAsync(Session session, Subscription subscription, MonitoredItem monitoredItem)
         {
-            var session = connectionService.Session;
             subscription.AddItem(monitoredItem);
             session.AddSubscription(subscription);
             await subscription.CreateAsync();
         }
 
-        private bool TryGetSubscription(string nodeId, out Subscription? subscription)
-        {
-            return _subscriptions.TryGetValue(nodeId, out subscription);
-        }
-
+        [Obsolete("Obsolete")]
         private async Task RemoveSubscriptionFromSessionAsync(Subscription subscription)
         {
-            if (!IsSessionConnected())
+            var session = connectionService.Session;
+            if (session is not { Connected: true })
             {
                 return;
             }
-            var session = connectionService.Session;
             await subscription.DeleteAsync(true);
             session.RemoveSubscription(subscription);
         }
