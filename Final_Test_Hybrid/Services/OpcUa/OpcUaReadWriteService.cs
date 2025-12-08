@@ -26,6 +26,11 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         public async Task<T?> ReadNodeAsync<T>(string nodeId, CancellationToken ct = default)
         {
+            if (_disposed)
+            {
+                logger.LogWarning("ReadNodeAsync called after dispose for node {NodeId}", nodeId);
+                return default;
+            }
             await _sessionLock.WaitAsync(ct);
             try
             {
@@ -37,6 +42,10 @@ namespace Final_Test_Hybrid.Services.OpcUa
                 }
                 var node = new NodeId(nodeId);
                 var value = await session.ReadValueAsync(node, ct);
+                if (!Equals(connection.Session, session) || !session.Connected)
+                {
+                    return default;
+                }
                 return GetValueOrDefault<T>(nodeId, value);
             }
             catch (OperationCanceledException)
@@ -74,6 +83,11 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         public async Task WriteNodeAsync<T>(string nodeId, T value, CancellationToken ct = default)
         {
+            if (_disposed)
+            {
+                logger.LogWarning("WriteNodeAsync called after dispose for node {NodeId}", nodeId);
+                return;
+            }
             await _sessionLock.WaitAsync(ct);
             try
             {
@@ -87,6 +101,10 @@ namespace Final_Test_Hybrid.Services.OpcUa
                 var writeValue = CreateWriteValue(node, value);
                 var request = new WriteValueCollection { writeValue };
                 var response = await session.WriteAsync(null, request, ct);
+                if (!Equals(connection.Session, session) || !session.Connected)
+                {
+                    return;
+                }
                 LogWriteResult(nodeId, response.Results);
             }
             catch (OperationCanceledException)
@@ -110,16 +128,20 @@ namespace Final_Test_Hybrid.Services.OpcUa
                 logger.LogWarning("Write node {NodeId}: empty results", nodeId);
                 return;
             }
-            LogBadStatusIfNeeded(nodeId, results[0]);
+            LogAllBadStatuses(nodeId, results);
         }
 
-        private void LogBadStatusIfNeeded(string nodeId, StatusCode status)
+        private void LogAllBadStatuses(string nodeId, StatusCodeCollection results)
         {
-            if (StatusCode.IsBad(status))
+            for (var i = 0; i < results.Count; i++)
             {
-                logger.LogWarning("Write node {NodeId} failed with status {Status}", nodeId, status);
+                if (StatusCode.IsBad(results[i]))
+                {
+                    logger.LogWarning("Write node {NodeId} item [{Index}] failed: {Status}", nodeId, i, results[i]);
+                }
             }
         }
+
 
         private WriteValue CreateWriteValue<T>(NodeId node, T value)
         {

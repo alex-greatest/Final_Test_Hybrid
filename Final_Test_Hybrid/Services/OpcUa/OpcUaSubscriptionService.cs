@@ -35,7 +35,7 @@ namespace Final_Test_Hybrid.Services.OpcUa
             }
         }
 
-        public async Task SubscribeAsync(string nodeId, Action<object?> callback)
+        public async Task<bool> SubscribeAsync(string nodeId, Action<object?> callback)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             EnsureConnectionEventsAttached();
@@ -47,10 +47,12 @@ namespace Final_Test_Hybrid.Services.OpcUa
                 var session = connectionService.Session;
                 if (session is not { Connected: true })
                 {
-                    return;
+                    logger.LogDebug("SubscribeAsync({NodeId}): no active session, callback registered for later", nodeId);
+                    return false;
                 }
                 await RemoveExistingSubscriptionAsync(nodeId);
                 await CreateAndAddSubscriptionAsync(nodeId, callback, session);
+                return true;
             }
             finally
             {
@@ -172,23 +174,27 @@ namespace Final_Test_Hybrid.Services.OpcUa
             };
             monitoredItem.Notification += (item, e) =>
             {
-                try
+                if (e.NotificationValue is not MonitoredItemNotification notification)
                 {
-                    if (e.NotificationValue is not MonitoredItemNotification notification)
-                    {
-                        return;
-                    }
-                    if (notification.Value == null)
-                    {
-                        logger.LogWarning("Received null DataValue for node {NodeId}", nodeId);
-                        return;
-                    }
-                    callback(notification.Value.Value);
+                    return;
                 }
-                catch (Exception ex)
+                if (notification.Value == null)
                 {
-                    logger.LogError(ex, "Callback error for node {NodeId}", nodeId);
+                    logger.LogWarning("Received null DataValue for node {NodeId}", nodeId);
+                    return;
                 }
+                // Выносим callback в ThreadPool, чтобы не блокировать поток уведомлений OPC UA
+                _ = Task.Run(() =>
+                {
+                    try
+                    {
+                        callback(notification.Value.Value);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Callback error for node {NodeId}", nodeId);
+                    }
+                });
             };
             return monitoredItem;
         }
