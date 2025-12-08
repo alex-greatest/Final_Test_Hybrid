@@ -13,19 +13,34 @@ namespace Final_Test_Hybrid.Services.OpcUa
     {
         private readonly OpcUaSettings _settings = settings.Value;
         private readonly ConcurrentDictionary<string, Subscription> _subscriptions = new();
+        private readonly ConcurrentDictionary<string, Action<object?>> _callbacks = new();
+        private readonly Lock _connectionEventsLock = new();
+        private bool _connectionEventsAttached;
 
-        [Obsolete("Obsolete")]
+        public OpcUaSubscriptionService(
+            IOpcUaConnectionService connectionService,
+            IOptions<OpcUaSettings> settings,
+            ILogger<OpcUaSubscriptionService> logger,
+            bool subscribeToConnection = true)
+            : this(connectionService, settings, logger)
+        {
+            if (subscribeToConnection)
+            {
+                connectionService.ConnectionChanged += OnConnectionChanged;
+                _connectionEventsAttached = true;
+            }
+        }
+
         public async Task SubscribeAsync(string nodeId, Action<object?> callback)
         {
+            EnsureConnectionEventsAttached();
+            _callbacks[nodeId] = callback;
             var session = connectionService.Session;
             if (session is not { Connected: true })
             {
                 return;
             }
-            if (_subscriptions.ContainsKey(nodeId))
-            {
-                await UnsubscribeAsync(nodeId);
-            }
+            await RemoveExistingSubscriptionAsync(nodeId);
             try
             {
                 var subscription = CreateSubscription(session);
@@ -40,9 +55,9 @@ namespace Final_Test_Hybrid.Services.OpcUa
             }
         }
 
-        [Obsolete("Obsolete")]
         public async Task UnsubscribeAsync(string nodeId)
         {
+            _callbacks.TryRemove(nodeId, out _);
             if (!_subscriptions.TryRemove(nodeId, out var subscription))
             {
                 return;
@@ -59,23 +74,28 @@ namespace Final_Test_Hybrid.Services.OpcUa
             }
         }
 
-        [Obsolete("Obsolete")]
         public async ValueTask DisposeAsync()
         {
-            foreach (var subscription in _subscriptions.Values)
+            DetachConnectionEvents();
+            foreach (var subscription in _subscriptions.Values.ToArray())
             {
-                try
-                {
-                    await RemoveSubscriptionFromSessionAsync(subscription);
-                    subscription.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Error disposing subscription");
-                }
+                await SafeRemoveSubscriptionAsync(subscription);
             }
             _subscriptions.Clear();
-            GC.SuppressFinalize(this);
+            _callbacks.Clear();
+        }
+
+        private async Task SafeRemoveSubscriptionAsync(Subscription subscription)
+        {
+            try
+            {
+                await RemoveSubscriptionFromSessionAsync(subscription);
+                subscription.Dispose();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error disposing subscription");
+            }
         }
 
         private Subscription CreateSubscription(Session session)
@@ -95,8 +115,15 @@ namespace Final_Test_Hybrid.Services.OpcUa
             };
             monitoredItem.Notification += (item, e) =>
             {
-                var value = ((MonitoredItemNotification)e.NotificationValue).Value.Value;
-                callback(value);
+                try
+                {
+                    var value = ((MonitoredItemNotification)e.NotificationValue).Value.Value;
+                    callback(value);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Callback error for node {NodeId}", nodeId);
+                }
             };
             return monitoredItem;
         }
@@ -108,16 +135,105 @@ namespace Final_Test_Hybrid.Services.OpcUa
             await subscription.CreateAsync();
         }
 
-        [Obsolete("Obsolete")]
         private async Task RemoveSubscriptionFromSessionAsync(Subscription subscription)
         {
-            var session = connectionService.Session;
-            if (session is not { Connected: true })
+            if (subscription.Session is not { Connected: true } session)
             {
                 return;
             }
             await subscription.DeleteAsync(true);
-            session.RemoveSubscription(subscription);
+            await session.RemoveSubscriptionAsync(subscription);
+        }
+
+        private async Task RemoveExistingSubscriptionAsync(string nodeId)
+        {
+            if (!_subscriptions.TryRemove(nodeId, out var existing))
+            {
+                return;
+            }
+            await RemoveSubscriptionFromSessionAsync(existing);
+            existing.Dispose();
+        }
+
+        private void EnsureConnectionEventsAttached()
+        {
+            lock (_connectionEventsLock)
+            {
+                if (_connectionEventsAttached)
+                {
+                    return;
+                }
+                connectionService.ConnectionChanged += OnConnectionChanged;
+                _connectionEventsAttached = true;
+            }
+        }
+
+        private void DetachConnectionEvents()
+        {
+            lock (_connectionEventsLock)
+            {
+                if (!_connectionEventsAttached)
+                {
+                    return;
+                }
+                connectionService.ConnectionChanged -= OnConnectionChanged;
+                _connectionEventsAttached = false;
+            }
+        }
+
+        private void OnConnectionChanged(object? sender, bool connected)
+        {
+            _ = HandleConnectionChangeAsync(connected);
+        }
+
+        private async Task HandleConnectionChangeAsync(bool connected)
+        {
+            try
+            {
+                if (connected)
+                {
+                    await ResubscribeAllAsync();
+                }
+                else
+                {
+                    await DropAllSubscriptionsAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error handling connection change (connected={Connected})", connected);
+            }
+        }
+
+        private async Task ResubscribeAllAsync()
+        {
+            if (connectionService.Session is not { Connected: true } session)
+            {
+                return;
+            }
+            foreach (var kvp in _callbacks.ToArray())
+            {
+                await SubscribeInternalAsync(kvp.Key, kvp.Value, session);
+            }
+        }
+
+        private async Task SubscribeInternalAsync(string nodeId, Action<object?> callback, Session session)
+        {
+            await RemoveExistingSubscriptionAsync(nodeId);
+            var subscription = CreateSubscription(session);
+            var monitoredItem = CreateMonitoredItem(nodeId, callback, subscription);
+            await AddSubscriptionToSessionAsync(session, subscription, monitoredItem);
+            _subscriptions[nodeId] = subscription;
+            logger.LogInformation("Subscribed to node {NodeId}", nodeId);
+        }
+
+        private async Task DropAllSubscriptionsAsync()
+        {
+            foreach (var subscription in _subscriptions.Values.ToArray())
+            {
+                await SafeRemoveSubscriptionAsync(subscription);
+            }
+            _subscriptions.Clear();
         }
     }
 }
