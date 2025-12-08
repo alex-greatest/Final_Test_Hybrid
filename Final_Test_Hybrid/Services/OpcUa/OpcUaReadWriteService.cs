@@ -32,14 +32,14 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         private T? GetValueOrDefault<T>(string nodeId, DataValue value)
         {
-            if (StatusCode.IsBad(value.StatusCode))
+            if (!StatusCode.IsBad(value.StatusCode))
             {
-                logger.LogWarning("Read node {NodeId} returned bad status {Status}", nodeId, value.StatusCode);
-                return default;
+                return value.Value is T typedValue
+                    ? typedValue
+                    : LogAndReturnDefault<T>(nodeId);
             }
-            return value.Value is T typedValue
-                ? typedValue
-                : LogAndReturnDefault<T>(nodeId);
+            logger.LogWarning("Read node {NodeId} returned bad status {Status}", nodeId, value.StatusCode);
+            return default;
         }
 
         private T? LogAndReturnDefault<T>(string nodeId)
