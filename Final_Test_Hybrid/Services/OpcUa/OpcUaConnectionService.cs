@@ -82,23 +82,45 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         private async Task ConnectLoopAsync(CancellationToken ct)
         {
+            while (!ct.IsCancellationRequested)
+            {
+                try
+                {
+                    await RunConnectLoopIterationsAsync(ct);
+                }
+                catch (OperationCanceledException)
+                {
+                    logger.LogInformation("Connection loop canceled");
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Connection loop failed, restarting in {Delay}ms", _settings.ReconnectIntervalMs);
+                    await SafeDelayAsync(_settings.ReconnectIntervalMs, ct);
+                }
+            }
+        }
+
+        private async Task RunConnectLoopIterationsAsync(CancellationToken ct)
+        {
             _currentDelayMs = _settings.ReconnectIntervalMs;
+            while (!ct.IsCancellationRequested)
+            {
+                var connected = await TryReconnectIfNeededAsync(ct);
+                UpdateBackoffDelay(connected);
+                await Task.Delay(_currentDelayMs, ct);
+            }
+        }
+
+        private async Task SafeDelayAsync(int delayMs, CancellationToken ct)
+        {
             try
             {
-                while (!ct.IsCancellationRequested)
-                {
-                    var connected = await TryReconnectIfNeededAsync(ct);
-                    UpdateBackoffDelay(connected);
-                    await Task.Delay(_currentDelayMs, ct);
-                }
+                await Task.Delay(delayMs, ct);
             }
             catch (OperationCanceledException)
             {
-                logger.LogInformation("Connection loop canceled");
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Connection loop failed");
+                // Expected during shutdown
             }
         }
 

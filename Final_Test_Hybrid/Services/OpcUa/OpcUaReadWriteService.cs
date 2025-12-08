@@ -7,26 +7,50 @@ namespace Final_Test_Hybrid.Services.OpcUa
     public class OpcUaReadWriteService(
         IOpcUaConnectionService connection,
         ILogger<OpcUaReadWriteService> logger)
-        : IOpcUaReadWriteService
+        : IOpcUaReadWriteService, IAsyncDisposable
     {
+        private readonly SemaphoreSlim _sessionLock = new(1, 1);
+        private bool _disposed;
+
+        public ValueTask DisposeAsync()
+        {
+            if (_disposed)
+            {
+                return ValueTask.CompletedTask;
+            }
+            _disposed = true;
+            _sessionLock.Dispose();
+            GC.SuppressFinalize(this);
+            return ValueTask.CompletedTask;
+        }
+
         public async Task<T?> ReadNodeAsync<T>(string nodeId, CancellationToken ct = default)
         {
-            var session = connection.Session;
-            if (session is not { Connected: true })
-            {
-                logger.LogWarning("Cannot read node {NodeId}: Session not connected", nodeId);
-                return default;
-            }
+            await _sessionLock.WaitAsync(ct);
             try
             {
+                var session = connection.Session;
+                if (session is not { Connected: true })
+                {
+                    logger.LogWarning("Cannot read node {NodeId}: Session not connected", nodeId);
+                    return default;
+                }
                 var node = new NodeId(nodeId);
                 var value = await session.ReadValueAsync(node, ct);
                 return GetValueOrDefault<T>(nodeId, value);
+            }
+            catch (OperationCanceledException)
+            {
+                return default;
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to read node {NodeId}", nodeId);
                 return default;
+            }
+            finally
+            {
+                _sessionLock.Release();
             }
         }
 
@@ -50,23 +74,32 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         public async Task WriteNodeAsync<T>(string nodeId, T value, CancellationToken ct = default)
         {
-            var session = connection.Session;
-            if (session is not { Connected: true })
-            {
-                logger.LogWarning("Cannot write node {NodeId}: Session not connected", nodeId);
-                return;
-            }
+            await _sessionLock.WaitAsync(ct);
             try
             {
+                var session = connection.Session;
+                if (session is not { Connected: true })
+                {
+                    logger.LogWarning("Cannot write node {NodeId}: Session not connected", nodeId);
+                    return;
+                }
                 var node = new NodeId(nodeId);
                 var writeValue = CreateWriteValue(node, value);
                 var request = new WriteValueCollection { writeValue };
                 var response = await session.WriteAsync(null, request, ct);
                 LogWriteResult(nodeId, response.Results);
             }
+            catch (OperationCanceledException)
+            {
+                // Expected during cancellation
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to write node {NodeId}", nodeId);
+            }
+            finally
+            {
+                _sessionLock.Release();
             }
         }
 

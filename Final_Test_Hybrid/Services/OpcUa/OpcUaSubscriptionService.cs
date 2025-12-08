@@ -178,6 +178,11 @@ namespace Final_Test_Hybrid.Services.OpcUa
                     {
                         return;
                     }
+                    if (notification.Value == null)
+                    {
+                        logger.LogWarning("Received null DataValue for node {NodeId}", nodeId);
+                        return;
+                    }
                     callback(notification.Value.Value);
                 }
                 catch (Exception ex)
