@@ -194,10 +194,16 @@ namespace Final_Test_Hybrid.Services.OpcUa
             {
                 return;
             }
-            Session?.KeepAlive -= OnSessionKeepAlive;
+            var oldSession = Session;
+            if (oldSession != null && !ReferenceEquals(oldSession, newSession))
+            {
+                oldSession.KeepAlive -= OnSessionKeepAlive;
+                oldSession.Dispose();
+            }
+
             Session = newSession;
-            logger.LogInformation("Reconnected to OPC UA server");
             Session.KeepAlive += OnSessionKeepAlive;
+            logger.LogInformation("Reconnected to OPC UA server");
             NotifyConnectionChanged(true);
         }
 
