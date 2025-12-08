@@ -257,7 +257,10 @@ namespace Final_Test_Hybrid.Services.OpcUa
             }
         }
 
-        private async void OnConnectionChanged(object? sender, bool connected)
+        private void OnConnectionChanged(object? sender, bool connected)
+            => _ = OnConnectionChangedAsync(connected);
+
+        private async Task OnConnectionChangedAsync(bool connected)
         {
             if (_disposed)
             {

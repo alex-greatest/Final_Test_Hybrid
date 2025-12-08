@@ -23,6 +23,7 @@ namespace Final_Test_Hybrid.Services.OpcUa
         private CancellationTokenSource? _cts;
         private Task? _connectLoopTask;
         private bool _lastConnectionState;
+        private int _currentDelayMs;
 
         public async Task StartAsync(CancellationToken ct = default)
         {
@@ -81,12 +82,14 @@ namespace Final_Test_Hybrid.Services.OpcUa
 
         private async Task ConnectLoopAsync(CancellationToken ct)
         {
+            _currentDelayMs = _settings.ReconnectIntervalMs;
             try
             {
                 while (!ct.IsCancellationRequested)
                 {
-                    await TryReconnectIfNeededAsync(ct);
-                    await Task.Delay(_settings.ReconnectIntervalMs, ct);
+                    var connected = await TryReconnectIfNeededAsync(ct);
+                    UpdateBackoffDelay(connected);
+                    await Task.Delay(_currentDelayMs, ct);
                 }
             }
             catch (OperationCanceledException)
@@ -99,13 +102,25 @@ namespace Final_Test_Hybrid.Services.OpcUa
             }
         }
 
-        private async Task TryReconnectIfNeededAsync(CancellationToken ct)
+        private void UpdateBackoffDelay(bool connected)
+        {
+            if (connected)
+            {
+                _currentDelayMs = _settings.ReconnectIntervalMs;
+                return;
+            }
+            var maxDelay = _settings.ReconnectIntervalMs * 8;
+            _currentDelayMs = Math.Min(_currentDelayMs * 2, maxDelay);
+        }
+
+        private async Task<bool> TryReconnectIfNeededAsync(CancellationToken ct)
         {
             if (IsReconnectingOrConnected())
             {
-                return;
+                return IsConnected;
             }
             await TryConnectAsync(ct);
+            return IsConnected;
         }
 
         private bool IsReconnectingOrConnected()
@@ -195,7 +210,13 @@ namespace Final_Test_Hybrid.Services.OpcUa
                 return;
             }
             var oldSession = Session;
-            if (oldSession != null && !ReferenceEquals(oldSession, newSession))
+            if (ReferenceEquals(oldSession, newSession))
+            {
+                logger.LogInformation("Reconnected to OPC UA server (same session)");
+                NotifyConnectionChanged(true);
+                return;
+            }
+            if (oldSession != null)
             {
                 oldSession.KeepAlive -= OnSessionKeepAlive;
                 oldSession.Dispose();
