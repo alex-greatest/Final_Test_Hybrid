@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Services.IO;
+using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Sequence;
 using Final_Test_Hybrid.Services.Settings.IO;
 using Final_Test_Hybrid.Services.UI;
@@ -25,11 +26,20 @@ namespace Final_Test_Hybrid
             services.AddScoped<ISequenceExcelService, SequenceExcelService>();
             services.AddScoped<INotificationService, NotificationServiceWrapper>();
             services.AddScoped<TestSequenceService>();
+            services.Configure<OpcUaSettings>(_config!.GetSection("OpcUa"));
+            services.AddSingleton<IOpcUaConnectionService, OpcUaConnectionService>();
+            services.AddSingleton<IOpcUaReadWriteService, OpcUaReadWriteService>();
+            services.AddSingleton<IOpcUaSubscriptionService, OpcUaSubscriptionService>();
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();
             blazorWebView1.HostPage = "wwwroot\\index.html";
-            blazorWebView1.Services = services.BuildServiceProvider();
+            var serviceProvider = services.BuildServiceProvider();
+            blazorWebView1.Services = serviceProvider;
+            
+            // Автозапуск OPC UA подключения
+            var connectionService = serviceProvider.GetRequiredService<IOpcUaConnectionService>();
+            _ = connectionService.StartAsync();
             //blazorWebView1.RootComponents.Add<Counter>("#app");
             blazorWebView1.RootComponents.Add<MyComponent>("#app");
         }
