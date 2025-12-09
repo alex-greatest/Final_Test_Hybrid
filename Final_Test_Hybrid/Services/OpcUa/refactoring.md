@@ -1,4 +1,4 @@
-# OPC UA Services - Документация и рефакторинг
+/c# OPC UA Services - Документация и рефакторинг
 
 ## Обзор модуля
 
@@ -11,8 +11,8 @@
 ```
 Services/OpcUa/
 ├── IOpcUaConnectionService.cs          # Интерфейс сервиса подключения (24 строки)
-├── OpcUaConnectionService.cs           # Core: lifecycle, connect loop (246 строк)
-├── OpcUaConnectionService.Reconnect.cs # Partial: reconnect логика (205 строк)
+├── OpcUaConnectionService.cs           # Core: lifecycle, connect loop (~250 строк)
+├── OpcUaConnectionService.Reconnect.cs # Partial: reconnect логика (~210 строк)
 │
 ├── IOpcUaSessionFactory.cs             # Интерфейс фабрики сессий (13 строк)
 ├── OpcUaSessionFactory.cs              # Создание сессий + конфигурация (87 строк)
@@ -278,6 +278,63 @@ public async Task WriteValueAsync(string nodeId, object value)
 
 **Результат:** Основной файл сокращён с 462 до 223 строк.
 
+### Phase 0.1: Hardening (декабрь 2024)
+
+#### 1. Атомарный DisposeAsync
+
+**Проблема:** Двойной вызов `DisposeAsync` мог вызвать `ObjectDisposedException` от `_sessionLock.Dispose()`.
+
+**Решение:** `Interlocked.Exchange(ref _disposeState, 1)` — атомарная проверка и установка.
+
+```csharp
+private int _disposeState;
+private bool IsDisposed => Volatile.Read(ref _disposeState) != 0;
+
+public async ValueTask DisposeAsync()
+{
+    if (Interlocked.Exchange(ref _disposeState, 1) != 0)
+    {
+        return;
+    }
+    ...
+}
+```
+
+#### 2. Защита от повторного StartAsync
+
+**Проблема:** Повторный вызов `StartAsync` перезаписывал `_connectTimer`, вызывая утечку.
+
+**Решение:** Проверка `_connectLoopTask is not null` + выброс исключений.
+
+```csharp
+public Task StartAsync(CancellationToken cancellationToken = default)
+{
+    if (IsDisposed)
+    {
+        throw new ObjectDisposedException(nameof(OpcUaConnectionService));
+    }
+    if (_connectLoopTask is not null)
+    {
+        throw new InvalidOperationException("Service is already started");
+    }
+    ...
+}
+```
+
+#### 3. ContinueWith в HandleKeepAliveError
+
+**Проблема:** Fire-and-forget в `HandleKeepAliveError` терял исключения.
+
+**Решение:** Добавлен `ContinueWith` с логированием.
+
+```csharp
+_ = StartReconnectHandlerAsync(session).ContinueWith(
+    t => _logger.LogError(t.Exception, "Error starting reconnect handler"),
+    CancellationToken.None,
+    TaskContinuationOptions.OnlyOnFaulted,
+    TaskScheduler.Default);
+```
+
 ### Phase 0: Исправление concurrency issues (декабрь 2024)
 
 #### 1. Race Condition: флаг `_isReconnecting`
@@ -296,7 +353,7 @@ public async Task WriteValueAsync(string nodeId, object value)
 
 **Проблема:** Исключения в async callback'ах терялись.
 
-**Решение:** `ContinueWith` с логированием ошибок.
+**Решение:** `ContinueWith` с логированием ошибок в `OnReconnectComplete`.
 
 #### 4. Блокирующие события
 

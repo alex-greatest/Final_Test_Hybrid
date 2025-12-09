@@ -41,7 +41,6 @@ public static class OpcUaSettingsValidator
         {
             return;
         }
-
         LogReconnectIntervalWarning(settings, logger);
         LogSessionTimeoutWarning(settings, logger);
     }

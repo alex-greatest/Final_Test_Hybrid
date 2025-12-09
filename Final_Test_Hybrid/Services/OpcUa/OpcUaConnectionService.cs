@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Opc.Ua;
 using Opc.Ua.Client;
 
 namespace Final_Test_Hybrid.Services.OpcUa;
@@ -20,7 +19,8 @@ public sealed partial class OpcUaConnectionService : IOpcUaConnectionService
     private volatile bool _isReconnecting;
     private PeriodicTimer? _connectTimer;
     private Task? _connectLoopTask;
-    private volatile bool _isDisposed;
+    private int _disposeState;
+    private bool IsDisposed => Volatile.Read(ref _disposeState) != 0;
 
     public OpcUaConnectionService(
         IOptions<OpcUaSettings> settings,
@@ -35,9 +35,13 @@ public sealed partial class OpcUaConnectionService : IOpcUaConnectionService
 
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
-        if (_isDisposed)
+        if (IsDisposed)
         {
-            return Task.CompletedTask;
+            throw new ObjectDisposedException(nameof(OpcUaConnectionService));
+        }
+        if (_connectLoopTask is not null)
+        {
+            throw new InvalidOperationException("Service is already started");
         }
         _connectTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(_settings.ReconnectIntervalMs));
         _connectLoopTask = ConnectLoopAsync(_disposeCts.Token);
@@ -79,7 +83,7 @@ public sealed partial class OpcUaConnectionService : IOpcUaConnectionService
 
     public async ValueTask DisposeAsync()
     {
-        if (_isDisposed)
+        if (Interlocked.Exchange(ref _disposeState, 1) != 0)
         {
             return;
         }
@@ -88,7 +92,6 @@ public sealed partial class OpcUaConnectionService : IOpcUaConnectionService
 
     private async Task DisposeAsyncCore()
     {
-        _isDisposed = true;
         await _disposeCts.CancelAsync().ConfigureAwait(false);
         _connectTimer?.Dispose();
         await WaitForConnectLoopAsync().ConfigureAwait(false);

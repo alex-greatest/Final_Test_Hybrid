@@ -19,7 +19,11 @@ public sealed partial class OpcUaConnectionService
     {
         _logger.LogWarning("Connection lost to OPC UA server");
         RaiseConnectionChangedAsync(false);
-        _ = StartReconnectHandlerAsync(session);
+        _ = StartReconnectHandlerAsync(session).ContinueWith(
+            t => _logger.LogError(t.Exception, "Error starting reconnect handler"),
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted,
+            TaskScheduler.Default);
     }
 
     private async Task StartReconnectHandlerAsync(ISession session)
@@ -58,7 +62,7 @@ public sealed partial class OpcUaConnectionService
 
     private void StartReconnectHandlerCore(ISession session)
     {
-        if (_isReconnecting || _isDisposed)
+        if (_isReconnecting || IsDisposed)
         {
             return;
         }
@@ -69,7 +73,7 @@ public sealed partial class OpcUaConnectionService
 
     private void OnReconnectComplete(object? sender, EventArgs e)
     {
-        if (_isDisposed)
+        if (IsDisposed)
         {
             return;
         }
