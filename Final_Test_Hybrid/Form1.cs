@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Opc.Ua.Client;
 using Radzen;
 
 namespace Final_Test_Hybrid
@@ -25,9 +24,6 @@ namespace Final_Test_Hybrid
             services.AddScoped<ISequenceExcelService, SequenceExcelService>();
             services.AddScoped<INotificationService, NotificationServiceWrapper>();
             services.AddScoped<TestSequenceService>();
-            //services.Configure<OpcUaSettings>(_config!.GetSection("OpcUa"));
-            services.AddSingleton<ISessionFactory, DefaultSessionFactory>();
-            //services.AddSingleton<IOpcUaConnectionService, OpcUaConnectionService>();
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();
