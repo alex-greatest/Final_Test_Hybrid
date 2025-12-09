@@ -1,7 +1,6 @@
-using Final_Test_Hybrid.Services.IO;
 using Final_Test_Hybrid.Services.Sequence;
 using Final_Test_Hybrid.Services.Settings.IO;
-using Final_Test_Hybrid.Services.UI;
+using Final_Test_Hybrid.Services.Settings.UI;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,22 +60,22 @@ namespace Final_Test_Hybrid
         
         private void SettingDevTools(ServiceCollection services)
         {
-#if DEBUG
-            services.AddBlazorWebViewDeveloperTools();
-            services.AddLogging(logging =>
-            {
-                logging.SetMinimumLevel(LogLevel.Information);
-                logging.AddDebug();
-                logging.AddConsole();
-                logging.AddFile(_config?.GetSection("Logging")!);
-            });
-#else
+            #if DEBUG
+                services.AddBlazorWebViewDeveloperTools();
+                services.AddLogging(logging =>
+                {
+                    logging.SetMinimumLevel(LogLevel.Information);
+                    logging.AddDebug();
+                    logging.AddConsole();
+                    logging.AddFile(_config?.GetSection("Logging")!);
+                });
+            #else
                 services.AddLogging(logging =>
                 {
                     logging.SetMinimumLevel(LogLevel.Error);
                     logging.AddFile(_config?.GetSection("Logging"));
                 });
-#endif
+            #endif
         }
     }
 }

@@ -1,4 +1,4 @@
-namespace Final_Test_Hybrid.Services.UI
+namespace Final_Test_Hybrid.Services.Settings.UI
 {
     public interface INotificationService
     {
