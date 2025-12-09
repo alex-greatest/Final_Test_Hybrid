@@ -1,3 +1,5 @@
+using Opc.Ua;
+
 namespace Final_Test_Hybrid
 {
     internal static class Program

@@ -1,4 +1,3 @@
-using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Sequence;
 using Final_Test_Hybrid.Services.Settings.IO;
 using Final_Test_Hybrid.Services.Settings.UI;
@@ -26,9 +25,9 @@ namespace Final_Test_Hybrid
             services.AddScoped<ISequenceExcelService, SequenceExcelService>();
             services.AddScoped<INotificationService, NotificationServiceWrapper>();
             services.AddScoped<TestSequenceService>();
-            services.Configure<OpcUaSettings>(_config!.GetSection("OpcUa"));
+            //services.Configure<OpcUaSettings>(_config!.GetSection("OpcUa"));
             services.AddSingleton<ISessionFactory, DefaultSessionFactory>();
-            services.AddSingleton<IOpcUaConnectionService, OpcUaConnectionService>();
+            //services.AddSingleton<IOpcUaConnectionService, OpcUaConnectionService>();
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();
