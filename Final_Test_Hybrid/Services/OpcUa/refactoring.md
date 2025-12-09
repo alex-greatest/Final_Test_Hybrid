@@ -10,11 +10,21 @@
 
 ```
 Services/OpcUa/
-├── IOpcUaConnectionService.cs   # Интерфейс сервиса подключения
-├── OpcUaConnectionService.cs    # Реализация с управлением сессией
-├── OpcUaSettings.cs             # Конфигурация подключения
-└── refactoring.md               # Эта документация
+├── IOpcUaConnectionService.cs          # Интерфейс сервиса подключения (24 строки)
+├── OpcUaConnectionService.cs           # Core: lifecycle, connect loop (246 строк)
+├── OpcUaConnectionService.Reconnect.cs # Partial: reconnect логика (205 строк)
+│
+├── IOpcUaSessionFactory.cs             # Интерфейс фабрики сессий (13 строк)
+├── OpcUaSessionFactory.cs              # Создание сессий + конфигурация (87 строк)
+│
+├── OpcUaSettings.cs                    # POCO настроек (16 строк)
+├── OpcUaSettingsValidator.cs           # Валидация настроек (64 строки)
+│
+├── refactoring.md                      # Эта документация
+└── plan.md                             # План рефакторинга
 ```
+
+**Все файлы < 300 строк** (лимит из `.cursorrules`).
 
 ---
 
@@ -52,6 +62,42 @@ Services/OpcUa/
 
 ---
 
+### OpcUaSettingsValidator
+
+**Назначение:** Статический класс для валидации настроек OPC UA.
+
+```csharp
+public static class OpcUaSettingsValidator
+{
+    public static void Validate(OpcUaSettings settings, ILogger? logger = null);
+}
+```
+
+**Проверки:**
+- `EndpointUrl` не пустой
+- `EndpointUrl` начинается с `opc.tcp://`
+- Предупреждения для слишком малых интервалов
+
+---
+
+### IOpcUaSessionFactory / OpcUaSessionFactory
+
+**Назначение:** Фабрика для создания настроенных OPC UA сессий. Инкапсулирует создание `ApplicationConfiguration` и `ConfiguredEndpoint`.
+
+```csharp
+public interface IOpcUaSessionFactory
+{
+    Task<ISession> CreateAsync(OpcUaSettings settings, CancellationToken cancellationToken = default);
+}
+```
+
+**Ответственность:**
+- Создание `ApplicationConfiguration` с настройками безопасности и транспорта
+- Создание `ConfiguredEndpoint` с таймаутами
+- Делегирование создания сессии в `ISessionFactory` (OPC UA SDK)
+
+---
+
 ### IOpcUaConnectionService
 
 **Назначение:** Контракт сервиса для управления подключением к OPC UA серверу.
@@ -59,18 +105,13 @@ Services/OpcUa/
 ```csharp
 public interface IOpcUaConnectionService : IAsyncDisposable
 {
-    // Состояние подключения
     bool IsConnected { get; }
+    event Action<bool>? ConnectionChanged;
+    event Action? SessionRecreated;
 
-    // События
-    event Action<bool>? ConnectionChanged;    // Изменение состояния подключения
-    event Action? SessionRecreated;           // Сессия пересоздана (подписки потеряны)
-
-    // Управление жизненным циклом
     Task StartAsync(CancellationToken cancellationToken = default);
     Task StopAsync();
 
-    // Thread-safe доступ к сессии
     Task ExecuteWithSessionAsync(Func<ISession, Task> action, CancellationToken ct = default);
     Task<T> ExecuteWithSessionAsync<T>(Func<ISession, Task<T>> action, CancellationToken ct = default);
 }
@@ -78,16 +119,16 @@ public interface IOpcUaConnectionService : IAsyncDisposable
 
 ---
 
-### OpcUaConnectionService
+### OpcUaConnectionService (partial class)
 
 **Назначение:** Реализация сервиса подключения с автоматическим переподключением.
 
-**Ключевые возможности:**
-- Автоматическое подключение при старте
-- Периодические попытки переподключения при разрыве связи
-- Обработка KeepAlive для детектирования потери соединения
-- Thread-safe операции с сессией
-- Корректное освобождение ресурсов
+Разбит на два файла:
+- `OpcUaConnectionService.cs` — lifecycle, connect loop, public API
+- `OpcUaConnectionService.Reconnect.cs` — reconnect логика, события
+
+**Почему partial, а не композиция:**
+Reconnect логика тесно связана с внутренним состоянием (`_session`, `_sessionLock`, `_isReconnecting`). Композиция потребовала бы либо выставить состояние публично, либо передавать много callback'ов. Partial class — компромисс между разделением кода и инкапсуляцией.
 
 **Жизненный цикл:**
 ```
@@ -102,195 +143,49 @@ StartAsync() → ConnectLoop → [Connected]
 
 ---
 
-## Проведённый рефакторинг (декабрь 2024)
+## Граф зависимостей
 
-### Исправленные проблемы
-
-#### 1. Race Condition: флаг `_isReconnecting`
-
-**Проблема:** Флаг устанавливался без синхронизации, что могло привести к параллельным попыткам подключения.
-
-**Было:**
-```csharp
-private void StartReconnectHandler(ISession session)
-{
-    _isReconnecting = true;  // БЕЗ lock
-    _reconnectHandler = new SessionReconnectHandler();
-    _reconnectHandler.BeginReconnect(...);
-}
 ```
-
-**Стало:**
-```csharp
-private async Task StartReconnectHandlerAsync(ISession session)
-{
-    await _sessionLock.WaitAsync(_disposeCts.Token).ConfigureAwait(false);
-    try
-    {
-        if (_isReconnecting || _isDisposed) return;
-        _isReconnecting = true;
-        _reconnectHandler = new SessionReconnectHandler();
-        _reconnectHandler.BeginReconnect(...);
-    }
-    finally
-    {
-        _sessionLock.Release();
-    }
-}
-```
-
-**Сценарий гонки (предотвращён):**
-1. Thread A: KeepAlive error → вызывает `StartReconnectHandler`
-2. Thread B: `TryConnectIfNotConnectedAsync` проверяет `_isReconnecting` (ещё false)
-3. Thread A: устанавливает `_isReconnecting = true`
-4. Thread B: создаёт новую сессию параллельно с reconnect handler
-5. **Результат:** две активные сессии, утечка ресурсов
-
----
-
-#### 2. Thread-safe доступ к Session
-
-**Проблема:** Публичное свойство `Session` позволяло внешнему коду получить сессию во время переподключения.
-
-**Было:**
-```csharp
-public ISession? Session { get; private set; }
-
-// Внешний код:
-var value = await opcUaService.Session!.ReadValueAsync(nodeId);  // Опасно!
-```
-
-**Стало:**
-```csharp
-private ISession? _session;  // Приватное поле
-
-// Безопасный доступ через метод:
-public async Task<T> ExecuteWithSessionAsync<T>(Func<ISession, Task<T>> action, CancellationToken ct)
-{
-    await _sessionLock.WaitAsync(ct).ConfigureAwait(false);
-    try
-    {
-        EnsureConnected();
-        return await action(_session!).ConfigureAwait(false);
-    }
-    finally
-    {
-        _sessionLock.Release();
-    }
-}
-
-// Использование:
-var value = await opcUaService.ExecuteWithSessionAsync(
-    session => session.ReadValueAsync(nodeId));
+┌─────────────────────────────────────────────────────────┐
+│                      DI Container                        │
+└─────────────────────────────────────────────────────────┘
+                            │
+         ┌──────────────────┼──────────────────┐
+         ▼                  ▼                  ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│ OpcUaSettings   │ │ ILoggerFactory  │ │ ISessionFactory │
+│ (IOptions)      │ │                 │ │ (OPC UA SDK)    │
+└─────────────────┘ └─────────────────┘ └─────────────────┘
+         │                  │                  │
+         └──────────────────┼──────────────────┘
+                            ▼
+                ┌───────────────────────┐
+                │  IOpcUaSessionFactory │
+                │  (OpcUaSessionFactory)│
+                └───────────────────────┘
+                            │
+                            ▼
+              ┌───────────────────────────┐
+              │  IOpcUaConnectionService  │
+              │ (OpcUaConnectionService)  │
+              │    └── .Reconnect.cs      │
+              └───────────────────────────┘
 ```
 
 ---
 
-#### 3. Fire-and-forget исключения
+## Регистрация в DI (Form1.cs)
 
-**Проблема:** Исключения в асинхронных callback'ах терялись.
-
-**Было:**
 ```csharp
-private void OnReconnectComplete(object? sender, EventArgs e)
-{
-    _ = HandleReconnectCompleteAsync();  // Исключения не логируются
-}
-```
-
-**Стало:**
-```csharp
-private void OnReconnectComplete(object? sender, EventArgs e)
-{
-    if (_isDisposed) return;
-
-    _ = HandleReconnectCompleteAsync().ContinueWith(
-        t => _logger.LogError(t.Exception, "Unhandled exception in reconnect handler"),
-        CancellationToken.None,
-        TaskContinuationOptions.OnlyOnFaulted,
-        TaskScheduler.Default);
-}
-```
-
----
-
-#### 4. Блокирующие события
-
-**Проблема:** Подписчики событий могли заблокировать reconnect flow.
-
-**Было:**
-```csharp
-private void RaiseConnectionChanged(bool isConnected)
-{
-    try
-    {
-        ConnectionChanged?.Invoke(isConnected);  // Синхронный вызов
-    }
-    catch (Exception ex) { ... }
-}
-```
-
-**Стало:**
-```csharp
-private void RaiseConnectionChangedAsync(bool isConnected)
-{
-    var handler = ConnectionChanged;
-    if (handler is null) return;
-
-    Task.Run(() =>
-    {
-        try
-        {
-            handler.Invoke(isConnected);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error in ConnectionChanged handler");
-        }
-    });
-}
-```
-
----
-
-#### 5. Упрощение `TryConnectIfNotConnectedAsync`
-
-**Было:**
-```csharp
-private async Task TryConnectIfNotConnectedAsync()
-{
-    if (IsConnected || _isReconnecting)  // Проверка IsConnected вне lock
-    {
-        return;
-    }
-    await TryConnectAsync().ConfigureAwait(false);
-}
-```
-
-**Стало:**
-```csharp
-private async Task TryConnectIfNotConnectedAsync()
-{
-    if (_isReconnecting)  // volatile достаточно для быстрого выхода
-    {
-        return;
-    }
-    await TryConnectAsync().ConfigureAwait(false);
-    // IsConnected проверяется внутри TryConnectCoreAsync под lock
-}
+services.Configure<OpcUaSettings>(configuration.GetSection("OpcUa"));
+services.AddSingleton<ISessionFactory>(sp => DefaultSessionFactory.Instance);
+services.AddSingleton<IOpcUaSessionFactory, OpcUaSessionFactory>();
+services.AddSingleton<IOpcUaConnectionService, OpcUaConnectionService>();
 ```
 
 ---
 
 ## Пример использования
-
-### Регистрация в DI (Form1.cs)
-
-```csharp
-services.Configure<OpcUaSettings>(configuration.GetSection("OpcUa"));
-services.AddSingleton<ISessionFactory, DefaultSessionFactory>();
-services.AddSingleton<IOpcUaConnectionService, OpcUaConnectionService>();
-```
 
 ### Подписка на события
 
@@ -367,6 +262,50 @@ public async Task WriteValueAsync(string nodeId, object value)
 
 ---
 
+## История рефакторинга
+
+### Phase 1: Разбиение на файлы (декабрь 2024)
+
+**Проблема:** `OpcUaConnectionService.cs` содержал 462 строки, превышая лимит 300 строк.
+
+**Решение:** Разбиение по Single Responsibility:
+
+| Извлечённый код | Новый файл | Строк |
+|-----------------|------------|-------|
+| `CreateApplicationConfigurationAsync()` | `OpcUaSessionFactory.cs` | 95 |
+| `ValidateSettings()` | `OpcUaSettingsValidator.cs` | 53 |
+| Reconnect методы (11 шт.) | `OpcUaConnectionService.Reconnect.cs` | 189 |
+
+**Результат:** Основной файл сокращён с 462 до 223 строк.
+
+### Phase 0: Исправление concurrency issues (декабрь 2024)
+
+#### 1. Race Condition: флаг `_isReconnecting`
+
+**Проблема:** Флаг устанавливался без синхронизации.
+
+**Решение:** Установка флага под `_sessionLock`.
+
+#### 2. Thread-safe доступ к Session
+
+**Проблема:** Публичное свойство `Session` позволяло доступ во время переподключения.
+
+**Решение:** Приватное поле `_session` + методы `ExecuteWithSessionAsync`.
+
+#### 3. Fire-and-forget исключения
+
+**Проблема:** Исключения в async callback'ах терялись.
+
+**Решение:** `ContinueWith` с логированием ошибок.
+
+#### 4. Блокирующие события
+
+**Проблема:** Подписчики могли заблокировать reconnect flow.
+
+**Решение:** Асинхронный вызов через `Task.Run`.
+
+---
+
 ## Известные ограничения
 
 1. **SessionReconnectHandler deprecated API** — используется конструктор без `ITelemetryContext`. При обновлении библиотеки OPC UA потребуется адаптация.
@@ -377,7 +316,30 @@ public async Task WriteValueAsync(string nodeId, object value)
 
 ---
 
-## Связанные файлы
+## Будущее развитие (Phase 2)
 
-- `appsettings.json` — секция `OpcUa` с настройками подключения
-- `Form1.cs` — регистрация сервисов в DI (закомментировано, подготовлено к активации)
+При добавлении подписок и read/write сервисов — возможная структура:
+
+```
+Services/OpcUa/
+├── Connection/
+│   ├── IOpcUaConnectionService.cs
+│   ├── OpcUaConnectionService.cs
+│   └── OpcUaConnectionService.Reconnect.cs
+│
+├── Session/
+│   ├── IOpcUaSessionFactory.cs
+│   └── OpcUaSessionFactory.cs
+│
+├── Data/
+│   ├── IOpcUaDataService.cs
+│   └── OpcUaDataService.cs
+│
+├── Subscriptions/
+│   ├── IOpcUaSubscriptionService.cs
+│   └── OpcUaSubscriptionService.cs
+│
+└── Configuration/
+    ├── OpcUaSettings.cs
+    └── OpcUaSettingsValidator.cs
+```

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "Bash(dotnet build:*)",
+      "Bash(findstr:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(dotnet package search:*)",
+      "Bash(del \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\ISessionFactory.cs\")",
+      "Bash(del \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\SessionFactoryWithTelemetry.cs\")",
+      "Bash(Remove-Item \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\ISessionFactory.cs\", \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\SessionFactoryWithTelemetry.cs\" -Force)",
+      "Bash(cmd /c \"del /q D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\ISessionFactory.cs D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\SessionFactoryWithTelemetry.cs\")"
+    ]
+  }
+}

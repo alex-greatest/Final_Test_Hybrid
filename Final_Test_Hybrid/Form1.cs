@@ -81,6 +81,7 @@ namespace Final_Test_Hybrid
         {
             services.Configure<OpcUaSettings>(_config!.GetSection("OpcUa"));
             services.AddSingleton<ISessionFactory>(sp => DefaultSessionFactory.Instance);
+            services.AddSingleton<IOpcUaSessionFactory, OpcUaSessionFactory>();
             services.AddSingleton<IOpcUaConnectionService, OpcUaConnectionService>();
         }
 
