@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Sequence;
 using Final_Test_Hybrid.Services.Settings.IO;
 using Final_Test_Hybrid.Services.Settings.UI;
@@ -5,6 +6,7 @@ using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Opc.Ua.Client;
 using Radzen;
 
 namespace Final_Test_Hybrid
@@ -24,13 +26,14 @@ namespace Final_Test_Hybrid
             services.AddScoped<ISequenceExcelService, SequenceExcelService>();
             services.AddScoped<INotificationService, NotificationServiceWrapper>();
             services.AddScoped<TestSequenceService>();
+            RegisterOpcUaServices(services);
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();
             blazorWebView1.HostPage = "wwwroot\\index.html";
             var serviceProvider = services.BuildServiceProvider();
             blazorWebView1.Services = serviceProvider;
-            //blazorWebView1.RootComponents.Add<Counter>("#app");
+            StartOpcUaConnection(serviceProvider);
             blazorWebView1.RootComponents.Add<MyComponent>("#app");
         }
 
@@ -72,6 +75,19 @@ namespace Final_Test_Hybrid
                     logging.AddFile(_config?.GetSection("Logging"));
                 });
             #endif
+        }
+
+        private void RegisterOpcUaServices(ServiceCollection services)
+        {
+            services.Configure<OpcUaSettings>(_config!.GetSection("OpcUa"));
+            services.AddSingleton<ISessionFactory>(sp => DefaultSessionFactory.Instance);
+            services.AddSingleton<IOpcUaConnectionService, OpcUaConnectionService>();
+        }
+
+        private void StartOpcUaConnection(ServiceProvider serviceProvider)
+        {
+            var opcUaService = serviceProvider.GetRequiredService<IOpcUaConnectionService>();
+            _ = opcUaService.StartAsync();
         }
     }
 }
