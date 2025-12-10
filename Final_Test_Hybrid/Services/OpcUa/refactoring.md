@@ -452,6 +452,85 @@ await opcUa.InitializeAsync();       // Один ApplyChanges() для всех
 
 ---
 
+### Phase 2.1.1: Early Exit Optimizations (декабрь 2024)
+
+**Цель:** Оптимизация раннего выхода при dispose для уменьшения блокировок.
+
+**Изменения:**
+
+| Файл | Метод | Оптимизация |
+|------|-------|-------------|
+| `OpcUaSubscriptionService.cs` | `RemoveCallback` | Двойная проверка `IsDisposed` (до и после lock) |
+| `OpcUaConnectionService.cs` | `ExecuteWithSessionAsync` | Двойная проверка `ObjectDisposedException.ThrowIf` |
+| `OpcUaConnectionService.cs` | `ExecuteWithSessionAsync<T>` | Двойная проверка `ObjectDisposedException.ThrowIf` |
+
+**Паттерн:**
+
+```csharp
+// До взятия lock — ранний выход без блокировки
+if (IsDisposed) return;
+
+lock.Wait();
+try
+{
+    // После взятия lock — повторная проверка (dispose мог произойти пока ждали)
+    if (IsDisposed) return;
+    // ... работа ...
+}
+finally
+{
+    lock.Release();
+}
+```
+
+**Преимущества:**
+- Избегаем ожидания lock при shutdown
+- Явное исключение вместо неявного `ObjectDisposedException` от disposed lock
+- Консистентность с остальным кодом (Subscribe, InitializeAsync уже используют этот паттерн)
+
+---
+
+### Phase 2.1.2: Lazy Subscription Creation Fix (декабрь 2024)
+
+**Цель:** Исправить edge case когда `Subscribe()` вызывается после пустого `InitializeAsync()`.
+
+**Проблема:**
+
+```csharp
+// Сценарий:
+await opcUa.InitializeAsync();  // _subscriptions.Count == 0 → _opcSubscription = null
+opcUa.Subscribe(nodeId, cb);    // IsInitialized == true → CreateMonitoredItemForEntry()
+                                 // → _opcSubscription is null → ранний return
+                                 // Callback добавлен но MonitoredItem НЕ создан!
+```
+
+**Решение:** Убран ранний выход в `CreateOpcSubscriptionAsync`. Subscription без MonitoredItems допустима в OPC UA — items добавляются позже через `ApplyChanges()`.
+
+**Изменённые файлы:**
+- `OpcUaSubscriptionService.cs` — удалён `if (_subscriptions.Count == 0) return;`
+
+**До:**
+```csharp
+private async Task CreateOpcSubscriptionAsync(...)
+{
+    if (_subscriptions.Count == 0)  // Пропускаем создание
+    {
+        return;
+    }
+    await _connectionService.ExecuteWithSessionAsync(...);
+}
+```
+
+**После:**
+```csharp
+private async Task CreateOpcSubscriptionAsync(...)
+{
+    await _connectionService.ExecuteWithSessionAsync(...);  // Всегда создаём
+}
+```
+
+---
+
 ### Phase 1: Разбиение на файлы (декабрь 2024)
 
 **Проблема:** `OpcUaConnectionService.cs` содержал 462 строки, превышая лимит 300 строк.

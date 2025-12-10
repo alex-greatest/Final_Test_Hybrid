@@ -110,10 +110,6 @@ public sealed partial class OpcUaSubscriptionService : IOpcUaSubscriptionService
 
     private async Task CreateOpcSubscriptionAsync(CancellationToken cancellationToken)
     {
-        if (_subscriptions.Count == 0)
-        {
-            return;
-        }
         await _connectionService.ExecuteWithSessionAsync(session =>
         {
             _opcSubscription = new Subscription(session.DefaultSubscription)
