@@ -8,15 +8,15 @@ public class OpcUaSubscriptionSettings
 
     public void Validate()
     {
-        if (PublishingIntervalMs < 100 || PublishingIntervalMs > 10000)
+        if (PublishingIntervalMs is < 100 or > 10000)
         {
             throw new InvalidOperationException($"OpcUa:Subscription:PublishingIntervalMs должен быть 100-10000 мс (получено: {PublishingIntervalMs})");
         }
-        if (SamplingIntervalMs < 50 || SamplingIntervalMs > 5000)
+        if (SamplingIntervalMs is < 50 or > 5000)
         {
             throw new InvalidOperationException($"OpcUa:Subscription:SamplingIntervalMs должен быть 50-5000 мс (получено: {SamplingIntervalMs})");
         }
-        if (QueueSize < 1 || QueueSize > 100)
+        if (QueueSize is < 1 or > 100)
         {
             throw new InvalidOperationException($"OpcUa:Subscription:QueueSize должен быть 1-100 (получено: {QueueSize})");
         }
