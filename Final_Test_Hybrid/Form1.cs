@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Models.Plc.Settings;
 using Final_Test_Hybrid.Services.Sequence;
 using Final_Test_Hybrid.Services.Settings.IO;
 using Final_Test_Hybrid.Services.Settings.UI;
@@ -75,15 +76,11 @@ namespace Final_Test_Hybrid
             #endif
         }
 
-        /*private void RegisterOpcUaServices(ServiceCollection services)
+        private void RegisterOpcUaServices(ServiceCollection services)
         {
             services.Configure<OpcUaSettings>(_config!.GetSection("OpcUa"));
             services.Configure<OpcUaSubscriptionSettings>(_config!.GetSection("OpcUa:Subscription"));
-            services.AddSingleton<ISessionFactory>(sp => DefaultSessionFactory.Instance);
-            services.AddSingleton<IOpcUaSessionFactory, OpcUaSessionFactory>();
-            services.AddSingleton<IOpcUaConnectionService, OpcUaConnectionService>();
-            services.AddSingleton<IOpcUaSubscriptionService, OpcUaSubscriptionService>();
-        }*/
+        }
 
         /*private void StartOpcUaConnection(ServiceProvider serviceProvider)
         {
