@@ -15,7 +15,8 @@
       "WebFetch(domain:opcfoundation.github.io)",
       "WebFetch(domain:csharp.hotexamples.com)",
       "Bash(find:*)",
-      "WebFetch(domain:www.nuget.org)"
+      "WebFetch(domain:www.nuget.org)",
+      "Bash(cat:*)"
     ]
   }
 }

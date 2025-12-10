@@ -24,6 +24,7 @@ public partial class OpcUaSubscriptionService
     private CancellationTokenSource? _processingCts;
     private Task? _processingTask;
     private List<string> _monitoredNodeIds = [];
+    private TaskCompletionSource<bool>? _connectionTcs;
     public SubscriptionState State { get; private set; } = SubscriptionState.NotInitialized;
     public event Action? SubscriptionsRestored;
 
@@ -52,12 +53,58 @@ public partial class OpcUaSubscriptionService
             _logger.LogWarning("Список узлов для мониторинга пуст");
             return;
         }
+        await WaitForConnectionAsync(ct).ConfigureAwait(false);
         StartProcessingTask();
         await CreateSubscriptionAsync(_connectionService.Session!, _monitoredNodeIds, ct)
             .ConfigureAwait(false);
         State = SubscriptionState.Active;
     }
+    
+    private async Task WaitForConnectionAsync(CancellationToken ct)
+    {
+        if (_connectionService.IsConnected)
+        {
+            return;
+        }
+        await WaitForConnectionWithCleanupAsync(ct).ConfigureAwait(false);
+    }
+    
+    private async Task WaitForConnectionWithCleanupAsync(CancellationToken ct)
+    {
+        StartConnectionWait();
+        try
+        {
+            await AwaitConnectionSignalAsync(ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            StopConnectionWait();
+        }
+    }
+    
+    private async Task AwaitConnectionSignalAsync(CancellationToken ct)
+    {
+        if (_connectionService.IsConnected)
+        {
+            return;
+        }
+        _logger.LogInformation("Ожидание подключения к OPC UA серверу...");
+        await _connectionTcs!.Task.WaitAsync(ct).ConfigureAwait(false);
+        _logger.LogInformation("Подключение установлено");
+    }
+    
+    private void StartConnectionWait()
+    {
+        _connectionTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _connectionService.ConnectionStateChanged += OnConnectionForWait;
+    }
 
+    private void StopConnectionWait()
+    {
+        _connectionService.ConnectionStateChanged -= OnConnectionForWait;
+        _connectionTcs = null;
+    }
+    
     public OpcValue? GetCurrentValue(string nodeId)
     {
         _cache.TryGetValue(nodeId, out var value);
@@ -67,20 +114,35 @@ public partial class OpcUaSubscriptionService
     public async Task StopAsync()
     {
         State = SubscriptionState.Stopped;
+        UnsubscribeFromConnectionEvents();
+        _channel.Writer.Complete();
+        await StopProcessingTaskAsync().ConfigureAwait(false);
+        await RemoveSubscriptionAsync().ConfigureAwait(false);
+        _logger.LogInformation("OpcUaSubscriptionService остановлен");
+    }
+
+    private void UnsubscribeFromConnectionEvents()
+    {
         _connectionService.ConnectionStateChanged -= OnConnectionStateChanged;
         _connectionService.SessionRestored -= OnSessionRestored;
-        _channel.Writer.Complete();
+    }
+
+    private async Task StopProcessingTaskAsync()
+    {
         if (_processingCts != null)
         {
             await _processingCts.CancelAsync().ConfigureAwait(false);
         }
+        await WaitForProcessingTaskAsync().ConfigureAwait(false);
+        _processingCts?.Dispose();
+    }
+
+    private async Task WaitForProcessingTaskAsync()
+    {
         if (_processingTask != null)
         {
             await _processingTask.ConfigureAwait(false);
         }
-        _processingCts?.Dispose();
-        await RemoveSubscriptionAsync().ConfigureAwait(false);
-        _logger.LogInformation("OpcUaSubscriptionService остановлен");
     }
 
     private void OnConnectionStateChanged(bool connected)
@@ -115,5 +177,13 @@ public partial class OpcUaSubscriptionService
             _logger.LogError(ex, "Ошибка при пересоздании подписок");
         }
     }
-    
+
+    private void OnConnectionForWait(bool connected)
+    {
+        if (!connected)
+        {
+            return;
+        }
+        _connectionTcs?.TrySetResult(true);
+    }
 }
