@@ -80,9 +80,11 @@ namespace Final_Test_Hybrid
         private void RegisterOpcUaServices(ServiceCollection services)
         {
             services.Configure<OpcUaSettings>(_config!.GetSection("OpcUa"));
+            services.Configure<OpcUaSubscriptionSettings>(_config!.GetSection("OpcUa:Subscription"));
             services.AddSingleton<ISessionFactory>(sp => DefaultSessionFactory.Instance);
             services.AddSingleton<IOpcUaSessionFactory, OpcUaSessionFactory>();
             services.AddSingleton<IOpcUaConnectionService, OpcUaConnectionService>();
+            services.AddSingleton<IOpcUaSubscriptionService, OpcUaSubscriptionService>();
         }
 
         private void StartOpcUaConnection(ServiceProvider serviceProvider)

@@ -16,7 +16,7 @@ public sealed partial class OpcUaConnectionService : IOpcUaConnectionService
     private readonly CancellationTokenSource _disposeCts = new();
     private ISession? _session;
     private SessionReconnectHandler? _reconnectHandler;
-    private volatile bool _isReconnecting;
+    private int _isReconnecting;
     private PeriodicTimer? _connectTimer;
     private Task? _connectLoopTask;
     private int _disposeState;
@@ -33,19 +33,32 @@ public sealed partial class OpcUaConnectionService : IOpcUaConnectionService
         OpcUaSettingsValidator.Validate(_settings, _logger);
     }
 
-    public Task StartAsync(CancellationToken cancellationToken = default)
+    public async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        if (IsDisposed)
+        await _sessionLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            throw new ObjectDisposedException(nameof(OpcUaConnectionService));
+            ObjectDisposedException.ThrowIf(IsDisposed, this);
+            if (_connectLoopTask is not null)
+            {
+                throw new InvalidOperationException("Service is already started");
+            }
+            _connectTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(_settings.ReconnectIntervalMs));
+            try
+            {
+                _connectLoopTask = ConnectLoopAsync(_disposeCts.Token);
+            }
+            catch
+            {
+                _connectTimer.Dispose();
+                _connectTimer = null;
+                throw;
+            }
         }
-        if (_connectLoopTask is not null)
+        finally
         {
-            throw new InvalidOperationException("Service is already started");
+            _sessionLock.Release();
         }
-        _connectTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(_settings.ReconnectIntervalMs));
-        _connectLoopTask = ConnectLoopAsync(_disposeCts.Token);
-        return Task.CompletedTask;
     }
 
     public Task StopAsync()
@@ -159,7 +172,7 @@ public sealed partial class OpcUaConnectionService : IOpcUaConnectionService
 
     private async Task TryConnectIfNotConnectedAsync()
     {
-        if (_isReconnecting)
+        if (Volatile.Read(ref _isReconnecting) != 0)
         {
             return;
         }

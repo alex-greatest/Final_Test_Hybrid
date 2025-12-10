@@ -11,7 +11,9 @@
       "Bash(del \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\ISessionFactory.cs\")",
       "Bash(del \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\SessionFactoryWithTelemetry.cs\")",
       "Bash(Remove-Item \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\ISessionFactory.cs\", \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\SessionFactoryWithTelemetry.cs\" -Force)",
-      "Bash(cmd /c \"del /q D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\ISessionFactory.cs D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\SessionFactoryWithTelemetry.cs\")"
+      "Bash(cmd /c \"del /q D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\ISessionFactory.cs D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\SessionFactoryWithTelemetry.cs\")",
+      "WebFetch(domain:opcfoundation.github.io)",
+      "WebFetch(domain:csharp.hotexamples.com)"
     ]
   }
 }

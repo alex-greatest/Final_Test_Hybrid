@@ -62,11 +62,15 @@ public sealed partial class OpcUaConnectionService
 
     private void StartReconnectHandlerCore(ISession session)
     {
-        if (_isReconnecting || IsDisposed)
+        if (Interlocked.CompareExchange(ref _isReconnecting, 1, 0) != 0)
         {
             return;
         }
-        _isReconnecting = true;
+        if (IsDisposed)
+        {
+            Interlocked.Exchange(ref _isReconnecting, 0);
+            return;
+        }
         _reconnectHandler = new SessionReconnectHandler();
         _reconnectHandler.BeginReconnect(session, _settings.ReconnectIntervalMs, OnReconnectComplete);
     }
@@ -100,7 +104,7 @@ public sealed partial class OpcUaConnectionService
         }
         finally
         {
-            _isReconnecting = false;
+            Interlocked.Exchange(ref _isReconnecting, 0);
             _sessionLock.Release();
         }
     }
