@@ -1,0 +1,38 @@
+@using Final_Test_Hybrid.Services.OpcUa
+@using Final_Test_Hybrid.Services.Settings
+@inject OpcUaConnectionService ConnectionService
+@implements IDisposable
+
+<div class="status-indicator">
+    <span class="status-label">@Label</span>
+    <img src="@_lampImage" alt="Status"/>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "PLC";
+    private string _lampImage = "images/RedLamp.png";
+
+    protected override void OnInitialized()
+    {
+        _lampImage = IndicatorHelper.GetLampImagePath(ConnectionService.IsConnected);
+        ConnectionService.ConnectionStateChanged += OnConnectionStateChanged;
+    }
+
+    private async void OnConnectionStateChanged(bool connected)
+    {
+        try
+        {
+            _lampImage = IndicatorHelper.GetLampImagePath(connected);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // ignored - component may be disposed
+        }
+    }
+
+    public void Dispose()
+    {
+        ConnectionService.ConnectionStateChanged -= OnConnectionStateChanged;
+    }
+}
