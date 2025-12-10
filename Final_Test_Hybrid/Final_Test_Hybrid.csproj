@@ -31,7 +31,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Components\Indicators\" />
     <Folder Include="Services\Settings\" />
   </ItemGroup>
 

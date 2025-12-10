@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Plc.Settings;
+using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Sequence;
 using Final_Test_Hybrid.Services.Settings.IO;
 using Final_Test_Hybrid.Services.Settings.UI;
@@ -13,6 +14,7 @@ namespace Final_Test_Hybrid
     public partial class Form1 : Form
     {
         private IConfiguration? _config;
+        private OpcUaConnectionService? _opcUaService;
         
         public Form1()
         {
@@ -25,14 +27,14 @@ namespace Final_Test_Hybrid
             services.AddScoped<ISequenceExcelService, SequenceExcelService>();
             services.AddScoped<INotificationService, NotificationServiceWrapper>();
             services.AddScoped<TestSequenceService>();
-            //RegisterOpcUaServices(services);
+            RegisterOpcUaServices(services);
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();
             blazorWebView1.HostPage = "wwwroot\\index.html";
             var serviceProvider = services.BuildServiceProvider();
             blazorWebView1.Services = serviceProvider;
-            //StartOpcUaConnection(serviceProvider);
+            StartOpcUaConnection(serviceProvider);
             blazorWebView1.RootComponents.Add<MyComponent>("#app");
         }
 
@@ -79,12 +81,19 @@ namespace Final_Test_Hybrid
         private void RegisterOpcUaServices(ServiceCollection services)
         {
             services.Configure<OpcUaSettings>(_config!.GetSection("OpcUa"));
+            services.AddSingleton<OpcUaConnectionService>();
         }
 
-        /*private void StartOpcUaConnection(ServiceProvider serviceProvider)
+        private void StartOpcUaConnection(ServiceProvider serviceProvider)
         {
-            var opcUaService = serviceProvider.GetRequiredService<IOpcUaConnectionService>();
-            _ = opcUaService.StartAsync();
-        }*/
+            _opcUaService = serviceProvider.GetRequiredService<OpcUaConnectionService>();
+            _ = _opcUaService.ConnectAsync();
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            _opcUaService?.DisconnectAsync().GetAwaiter().GetResult();
+            base.OnFormClosing(e);
+        }
     }
 }
