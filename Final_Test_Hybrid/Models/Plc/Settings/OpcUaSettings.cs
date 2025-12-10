@@ -6,7 +6,7 @@ public class OpcUaSettings
     public string ApplicationName { get; set; } = string.Empty;
     public int ReconnectIntervalMs { get; set; }
     public int SessionTimeoutMs { get; set; }
-    private OpcUaSubscriptionSettings Subscription { get; set; } = new();
+    public OpcUaSubscriptionSettings Subscription { get; set; } = new();
 
     public void Validate()
     {
