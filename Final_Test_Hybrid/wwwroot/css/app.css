@@ -119,3 +119,23 @@ svg {
     font-weight: 900 !important;
     display: block !important;
 }
+
+/* ===== STATUS INDICATORS ===== */
+.status-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    row-gap: 5px;
+}
+
+.status-indicator .status-label {
+    font-weight: 700;
+    color: black;
+    font-size: 1.3rem;
+    white-space: nowrap;
+}
+
+.status-indicator img {
+    max-height: 42px;
+    max-width: 200px;
+}
