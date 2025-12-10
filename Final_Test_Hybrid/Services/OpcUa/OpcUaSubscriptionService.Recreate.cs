@@ -27,7 +27,7 @@ public sealed partial class OpcUaSubscriptionService
         await _stateLock.WaitAsync();
         try
         {
-            if (IsDisposed || !_isInitialized)
+            if (IsDisposed || !IsInitialized)
             {
                 return;
             }

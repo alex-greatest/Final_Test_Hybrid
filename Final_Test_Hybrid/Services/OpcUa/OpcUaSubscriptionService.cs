@@ -18,10 +18,8 @@ public sealed partial class OpcUaSubscriptionService : IOpcUaSubscriptionService
     private Dictionary<string, List<CallbackEntry>> _callbackSnapshot = new();
     private Subscription? _opcSubscription;
     private int _disposeState;
-    private bool _isInitialized;
-
     private bool IsDisposed => Volatile.Read(ref _disposeState) != 0;
-    public bool IsInitialized => _isInitialized;
+    public bool IsInitialized { get; private set; }
 
     public OpcUaSubscriptionService(
         IOpcUaConnectionService connectionService,
@@ -78,7 +76,7 @@ public sealed partial class OpcUaSubscriptionService : IOpcUaSubscriptionService
         {
             entry = new SubscriptionEntry { NodeId = nodeId };
             _subscriptions[nodeId] = entry;
-            if (_isInitialized)
+            if (IsInitialized)
             {
                 CreateMonitoredItemForEntry(entry);
                 _opcSubscription?.ApplyChanges();
@@ -96,12 +94,12 @@ public sealed partial class OpcUaSubscriptionService : IOpcUaSubscriptionService
         try
         {
             ObjectDisposedException.ThrowIf(IsDisposed, this);
-            if (_isInitialized)
+            if (IsInitialized)
             {
                 return;
             }
             await CreateOpcSubscriptionAsync(cancellationToken);
-            _isInitialized = true;
+            IsInitialized = true;
             _logger.LogInformation("Initialized {Count} OPC UA subscriptions", _subscriptions.Count);
         }
         finally
