@@ -17,9 +17,13 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
     public bool IsReconnecting => _reconnectHandler != null;
     public event Action<bool>? ConnectionStateChanged;
 
-    public async Task ConnectAsync(CancellationToken cancellationToken = default)
+    public void ValidateSettings()
     {
         _settings.Validate();
+    }
+
+    public async Task ConnectAsync(CancellationToken cancellationToken = default)
+    {
         _appConfig = await AppConfigurator.CreateApplicationConfigurationAsync(_settings);
         await _appConfig.ValidateAsync(ApplicationType.Client, cancellationToken);
         await ConnectWithRetryAsync(cancellationToken);

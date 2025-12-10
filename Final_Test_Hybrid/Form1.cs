@@ -87,6 +87,7 @@ namespace Final_Test_Hybrid
         private void StartOpcUaConnection(ServiceProvider serviceProvider)
         {
             _opcUaService = serviceProvider.GetRequiredService<OpcUaConnectionService>();
+            _opcUaService.ValidateSettings();
             _ = _opcUaService.ConnectAsync();
         }
 
