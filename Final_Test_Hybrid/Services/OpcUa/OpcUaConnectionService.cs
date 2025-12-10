@@ -14,10 +14,11 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private Opc.Ua.ApplicationConfiguration? _appConfig;
     private SessionReconnectHandler? _reconnectHandler;
-    private ISession? _session;
-    public bool IsConnected => _session is { Connected: true };
+    public bool IsConnected => Session is { Connected: true };
     public bool IsReconnecting => _reconnectHandler != null;
+    public ISession? Session { get; private set; }
     public event Action<bool>? ConnectionStateChanged;
+    public event Action<ISession>? SessionRestored;
 
     public void ValidateSettings()
     {
@@ -39,7 +40,7 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
             {
                 var endpoint = await AppConfigurator.SelectEndpointAsync(_appConfig!, _settings.EndpointUrl, _settings, cancellationToken)
                     .ConfigureAwait(false);
-                _session = await AppConfigurator.CreateSessionAsync(_appConfig!, _settings, endpoint, OnKeepAlive, cancellationToken)
+                Session = await AppConfigurator.CreateSessionAsync(_appConfig!, _settings, endpoint, OnKeepAlive, cancellationToken)
                     .ConfigureAwait(false);
                 logger.LogInformation("Подключено к OPC UA серверу: {Endpoint}", _settings.EndpointUrl);
                 ConnectionStateChanged?.Invoke(true);
@@ -101,9 +102,10 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
         {
             return;
         }
-        _session = newSession;
+        Session = newSession;
         logger.LogInformation("Переподключение к OPC UA серверу выполнено успешно");
         ConnectionStateChanged?.Invoke(true);
+        SessionRestored?.Invoke(newSession);
         _reconnectHandler?.Dispose();
         _reconnectHandler = null;
     }
@@ -114,7 +116,7 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
             .ConfigureAwait(false);
         _reconnectHandler?.Dispose();
         _reconnectHandler = null;
-        if (_session == null)
+        if (Session == null)
         {
             return;
         }
@@ -125,8 +127,8 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
     {
         try
         {
-            _session!.KeepAlive -= OnKeepAlive;
-            await _session.CloseAsync(CancellationToken.None)
+            Session!.KeepAlive -= OnKeepAlive;
+            await Session.CloseAsync(CancellationToken.None)
                 .ConfigureAwait(false);
             logger.LogInformation("Отключено от OPC UA сервера");
         }
@@ -136,8 +138,8 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
         }
         finally
         {
-            _session?.Dispose();
-            _session = null;
+            Session?.Dispose();
+            Session = null;
             ConnectionStateChanged?.Invoke(false);
         }
     }

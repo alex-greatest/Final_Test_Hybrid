@@ -15,6 +15,7 @@ namespace Final_Test_Hybrid
     {
         private IConfiguration? _config;
         private OpcUaConnectionService? _opcUaService;
+        private OpcUaSubscriptionService? _opcUaSubscriptionService;
 
         public Form1()
         {
@@ -94,6 +95,7 @@ namespace Final_Test_Hybrid
         {
             services.Configure<OpcUaSettings>(_config!.GetSection("OpcUa"));
             services.AddSingleton<OpcUaConnectionService>();
+            services.AddSingleton<OpcUaSubscriptionService>();
         }
 
         // async void намеренно: исключения должны попадать в Application.ThreadException
@@ -103,10 +105,23 @@ namespace Final_Test_Hybrid
             _opcUaService = serviceProvider.GetRequiredService<OpcUaConnectionService>();
             _opcUaService.ValidateSettings();
             await _opcUaService.ConnectAsync();
+            _opcUaSubscriptionService = serviceProvider.GetRequiredService<OpcUaSubscriptionService>();
+            var nodesToMonitor = GetNodesToMonitor();
+            await _opcUaSubscriptionService.InitializeAsync(nodesToMonitor);
+        }
+
+        private static List<string> GetNodesToMonitor()
+        {
+            // TODO: Заполнить список узлов для мониторинга
+            return [];
         }
 
         protected override async void OnFormClosing(FormClosingEventArgs e)
         {
+            if (_opcUaSubscriptionService != null)
+            {
+                await _opcUaSubscriptionService.StopAsync();
+            }
             if (_opcUaService != null)
             {
                 await _opcUaService.DisconnectAsync();
