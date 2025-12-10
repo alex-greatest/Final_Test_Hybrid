@@ -25,9 +25,11 @@ public static class AppConfigurator
         return Task.FromResult(config);
     }
     
-    public async Task<ISession> CreateSessionAsync(Opc.Ua.ApplicationConfiguration appConfig,
+    public static async Task<ISession> CreateSessionAsync(
+        Opc.Ua.ApplicationConfiguration appConfig,
         OpcUaSettings settings,
-        EndpointDescription endpoint, 
+        EndpointDescription endpoint,
+        KeepAliveEventHandler keepAliveHandler,
         CancellationToken cancellationToken)
     {
         var endpointConfiguration = EndpointConfiguration.Create(appConfig);
@@ -42,7 +44,7 @@ public static class AppConfigurator
             identity: new UserIdentity(new AnonymousIdentityToken()),
             preferredLocales: null,
             cancellationToken);
-        session.KeepAlive += OnKeepAlive;
+        session.KeepAlive += keepAliveHandler;
         return session;
     }
     

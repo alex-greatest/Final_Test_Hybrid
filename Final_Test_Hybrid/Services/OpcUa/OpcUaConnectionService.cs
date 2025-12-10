@@ -25,8 +25,8 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
             _settings.Validate();
             _appConfig = await AppConfigurator.CreateApplicationConfigurationAsync(_settings);
             await _appConfig.ValidateAsync(ApplicationType.Client, cancellationToken);
-            var endpoint = await SelectEndpointAsync(_settings.EndpointUrl, cancellationToken);
-            Session = await CreateSessionAsync(endpoint, cancellationToken);
+            var endpoint = await AppConfigurator.SelectEndpointAsync(_appConfig, _settings.EndpointUrl, _settings, cancellationToken);
+            Session = await AppConfigurator.CreateSessionAsync(_appConfig, _settings, endpoint, OnKeepAlive, cancellationToken);
             logger.LogInformation("Подключено к OPC UA серверу: {Endpoint}", _settings.EndpointUrl);
             return true;
         }
@@ -35,37 +35,6 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
             logger.LogError(ex, "Ошибка подключения к OPC UA серверу: {Endpoint}", _settings.EndpointUrl);
             return false;
         }
-    }
-    
-    private async Task<EndpointDescription> SelectEndpointAsync(string endpointUrl, CancellationToken cancellationToken)
-    {
-        var endpointConfiguration = EndpointConfiguration.Create(_appConfig);
-        endpointConfiguration.OperationTimeout = _settings.SessionTimeoutMs;
-        using var client = DiscoveryClient.Create(new Uri(endpointUrl), endpointConfiguration);
-        var endpoints = await client.GetEndpointsAsync(null, cancellationToken);
-        var endpoint = endpoints
-            .Where(e => e.EndpointUrl.StartsWith("opc.tcp", StringComparison.OrdinalIgnoreCase))
-            .OrderBy(e => e.SecurityLevel)
-            .FirstOrDefault();
-        return endpoint ?? throw new InvalidOperationException($"Не найден подходящий endpoint: {endpointUrl}");
-    }
-
-    private async Task<ISession> CreateSessionAsync(EndpointDescription endpoint, CancellationToken cancellationToken)
-    {
-        var endpointConfiguration = EndpointConfiguration.Create(_appConfig);
-        var configuredEndpoint = new ConfiguredEndpoint(null, endpoint, endpointConfiguration);
-        var sessionFactory = DefaultSessionFactory.Instance;
-        var session = await sessionFactory.CreateAsync(
-            _appConfig,
-            configuredEndpoint,
-            updateBeforeConnect: false,
-            sessionName: _settings.ApplicationName,
-            sessionTimeout: (uint)_settings.SessionTimeoutMs,
-            identity: new UserIdentity(new AnonymousIdentityToken()),
-            preferredLocales: null,
-            cancellationToken);
-        session.KeepAlive += OnKeepAlive;
-        return session;
     }
 
     private void OnKeepAlive(ISession session, KeepAliveEventArgs e)
