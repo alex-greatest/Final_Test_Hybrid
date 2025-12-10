@@ -66,6 +66,18 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
 
     private async void StartReconnect(ISession session)
     {
+        try
+        {
+            await StartReconnectSafe(session);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при запуске переподключения к OPC UA серверу");
+        }
+    }
+
+    private async Task StartReconnectSafe(ISession session)
+    {
         await _semaphore.WaitAsync();
         try
         {
@@ -83,6 +95,18 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
     }
     
     private async void OnReconnectComplete(object? sender, EventArgs e)
+    {
+        try
+        {
+            await OnReconnectCompleteSafe();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при завершении переподключения к OPC UA серверу");
+        }
+    }
+
+    private async Task OnReconnectCompleteSafe()
     {
         await _semaphore.WaitAsync();
         try
