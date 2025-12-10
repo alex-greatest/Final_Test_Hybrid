@@ -68,9 +68,11 @@ public sealed partial class OpcUaConnectionService : IOpcUaConnectionService
 
     public async Task ExecuteWithSessionAsync(Func<ISession, Task> action, CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
         await _sessionLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            ObjectDisposedException.ThrowIf(IsDisposed, this);
             EnsureConnected();
             await action(_session!).ConfigureAwait(false);
         }
@@ -82,9 +84,11 @@ public sealed partial class OpcUaConnectionService : IOpcUaConnectionService
 
     public async Task<T> ExecuteWithSessionAsync<T>(Func<ISession, Task<T>> action, CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
         await _sessionLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            ObjectDisposedException.ThrowIf(IsDisposed, this);
             EnsureConnected();
             return await action(_session!).ConfigureAwait(false);
         }

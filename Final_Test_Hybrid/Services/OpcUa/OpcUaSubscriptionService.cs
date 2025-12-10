@@ -158,9 +158,17 @@ public sealed partial class OpcUaSubscriptionService : IOpcUaSubscriptionService
 
     private void RemoveCallback(string nodeId, Guid callbackId)
     {
+        if (IsDisposed)
+        {
+            return;
+        }
         _stateLock.Wait();
         try
         {
+            if (IsDisposed)
+            {
+                return;
+            }
             RemoveCallbackCore(nodeId, callbackId);
         }
         finally
