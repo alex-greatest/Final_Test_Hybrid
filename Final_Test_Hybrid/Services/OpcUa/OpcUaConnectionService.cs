@@ -18,7 +18,6 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
     public bool IsReconnecting => _reconnectHandler != null;
     public ISession? Session { get; private set; }
     public event Action<bool>? ConnectionStateChanged;
-    public event Action<ISession>? SessionRestored;
 
     public void ValidateSettings()
     {
@@ -105,7 +104,6 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
         Session = newSession;
         logger.LogInformation("Переподключение к OPC UA серверу выполнено успешно");
         ConnectionStateChanged?.Invoke(true);
-        SessionRestored?.Invoke(newSession);
         _reconnectHandler?.Dispose();
         _reconnectHandler = null;
     }

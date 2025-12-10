@@ -4,11 +4,9 @@ using Final_Test_Hybrid.Models.Plc;
 using Final_Test_Hybrid.Models.Plc.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Opc.Ua;
 using Opc.Ua.Client;
 
 namespace Final_Test_Hybrid.Services.OpcUa;
-
 
 public partial class OpcUaSubscriptionService
 {
@@ -26,7 +24,6 @@ public partial class OpcUaSubscriptionService
     private List<string> _monitoredNodeIds = [];
     private TaskCompletionSource<bool>? _connectionTcs;
     public SubscriptionState State { get; private set; } = SubscriptionState.NotInitialized;
-    public event Action? SubscriptionsRestored;
 
     public OpcUaSubscriptionService(
         OpcUaConnectionService connectionService,
@@ -42,7 +39,6 @@ public partial class OpcUaSubscriptionService
             SingleWriter = false
         });
         _connectionService.ConnectionStateChanged += OnConnectionStateChanged;
-        _connectionService.SessionRestored += OnSessionRestored;
     }
 
     public async Task InitializeAsync(IEnumerable<string> nodeIds, CancellationToken ct = default)
@@ -105,6 +101,15 @@ public partial class OpcUaSubscriptionService
         _connectionTcs = null;
     }
     
+    private void OnConnectionForWait(bool connected)
+    {
+        if (!connected)
+        {
+            return;
+        }
+        _connectionTcs?.TrySetResult(true);
+    }
+    
     public OpcValue? GetCurrentValue(string nodeId)
     {
         _cache.TryGetValue(nodeId, out var value);
@@ -124,7 +129,6 @@ public partial class OpcUaSubscriptionService
     private void UnsubscribeFromConnectionEvents()
     {
         _connectionService.ConnectionStateChanged -= OnConnectionStateChanged;
-        _connectionService.SessionRestored -= OnSessionRestored;
     }
 
     private async Task StopProcessingTaskAsync()
@@ -149,41 +153,25 @@ public partial class OpcUaSubscriptionService
     {
         if (connected)
         {
+            OnConnectionRestored();
             return;
         }
+        OnConnectionLost();
+    }
+
+    private void OnConnectionRestored()
+    {
+        if (State != SubscriptionState.Suspended)
+        {
+            return;
+        }
+        State = SubscriptionState.Active;
+        _logger.LogInformation("Соединение восстановлено, подписки активны");
+    }
+
+    private void OnConnectionLost()
+    {
         State = SubscriptionState.Suspended;
         _logger.LogWarning("Соединение потеряно, подписки приостановлены");
-    }
-
-    private void OnSessionRestored(ISession newSession)
-    {
-        _logger.LogInformation("Сессия восстановлена, пересоздаём подписки...");
-        _ = RecreateSubscriptionAsync(newSession);
-    }
-
-    private async Task RecreateSubscriptionAsync(ISession session)
-    {
-        try
-        {
-            await RemoveSubscriptionAsync().ConfigureAwait(false);
-            await CreateSubscriptionAsync(session, _monitoredNodeIds, CancellationToken.None)
-                .ConfigureAwait(false);
-            State = SubscriptionState.Active;
-            _logger.LogInformation("Подписки восстановлены: {Count} узлов", _monitoredNodeIds.Count);
-            SubscriptionsRestored?.Invoke();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка при пересоздании подписок");
-        }
-    }
-
-    private void OnConnectionForWait(bool connected)
-    {
-        if (!connected)
-        {
-            return;
-        }
-        _connectionTcs?.TrySetResult(true);
     }
 }
