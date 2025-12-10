@@ -1,13 +1,19 @@
 ﻿using Final_Test_Hybrid.Models.Plc.Settings;
 using Opc.Ua;
 using Opc.Ua.Client;
+using Opc.Ua.Configuration;
 
 namespace Final_Test_Hybrid.Services.OpcUa;
 
 public static class AppConfigurator
 {
-    public static Task<Opc.Ua.ApplicationConfiguration> CreateApplicationConfigurationAsync(OpcUaSettings settings)
+    public static async Task<Opc.Ua.ApplicationConfiguration> CreateApplicationConfigurationAsync(OpcUaSettings settings)
     {
+        var pkiRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            settings.ApplicationName,
+            "pki");
+
         var config = new Opc.Ua.ApplicationConfiguration
         {
             ApplicationName = settings.ApplicationName,
@@ -15,14 +21,40 @@ public static class AppConfigurator
             ApplicationType = ApplicationType.Client,
             SecurityConfiguration = new SecurityConfiguration
             {
+                ApplicationCertificate = new CertificateIdentifier
+                {
+                    StoreType = CertificateStoreType.Directory,
+                    StorePath = Path.Combine(pkiRoot, "own"),
+                    SubjectName = $"CN={settings.ApplicationName}, DC={Utils.GetHostName()}"
+                },
+                TrustedPeerCertificates = new CertificateTrustList
+                {
+                    StoreType = CertificateStoreType.Directory,
+                    StorePath = Path.Combine(pkiRoot, "trusted")
+                },
+                TrustedIssuerCertificates = new CertificateTrustList
+                {
+                    StoreType = CertificateStoreType.Directory,
+                    StorePath = Path.Combine(pkiRoot, "issuer")
+                },
+                RejectedCertificateStore = new CertificateTrustList
+                {
+                    StoreType = CertificateStoreType.Directory,
+                    StorePath = Path.Combine(pkiRoot, "rejected")
+                },
                 AutoAcceptUntrustedCertificates = true,
                 RejectSHA1SignedCertificates = false,
-                MinimumCertificateKeySize = 1024
+                MinimumCertificateKeySize = 1024,
+                AddAppCertToTrustedStore = true
             },
             TransportQuotas = new TransportQuotas { OperationTimeout = settings.SessionTimeoutMs },
             ClientConfiguration = new ClientConfiguration { DefaultSessionTimeout = settings.SessionTimeoutMs }
         };
-        return Task.FromResult(config);
+
+        await config.ValidateAsync(ApplicationType.Client, CancellationToken.None);
+        var application = new ApplicationInstance(config);
+        await application.CheckApplicationInstanceCertificatesAsync(silent: true, lifeTimeInMonths: 120);
+        return config;
     }
     
     public static async Task<ISession> CreateSessionAsync(
@@ -58,8 +90,7 @@ public static class AppConfigurator
         var endpoints = await client.GetEndpointsAsync(null, cancellationToken);
         var endpoint = endpoints
             .Where(e => e.EndpointUrl.StartsWith("opc.tcp", StringComparison.OrdinalIgnoreCase))
-            .OrderBy(e => e.SecurityLevel)
-            .FirstOrDefault();
+            .FirstOrDefault(e => e.SecurityMode == MessageSecurityMode.None);
         return endpoint ?? throw new InvalidOperationException($"Не найден подходящий endpoint: {endpointUrl}");
     }
 }
