@@ -54,6 +54,7 @@ public static class AppConfigurator
         await config.ValidateAsync(ApplicationType.Client, CancellationToken.None);
         var application = new ApplicationInstance(config);
         await application.CheckApplicationInstanceCertificatesAsync(silent: true, lifeTimeInMonths: 120);
+        config.CertificateValidator.CertificateValidation += (_, e) => e.Accept = true;
         return config;
     }
     
@@ -80,7 +81,7 @@ public static class AppConfigurator
         return session;
     }
     
-    public static async Task<EndpointDescription> SelectEndpointAsync(Opc.Ua.ApplicationConfiguration appConfig, 
+    public static async Task<EndpointDescription> SelectEndpointAsync(Opc.Ua.ApplicationConfiguration appConfig,
         string endpointUrl, OpcUaSettings settings,
         CancellationToken cancellationToken)
     {
