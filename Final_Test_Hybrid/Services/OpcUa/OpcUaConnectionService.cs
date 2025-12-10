@@ -26,8 +26,9 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
 
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
-        _appConfig = await AppConfigurator.CreateApplicationConfigurationAsync(_settings);
-        await ConnectWithRetryAsync(cancellationToken);
+        _appConfig = await AppConfigurator.CreateApplicationConfigurationAsync(_settings)
+            .ConfigureAwait(false);
+        await ConnectWithRetryAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task ConnectWithRetryAsync(CancellationToken cancellationToken)
@@ -36,8 +37,10 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
         {
             try
             {
-                var endpoint = await AppConfigurator.SelectEndpointAsync(_appConfig!, _settings.EndpointUrl, _settings, cancellationToken);
-                _session = await AppConfigurator.CreateSessionAsync(_appConfig!, _settings, endpoint, OnKeepAlive, cancellationToken);
+                var endpoint = await AppConfigurator.SelectEndpointAsync(_appConfig!, _settings.EndpointUrl, _settings, cancellationToken)
+                    .ConfigureAwait(false);
+                _session = await AppConfigurator.CreateSessionAsync(_appConfig!, _settings, endpoint, OnKeepAlive, cancellationToken)
+                    .ConfigureAwait(false);
                 logger.LogInformation("Подключено к OPC UA серверу: {Endpoint}", _settings.EndpointUrl);
                 ConnectionStateChanged?.Invoke(true);
                 return;
@@ -49,7 +52,8 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "Не удалось подключиться к OPC UA серверу. Повтор через {Interval} мс", _settings.ReconnectIntervalMs);
-                await Task.Delay(_settings.ReconnectIntervalMs, cancellationToken);
+                await Task.Delay(_settings.ReconnectIntervalMs, cancellationToken)
+                    .ConfigureAwait(false);
             }
         }
         cancellationToken.ThrowIfCancellationRequested();
@@ -106,14 +110,15 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
     
     public async Task DisconnectAsync()
     {
-        await using var _ = await AsyncLock.AcquireAsync(_semaphore);
+        await using var _ = await AsyncLock.AcquireAsync(_semaphore)
+            .ConfigureAwait(false);
         _reconnectHandler?.Dispose();
         _reconnectHandler = null;
         if (_session == null)
         {
             return;
         }
-        await CloseSessionAsync();
+        await CloseSessionAsync().ConfigureAwait(false);
     }
     
     private async Task CloseSessionAsync()
@@ -121,7 +126,8 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
         try
         {
             _session!.KeepAlive -= OnKeepAlive;
-            await _session.CloseAsync(CancellationToken.None);
+            await _session.CloseAsync(CancellationToken.None)
+                .ConfigureAwait(false);
             logger.LogInformation("Отключено от OPC UA сервера");
         }
         catch (Exception ex)
