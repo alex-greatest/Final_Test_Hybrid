@@ -1,3 +1,4 @@
+using AsyncAwaitBestPractices;
 using Final_Test_Hybrid.Models.Plc.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -64,16 +65,10 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
         StartReconnect(session);
     }
 
-    private async void StartReconnect(ISession session)
+    private void StartReconnect(ISession session)
     {
-        try
-        {
-            await StartReconnectSafe(session);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка при запуске переподключения к OPC UA серверу");
-        }
+        StartReconnectSafe(session).SafeFireAndForget(
+            ex => logger.LogError(ex, "Ошибка при запуске переподключения к OPC UA серверу"));
     }
 
     private async Task StartReconnectSafe(ISession session)
@@ -94,16 +89,10 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
         }
     }
     
-    private async void OnReconnectComplete(object? sender, EventArgs e)
+    private void OnReconnectComplete(object? sender, EventArgs e)
     {
-        try
-        {
-            await OnReconnectCompleteSafe();
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка при завершении переподключения к OPC UA серверу");
-        }
+        OnReconnectCompleteSafe().SafeFireAndForget(
+            ex => logger.LogError(ex, "Ошибка при завершении переподключения к OPC UA серверу"));
     }
 
     private async Task OnReconnectCompleteSafe()
