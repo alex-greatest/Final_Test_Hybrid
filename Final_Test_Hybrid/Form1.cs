@@ -96,6 +96,8 @@ namespace Final_Test_Hybrid
             services.AddSingleton<OpcUaConnectionService>();
         }
 
+        // async void намеренно: исключения должны попадать в Application.ThreadException
+        // ReSharper disable once AsyncVoidMethod
         private async void StartOpcUaConnection(ServiceProvider serviceProvider)
         {
             _opcUaService = serviceProvider.GetRequiredService<OpcUaConnectionService>();
