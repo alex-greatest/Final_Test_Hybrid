@@ -9,11 +9,11 @@ namespace Final_Test_Hybrid.Services.OpcUa;
 public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILogger<OpcUaConnectionService> logger)
 {
     private readonly OpcUaSettings _settings = settingsOptions.Value;
-    private readonly Lock _lock = new();
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
     private Opc.Ua.ApplicationConfiguration? _appConfig;
     private SessionReconnectHandler? _reconnectHandler;
-    private ISession? Session { get; set; }
-    public bool IsConnected => Session is { Connected: true };
+    private ISession? _session;
+    public bool IsConnected => _session is { Connected: true };
     public bool IsReconnecting => _reconnectHandler != null;
     public event Action<bool>? ConnectionStateChanged;
 
@@ -32,7 +32,7 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
             try
             {
                 var endpoint = await AppConfigurator.SelectEndpointAsync(_appConfig!, _settings.EndpointUrl, _settings, cancellationToken);
-                Session = await AppConfigurator.CreateSessionAsync(_appConfig!, _settings, endpoint, OnKeepAlive, cancellationToken);
+                _session = await AppConfigurator.CreateSessionAsync(_appConfig!, _settings, endpoint, OnKeepAlive, cancellationToken);
                 logger.LogInformation("Подключено к OPC UA серверу: {Endpoint}", _settings.EndpointUrl);
                 ConnectionStateChanged?.Invoke(true);
                 return;
@@ -63,68 +63,84 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
 
     private void StartReconnect(ISession session)
     {
-        lock (_lock)
+        _semaphore.Wait();
+        try
         {
-            ReconnectSafe(session);
+            StartReconnectLock(session);
+        }
+        finally
+        {
+            _semaphore.Release();
         }
     }
 
-    private void ReconnectSafe(ISession session)
+    private void StartReconnectLock(ISession session)
     {
         if (_reconnectHandler != null)
         {
             return;
         }
         _reconnectHandler = new SessionReconnectHandler(reconnectAbort: false);
-        _reconnectHandler.BeginReconnect(
-            session,
-            _settings.ReconnectIntervalMs,
-            OnReconnectComplete);
+        _reconnectHandler.BeginReconnect(session, _settings.ReconnectIntervalMs, OnReconnectComplete);
     }
 
     private void OnReconnectComplete(object? sender, EventArgs e)
     {
-        lock (_lock)
+        _semaphore.Wait();
+        try
         {
-            var newSession = _reconnectHandler?.Session;
-            OnReconnectCompleteSafe(newSession);
+            OnReconnectCompleteLock();
+        }
+        finally
+        {
+            _semaphore.Release();
         }
     }
 
-    private void OnReconnectCompleteSafe(ISession? session)
+    private void OnReconnectCompleteLock()
     {
-        if (session == null)
+        var newSession = _reconnectHandler?.Session;
+        if (newSession == null)
         {
             return;
         }
-        Session = session;
+        _session = newSession;
         logger.LogInformation("Переподключение к OPC UA серверу выполнено успешно");
         ConnectionStateChanged?.Invoke(true);
         _reconnectHandler?.Dispose();
         _reconnectHandler = null;
     }
-    
-    public Task DisconnectAsync()
+
+    public async Task DisconnectAsync()
     {
-        lock (_lock)
+        await _semaphore.WaitAsync();
+        try
         {
             _reconnectHandler?.Dispose();
             _reconnectHandler = null;
-            DisconnectAsyncSafe();
-            return Task.CompletedTask;
+            await CloseSessionAsyncLock();
+        }
+        finally
+        {
+            _semaphore.Release();
         }
     }
 
-    private async void DisconnectAsyncSafe()
+    private async Task CloseSessionAsyncLock()
+    {
+        if (_session == null)
+        {
+            return;
+        }
+        await CloseSession();
+    }
+
+    private async Task CloseSession()
     {
         try
         {
-            if (Session == null)
-            {
-                return;
-            }
-            Session.KeepAlive -= OnKeepAlive;
-            await Session.CloseAsync(CancellationToken.None);
+            _session!.KeepAlive -= OnKeepAlive;
+            await _session.CloseAsync(CancellationToken.None);
             logger.LogInformation("Отключено от OPC UA сервера");
         }
         catch (Exception ex)
@@ -133,8 +149,8 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
         }
         finally
         {
-            Session?.Dispose();
-            Session = null;
+            _session?.Dispose();
+            _session = null;
             ConnectionStateChanged?.Invoke(false);
         }
     }
