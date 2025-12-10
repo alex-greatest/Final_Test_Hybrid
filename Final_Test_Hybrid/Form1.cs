@@ -79,7 +79,6 @@ namespace Final_Test_Hybrid
         private void RegisterOpcUaServices(ServiceCollection services)
         {
             services.Configure<OpcUaSettings>(_config!.GetSection("OpcUa"));
-            services.Configure<OpcUaSubscriptionSettings>(_config!.GetSection("OpcUa:Subscription"));
         }
 
         /*private void StartOpcUaConnection(ServiceProvider serviceProvider)

@@ -6,18 +6,24 @@ using Opc.Ua.Client;
 
 namespace Final_Test_Hybrid.Services.OpcUa;
 
-public class OpcUaConnectionService(IOptions<OpcUaSettings> settings, ILogger<OpcUaConnectionService> logger)
+public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILogger<OpcUaConnectionService> logger)
 {
-    private readonly OpcUaSettings _settings = settings.Value;
+    private readonly OpcUaSettings _settings = settingsOptions.Value;
+    private readonly Lock _lock = new();
     private Opc.Ua.ApplicationConfiguration? _appConfig;
+    private SessionReconnectHandler? _reconnectHandler;
     private ISession? Session { get; set; }
     public bool IsConnected => Session is { Connected: true };
+    public bool IsReconnecting => _reconnectHandler != null;
+    public event EventHandler? Reconnecting;
+    public event EventHandler? Reconnected;
 
     public async Task<bool> ConnectAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            _appConfig = await CreateApplicationConfigurationAsync();
+            _settings.Validate();
+            _appConfig = await AppConfigurator.CreateApplicationConfigurationAsync(_settings);
             await _appConfig.ValidateAsync(ApplicationType.Client, cancellationToken);
             var endpoint = await SelectEndpointAsync(_settings.EndpointUrl, cancellationToken);
             Session = await CreateSessionAsync(endpoint, cancellationToken);
@@ -30,26 +36,7 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settings, ILogger<Op
             return false;
         }
     }
-
-    private Task<Opc.Ua.ApplicationConfiguration> CreateApplicationConfigurationAsync()
-    {
-        var config = new Opc.Ua.ApplicationConfiguration
-        {
-            ApplicationName = _settings.ApplicationName,
-            ApplicationUri = $"urn:{Utils.GetHostName()}:{_settings.ApplicationName}",
-            ApplicationType = ApplicationType.Client,
-            SecurityConfiguration = new SecurityConfiguration
-            {
-                AutoAcceptUntrustedCertificates = true,
-                RejectSHA1SignedCertificates = false,
-                MinimumCertificateKeySize = 1024
-            },
-            TransportQuotas = new TransportQuotas { OperationTimeout = _settings.SessionTimeoutMs },
-            ClientConfiguration = new ClientConfiguration { DefaultSessionTimeout = _settings.SessionTimeoutMs }
-        };
-        return Task.FromResult(config);
-    }
-
+    
     private async Task<EndpointDescription> SelectEndpointAsync(string endpointUrl, CancellationToken cancellationToken)
     {
         var endpointConfiguration = EndpointConfiguration.Create(_appConfig);
@@ -77,27 +64,68 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settings, ILogger<Op
             identity: new UserIdentity(new AnonymousIdentityToken()),
             preferredLocales: null,
             cancellationToken);
-        session.KeepAlive += OnSessionKeepAlive;
+        session.KeepAlive += OnKeepAlive;
         return session;
     }
 
-    private void OnSessionKeepAlive(ISession session, KeepAliveEventArgs e)
+    private void OnKeepAlive(ISession session, KeepAliveEventArgs e)
     {
-        if (ServiceResult.IsBad(e.Status))
+        if (ServiceResult.IsGood(e.Status))
         {
-            logger.LogWarning("OPC UA KeepAlive failed: {Status}", e.Status);
+            return;
+        }
+        logger.LogWarning("OPC UA KeepAlive failed: {Status}. Запуск переподключения...", e.Status);
+        StartReconnect(session);
+    }
+
+    private void StartReconnect(ISession session)
+    {
+        lock (_lock)
+        {
+            if (_reconnectHandler != null)
+            {
+                return;
+            }
+            Reconnecting?.Invoke(this, EventArgs.Empty);
+            _reconnectHandler = new SessionReconnectHandler(reconnectAbort: false);
+            _reconnectHandler.BeginReconnect(
+                session,
+                _settings.ReconnectIntervalMs,
+                OnReconnectComplete);
+        }
+    }
+
+    private void OnReconnectComplete(object? sender, EventArgs e)
+    {
+        lock (_lock)
+        {
+            var newSession = _reconnectHandler?.Session;
+            if (newSession == null)
+            {
+                return;
+            }
+            Session = newSession;
+            logger.LogInformation("Переподключение к OPC UA серверу выполнено успешно");
+            Reconnected?.Invoke(this, EventArgs.Empty);
+            _reconnectHandler?.Dispose();
+            _reconnectHandler = null;
         }
     }
 
     public async Task DisconnectAsync()
     {
+        lock (_lock)
+        {
+            _reconnectHandler?.Dispose();
+            _reconnectHandler = null;
+        }
         if (Session == null)
         {
             return;
         }
         try
         {
-            Session.KeepAlive -= OnSessionKeepAlive;
+            Session.KeepAlive -= OnKeepAlive;
             await Session.CloseAsync(CancellationToken.None);
             logger.LogInformation("Отключено от OPC UA сервера");
         }
