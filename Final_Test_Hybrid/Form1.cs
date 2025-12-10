@@ -15,11 +15,10 @@ namespace Final_Test_Hybrid
     {
         private IConfiguration? _config;
         private OpcUaConnectionService? _opcUaService;
-        
+
         public Form1()
         {
             InitializeComponent();
-            HandleException();
             var services = new ServiceCollection();
             SettingConfiguration(services);
             SettingDevTools(services);
@@ -33,17 +32,30 @@ namespace Final_Test_Hybrid
             services.AddRadzenComponents();
             blazorWebView1.HostPage = "wwwroot\\index.html";
             var serviceProvider = services.BuildServiceProvider();
+            var logger = serviceProvider.GetRequiredService<ILogger<Form1>>();
+            HandleException(logger);
             blazorWebView1.Services = serviceProvider;
             StartOpcUaConnection(serviceProvider);
             blazorWebView1.RootComponents.Add<MyComponent>("#app");
         }
 
-        private static void HandleException()
+        private static void HandleException(ILogger logger)
         {
+            Application.ThreadException += (_, error) =>
+            {
+                logger.LogCritical(error.Exception, "Необработанное исключение в UI потоке");
+                #if DEBUG
+                    MessageBox.Show(text: error.Exception.ToString(), caption: @"Ошибка");
+                #else
+                    MessageBox.Show(text: "An error has occurred.", caption: "Error");
+                #endif
+                Environment.Exit(1);
+            };
             AppDomain.CurrentDomain.UnhandledException += (_, error) =>
             {
+                logger.LogCritical(error.ExceptionObject as Exception, "Необработанное исключение в AppDomain");
                 #if DEBUG
-                    MessageBox.Show(text: error.ExceptionObject.ToString(), caption: @"������");
+                    MessageBox.Show(text: error.ExceptionObject.ToString(), caption: @"Ошибка");
                 #else
                     MessageBox.Show(text: "An error has occurred.", caption: "Error");
                 #endif
@@ -84,11 +96,11 @@ namespace Final_Test_Hybrid
             services.AddSingleton<OpcUaConnectionService>();
         }
 
-        private void StartOpcUaConnection(ServiceProvider serviceProvider)
+        private async void StartOpcUaConnection(ServiceProvider serviceProvider)
         {
             _opcUaService = serviceProvider.GetRequiredService<OpcUaConnectionService>();
             _opcUaService.ValidateSettings();
-            _ = _opcUaService.ConnectAsync();
+            await _opcUaService.ConnectAsync();
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
