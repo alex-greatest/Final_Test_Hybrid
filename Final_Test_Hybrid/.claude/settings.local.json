@@ -16,7 +16,9 @@
       "WebFetch(domain:csharp.hotexamples.com)",
       "Bash(find:*)",
       "WebFetch(domain:www.nuget.org)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(Remove-Item \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\OpcUaSubscriptionService.Subscribers.cs\", \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\OpcUaSubscriptionService.Notifications.cs\", \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\OpcUaSubscriptionService.Subscription.cs\" -Force)",
+      "Bash(cmd /c \"del /q \"\"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\OpcUaSubscriptionService.Subscribers.cs\"\" \"\"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\OpcUaSubscriptionService.Notifications.cs\"\" \"\"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\OpcUaSubscriptionService.Subscription.cs\"\"\")"
     ]
   }
 }

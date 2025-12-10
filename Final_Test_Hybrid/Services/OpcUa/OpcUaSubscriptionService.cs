@@ -1,150 +1,117 @@
-using System.Collections.Concurrent;
-using System.Threading.Channels;
 using Final_Test_Hybrid.Models.Plc;
 using Final_Test_Hybrid.Models.Plc.Settings;
+using Final_Test_Hybrid.Services.OpcUa.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Opc.Ua.Client;
 
 namespace Final_Test_Hybrid.Services.OpcUa;
 
-public partial class OpcUaSubscriptionService
+public sealed class OpcUaSubscriptionService : IAsyncDisposable
 {
     private readonly OpcUaConnectionService _connectionService;
-    private readonly OpcUaSettings _settings;
+    private readonly ConnectionAwaiter _connectionAwaiter;
+    private readonly SubscriptionFactory _subscriptionFactory;
+    private readonly NotificationHub _hub;
     private readonly ILogger<OpcUaSubscriptionService> _logger;
-    private record OpcValueChange(string NodeId, OpcValue Value);
-    private readonly Channel<OpcValueChange> _channel;
-    private readonly ConcurrentDictionary<string, OpcValue> _cache = new();
-    private readonly ConcurrentDictionary<string, List<Action<OpcValue>>> _subscribers = new();
-    private readonly object _subscribersLock = new();
-    private Subscription? _subscription;
-    private CancellationTokenSource? _processingCts;
-    private Task? _processingTask;
     private List<string> _monitoredNodeIds = [];
-    private TaskCompletionSource<bool>? _connectionTcs;
-    public SubscriptionState State { get; private set; } = SubscriptionState.NotInitialized;
+    private SubscriptionState State { get; set; } = SubscriptionState.NotInitialized;
 
     public OpcUaSubscriptionService(
         OpcUaConnectionService connectionService,
         IOptions<OpcUaSettings> settings,
-        ILogger<OpcUaSubscriptionService> logger, OpcUaSettings settings1)
+        ILogger<OpcUaSubscriptionService> logger,
+        ILoggerFactory loggerFactory)
     {
         _connectionService = connectionService;
-        _settings = settings.Value;
         _logger = logger;
-        _channel = Channel.CreateUnbounded<OpcValueChange>(new UnboundedChannelOptions
-        {
-            SingleReader = true,
-            SingleWriter = false
-        });
+        _hub = new NotificationHub(loggerFactory.CreateLogger<NotificationHub>());
+        _connectionAwaiter = new ConnectionAwaiter(connectionService, loggerFactory.CreateLogger<ConnectionAwaiter>());
+        _subscriptionFactory = new SubscriptionFactory(settings.Value, loggerFactory.CreateLogger<SubscriptionFactory>());
         _connectionService.ConnectionStateChanged += OnConnectionStateChanged;
     }
 
-    public async Task<SubscriptionResult> InitializeAsync(IEnumerable<string> nodeIds, CancellationToken ct = default)
+    public async Task InitializeAsync(IEnumerable<string> nodeIds, CancellationToken ct = default)
     {
         _monitoredNodeIds = nodeIds.ToList();
         if (_monitoredNodeIds.Count == 0)
         {
             _logger.LogWarning("Список узлов для мониторинга пуст");
-            return new SubscriptionResult([], []);
+            return;
         }
-        StartProcessingTask();
-        var result = await CreateSubscriptionWithRetryAsync(ct).ConfigureAwait(false);
+        _hub.Start();
+        await CreateWithRetryAsync(ct).ConfigureAwait(false);
         State = SubscriptionState.Active;
-        return result;
-    }
-    
-    private async Task WaitForConnectionAsync(CancellationToken ct)
-    {
-        if (_connectionService.IsConnected)
-        {
-            return;
-        }
-        await WaitForConnectionWithCleanupAsync(ct).ConfigureAwait(false);
-    }
-    
-    private async Task WaitForConnectionWithCleanupAsync(CancellationToken ct)
-    {
-        StartConnectionWait();
-        try
-        {
-            await AwaitConnectionSignalAsync(ct).ConfigureAwait(false);
-        }
-        finally
-        {
-            StopConnectionWait();
-        }
-    }
-    
-    private async Task AwaitConnectionSignalAsync(CancellationToken ct)
-    {
-        if (_connectionService.IsConnected)
-        {
-            return;
-        }
-        _logger.LogInformation("Ожидание подключения к OPC UA серверу...");
-        await _connectionTcs!.Task.WaitAsync(ct).ConfigureAwait(false);
-        _logger.LogInformation("Подключение установлено");
-    }
-    
-    private void StartConnectionWait()
-    {
-        _connectionTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _connectionService.ConnectionStateChanged += OnConnectionForWait;
     }
 
-    private void StopConnectionWait()
+    public void Subscribe(string nodeId, Action<OpcValue> callback)
     {
-        _connectionService.ConnectionStateChanged -= OnConnectionForWait;
-        _connectionTcs = null;
+        _hub.Subscribe(nodeId, callback);
     }
-    
-    private void OnConnectionForWait(bool connected)
+
+    public void Unsubscribe(string nodeId, Action<OpcValue> callback)
     {
-        if (!connected)
-        {
-            return;
-        }
-        _connectionTcs?.TrySetResult(true);
+        _hub.Unsubscribe(nodeId, callback);
     }
-    
+
     public OpcValue? GetCurrentValue(string nodeId)
     {
-        _cache.TryGetValue(nodeId, out var value);
-        return value;
+        return _hub.GetValue(nodeId);
     }
 
     public async Task StopAsync()
     {
         State = SubscriptionState.Stopped;
-        UnsubscribeFromConnectionEvents();
-        _channel.Writer.Complete();
-        await StopProcessingTaskAsync().ConfigureAwait(false);
-        await RemoveSubscriptionAsync().ConfigureAwait(false);
+        _connectionService.ConnectionStateChanged -= OnConnectionStateChanged;
+        await _hub.DisposeAsync().ConfigureAwait(false);
+        await _subscriptionFactory.RemoveAsync(_connectionService.Session).ConfigureAwait(false);
         _logger.LogInformation("OpcUaSubscriptionService остановлен");
     }
 
-    private void UnsubscribeFromConnectionEvents()
+    public async ValueTask DisposeAsync()
     {
-        _connectionService.ConnectionStateChanged -= OnConnectionStateChanged;
+        await StopAsync().ConfigureAwait(false);
     }
 
-    private async Task StopProcessingTaskAsync()
+    private async Task CreateWithRetryAsync(CancellationToken ct)
     {
-        if (_processingCts != null)
+        while (!ct.IsCancellationRequested)
         {
-            await _processingCts.CancelAsync().ConfigureAwait(false);
+            var result = await TryCreateOnceAsync(ct).ConfigureAwait(false);
+            if (result != null)
+            {
+                return;
+            }
         }
-        await WaitForProcessingTaskAsync().ConfigureAwait(false);
-        _processingCts?.Dispose();
+        ct.ThrowIfCancellationRequested();
     }
 
-    private async Task WaitForProcessingTaskAsync()
+    private async Task<SubscriptionResult?> TryCreateOnceAsync(CancellationToken ct)
     {
-        if (_processingTask != null)
+        await _connectionAwaiter.WaitAsync(ct).ConfigureAwait(false);
+        var session = _connectionService.Session;
+        if (session?.Connected != true)
         {
-            await _processingTask.ConfigureAwait(false);
+            return null;
+        }
+        return await CreateSubscription(session, ct);
+    }
+
+    private async Task<SubscriptionResult?> CreateSubscription(ISession session, CancellationToken ct)
+    {
+        try
+        {
+            return await _subscriptionFactory.CreateAsync(
+                session,
+                _monitoredNodeIds,
+                _hub.Enqueue,
+                ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Ошибка при создании подписки, повторяем...");
+            await _subscriptionFactory.RemoveAsync(session).ConfigureAwait(false);
+            return null;
         }
     }
 
@@ -152,13 +119,13 @@ public partial class OpcUaSubscriptionService
     {
         if (connected)
         {
-            OnConnectionRestored();
+            HandleConnectionRestored();
             return;
         }
-        OnConnectionLost();
+        HandleConnectionLost();
     }
 
-    private void OnConnectionRestored()
+    private void HandleConnectionRestored()
     {
         if (State != SubscriptionState.Suspended)
         {
@@ -168,80 +135,9 @@ public partial class OpcUaSubscriptionService
         _logger.LogInformation("Соединение восстановлено, подписки активны");
     }
 
-    private void OnConnectionLost()
+    private void HandleConnectionLost()
     {
         State = SubscriptionState.Suspended;
         _logger.LogWarning("Соединение потеряно, подписки приостановлены");
-    }
-
-    private async Task<SubscriptionResult> CreateSubscriptionWithRetryAsync(CancellationToken ct)
-    {
-        while (!ct.IsCancellationRequested)
-        {
-            var result = await TryCreateSubscriptionAsync(ct).ConfigureAwait(false);
-            if (result != null)
-            {
-                return result;
-            }
-        }
-
-        ct.ThrowIfCancellationRequested();
-        return new SubscriptionResult([], []);
-    }
-
-    private async Task<SubscriptionResult?> TryCreateSubscriptionAsync(CancellationToken ct)
-    {
-        await WaitForConnectionAsync(ct).ConfigureAwait(false);
-
-        var session = _connectionService.Session;
-        if (session?.Connected != true)
-        {
-            return null;
-        }
-
-        return await TryCreateSubscriptionCoreAsync(session, ct).ConfigureAwait(false);
-    }
-
-    private async Task<SubscriptionResult?> TryCreateSubscriptionCoreAsync(ISession session, CancellationToken ct)
-    {
-        try
-        {
-            return await CreateSubscriptionAsync(session, _monitoredNodeIds, ct)
-                .ConfigureAwait(false);
-        }
-        catch (Exception ex) when (!ct.IsCancellationRequested && IsTransientError(ex))
-        {
-            await HandleTransientErrorAsync(ex).ConfigureAwait(false);
-            return null;
-        }
-    }
-
-    private async Task HandleTransientErrorAsync(Exception ex)
-    {
-        _logger.LogWarning(ex, "Сетевая ошибка при создании подписки, повторяем...");
-        await CleanupFailedSubscriptionAsync().ConfigureAwait(false);
-    }
-
-    private static bool IsTransientError(Exception ex)
-    {
-        return ex is not OperationCanceledException;
-    }
-
-    private async Task CleanupFailedSubscriptionAsync()
-    {
-        if (_subscription == null)
-        {
-            return;
-        }
-        try
-        {
-            await RemoveSubscriptionAsync().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Ошибка очистки подписки (игнорируем)");
-        }
-
-        _subscription = null;
     }
 }

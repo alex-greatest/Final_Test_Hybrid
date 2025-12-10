@@ -32,6 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Services\OpcUa\Subscription\" />
     <Folder Include="Services\Settings\" />
   </ItemGroup>
 
