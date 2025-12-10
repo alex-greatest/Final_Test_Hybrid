@@ -32,7 +32,6 @@
 
   <ItemGroup>
     <Folder Include="Components\Indicators\" />
-    <Folder Include="Services\OpcUa\" />
     <Folder Include="Services\Settings\" />
   </ItemGroup>
 

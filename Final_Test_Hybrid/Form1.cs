@@ -1,4 +1,3 @@
-using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Sequence;
 using Final_Test_Hybrid.Services.Settings.IO;
 using Final_Test_Hybrid.Services.Settings.UI;
@@ -6,7 +5,6 @@ using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Opc.Ua.Client;
 using Radzen;
 
 namespace Final_Test_Hybrid
@@ -26,14 +24,14 @@ namespace Final_Test_Hybrid
             services.AddScoped<ISequenceExcelService, SequenceExcelService>();
             services.AddScoped<INotificationService, NotificationServiceWrapper>();
             services.AddScoped<TestSequenceService>();
-            RegisterOpcUaServices(services);
+            //RegisterOpcUaServices(services);
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();
             blazorWebView1.HostPage = "wwwroot\\index.html";
             var serviceProvider = services.BuildServiceProvider();
             blazorWebView1.Services = serviceProvider;
-            StartOpcUaConnection(serviceProvider);
+            //StartOpcUaConnection(serviceProvider);
             blazorWebView1.RootComponents.Add<MyComponent>("#app");
         }
 
@@ -77,7 +75,7 @@ namespace Final_Test_Hybrid
             #endif
         }
 
-        private void RegisterOpcUaServices(ServiceCollection services)
+        /*private void RegisterOpcUaServices(ServiceCollection services)
         {
             services.Configure<OpcUaSettings>(_config!.GetSection("OpcUa"));
             services.Configure<OpcUaSubscriptionSettings>(_config!.GetSection("OpcUa:Subscription"));
@@ -85,12 +83,12 @@ namespace Final_Test_Hybrid
             services.AddSingleton<IOpcUaSessionFactory, OpcUaSessionFactory>();
             services.AddSingleton<IOpcUaConnectionService, OpcUaConnectionService>();
             services.AddSingleton<IOpcUaSubscriptionService, OpcUaSubscriptionService>();
-        }
+        }*/
 
-        private void StartOpcUaConnection(ServiceProvider serviceProvider)
+        /*private void StartOpcUaConnection(ServiceProvider serviceProvider)
         {
             var opcUaService = serviceProvider.GetRequiredService<IOpcUaConnectionService>();
             _ = opcUaService.StartAsync();
-        }
+        }*/
     }
 }
