@@ -10,7 +10,7 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settings, ILogger<Op
 {
     private readonly OpcUaSettings _settings = settings.Value;
     private Opc.Ua.ApplicationConfiguration? _appConfig;
-    private Session? Session { get; set; }
+    private ISession? Session { get; set; }
     public bool IsConnected => Session is { Connected: true };
 
     public async Task<bool> ConnectAsync(CancellationToken cancellationToken = default)
@@ -63,18 +63,19 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settings, ILogger<Op
         return endpoint ?? throw new InvalidOperationException($"Не найден подходящий endpoint: {endpointUrl}");
     }
 
-    private async Task<Session> CreateSessionAsync(EndpointDescription endpoint, CancellationToken cancellationToken)
+    private async Task<ISession> CreateSessionAsync(EndpointDescription endpoint, CancellationToken cancellationToken)
     {
         var endpointConfiguration = EndpointConfiguration.Create(_appConfig);
         var configuredEndpoint = new ConfiguredEndpoint(null, endpoint, endpointConfiguration);
-        var session = await Session.Create(
+        var sessionFactory = DefaultSessionFactory.Instance;
+        var session = await sessionFactory.CreateAsync(
             _appConfig,
             configuredEndpoint,
-            false,
-            _settings.ApplicationName,
-            (uint)_settings.SessionTimeoutMs,
-            new UserIdentity(new AnonymousIdentityToken()),
-            null,
+            updateBeforeConnect: false,
+            sessionName: _settings.ApplicationName,
+            sessionTimeout: (uint)_settings.SessionTimeoutMs,
+            identity: new UserIdentity(new AnonymousIdentityToken()),
+            preferredLocales: null,
             cancellationToken);
         session.KeepAlive += OnSessionKeepAlive;
         return session;
@@ -97,7 +98,7 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settings, ILogger<Op
         try
         {
             Session.KeepAlive -= OnSessionKeepAlive;
-            await Session.CloseAsync();
+            await Session.CloseAsync(CancellationToken.None);
             logger.LogInformation("Отключено от OPC UA сервера");
         }
         catch (Exception ex)
