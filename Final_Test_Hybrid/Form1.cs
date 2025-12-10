@@ -105,9 +105,12 @@ namespace Final_Test_Hybrid
             await _opcUaService.ConnectAsync();
         }
 
-        protected override void OnFormClosing(FormClosingEventArgs e)
+        protected override async void OnFormClosing(FormClosingEventArgs e)
         {
-            _opcUaService?.DisconnectAsync().GetAwaiter().GetResult();
+            if (_opcUaService != null)
+            {
+                await _opcUaService.DisconnectAsync();
+            }
             base.OnFormClosing(e);
         }
     }

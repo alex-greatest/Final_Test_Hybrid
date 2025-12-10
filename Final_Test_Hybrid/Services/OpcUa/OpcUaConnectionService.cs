@@ -64,56 +64,46 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
         StartReconnect(session);
     }
 
-    private void StartReconnect(ISession session)
+    private async void StartReconnect(ISession session)
     {
-        _semaphore.Wait();
+        await _semaphore.WaitAsync();
         try
         {
-            StartReconnectLock(session);
+            if (_reconnectHandler != null)
+            {
+                return;
+            }
+            _reconnectHandler = new SessionReconnectHandler(reconnectAbort: false);
+            _reconnectHandler.BeginReconnect(session, _settings.ReconnectIntervalMs, OnReconnectComplete);
         }
         finally
         {
             _semaphore.Release();
         }
     }
-
-    private void StartReconnectLock(ISession session)
+    
+    private async void OnReconnectComplete(object? sender, EventArgs e)
     {
-        if (_reconnectHandler != null)
-        {
-            return;
-        }
-        _reconnectHandler = new SessionReconnectHandler(reconnectAbort: false);
-        _reconnectHandler.BeginReconnect(session, _settings.ReconnectIntervalMs, OnReconnectComplete);
-    }
-
-    private void OnReconnectComplete(object? sender, EventArgs e)
-    {
-        _semaphore.Wait();
+        await _semaphore.WaitAsync();
         try
         {
-            OnReconnectCompleteLock();
+            var newSession = _reconnectHandler?.Session;
+            if (newSession == null)
+            {
+                return;
+            }
+            _session = newSession;
+            logger.LogInformation("Переподключение к OPC UA серверу выполнено успешно");
+            ConnectionStateChanged?.Invoke(true);
+            _reconnectHandler?.Dispose();
+            _reconnectHandler = null;
         }
         finally
         {
             _semaphore.Release();
         }
     }
-
-    private void OnReconnectCompleteLock()
-    {
-        var newSession = _reconnectHandler?.Session;
-        if (newSession == null)
-        {
-            return;
-        }
-        _session = newSession;
-        logger.LogInformation("Переподключение к OPC UA серверу выполнено успешно");
-        ConnectionStateChanged?.Invoke(true);
-        _reconnectHandler?.Dispose();
-        _reconnectHandler = null;
-    }
-
+    
     public async Task DisconnectAsync()
     {
         await _semaphore.WaitAsync();
@@ -121,6 +111,10 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
         {
             _reconnectHandler?.Dispose();
             _reconnectHandler = null;
+            if (_session == null)
+            {
+                return;
+            }
             await CloseSessionAsyncLock();
         }
         finally
@@ -128,17 +122,8 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
             _semaphore.Release();
         }
     }
-
+    
     private async Task CloseSessionAsyncLock()
-    {
-        if (_session == null)
-        {
-            return;
-        }
-        await CloseSession();
-    }
-
-    private async Task CloseSession()
     {
         try
         {
