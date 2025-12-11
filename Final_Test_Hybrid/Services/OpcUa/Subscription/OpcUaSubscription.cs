@@ -133,14 +133,18 @@ public class OpcUaSubscription(
         list.Add(callback);
     }
 
-    public async Task UnsubscribeAsync(string nodeId, Func<object?, Task> callback, CancellationToken ct = default)
+    public async Task UnsubscribeAsync(
+        string nodeId,
+        Func<object?, Task> callback,
+        bool removeTag = false,
+        CancellationToken ct = default)
     {
         if (!_callbacks.TryGetValue(nodeId, out var list))
         {
             return;
         }
         list.Remove(callback);
-        if (list.Count > 0)
+        if (list.Count > 0 || !removeTag)
         {
             return;
         }
