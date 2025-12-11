@@ -1,0 +1,8 @@
+namespace Final_Test_Hybrid.Models.Plc.Tags;
+
+public static class BaseTags
+{
+    public const string PcOn = "ns=3;s=\"PC_ON\"";
+    public const string Sb3011 = "ns=3;s=\"30SB11\"";
+    public const string PneuValveEv31AirOn = "ns=3;s=\"DB_PneuValve\".\"EV3_1\".\"AirOn\"";
+}

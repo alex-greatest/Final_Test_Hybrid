@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Plc.Settings;
+using Final_Test_Hybrid.Models.Plc.Tags;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.Sequence;
@@ -106,14 +107,17 @@ namespace Final_Test_Hybrid
             _opcUaService = serviceProvider.GetRequiredService<OpcUaConnectionService>();
             _opcUaService.ValidateSettings();
             await _opcUaService.ConnectAsync();
+            var subscription = serviceProvider.GetRequiredService<OpcUaSubscription>();
             var nodesToMonitor = GetNodesToMonitor();
+            await subscription.AddTagsAsync(nodesToMonitor);
         }
 
-        private static List<string> GetNodesToMonitor()
-        {
-            // TODO: Заполнить список узлов для мониторинга
-            return [];
-        }
+        private static List<string> GetNodesToMonitor() =>
+        [
+            BaseTags.PcOn,
+            BaseTags.Sb3011,
+            BaseTags.PneuValveEv31AirOn
+        ];
 
         protected override async void OnFormClosing(FormClosingEventArgs e)
         {
