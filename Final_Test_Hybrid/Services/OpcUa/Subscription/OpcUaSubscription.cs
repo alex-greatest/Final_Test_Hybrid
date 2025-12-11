@@ -56,7 +56,17 @@ public class OpcUaSubscription(IOptions<OpcUaSettings> settingsOptions)
 
     public async Task<IReadOnlyList<TagError>> AddTagsAsync(IEnumerable<string> nodeIds, CancellationToken ct = default)
     {
-        var errors = new List<TagError>();
+        var newItems = CreateNewMonitoredItems(nodeIds);
+        if (newItems.Count == 0)
+        {
+            return [];
+        }
+        await _subscription!.ApplyChangesAsync(ct).ConfigureAwait(false);
+        return CollectErrors(newItems);
+    }
+
+    private List<MonitoredItem> CreateNewMonitoredItems(IEnumerable<string> nodeIds)
+    {
         var newItems = new List<MonitoredItem>();
         foreach (var nodeId in nodeIds)
         {
@@ -69,19 +79,19 @@ public class OpcUaSubscription(IOptions<OpcUaSettings> settingsOptions)
             _subscription!.AddItem(item);
             newItems.Add(item);
         }
-        if (newItems.Count > 0)
+        return newItems;
+    }
+
+    private List<TagError> CollectErrors(List<MonitoredItem> items)
+    {
+        var errors = new List<TagError>();
+        var failedItems = items.Where(i => ServiceResult.IsBad(i.Status.Error));
+        foreach (var item in failedItems)
         {
-            await _subscription!.ApplyChangesAsync(ct).ConfigureAwait(false);
-        }
-        foreach (var item in newItems)
-        {
-            if (ServiceResult.IsBad(item.Status.Error))
-            {
-                var nodeId = item.StartNodeId.ToString();
-                _monitoredItems.Remove(nodeId);
-                var message = OpcUaErrorMapper.ToHumanReadable(item.Status.Error.StatusCode);
-                errors.Add(new TagError(nodeId, message));
-            }
+            var nodeId = item.StartNodeId.ToString();
+            _monitoredItems.Remove(nodeId);
+            var message = OpcUaErrorMapper.ToHumanReadable(item.Status.Error.StatusCode);
+            errors.Add(new TagError(nodeId, message));
         }
         return errors;
     }
