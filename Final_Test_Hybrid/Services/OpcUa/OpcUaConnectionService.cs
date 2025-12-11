@@ -22,7 +22,6 @@ public class OpcUaConnectionService(
     public bool IsReconnecting => _reconnectHandler != null;
     public ISession? Session { get; private set; }
     public event Action<bool>? ConnectionStateChanged;
-    public event Action<string>? SubscriptionError;
 
     public void ValidateSettings()
     {
@@ -34,6 +33,7 @@ public class OpcUaConnectionService(
         _appConfig = await AppConfigurator.CreateApplicationConfigurationAsync(_settings)
             .ConfigureAwait(false);
         await ConnectWithRetryAsync(cancellationToken).ConfigureAwait(false);
+        await CreateSubscriptionAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task ConnectWithRetryAsync(CancellationToken cancellationToken)
@@ -48,7 +48,6 @@ public class OpcUaConnectionService(
                     .ConfigureAwait(false);
                 logger.LogInformation("Подключено к OPC UA серверу: {Endpoint}", _settings.EndpointUrl);
                 ConnectionStateChanged?.Invoke(true);
-                await CreateSubscriptionAsync(cancellationToken).ConfigureAwait(false);
                 return;
             }
             catch (OperationCanceledException)
@@ -75,7 +74,7 @@ public class OpcUaConnectionService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Не удалось создать подписку OPC UA");
-            SubscriptionError?.Invoke("Не удалось создать подписку OPC UA");
+            throw;
         }
     }
 
