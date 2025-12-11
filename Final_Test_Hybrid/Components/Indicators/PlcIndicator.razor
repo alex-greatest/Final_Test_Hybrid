@@ -1,6 +1,6 @@
 @using Final_Test_Hybrid.Services.OpcUa
 @using Final_Test_Hybrid.Services.Settings
-@inject OpcUaConnectionService ConnectionService
+@inject OpcUaConnectionState ConnectionState
 @implements IDisposable
 
 <div class="status-indicator">
@@ -14,8 +14,8 @@
 
     protected override void OnInitialized()
     {
-        _lampImage = IndicatorHelper.GetLampImagePath(ConnectionService.IsConnected);
-        ConnectionService.ConnectionStateChanged += OnConnectionStateChanged;
+        _lampImage = IndicatorHelper.GetLampImagePath(ConnectionState.IsConnected);
+        ConnectionState.ConnectionStateChanged += OnConnectionStateChanged;
     }
 
     private async void OnConnectionStateChanged(bool connected)
@@ -33,6 +33,6 @@
 
     public void Dispose()
     {
-        ConnectionService.ConnectionStateChanged -= OnConnectionStateChanged;
+        ConnectionState.ConnectionStateChanged -= OnConnectionStateChanged;
     }
 }

@@ -95,6 +95,7 @@ namespace Final_Test_Hybrid
         private void RegisterOpcUaServices(ServiceCollection services)
         {
             services.Configure<OpcUaSettings>(_config!.GetSection("OpcUa"));
+            services.AddSingleton<OpcUaConnectionState>();
             services.AddSingleton<OpcUaSubscription>();
             services.AddSingleton<OpcUaConnectionService>();
             services.AddSingleton<OpcUaTagService>();

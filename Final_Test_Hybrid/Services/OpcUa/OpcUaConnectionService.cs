@@ -12,6 +12,7 @@ namespace Final_Test_Hybrid.Services.OpcUa;
 public class OpcUaConnectionService(
     IOptions<OpcUaSettings> settingsOptions,
     OpcUaSubscription subscription,
+    OpcUaConnectionState connectionState,
     ILogger<OpcUaConnectionService> logger)
 {
     private readonly OpcUaSettings _settings = settingsOptions.Value;
@@ -21,7 +22,6 @@ public class OpcUaConnectionService(
     public bool IsConnected => Session is { Connected: true };
     public bool IsReconnecting => _reconnectHandler != null;
     public ISession? Session { get; private set; }
-    public event Action<bool>? ConnectionStateChanged;
 
     public void ValidateSettings()
     {
@@ -34,7 +34,7 @@ public class OpcUaConnectionService(
             .ConfigureAwait(false);
         await ConnectWithRetryAsync(cancellationToken).ConfigureAwait(false);
         await CreateSubscriptionAsync(cancellationToken).ConfigureAwait(false);
-        ConnectionStateChanged?.Invoke(true);
+        connectionState.SetConnected(true);
     }
 
     private async Task ConnectWithRetryAsync(CancellationToken cancellationToken)
@@ -86,7 +86,7 @@ public class OpcUaConnectionService(
             return;
         }
         logger.LogWarning("OPC UA KeepAlive failed: {Status}. Запуск переподключения...", e.Status);
-        ConnectionStateChanged?.Invoke(false);
+        connectionState.SetConnected(false);
         StartReconnect(session);
     }
 
@@ -125,7 +125,7 @@ public class OpcUaConnectionService(
         Session = newSession;
         newSession.KeepAlive += OnKeepAlive;
         logger.LogInformation("Переподключение к OPC UA серверу выполнено успешно");
-        ConnectionStateChanged?.Invoke(true);
+        connectionState.SetConnected(true);
         _reconnectHandler?.Dispose();
         _reconnectHandler = null;
     }
@@ -160,7 +160,7 @@ public class OpcUaConnectionService(
         {
             Session?.Dispose();
             Session = null;
-            ConnectionStateChanged?.Invoke(false);
+            connectionState.SetConnected(false);
         }
     }
 }

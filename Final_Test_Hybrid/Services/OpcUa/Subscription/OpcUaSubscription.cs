@@ -8,45 +8,16 @@ using Opc.Ua.Client;
 
 namespace Final_Test_Hybrid.Services.OpcUa.Subscription;
 
-public class OpcUaSubscription : IDisposable
+public class OpcUaSubscription(
+    OpcUaConnectionState connectionState,
+    IOptions<OpcUaSettings> settingsOptions,
+    ILogger<OpcUaSubscription> logger)
 {
-    private readonly OpcUaConnectionService _connectionService;
-    private readonly OpcUaSubscriptionSettings _settings;
-    private readonly ILogger<OpcUaSubscription> _logger;
+    private readonly OpcUaSubscriptionSettings _settings = settingsOptions.Value.Subscription;
     private readonly ConcurrentDictionary<string, object?> _values = new();
     private readonly Dictionary<string, List<Func<object?, Task>>> _callbacks = new();
     private readonly Dictionary<string, MonitoredItem> _monitoredItems = new();
     private Opc.Ua.Client.Subscription? _subscription;
-    private TaskCompletionSource? _connectionTcs;
-
-    public OpcUaSubscription(
-        OpcUaConnectionService connectionService,
-        IOptions<OpcUaSettings> settingsOptions,
-        ILogger<OpcUaSubscription> logger)
-    {
-        _connectionService = connectionService;
-        _settings = settingsOptions.Value.Subscription;
-        _logger = logger;
-        _connectionService.ConnectionStateChanged += OnConnectionStateChanged;
-    }
-
-    private void OnConnectionStateChanged(bool connected)
-    {
-        if (connected)
-        {
-            _connectionTcs?.TrySetResult();
-        }
-    }
-
-    private async Task WaitForConnectionAsync(CancellationToken ct)
-    {
-        if (_connectionService.IsConnected)
-        {
-            return;
-        }
-        _connectionTcs ??= new TaskCompletionSource();
-        await _connectionTcs.Task.WaitAsync(ct).ConfigureAwait(false);
-    }
     
     public async Task CreateAsync(ISession session, CancellationToken ct = default)
     {
@@ -61,12 +32,12 @@ public class OpcUaSubscription : IDisposable
         };
         session.AddSubscription(_subscription);
         await _subscription.CreateAsync(ct).ConfigureAwait(false);
-        _logger.LogInformation("Подписка OPC UA создана");
+        logger.LogInformation("Подписка OPC UA создана");
     }
 
     public async Task<TagError?> AddTagAsync(string nodeId, CancellationToken ct = default)
     {
-        await WaitForConnectionAsync(ct).ConfigureAwait(false);
+        await connectionState.WaitForConnectionAsync(ct).ConfigureAwait(false);
         if (_monitoredItems.ContainsKey(nodeId))
         {
             return null;
@@ -82,12 +53,12 @@ public class OpcUaSubscription : IDisposable
         await _subscription.ApplyChangesAsync(ct).ConfigureAwait(false);
         if (!ServiceResult.IsBad(item.Status.Error))
         {
-            _logger.LogInformation("Тег {NodeId} добавлен в подписку", nodeId);
+            logger.LogInformation("Тег {NodeId} добавлен в подписку", nodeId);
             return null;
         }
         _monitoredItems.Remove(nodeId);
         var message = OpcUaErrorMapper.ToHumanReadable(item.Status.Error.StatusCode);
-        _logger.LogWarning("Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
+        logger.LogWarning("Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
         return new TagError(nodeId, message);
     }
 
@@ -124,12 +95,12 @@ public class OpcUaSubscription : IDisposable
             var nodeId = item.StartNodeId.ToString();
             if (!ServiceResult.IsBad(item.Status.Error))
             {
-                _logger.LogInformation("Тег {NodeId} добавлен в подписку", nodeId);
+                logger.LogInformation("Тег {NodeId} добавлен в подписку", nodeId);
                 continue;
             }
             _monitoredItems.Remove(nodeId);
             var message = OpcUaErrorMapper.ToHumanReadable(item.Status.Error.StatusCode);
-            _logger.LogWarning("Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
+            logger.LogWarning("Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
             errors.Add(new TagError(nodeId, message));
         }
         return errors;
@@ -137,7 +108,6 @@ public class OpcUaSubscription : IDisposable
 
     public async Task SubscribeAsync(string nodeId, Func<object?, Task> callback, CancellationToken ct = default)
     {
-        await WaitForConnectionAsync(ct).ConfigureAwait(false);
         var error = await EnsureTagExistsAsync(nodeId, ct).ConfigureAwait(false);
         if (error != null)
         {
@@ -228,7 +198,7 @@ public class OpcUaSubscription : IDisposable
         var nodeId = item.StartNodeId.ToString();
         var value = notification.Value?.Value;
         _values[nodeId] = value;
-        _logger.LogDebug("Тег {NodeId} = {Value}", nodeId, value);
+        logger.LogDebug("Тег {NodeId} = {Value}", nodeId, value);
         if (!_callbacks.TryGetValue(nodeId, out var list))
         {
             return;
@@ -237,10 +207,5 @@ public class OpcUaSubscription : IDisposable
         {
             _ = callback(value);
         }
-    }
-    
-    public void Dispose()
-    {
-        _connectionService.ConnectionStateChanged -= OnConnectionStateChanged;
     }
 }
