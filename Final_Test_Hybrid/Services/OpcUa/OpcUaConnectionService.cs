@@ -34,6 +34,7 @@ public class OpcUaConnectionService(
             .ConfigureAwait(false);
         await ConnectWithRetryAsync(cancellationToken).ConfigureAwait(false);
         await CreateSubscriptionAsync(cancellationToken).ConfigureAwait(false);
+        ConnectionStateChanged?.Invoke(true);
     }
 
     private async Task ConnectWithRetryAsync(CancellationToken cancellationToken)
@@ -47,7 +48,6 @@ public class OpcUaConnectionService(
                 Session = await AppConfigurator.CreateSessionAsync(_appConfig!, _settings, endpoint, OnKeepAlive, cancellationToken)
                     .ConfigureAwait(false);
                 logger.LogInformation("Подключено к OPC UA серверу: {Endpoint}", _settings.EndpointUrl);
-                ConnectionStateChanged?.Invoke(true);
                 return;
             }
             catch (OperationCanceledException)
