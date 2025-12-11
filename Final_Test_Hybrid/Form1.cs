@@ -96,6 +96,7 @@ namespace Final_Test_Hybrid
             services.Configure<OpcUaSettings>(_config!.GetSection("OpcUa"));
             services.AddSingleton<OpcUaSubscription>();
             services.AddSingleton<OpcUaConnectionService>();
+            services.AddSingleton<OpcUaTagService>();
         }
 
         // async void намеренно: исключения должны попадать в Application.ThreadException
