@@ -1,13 +1,16 @@
 using System.Collections.Concurrent;
 using Final_Test_Hybrid.Models.Plc.Settings;
 using Final_Test_Hybrid.Models.Plc.Subcription;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Opc.Ua;
 using Opc.Ua.Client;
 
 namespace Final_Test_Hybrid.Services.OpcUa.Subscription;
 
-public class OpcUaSubscription(IOptions<OpcUaSettings> settingsOptions)
+public class OpcUaSubscription(
+    IOptions<OpcUaSettings> settingsOptions,
+    ILogger<OpcUaSubscription> logger)
 {
     private readonly OpcUaSubscriptionSettings _settings = settingsOptions.Value.Subscription;
     private readonly ConcurrentDictionary<string, object?> _values = new();
@@ -28,6 +31,7 @@ public class OpcUaSubscription(IOptions<OpcUaSettings> settingsOptions)
         };
         session.AddSubscription(_subscription);
         await _subscription.CreateAsync(ct).ConfigureAwait(false);
+        logger.LogInformation("Подписка OPC UA создана");
     }
 
     public async Task<TagError?> AddTagAsync(string nodeId, CancellationToken ct = default)
@@ -47,10 +51,12 @@ public class OpcUaSubscription(IOptions<OpcUaSettings> settingsOptions)
         await _subscription.ApplyChangesAsync(ct).ConfigureAwait(false);
         if (!ServiceResult.IsBad(item.Status.Error))
         {
+            logger.LogInformation("Тег {NodeId} добавлен в подписку", nodeId);
             return null;
         }
         _monitoredItems.Remove(nodeId);
         var message = OpcUaErrorMapper.ToHumanReadable(item.Status.Error.StatusCode);
+        logger.LogWarning("Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
         return new TagError(nodeId, message);
     }
 
@@ -82,12 +88,17 @@ public class OpcUaSubscription(IOptions<OpcUaSettings> settingsOptions)
     private List<TagError> CollectErrors(List<MonitoredItem> items)
     {
         var errors = new List<TagError>();
-        var failedItems = items.Where(i => ServiceResult.IsBad(i.Status.Error));
-        foreach (var item in failedItems)
+        foreach (var item in items)
         {
             var nodeId = item.StartNodeId.ToString();
+            if (!ServiceResult.IsBad(item.Status.Error))
+            {
+                logger.LogInformation("Тег {NodeId} добавлен в подписку", nodeId);
+                continue;
+            }
             _monitoredItems.Remove(nodeId);
             var message = OpcUaErrorMapper.ToHumanReadable(item.Status.Error.StatusCode);
+            logger.LogWarning("Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
             errors.Add(new TagError(nodeId, message));
         }
         return errors;
@@ -182,6 +193,7 @@ public class OpcUaSubscription(IOptions<OpcUaSettings> settingsOptions)
         var nodeId = item.StartNodeId.ToString();
         var value = notification.Value?.Value;
         _values[nodeId] = value;
+        logger.LogDebug("Тег {NodeId} = {Value}", nodeId, value);
         if (!_callbacks.TryGetValue(nodeId, out var list))
         {
             return;
