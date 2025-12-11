@@ -8,8 +8,9 @@ namespace Final_Test_Hybrid.Services.OpcUa.Subscription;
 public class OpcUaSubscription(IOptions<OpcUaSettings> settingsOptions)
 {
     private readonly OpcUaSubscriptionSettings _settings = settingsOptions.Value.Subscription;
+    private readonly Dictionary<string, List<Action<object?>>> _callbacks = new();
+    private readonly Dictionary<string, MonitoredItem> _monitoredItems = new();
     private Opc.Ua.Client.Subscription? _subscription;
-    public event Action<string, object?>? DataChanged;
 
     public async Task CreateAsync(ISession session, CancellationToken ct = default)
     {
@@ -26,14 +27,47 @@ public class OpcUaSubscription(IOptions<OpcUaSettings> settingsOptions)
         await _subscription.CreateAsync(ct).ConfigureAwait(false);
     }
 
-    public async Task AddMonitoredItemsAsync(IEnumerable<string> nodeIds, CancellationToken ct = default)
+    public async Task SubscribeAsync(string nodeId, Action<object?> callback, CancellationToken ct = default)
     {
         if (_subscription == null)
         {
             throw new InvalidOperationException("Subscription not created. Call CreateAsync first.");
         }
-        var items = nodeIds.Select(CreateMonitoredItem).ToList();
-        _subscription.AddItems(items);
+        if (_callbacks.TryGetValue(nodeId, out var list))
+        {
+            list.Add(callback);
+            return;
+        }
+        _callbacks[nodeId] = [callback];
+        var item = CreateMonitoredItem(nodeId);
+        _monitoredItems[nodeId] = item;
+        _subscription.AddItem(item);
+        await _subscription.ApplyChangesAsync(ct).ConfigureAwait(false);
+    }
+
+    public async Task UnsubscribeAsync(string nodeId, Action<object?> callback, CancellationToken ct = default)
+    {
+        if (!_callbacks.TryGetValue(nodeId, out var list))
+        {
+            return;
+        }
+        list.Remove(callback);
+        if (list.Count > 0)
+        {
+            return;
+        }
+        _callbacks.Remove(nodeId);
+        await RemoveMonitoredItemAsync(nodeId, ct).ConfigureAwait(false);
+    }
+
+    private async Task RemoveMonitoredItemAsync(string nodeId, CancellationToken ct)
+    {
+        if (!_monitoredItems.Remove(nodeId, out var item))
+        {
+            return;
+        }
+        item.Notification -= OnNotification;
+        _subscription!.RemoveItem(item);
         await _subscription.ApplyChangesAsync(ct).ConfigureAwait(false);
     }
 
@@ -58,6 +92,15 @@ public class OpcUaSubscription(IOptions<OpcUaSettings> settingsOptions)
         {
             return;
         }
-        DataChanged?.Invoke(item.StartNodeId.ToString(), notification.Value?.Value);
+        var nodeId = item.StartNodeId.ToString();
+        if (!_callbacks.TryGetValue(nodeId, out var list))
+        {
+            return;
+        }
+        var value = notification.Value?.Value;
+        foreach (var callback in list)
+        {
+            callback(value);
+        }
     }
 }
