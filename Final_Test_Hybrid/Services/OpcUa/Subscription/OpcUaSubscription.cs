@@ -68,12 +68,9 @@ public class OpcUaSubscription(IOptions<OpcUaSettings> settingsOptions)
     private List<MonitoredItem> CreateNewMonitoredItems(IEnumerable<string> nodeIds)
     {
         var newItems = new List<MonitoredItem>();
-        foreach (var nodeId in nodeIds)
+        var newNodeIds = nodeIds.Where(id => !_monitoredItems.ContainsKey(id));
+        foreach (var nodeId in newNodeIds)
         {
-            if (_monitoredItems.ContainsKey(nodeId))
-            {
-                continue;
-            }
             var item = CreateMonitoredItem(nodeId);
             _monitoredItems[nodeId] = item;
             _subscription!.AddItem(item);
@@ -98,20 +95,31 @@ public class OpcUaSubscription(IOptions<OpcUaSettings> settingsOptions)
 
     public async Task<TagError?> SubscribeAsync(string nodeId, Func<object?, Task> callback, CancellationToken ct = default)
     {
-        if (!_monitoredItems.ContainsKey(nodeId))
+        var error = await EnsureTagExistsAsync(nodeId, ct).ConfigureAwait(false);
+        if (error != null)
         {
-            var error = await AddTagAsync(nodeId, ct).ConfigureAwait(false);
-            if (error != null)
-            {
-                return error;
-            }
+            return error;
         }
+        AddCallback(nodeId, callback);
+        return null;
+    }
+
+    private async Task<TagError?> EnsureTagExistsAsync(string nodeId, CancellationToken ct)
+    {
+        if (_monitoredItems.ContainsKey(nodeId))
+        {
+            return null;
+        }
+        return await AddTagAsync(nodeId, ct).ConfigureAwait(false);
+    }
+
+    private void AddCallback(string nodeId, Func<object?, Task> callback)
+    {
         if (!_callbacks.TryGetValue(nodeId, out var list))
         {
             _callbacks[nodeId] = list = [];
         }
         list.Add(callback);
-        return null;
     }
 
     public async Task UnsubscribeAsync(string nodeId, Func<object?, Task> callback, CancellationToken ct = default)
