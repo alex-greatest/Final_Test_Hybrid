@@ -1,0 +1,31 @@
+@using Final_Test_Hybrid.Models.Plc.Tags
+@using Final_Test_Hybrid.Services.OpcUa.Subscription
+@using Final_Test_Hybrid.Services.Settings
+@inject OpcUaSubscription Subscription
+@implements IAsyncDisposable
+
+<div class="status-indicator">
+    <span class="status-label">Air ON</span>
+    <img src="@_lampImage" alt="Status"/>
+</div>
+
+@code {
+    private string _lampImage = "images/RedLamp.png";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Subscription.SubscribeAsync(BaseTags.PneuValveEv31AirOn, OnValueChanged);
+    }
+
+    private async Task OnValueChanged(object? value)
+    {
+        var isOn = value is true;
+        _lampImage = IndicatorHelper.GetLampImagePath(isOn);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await Subscription.UnsubscribeAsync(BaseTags.PneuValveEv31AirOn, OnValueChanged);
+    }
+}
