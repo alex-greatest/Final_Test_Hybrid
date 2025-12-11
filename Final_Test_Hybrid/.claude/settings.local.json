@@ -18,7 +18,13 @@
       "WebFetch(domain:www.nuget.org)",
       "Bash(cat:*)",
       "Bash(Remove-Item \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\OpcUaSubscriptionService.Subscribers.cs\", \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\OpcUaSubscriptionService.Notifications.cs\", \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\OpcUaSubscriptionService.Subscription.cs\" -Force)",
-      "Bash(cmd /c \"del /q \"\"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\OpcUaSubscriptionService.Subscribers.cs\"\" \"\"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\OpcUaSubscriptionService.Notifications.cs\"\" \"\"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\OpcUaSubscriptionService.Subscription.cs\"\"\")"
+      "Bash(cmd /c \"del /q \"\"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\OpcUaSubscriptionService.Subscribers.cs\"\" \"\"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\OpcUaSubscriptionService.Notifications.cs\"\" \"\"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\\Services\\OpcUa\\OpcUaSubscriptionService.Subscription.cs\"\"\")",
+      "Bash(git -C \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\" log --oneline --all -- \"*OpcUa*\")",
+      "Bash(git -C \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\" diff HEAD~5..HEAD -- Services/OpcUa/OpcUaConnectionService.cs)",
+      "Bash(git -C \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\" show ca5ea32:Services/OpcUa/OpcUaConnectionService.cs)",
+      "Bash(git -C \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\" log --all --full-history -- \"Services/OpcUa/OpcUaConnectionService.cs\")",
+      "Bash(git -C \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\" show d48224e:Services/OpcUa/OpcUaConnectionService.cs)",
+      "Bash(git -C \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\" show:*)"
     ]
   }
 }

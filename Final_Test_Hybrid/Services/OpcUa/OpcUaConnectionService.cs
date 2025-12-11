@@ -103,6 +103,7 @@ public class OpcUaConnectionService(
         {
             return;
         }
+        session.KeepAlive -= OnKeepAlive;
         _reconnectHandler = new SessionReconnectHandler(reconnectAbort: false);
         _reconnectHandler.BeginReconnect(session, _settings.ReconnectIntervalMs, OnReconnectComplete);
     }
@@ -122,6 +123,7 @@ public class OpcUaConnectionService(
             return;
         }
         Session = newSession;
+        newSession.KeepAlive += OnKeepAlive;
         logger.LogInformation("Переподключение к OPC UA серверу выполнено успешно");
         ConnectionStateChanged?.Invoke(true);
         _reconnectHandler?.Dispose();
