@@ -1,14 +1,11 @@
 using Final_Test_Hybrid.Models.Plc.Settings;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Opc.Ua;
 using Opc.Ua.Client;
 
 namespace Final_Test_Hybrid.Services.OpcUa.Subscription;
 
-public class OpcUaSubscription(
-    IOptions<OpcUaSettings> settingsOptions,
-    ILogger<OpcUaSubscription> logger)
+public class OpcUaSubscription(IOptions<OpcUaSettings> settingsOptions)
 {
     private readonly OpcUaSubscriptionSettings _settings = settingsOptions.Value.Subscription;
     private readonly Dictionary<string, List<Func<object?, Task>>> _callbacks = new();
@@ -103,19 +100,7 @@ public class OpcUaSubscription(
         var value = notification.Value?.Value;
         foreach (var callback in list)
         {
-            _ = InvokeCallbackAsync(callback, value, nodeId);
-        }
-    }
-
-    private async Task InvokeCallbackAsync(Func<object?, Task> callback, object? value, string nodeId)
-    {
-        try
-        {
-            await callback(value).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Ошибка в callback подписки для {NodeId}", nodeId);
+            _ = callback(value);
         }
     }
 }
