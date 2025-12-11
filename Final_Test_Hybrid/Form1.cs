@@ -1,5 +1,6 @@
 using Final_Test_Hybrid.Models.Plc.Settings;
 using Final_Test_Hybrid.Services.OpcUa;
+using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.Sequence;
 using Final_Test_Hybrid.Services.Settings.IO;
 using Final_Test_Hybrid.Services.Settings.UI;
@@ -93,6 +94,7 @@ namespace Final_Test_Hybrid
         private void RegisterOpcUaServices(ServiceCollection services)
         {
             services.Configure<OpcUaSettings>(_config!.GetSection("OpcUa"));
+            services.AddSingleton<OpcUaSubscription>();
             services.AddSingleton<OpcUaConnectionService>();
         }
 

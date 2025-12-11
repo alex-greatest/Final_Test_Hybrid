@@ -1,6 +1,7 @@
 using AsyncAwaitBestPractices;
 using Final_Test_Hybrid.Models.Plc.Settings;
 using Final_Test_Hybrid.Services.Common;
+using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Opc.Ua;
@@ -8,7 +9,10 @@ using Opc.Ua.Client;
 
 namespace Final_Test_Hybrid.Services.OpcUa;
 
-public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILogger<OpcUaConnectionService> logger)
+public class OpcUaConnectionService(
+    IOptions<OpcUaSettings> settingsOptions,
+    OpcUaSubscription subscription,
+    ILogger<OpcUaConnectionService> logger)
 {
     private readonly OpcUaSettings _settings = settingsOptions.Value;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
@@ -42,6 +46,7 @@ public class OpcUaConnectionService(IOptions<OpcUaSettings> settingsOptions, ILo
                 Session = await AppConfigurator.CreateSessionAsync(_appConfig!, _settings, endpoint, OnKeepAlive, cancellationToken)
                     .ConfigureAwait(false);
                 logger.LogInformation("Подключено к OPC UA серверу: {Endpoint}", _settings.EndpointUrl);
+                await subscription.CreateAsync(Session, cancellationToken).ConfigureAwait(false);
                 ConnectionStateChanged?.Invoke(true);
                 return;
             }
