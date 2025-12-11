@@ -1,14 +1,17 @@
 using Final_Test_Hybrid.Models.Plc.Settings;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Opc.Ua;
 using Opc.Ua.Client;
 
 namespace Final_Test_Hybrid.Services.OpcUa.Subscription;
 
-public class OpcUaSubscription(IOptions<OpcUaSettings> settingsOptions)
+public class OpcUaSubscription(
+    IOptions<OpcUaSettings> settingsOptions,
+    ILogger<OpcUaSubscription> logger)
 {
     private readonly OpcUaSubscriptionSettings _settings = settingsOptions.Value.Subscription;
-    private readonly Dictionary<string, List<Action<object?>>> _callbacks = new();
+    private readonly Dictionary<string, List<Func<object?, Task>>> _callbacks = new();
     private readonly Dictionary<string, MonitoredItem> _monitoredItems = new();
     private Opc.Ua.Client.Subscription? _subscription;
 
@@ -27,7 +30,7 @@ public class OpcUaSubscription(IOptions<OpcUaSettings> settingsOptions)
         await _subscription.CreateAsync(ct).ConfigureAwait(false);
     }
 
-    public async Task SubscribeAsync(string nodeId, Action<object?> callback, CancellationToken ct = default)
+    public async Task SubscribeAsync(string nodeId, Func<object?, Task> callback, CancellationToken ct = default)
     {
         if (_subscription == null)
         {
@@ -45,7 +48,7 @@ public class OpcUaSubscription(IOptions<OpcUaSettings> settingsOptions)
         await _subscription.ApplyChangesAsync(ct).ConfigureAwait(false);
     }
 
-    public async Task UnsubscribeAsync(string nodeId, Action<object?> callback, CancellationToken ct = default)
+    public async Task UnsubscribeAsync(string nodeId, Func<object?, Task> callback, CancellationToken ct = default)
     {
         if (!_callbacks.TryGetValue(nodeId, out var list))
         {
@@ -100,7 +103,19 @@ public class OpcUaSubscription(IOptions<OpcUaSettings> settingsOptions)
         var value = notification.Value?.Value;
         foreach (var callback in list)
         {
-            callback(value);
+            _ = InvokeCallbackAsync(callback, value, nodeId);
+        }
+    }
+
+    private async Task InvokeCallbackAsync(Func<object?, Task> callback, object? value, string nodeId)
+    {
+        try
+        {
+            await callback(value).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка в callback подписки для {NodeId}", nodeId);
         }
     }
 }
