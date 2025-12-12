@@ -1,0 +1,38 @@
+@using Final_Test_Hybrid.Services.SpringBoot.Health
+@using Final_Test_Hybrid.Services.Common
+@inject SpringBootConnectionState ConnectionState
+@implements IDisposable
+
+<div class="status-indicator">
+    <span class="status-label">@Label</span>
+    <img src="@_lampImage" alt="Status"/>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "Server";
+    private string _lampImage = "images/RedLamp.png";
+
+    protected override void OnInitialized()
+    {
+        _lampImage = IndicatorHelper.GetLampImagePath(ConnectionState.IsConnected);
+        ConnectionState.ConnectionStateChanged += OnConnectionStateChanged;
+    }
+
+    private async void OnConnectionStateChanged(bool connected)
+    {
+        try
+        {
+            _lampImage = IndicatorHelper.GetLampImagePath(connected);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // ignored - component may be disposed
+        }
+    }
+
+    public void Dispose()
+    {
+        ConnectionState.ConnectionStateChanged -= OnConnectionStateChanged;
+    }
+}

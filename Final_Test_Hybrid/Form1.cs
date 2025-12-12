@@ -8,6 +8,9 @@ using Final_Test_Hybrid.Services.Sequence;
 using Final_Test_Hybrid.Services.Common.IO;
 using Final_Test_Hybrid.Services.Common.UI;
 using Final_Test_Hybrid.Services.Steps;
+using Final_Test_Hybrid.Services.SpringBoot.Health;
+using Final_Test_Hybrid.Services.SpringBoot.Http;
+using Final_Test_Hybrid.Services.SpringBoot.Settings;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +24,7 @@ namespace Final_Test_Hybrid
     {
         private IConfiguration? _config;
         private OpcUaConnectionService? _opcUaService;
+        private SpringBootHealthService? _springBootHealthService;
 
         public Form1()
         {
@@ -34,6 +38,7 @@ namespace Final_Test_Hybrid
             services.AddScoped<TestSequenceService>();
             services.AddSingleton<ITestStepRegistry, TestStepRegistry>();
             RegisterOpcUaServices(services);
+            RegisterSpringBootServices(services);
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();
@@ -43,6 +48,7 @@ namespace Final_Test_Hybrid
             HandleException(logger);
             blazorWebView1.Services = serviceProvider;
             StartOpcUaConnection(serviceProvider);
+            StartSpringBootHealthCheck(serviceProvider);
             blazorWebView1.RootComponents.Add<MyComponent>("#app");
         }
 
@@ -117,6 +123,20 @@ namespace Final_Test_Hybrid
             services.AddSingleton<OpcUaTagService>();
         }
 
+        private void RegisterSpringBootServices(ServiceCollection services)
+        {
+            services.Configure<SpringBootSettings>(_config!.GetSection("SpringBoot"));
+            services.AddSingleton<SpringBootConnectionState>();
+            services.AddSingleton<SpringBootHttpClient>();
+            services.AddSingleton<SpringBootHealthService>();
+        }
+
+        private void StartSpringBootHealthCheck(ServiceProvider serviceProvider)
+        {
+            _springBootHealthService = serviceProvider.GetRequiredService<SpringBootHealthService>();
+            _springBootHealthService.Start();
+        }
+
         // async void намеренно: исключения должны попадать в Application.ThreadException
         // ReSharper disable once AsyncVoidMethod
         private async void StartOpcUaConnection(ServiceProvider serviceProvider)
@@ -128,6 +148,7 @@ namespace Final_Test_Hybrid
 
         protected override async void OnFormClosing(FormClosingEventArgs e)
         {
+            _springBootHealthService?.Stop();
             if (_opcUaService != null)
             {
                 await _opcUaService.DisconnectAsync();
