@@ -11,6 +11,7 @@ using Final_Test_Hybrid.Services.Steps;
 using Final_Test_Hybrid.Services.SpringBoot.Health;
 using Final_Test_Hybrid.Services.SpringBoot.Http;
 using Final_Test_Hybrid.Services.SpringBoot.Settings;
+using Final_Test_Hybrid.Services.Common.Settings;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,6 +38,8 @@ namespace Final_Test_Hybrid
             services.AddScoped<INotificationService, NotificationServiceWrapper>();
             services.AddScoped<TestSequenceService>();
             services.AddSingleton<ITestStepRegistry, TestStepRegistry>();
+            services.Configure<AppSettings>(_config!.GetSection("Settings"));
+            services.AddSingleton<AppSettingsService>();
             RegisterOpcUaServices(services);
             RegisterSpringBootServices(services);
             services.AddBlazorWebViewDeveloperTools();

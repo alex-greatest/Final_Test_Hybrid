@@ -1,0 +1,16 @@
+.switch-mes {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.switch-mes-label {
+    font-weight: bold;
+    font-size: 20px;
+    color: black;
+}
+
+::deep .rz-switch {
+    transform: scale(1.3);
+}

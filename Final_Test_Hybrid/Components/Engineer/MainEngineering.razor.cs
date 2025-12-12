@@ -7,16 +7,6 @@ public partial class MainEngineering
 {
     [Inject]
     public required DialogService DialogService { get; set; }
-    private string selectedLanguage = "French (fr)";
-    private readonly List<string> languages =
-    [
-        "English (en)",
-        "French (fr)",
-        "German (de)",
-        "Spanish (es)",
-        "Italian (it)",
-        "Russian (ru)"
-    ];
 
     private async Task OpenTestSequenceEditor()
     {

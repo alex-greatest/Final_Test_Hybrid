@@ -60,14 +60,14 @@
 
 
 /* ===== HEADER RIGHT BUTTONS ===== */
-.header-block-right .buttons-row {
+.header-block-right ::deep .buttons-row {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
     align-items: center;
 }
 
-.header-block-right .buttons-row ::deep .rz-button {
+.header-block-right ::deep .buttons-row .rz-button {
     padding: 10px 24px;
     min-width: 150px;
     font-size: 1.3rem;
