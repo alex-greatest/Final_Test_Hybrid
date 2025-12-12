@@ -17,7 +17,8 @@ public class OpcUaSubscription(
 {
     private readonly OpcUaSubscriptionSettings _settings = settingsOptions.Value.Subscription;
     private readonly ConcurrentDictionary<string, object?> _values = new();
-    private readonly ConcurrentDictionary<string, List<Func<object?, Task>>> _callbacks = new();
+    private readonly Dictionary<string, List<Func<object?, Task>>> _callbacks = new();
+    private readonly Lock _callbacksLock = new();
     private readonly ConcurrentDictionary<string, MonitoredItem> _monitoredItems = new();
     private readonly SemaphoreSlim _subscriptionLock = new(1, 1);
     private Opc.Ua.Client.Subscription? _subscription;
@@ -29,8 +30,8 @@ public class OpcUaSubscription(
             DisplayName = "OpcUa Subscription",
             PublishingEnabled = true,
             PublishingInterval = _settings.PublishingIntervalMs,
-            KeepAliveCount = 10,
-            LifetimeCount = 100,
+            KeepAliveCount = _settings.KeepAliveCount,
+            LifetimeCount = _settings.LifetimeCount,
             MaxNotificationsPerPublish = _settings.MaxNotificationsPerPublish
         };
         session.AddSubscription(_subscription);
@@ -53,6 +54,7 @@ public class OpcUaSubscription(
         var item = CreateMonitoredItem(nodeId);
         if (!_monitoredItems.TryAdd(nodeId, item))
         {
+            item.Notification -= OnNotification;
             return null;
         }
         await ApplyItemToSubscriptionAsync(item, ct).ConfigureAwait(false);
@@ -76,6 +78,7 @@ public class OpcUaSubscription(
             return null;
         }
         _monitoredItems.TryRemove(nodeId, out _);
+        item.Notification -= OnNotification;
         var message = OpcUaErrorMapper.ToHumanReadable(item.Status.Error.StatusCode);
         logger.LogWarning("Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
         return new TagError(nodeId, message);
@@ -104,6 +107,7 @@ public class OpcUaSubscription(
             var item = CreateMonitoredItem(nodeId);
             if (!_monitoredItems.TryAdd(nodeId, item))
             {
+                item.Notification -= OnNotification;
                 continue;
             }
             _subscription!.AddItem(item);
@@ -112,20 +116,11 @@ public class OpcUaSubscription(
         return newItems;
     }
 
-    private List<TagError> CollectErrors(List<MonitoredItem> items)
-    {
-        var errors = new List<TagError>();
-        foreach (var item in items)
-        {
-            var nodeId = item.StartNodeId.ToString();
-            var error = ProcessAddResult(item, nodeId);
-            if (error != null)
-            {
-                errors.Add(error);
-            }
-        }
-        return errors;
-    }
+    private List<TagError> CollectErrors(List<MonitoredItem> items) =>
+        items
+            .Select(item => ProcessAddResult(item, item.StartNodeId.ToString()))
+            .Where(error => error != null)
+            .ToList()!;
 
     public async Task SubscribeAsync(string nodeId, Func<object?, Task> callback, CancellationToken ct = default)
     {
@@ -137,22 +132,21 @@ public class OpcUaSubscription(
         AddCallback(nodeId, callback);
     }
 
-    private async Task<TagError?> EnsureTagExistsAsync(string nodeId, CancellationToken ct)
-    {
-        if (_monitoredItems.ContainsKey(nodeId))
-        {
-            return null;
-        }
-        return await AddTagAsync(nodeId, ct).ConfigureAwait(false);
-    }
+    private Task<TagError?> EnsureTagExistsAsync(string nodeId, CancellationToken ct) =>
+        _monitoredItems.ContainsKey(nodeId)
+            ? Task.FromResult<TagError?>(null)
+            : AddTagAsync(nodeId, ct);
 
     private void AddCallback(string nodeId, Func<object?, Task> callback)
     {
-        if (!_callbacks.TryGetValue(nodeId, out var list))
+        lock (_callbacksLock)
         {
-            _callbacks[nodeId] = list = [];
+            if (!_callbacks.TryGetValue(nodeId, out var list))
+            {
+                _callbacks[nodeId] = list = [];
+            }
+            list.Add(callback);
         }
-        list.Add(callback);
     }
 
     public async Task UnsubscribeAsync(
@@ -170,25 +164,39 @@ public class OpcUaSubscription(
 
     private bool TryRemoveCallback(string nodeId, Func<object?, Task> callback)
     {
-        if (!_callbacks.TryGetValue(nodeId, out var list))
+        lock (_callbacksLock)
         {
-            return false;
+            if (!_callbacks.TryGetValue(nodeId, out var list))
+            {
+                return false;
+            }
+            list.Remove(callback);
+            return true;
         }
-        list.Remove(callback);
-        return true;
     }
 
     private async Task TryRemoveTagIfEmptyAsync(string nodeId, bool removeTag, CancellationToken ct)
     {
-        if (!removeTag || !_callbacks.TryGetValue(nodeId, out var list) || list.Count > 0)
+        if (!removeTag)
         {
             return;
         }
-        _callbacks.TryRemove(nodeId, out _);
-        await RemoveTagAsync(nodeId, ct).ConfigureAwait(false);
+        bool shouldRemove;
+        lock (_callbacksLock)
+        {
+            shouldRemove = _callbacks.TryGetValue(nodeId, out var list) && list.Count == 0;
+            if (shouldRemove)
+            {
+                _callbacks.Remove(nodeId);
+            }
+        }
+        if (shouldRemove)
+        {
+            await RemoveTagAsync(nodeId, ct).ConfigureAwait(false);
+        }
     }
 
-    public async Task RemoveTagAsync(string nodeId, CancellationToken ct = default)
+    private async Task RemoveTagAsync(string nodeId, CancellationToken ct = default)
     {
         if (!_monitoredItems.TryRemove(nodeId, out var item))
         {
@@ -201,16 +209,16 @@ public class OpcUaSubscription(
             await _subscription.ApplyChangesAsync(ct).ConfigureAwait(false);
         }
         _values.TryRemove(nodeId, out _);
-        _callbacks.TryRemove(nodeId, out _);
+        lock (_callbacksLock)
+        {
+            _callbacks.Remove(nodeId);
+        }
     }
 
     public object? GetValue(string nodeId) => _values.GetValueOrDefault(nodeId);
 
-    public T? GetValue<T>(string nodeId)
-    {
-        var value = _values.GetValueOrDefault(nodeId);
-        return value is T typed ? typed : default;
-    }
+    public T? GetValue<T>(string nodeId) =>
+        _values.GetValueOrDefault(nodeId) is T typed ? typed : default;
 
     private MonitoredItem CreateMonitoredItem(string nodeId)
     {
@@ -247,11 +255,16 @@ public class OpcUaSubscription(
 
     private void InvokeCallbacks(string nodeId, object? value)
     {
-        if (!_callbacks.TryGetValue(nodeId, out var list))
+        Func<object?, Task>[] callbacks;
+        lock (_callbacksLock)
         {
-            return;
+            if (!_callbacks.TryGetValue(nodeId, out var list))
+            {
+                return;
+            }
+            callbacks = [.. list];
         }
-        foreach (var callback in list)
+        foreach (var callback in callbacks)
         {
             callback(value).SafeFireAndForget(ex =>
                 logger.LogError(ex, "Ошибка в callback для тега {NodeId}", nodeId));

@@ -6,6 +6,8 @@ public class OpcUaSubscriptionSettings
     public int SamplingIntervalMs { get; set; }
     public int QueueSize { get; set; }
     public uint MaxNotificationsPerPublish { get; set; }
+    public uint KeepAliveCount { get; set; } = 10;
+    public uint LifetimeCount { get; set; } = 100;
 
     public void Validate()
     {
