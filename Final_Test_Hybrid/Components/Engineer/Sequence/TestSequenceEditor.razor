@@ -56,7 +56,7 @@
                                             Data="@_steps"
                                             TextProperty="Name"
                                             ValueProperty="Id"
-                                            Value="@data.Columns[index]"
+                                            @bind-Value="data.Columns[index]"
                                             Change="@(args => OnStepSelected(data, index, args))"
                                             AllowFiltering="true"
                                             FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
