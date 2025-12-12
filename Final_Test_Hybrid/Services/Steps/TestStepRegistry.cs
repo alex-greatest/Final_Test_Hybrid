@@ -25,7 +25,7 @@ public class TestStepRegistry : ITestStepRegistry
 
     private static bool IsTestStepType(Type type)
     {
-        return typeof(ITestStep).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract;
+        return typeof(ITestStep).IsAssignableFrom(type) && type is { IsInterface: false, IsAbstract: false };
     }
 
     private static ITestStep? CreateInstance(Type type)
