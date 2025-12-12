@@ -84,9 +84,10 @@ namespace Final_Test_Hybrid
             #endif
             ConfigureSerilog();
             services.AddSingleton<ISubscriptionLogger, SubscriptionLogger>();
+            var logLevel = Enum.Parse<LogLevel>(_config?["Logging:General:LogLevel"] ?? "Warning");
             services.AddLogging(logging =>
             {
-                logging.SetMinimumLevel(LogLevel.Warning);
+                logging.SetMinimumLevel(logLevel);
                 #if DEBUG
                     logging.AddDebug();
                     logging.AddConsole();
