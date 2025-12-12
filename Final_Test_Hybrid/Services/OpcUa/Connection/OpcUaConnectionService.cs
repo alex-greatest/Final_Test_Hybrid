@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 using Opc.Ua;
 using Opc.Ua.Client;
 
-namespace Final_Test_Hybrid.Services.OpcUa;
+namespace Final_Test_Hybrid.Services.OpcUa.Connection;
 
 public class OpcUaConnectionService(
     IOptions<OpcUaSettings> settingsOptions,

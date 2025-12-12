@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Plc.Subcription;
+using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Microsoft.Extensions.Logging;
 using Opc.Ua;

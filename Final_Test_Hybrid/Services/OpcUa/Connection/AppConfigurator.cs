@@ -3,7 +3,7 @@ using Opc.Ua;
 using Opc.Ua.Client;
 using Opc.Ua.Configuration;
 
-namespace Final_Test_Hybrid.Services.OpcUa;
+namespace Final_Test_Hybrid.Services.OpcUa.Connection;
 
 public static class AppConfigurator
 {
