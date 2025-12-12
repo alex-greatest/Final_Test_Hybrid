@@ -3,6 +3,7 @@ using AsyncAwaitBestPractices;
 using Final_Test_Hybrid.Models.Plc.Settings;
 using Final_Test_Hybrid.Models.Plc.Subcription;
 using Final_Test_Hybrid.Services.Common;
+using Final_Test_Hybrid.Services.Logging;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -14,7 +15,8 @@ namespace Final_Test_Hybrid.Services.OpcUa.Subscription;
 public class OpcUaSubscription(
     OpcUaConnectionState connectionState,
     IOptions<OpcUaSettings> settingsOptions,
-    ILogger<OpcUaSubscription> logger)
+    ILogger<OpcUaSubscription> logger,
+    ISubscriptionLogger subscriptionLogger)
 {
     private readonly OpcUaSubscriptionSettings _settings = settingsOptions.Value.Subscription;
     private readonly ConcurrentDictionary<string, object?> _values = new();
@@ -38,6 +40,7 @@ public class OpcUaSubscription(
         session.AddSubscription(_subscription);
         await _subscription.CreateAsync(ct).ConfigureAwait(false);
         logger.LogInformation("Подписка OPC UA создана");
+        subscriptionLogger.LogInformation("Подписка OPC UA создана");
     }
 
     public async Task<TagError?> AddTagAsync(string nodeId, CancellationToken ct = default)
@@ -76,12 +79,14 @@ public class OpcUaSubscription(
         if (!ServiceResult.IsBad(item.Status.Error))
         {
             logger.LogInformation("Тег {NodeId} добавлен в подписку", nodeId);
+            subscriptionLogger.LogInformation("Тег {NodeId} добавлен в подписку", nodeId);
             return null;
         }
         _monitoredItems.TryRemove(nodeId, out _);
         item.Notification -= OnNotification;
         var message = OpcUaErrorMapper.ToHumanReadable(item.Status.Error.StatusCode);
         logger.LogWarning("Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
+        subscriptionLogger.LogWarning("Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
         return new TagError(nodeId, message);
     }
 
@@ -252,6 +257,7 @@ public class OpcUaSubscription(
     {
         _values[nodeId] = value;
         logger.LogDebug("Тег {NodeId} = {Value}", nodeId, value);
+        subscriptionLogger.LogDebug("Тег {NodeId} = {Value}", nodeId, value);
     }
 
     private void InvokeCallbacks(string nodeId, object? value)
@@ -268,7 +274,10 @@ public class OpcUaSubscription(
         foreach (var callback in callbacks)
         {
             callback(value).SafeFireAndForget(ex =>
-                logger.LogError(ex, "Ошибка в callback для тега {NodeId}", nodeId));
+            {
+                logger.LogError(ex, "Ошибка в callback для тега {NodeId}", nodeId);
+                subscriptionLogger.LogError(ex, "Ошибка в callback для тега {NodeId}", nodeId);
+            });
         }
     }
 }

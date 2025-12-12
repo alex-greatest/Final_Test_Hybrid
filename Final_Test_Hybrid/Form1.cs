@@ -1,11 +1,11 @@
 using System.Globalization;
 using Final_Test_Hybrid.Models.Plc.Settings;
-using Final_Test_Hybrid.Models.Plc.Tags;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.Sequence;
 using Final_Test_Hybrid.Services.Settings.IO;
+using Final_Test_Hybrid.Services.Logging;
 using Final_Test_Hybrid.Services.Settings.UI;
 using Final_Test_Hybrid.Services.Steps;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
@@ -83,10 +83,10 @@ namespace Final_Test_Hybrid
                 services.AddBlazorWebViewDeveloperTools();
             #endif
             ConfigureSerilog();
+            services.AddSingleton<ISubscriptionLogger, SubscriptionLogger>();
             services.AddLogging(logging =>
             {
                 logging.SetMinimumLevel(LogLevel.Warning);
-                logging.AddFilter("Final_Test_Hybrid.Services.OpcUa.Subscription", LogLevel.Debug);
                 #if DEBUG
                     logging.AddDebug();
                     logging.AddConsole();
@@ -97,18 +97,12 @@ namespace Final_Test_Hybrid
 
         private void ConfigureSerilog()
         {
-            var logConfig = _config?.GetSection("Logging");
-            var generalPath = logConfig?["General:Path"] ?? "D:/Logs/app-.txt";
-            var generalRetain = int.Parse(logConfig?["General:RetainedFileCountLimit"] ?? "5", CultureInfo.InvariantCulture);
-            var subscriptionPath = logConfig?["Subscription:Path"] ?? "D:/Logs/Subscriptions/subscription-.txt";
-            var subscriptionRetain = int.Parse(logConfig?["Subscription:RetainedFileCountLimit"] ?? "10", CultureInfo.InvariantCulture);
+            var logConfig = _config?.GetSection("Logging:General");
+            var path = logConfig?["Path"] ?? "D:/Logs/app-.txt";
+            var retain = int.Parse(logConfig?["RetainedFileCountLimit"] ?? "5", CultureInfo.InvariantCulture);
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Warning()
-                .MinimumLevel.Override("Final_Test_Hybrid.Services.OpcUa.Subscription", Serilog.Events.LogEventLevel.Debug)
-                .WriteTo.File(generalPath, rollingInterval: RollingInterval.Day, retainedFileCountLimit: generalRetain)
-                .WriteTo.Logger(lc => lc
-                    .Filter.ByIncludingOnly("SourceContext like 'Final_Test_Hybrid.Services.OpcUa.Subscription%'")
-                    .WriteTo.File(subscriptionPath, rollingInterval: RollingInterval.Infinite, retainedFileCountLimit: subscriptionRetain))
+                .WriteTo.File(path, rollingInterval: RollingInterval.Day, retainedFileCountLimit: retain)
                 .CreateLogger();
         }
 
