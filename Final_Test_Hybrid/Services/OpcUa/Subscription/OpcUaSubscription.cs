@@ -54,11 +54,21 @@ public class OpcUaSubscription(
         {
             return null;
         }
+        await ApplyItemToSubscriptionAsync(item, ct).ConfigureAwait(false);
+        return ProcessAddResult(item, nodeId);
+    }
+
+    private async Task ApplyItemToSubscriptionAsync(MonitoredItem item, CancellationToken ct)
+    {
         await using (await AsyncLock.AcquireAsync(_subscriptionLock, ct).ConfigureAwait(false))
         {
             _subscription!.AddItem(item);
             await _subscription.ApplyChangesAsync(ct).ConfigureAwait(false);
         }
+    }
+
+    private TagError? ProcessAddResult(MonitoredItem item, string nodeId)
+    {
         if (!ServiceResult.IsBad(item.Status.Error))
         {
             logger.LogInformation("Тег {NodeId} добавлен в подписку", nodeId);
