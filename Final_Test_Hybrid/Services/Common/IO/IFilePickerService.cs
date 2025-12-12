@@ -1,4 +1,4 @@
-namespace Final_Test_Hybrid.Services.Settings.IO
+namespace Final_Test_Hybrid.Services.Common.IO
 {
     public interface IFilePickerService
     {

@@ -1,4 +1,4 @@
-namespace Final_Test_Hybrid.Services.Settings.UI
+namespace Final_Test_Hybrid.Services.Common.UI
 {
     public interface INotificationService
     {
@@ -8,4 +8,3 @@ namespace Final_Test_Hybrid.Services.Settings.UI
         void ShowInfo(string summary, string detail, double? duration = null, bool closeOnClick = true, string? id = null, string? style = null);
     }
 }
-

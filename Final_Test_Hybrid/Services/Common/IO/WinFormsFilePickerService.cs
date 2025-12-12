@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace Final_Test_Hybrid.Services.Settings.IO
+namespace Final_Test_Hybrid.Services.Common.IO
 {
     public class WinFormsFilePickerService(ILogger<WinFormsFilePickerService> logger) : IFilePickerService
     {
@@ -43,7 +43,7 @@ namespace Final_Test_Hybrid.Services.Settings.IO
         {
             var absRoot = Path.GetFullPath(rootPath);
             var absSelected = Path.GetFullPath(selectedFile);
-            var rootCheck = absRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) 
+            var rootCheck = absRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                                + Path.DirectorySeparatorChar;
             if (absSelected.StartsWith(rootCheck, StringComparison.OrdinalIgnoreCase))
             {
@@ -57,9 +57,9 @@ namespace Final_Test_Hybrid.Services.Settings.IO
         {
             logger.LogWarning("Попытка выбора файла вне разрешенной директории: {RootPath}", absRoot);
             MessageBox.Show(
-                $"Выбранный файл находится за пределами разрешенной папки:\n{absRoot}\n\nПожалуйста, выберите файл внутри этой директории.", 
-                "Недопустимый выбор", 
-                MessageBoxButtons.OK, 
+                $"Выбранный файл находится за пределами разрешенной папки:\n{absRoot}\n\nПожалуйста, выберите файл внутри этой директории.",
+                "Недопустимый выбор",
+                MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
         }
 

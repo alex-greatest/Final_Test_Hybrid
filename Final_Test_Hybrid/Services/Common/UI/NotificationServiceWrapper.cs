@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Radzen;
 
-namespace Final_Test_Hybrid.Services.Settings.UI
+namespace Final_Test_Hybrid.Services.Common.UI
 {
     public class NotificationServiceWrapper(NotificationService notificationService, ILogger<NotificationServiceWrapper> logger) : INotificationService
     {
