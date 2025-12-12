@@ -1,0 +1,27 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Microsoft.Extensions.Options;
+
+namespace Final_Test_Hybrid.Services.Common.Settings;
+
+public class AppSettingsService(IOptions<AppSettings> options)
+{
+    private readonly string _settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+    public bool UseMes { get; private set; } = options.Value.UseMes;
+    public string EngineerPassword { get; } = options.Value.EngineerPassword;
+
+    public void SaveUseMes(bool value)
+    {
+        UseMes = value;
+        SaveToFile();
+    }
+
+    private void SaveToFile()
+    {
+        var json = File.ReadAllText(_settingsPath);
+        var jsonNode = JsonNode.Parse(json)!;
+        jsonNode["Settings"]![nameof(UseMes)] = UseMes;
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        File.WriteAllText(_settingsPath, jsonNode.ToJsonString(options));
+    }
+}

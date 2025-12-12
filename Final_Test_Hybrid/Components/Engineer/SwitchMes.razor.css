@@ -11,6 +11,12 @@
     color: black;
 }
 
+.switch-wrapper {
+    cursor: pointer;
+}
+
 ::deep .rz-switch {
     transform: scale(1.3);
+    pointer-events: none;
+    opacity: 1 !important;
 }
