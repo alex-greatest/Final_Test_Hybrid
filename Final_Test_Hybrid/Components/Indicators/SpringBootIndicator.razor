@@ -1,12 +1,17 @@
 @using Final_Test_Hybrid.Services.SpringBoot.Health
 @using Final_Test_Hybrid.Services.Common
+@using Final_Test_Hybrid.Services.Common.Settings
 @inject SpringBootConnectionState ConnectionState
+@inject AppSettingsService AppSettingsService
 @implements IDisposable
 
-<div class="status-indicator">
-    <span class="status-label">@Label</span>
-    <img src="@_lampImage" alt="Status"/>
-</div>
+@if (AppSettingsService.UseMes)
+{
+    <div class="status-indicator">
+        <span class="status-label">@Label</span>
+        <img src="@_lampImage" alt="Status"/>
+    </div>
+}
 
 @code {
     [Parameter] public string Label { get; set; } = "Server";
@@ -16,6 +21,7 @@
     {
         _lampImage = IndicatorHelper.GetLampImagePath(ConnectionState.IsConnected);
         ConnectionState.ConnectionStateChanged += OnConnectionStateChanged;
+        AppSettingsService.UseMesChanged += OnUseMesChanged;
     }
 
     private async void OnConnectionStateChanged(bool connected)
@@ -31,8 +37,21 @@
         }
     }
 
+    private async void OnUseMesChanged(bool _)
+    {
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // ignored - component may be disposed
+        }
+    }
+
     public void Dispose()
     {
         ConnectionState.ConnectionStateChanged -= OnConnectionStateChanged;
+        AppSettingsService.UseMesChanged -= OnUseMesChanged;
     }
 }

@@ -9,11 +9,13 @@ public class AppSettingsService(IOptions<AppSettings> options)
     private readonly string _settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
     public bool UseMes { get; private set; } = options.Value.UseMes;
     public string EngineerPassword { get; } = options.Value.EngineerPassword;
+    public event Action<bool>? UseMesChanged;
 
     public void SaveUseMes(bool value)
     {
         UseMes = value;
         SaveToFile();
+        UseMesChanged?.Invoke(value);
     }
 
     private void SaveToFile()
