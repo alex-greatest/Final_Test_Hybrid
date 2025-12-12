@@ -139,3 +139,32 @@ svg {
     max-height: 42px;
     max-width: 200px;
 }
+
+/* ===== FIELD ROWS ===== */
+.field-row {
+    display: grid;
+    grid-template-columns: 90px minmax(0, 1fr);
+    column-gap: 70px;
+    align-items: center;
+}
+
+.field-row-operator {
+    column-gap: 60px;
+}
+
+.field-row.field-row-middle {
+    column-gap: 75px;
+}
+
+.field-row .rz-label {
+    white-space: nowrap;
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.field-row .rz-textbox {
+    width: 100%;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: black;
+}

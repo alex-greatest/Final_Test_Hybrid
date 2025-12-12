@@ -1,5 +1,6 @@
 @using Final_Test_Hybrid.Components.Engineer
 @using Final_Test_Hybrid.Components.Indicators
+@using Final_Test_Hybrid.Components.Main
 @using Final_Test_Hybrid.Components.Overview
 
 <RadzenDialog />
@@ -19,10 +20,7 @@
                                     <div class="header-grid">
                                         @* Блок 1: четыре поля *@
                                         <div class="header-block header-block-left">
-                                            <div class="field-row">
-                                                <RadzenLabel Text="Номер смены"/>
-                                                <RadzenTextBox Style="width:100%"/>
-                                            </div>
+                                            <Shift /> 
                                             <div class="field-row">
                                                 <RadzenLabel Text="Номер заказа"/>
                                                 <RadzenTextBox Style="width:100%"/>
