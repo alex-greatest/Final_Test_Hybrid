@@ -4,4 +4,5 @@ public interface ITestStepRegistry
 {
     IReadOnlyList<ITestStep> Steps { get; }
     ITestStep? GetById(string id);
+    ITestStep? GetByName(string name);
 }

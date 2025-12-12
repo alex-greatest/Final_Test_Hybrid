@@ -125,7 +125,7 @@ public partial class TestSequenceEditor
         {
             _rows = await TestSequenceService.LoadFromExcelAsync(filePath, _columnCount);
             _rows = _rows.Count == 0 ? TestSequenceService.InitializeRows(20, _columnCount) : _rows;
-            ClearUnknownStepIds();
+            ClearUnknownStepNames();
             await RefreshGrid();
             NotifySuccessIfNotDisposed();
         }
@@ -136,18 +136,18 @@ public partial class TestSequenceEditor
         }
     }
 
-    private void ClearUnknownStepIds()
+    private void ClearUnknownStepNames()
     {
         foreach (var row in _rows)
         {
             for (var i = 0; i < row.Columns.Count; i++)
             {
-                var stepId = row.Columns[i];
-                if (string.IsNullOrEmpty(stepId))
+                var stepName = row.Columns[i];
+                if (string.IsNullOrEmpty(stepName))
                 {
                     continue;
                 }
-                if (StepRegistry.GetById(stepId) == null)
+                if (StepRegistry.GetByName(stepName) == null)
                 {
                     row.Columns[i] = "";
                 }

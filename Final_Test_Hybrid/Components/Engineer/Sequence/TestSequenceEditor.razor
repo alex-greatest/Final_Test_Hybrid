@@ -55,7 +55,7 @@
                             <RadzenDropDown TValue="string"
                                             Data="@_steps"
                                             TextProperty="Name"
-                                            ValueProperty="Id"
+                                            ValueProperty="Name"
                                             @bind-Value="data.Columns[index]"
                                             Change="@(args => OnStepSelected(data, index, args))"
                                             AllowFiltering="true"

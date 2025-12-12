@@ -11,6 +11,11 @@ public class TestStepRegistry : ITestStepRegistry
         return Steps.FirstOrDefault(s => s.Id == id);
     }
 
+    public ITestStep? GetByName(string name)
+    {
+        return Steps.FirstOrDefault(s => s.Name == name);
+    }
+
     private static List<ITestStep> LoadSteps()
     {
         return Assembly.GetExecutingAssembly()
