@@ -100,8 +100,9 @@ namespace Final_Test_Hybrid
             var logConfig = _config?.GetSection("Logging:General");
             var path = logConfig?["Path"] ?? "D:/Logs/app-.txt";
             var retain = int.Parse(logConfig?["RetainedFileCountLimit"] ?? "5", CultureInfo.InvariantCulture);
+            var level = Enum.Parse<Serilog.Events.LogEventLevel>(logConfig?["LogLevel"] ?? "Warning");
             Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Warning()
+                .MinimumLevel.Is(level)
                 .WriteTo.File(path, rollingInterval: RollingInterval.Day, retainedFileCountLimit: retain)
                 .CreateLogger();
         }
