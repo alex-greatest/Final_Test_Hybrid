@@ -1,3 +1,4 @@
+using System.Globalization;
 using Final_Test_Hybrid.Models.Plc.Settings;
 using Final_Test_Hybrid.Models.Plc.Tags;
 using Final_Test_Hybrid.Services.OpcUa;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Radzen;
+using Serilog;
 
 namespace Final_Test_Hybrid
 {
@@ -44,7 +46,7 @@ namespace Final_Test_Hybrid
             blazorWebView1.RootComponents.Add<MyComponent>("#app");
         }
 
-        private static void HandleException(ILogger logger)
+        private static void HandleException(Microsoft.Extensions.Logging.ILogger logger)
         {
             Application.ThreadException += (_, error) =>
             {
@@ -79,20 +81,35 @@ namespace Final_Test_Hybrid
         {
             #if DEBUG
                 services.AddBlazorWebViewDeveloperTools();
-                services.AddLogging(logging =>
-                {
-                    logging.SetMinimumLevel(LogLevel.Information);
+            #endif
+            ConfigureSerilog();
+            services.AddLogging(logging =>
+            {
+                logging.SetMinimumLevel(LogLevel.Warning);
+                logging.AddFilter("Final_Test_Hybrid.Services.OpcUa.Subscription", LogLevel.Debug);
+                #if DEBUG
                     logging.AddDebug();
                     logging.AddConsole();
-                    logging.AddFile(_config?.GetSection("Logging")!);
-                });
-            #else
-                services.AddLogging(logging =>
-                {
-                    logging.SetMinimumLevel(LogLevel.Error);
-                    logging.AddFile(_config?.GetSection("Logging"));
-                });
-            #endif
+                #endif
+                logging.AddSerilog(Log.Logger, dispose: true);
+            });
+        }
+
+        private void ConfigureSerilog()
+        {
+            var logConfig = _config?.GetSection("Logging");
+            var generalPath = logConfig?["General:Path"] ?? "D:/Logs/app-.txt";
+            var generalRetain = int.Parse(logConfig?["General:RetainedFileCountLimit"] ?? "5", CultureInfo.InvariantCulture);
+            var subscriptionPath = logConfig?["Subscription:Path"] ?? "D:/Logs/Subscriptions/subscription-.txt";
+            var subscriptionRetain = int.Parse(logConfig?["Subscription:RetainedFileCountLimit"] ?? "10", CultureInfo.InvariantCulture);
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Warning()
+                .MinimumLevel.Override("Final_Test_Hybrid.Services.OpcUa.Subscription", Serilog.Events.LogEventLevel.Debug)
+                .WriteTo.File(generalPath, rollingInterval: RollingInterval.Day, retainedFileCountLimit: generalRetain)
+                .WriteTo.Logger(lc => lc
+                    .Filter.ByIncludingOnly("SourceContext like 'Final_Test_Hybrid.Services.OpcUa.Subscription%'")
+                    .WriteTo.File(subscriptionPath, rollingInterval: RollingInterval.Infinite, retainedFileCountLimit: subscriptionRetain))
+                .CreateLogger();
         }
 
         private void RegisterOpcUaServices(ServiceCollection services)
