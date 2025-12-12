@@ -3,7 +3,7 @@ using AsyncAwaitBestPractices;
 using Final_Test_Hybrid.Models.Plc.Settings;
 using Final_Test_Hybrid.Models.Plc.Subcription;
 using Final_Test_Hybrid.Services.Common;
-using Final_Test_Hybrid.Services.Logging;
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

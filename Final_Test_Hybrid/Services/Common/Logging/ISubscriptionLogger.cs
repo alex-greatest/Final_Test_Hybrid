@@ -1,6 +1,6 @@
 using Serilog.Core;
 
-namespace Final_Test_Hybrid.Services.Logging;
+namespace Final_Test_Hybrid.Services.Common.Logging;
 
 public interface ISubscriptionLogger
 {
