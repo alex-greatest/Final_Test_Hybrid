@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using AsyncAwaitBestPractices;
 using Final_Test_Hybrid.Models.Plc.Settings;
 using Final_Test_Hybrid.Models.Plc.Subcription;
 using Final_Test_Hybrid.Services.Common;
@@ -117,15 +118,11 @@ public class OpcUaSubscription(
         foreach (var item in items)
         {
             var nodeId = item.StartNodeId.ToString();
-            if (!ServiceResult.IsBad(item.Status.Error))
+            var error = ProcessAddResult(item, nodeId);
+            if (error != null)
             {
-                logger.LogInformation("Тег {NodeId} добавлен в подписку", nodeId);
-                continue;
+                errors.Add(error);
             }
-            _monitoredItems.TryRemove(nodeId, out _);
-            var message = OpcUaErrorMapper.ToHumanReadable(item.Status.Error.StatusCode);
-            logger.LogWarning("Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
-            errors.Add(new TagError(nodeId, message));
         }
         return errors;
     }
@@ -164,12 +161,26 @@ public class OpcUaSubscription(
         bool removeTag = false,
         CancellationToken ct = default)
     {
-        if (!_callbacks.TryGetValue(nodeId, out var list))
+        if (!TryRemoveCallback(nodeId, callback))
         {
             return;
         }
+        await TryRemoveTagIfEmptyAsync(nodeId, removeTag, ct).ConfigureAwait(false);
+    }
+
+    private bool TryRemoveCallback(string nodeId, Func<object?, Task> callback)
+    {
+        if (!_callbacks.TryGetValue(nodeId, out var list))
+        {
+            return false;
+        }
         list.Remove(callback);
-        if (list.Count > 0 || !removeTag)
+        return true;
+    }
+
+    private async Task TryRemoveTagIfEmptyAsync(string nodeId, bool removeTag, CancellationToken ct)
+    {
+        if (!removeTag || !_callbacks.TryGetValue(nodeId, out var list) || list.Count > 0)
         {
             return;
         }
@@ -224,8 +235,18 @@ public class OpcUaSubscription(
         }
         var nodeId = item.StartNodeId.ToString();
         var value = notification.Value?.Value;
+        StoreAndLogValue(nodeId, value);
+        InvokeCallbacks(nodeId, value);
+    }
+
+    private void StoreAndLogValue(string nodeId, object? value)
+    {
         _values[nodeId] = value;
         logger.LogDebug("Тег {NodeId} = {Value}", nodeId, value);
+    }
+
+    private void InvokeCallbacks(string nodeId, object? value)
+    {
         if (!_callbacks.TryGetValue(nodeId, out var list))
         {
             return;
