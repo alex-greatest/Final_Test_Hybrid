@@ -21,48 +21,17 @@
                                         @* Блок 1: четыре поля *@
                                         <div class="header-block header-block-left">
                                             <Shift /> 
-                                            <div class="field-row">
-                                                <RadzenLabel Text="Номер заказа"/>
-                                                <RadzenTextBox Style="width:100%"/>
-                                            </div>
-                                            <div class="field-row">
-                                                <RadzenLabel Text="Котлов в заказе"/>
-                                                <RadzenTextBox Style="width:100%"/>
-                                            </div>
-                                            <div class="field-row">
-                                                <RadzenLabel Text="Котлов сделано"/>
-                                                <RadzenTextBox Style="width:100%"/>
-                                            </div>
+                                            <BoilerOrder />
                                         </div>
 
                                         @* Блок 2: тип + серийный + кнопка *@
                                         <div class="header-block header-block-middle">
-                                            <div class="field-row field-row-middle">
-                                                <RadzenLabel Text="Тип котла"/>
-                                                <RadzenTextBox Style="width:100%"/>
-                                            </div>
-                                            <div class="field-row field-row-middle">
-                                                <RadzenLabel Text="Серийный номер"/>
-                                                <RadzenTextBox Style="width:100%"/>
-                                            </div>
+                                            <BoilerInfo />
                                         </div>
 
                                         @* Блок 3: кнопки + имя оператора *@
                                         <div class="header-block header-block-right">
-                                            <div class="buttons-row">
-                                                <RadzenButton Text="Авторизация оператора"
-                                                              Icon="person"
-                                                              ButtonStyle="ButtonStyle.Primary"
-                                                              Style="background-color: #1e5fcf"/>
-                                                <RadzenButton Text="Выйти"
-                                                              Icon="logout"
-                                                              ButtonStyle="ButtonStyle.Light"
-                                                              Style="color: black"/>
-                                            </div>
-                                            <div class="field-row field-row-operator">
-                                                <RadzenLabel Text="Имя оператора"/>
-                                                <RadzenTextBox Style="width:100%"/>
-                                            </div>
+                                            <OperatorInfo />
                                         </div>
 
                                     </div>
