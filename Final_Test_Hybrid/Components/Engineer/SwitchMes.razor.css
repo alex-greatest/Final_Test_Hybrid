@@ -20,3 +20,11 @@
     pointer-events: none;
     opacity: 1 !important;
 }
+
+::deep .rz-switch.rz-switch-checked .rz-switch-circle {
+    background-color: #1976d2 !important;
+}
+
+::deep .rz-switch.rz-switch-checked .rz-switch-bar {
+    background-color: #64b5f6 !important;
+}
