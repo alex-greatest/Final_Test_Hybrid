@@ -189,3 +189,16 @@ svg {
     font-weight: 700;
     color: black;
 }
+
+/* ===== MES SWITCH ===== */
+.rz-switch.rz-switch-checked .rz-switch-circle {
+    background-color: #1565c0 !important;
+}
+
+.rz-switch.rz-switch-checked .rz-switch-bar {
+    background-color: #42a5f5 !important;
+}
+
+.rz-switch.rz-state-disabled {
+    opacity: 1 !important;
+}
