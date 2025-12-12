@@ -253,7 +253,8 @@ public class OpcUaSubscription(
         }
         foreach (var callback in list)
         {
-            _ = callback(value);
+            callback(value).SafeFireAndForget(ex =>
+                logger.LogError(ex, "Ошибка в callback для тега {NodeId}", nodeId));
         }
     }
 }
