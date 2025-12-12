@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Final_Test_Hybrid.Models.Plc.Settings;
 using Final_Test_Hybrid.Models.Plc.Subcription;
+using Final_Test_Hybrid.Services.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Opc.Ua;
@@ -53,15 +54,10 @@ public class OpcUaSubscription(
         {
             return null;
         }
-        await _subscriptionLock.WaitAsync(ct).ConfigureAwait(false);
-        try
+        await using (await AsyncLock.AcquireAsync(_subscriptionLock, ct).ConfigureAwait(false))
         {
             _subscription!.AddItem(item);
             await _subscription.ApplyChangesAsync(ct).ConfigureAwait(false);
-        }
-        finally
-        {
-            _subscriptionLock.Release();
         }
         if (!ServiceResult.IsBad(item.Status.Error))
         {
@@ -76,9 +72,8 @@ public class OpcUaSubscription(
 
     public async Task<IReadOnlyList<TagError>> AddTagsAsync(IEnumerable<string> nodeIds, CancellationToken ct = default)
     {
-        await _subscriptionLock.WaitAsync(ct).ConfigureAwait(false);
         List<MonitoredItem> newItems;
-        try
+        await using (await AsyncLock.AcquireAsync(_subscriptionLock, ct).ConfigureAwait(false))
         {
             newItems = CreateNewMonitoredItems(nodeIds);
             if (newItems.Count == 0)
@@ -86,10 +81,6 @@ public class OpcUaSubscription(
                 return [];
             }
             await _subscription!.ApplyChangesAsync(ct).ConfigureAwait(false);
-        }
-        finally
-        {
-            _subscriptionLock.Release();
         }
         return CollectErrors(newItems);
     }
@@ -183,15 +174,10 @@ public class OpcUaSubscription(
             return;
         }
         item.Notification -= OnNotification;
-        await _subscriptionLock.WaitAsync(ct).ConfigureAwait(false);
-        try
+        await using (await AsyncLock.AcquireAsync(_subscriptionLock, ct).ConfigureAwait(false))
         {
             _subscription!.RemoveItem(item);
             await _subscription.ApplyChangesAsync(ct).ConfigureAwait(false);
-        }
-        finally
-        {
-            _subscriptionLock.Release();
         }
         _values.TryRemove(nodeId, out _);
         _callbacks.TryRemove(nodeId, out _);
