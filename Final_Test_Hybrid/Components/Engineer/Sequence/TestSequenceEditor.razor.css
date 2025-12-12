@@ -259,3 +259,36 @@
     align-items: center;
     z-index: 1000; /* Ensure it's on top */
 }
+
+/* DropDown Styles */
+.editor-layout ::deep .rz-dropdown {
+    height: 42px;
+}
+
+.editor-layout ::deep .rz-dropdown .rz-inputtext {
+    font-size: 18px !important;
+    font-weight: bold !important;
+    color: #000 !important;
+}
+
+.editor-layout ::deep .rz-dropdown .rz-placeholder {
+    font-size: 16px !important;
+    color: #999 !important;
+}
+
+/* DropDown List Items */
+::deep .rz-dropdown-panel .rz-dropdown-item {
+    font-size: 18px !important;
+    font-weight: bold !important;
+    color: #000 !important;
+    padding: 10px 12px !important;
+}
+
+::deep .rz-dropdown-panel .rz-dropdown-item:hover {
+    background-color: #e3f2fd !important;
+}
+
+::deep .rz-dropdown-panel .rz-dropdown-item.rz-state-highlight {
+    background-color: #1976d2 !important;
+    color: #fff !important;
+}
