@@ -50,7 +50,6 @@ public class SequenceExcelService(ILogger<SequenceExcelService> logger) : ISeque
     {
         using var package = new ExcelPackage();
         var worksheet = package.Workbook.Worksheets.Add("Sequence");
-        CreateHeader(worksheet);
         PopulateData(worksheet, rows);
         FormatWorksheet(worksheet);
         package.SaveAs(new FileInfo(path));
@@ -87,13 +86,6 @@ public class SequenceExcelService(ILogger<SequenceExcelService> logger) : ISeque
         }
     }
 
-    private void CreateHeader(ExcelWorksheet worksheet)
-    {
-        Enumerable.Range(0, MaxColumns)
-            .ToList()
-            .ForEach(i => worksheet.Cells[1, i + 1].Value = $"Column {i + 1}");
-    }
-
     private void PopulateData(ExcelWorksheet worksheet, List<SequenceRow> rows)
     {
         rows.Select((row, index) => new { row, index })
@@ -107,13 +99,13 @@ public class SequenceExcelService(ILogger<SequenceExcelService> logger) : ISeque
             .Take(MaxColumns)
             .Select((value, colIndex) => new { value, colIndex })
             .ToList()
-            .ForEach(item => worksheet.Cells[rowIndex + 2, item.colIndex + 1].Value = item.value);
+            .ForEach(item => worksheet.Cells[rowIndex + 1, item.colIndex + 1].Value = item.value);
     }
 
     private List<SequenceRow> ParseWorksheet(ExcelWorksheet worksheet, int columnCount)
     {
         var rowCount = worksheet.Dimension?.Rows ?? 0;
-        return Enumerable.Range(2, Math.Max(0, rowCount - 1))
+        return Enumerable.Range(1, rowCount)
             .Select(rowIndex => ParseRow(worksheet, rowIndex, columnCount))
             .ToList();
     }
