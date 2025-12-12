@@ -125,6 +125,7 @@ public partial class TestSequenceEditor
         {
             _rows = await TestSequenceService.LoadFromExcelAsync(filePath, _columnCount);
             _rows = _rows.Count == 0 ? TestSequenceService.InitializeRows(20, _columnCount) : _rows;
+            ClearUnknownStepIds();
             await RefreshGrid();
             NotifySuccessIfNotDisposed();
         }
@@ -132,6 +133,25 @@ public partial class TestSequenceEditor
         {
             Logger.LogError(ex, "Ошибка загрузки данных из Excel: {FilePath}", filePath);
             NotifyErrorIfNotDisposed("Не удалось загрузить данные");
+        }
+    }
+
+    private void ClearUnknownStepIds()
+    {
+        foreach (var row in _rows)
+        {
+            for (var i = 0; i < row.Columns.Count; i++)
+            {
+                var stepId = row.Columns[i];
+                if (string.IsNullOrEmpty(stepId))
+                {
+                    continue;
+                }
+                if (StepRegistry.GetById(stepId) == null)
+                {
+                    row.Columns[i] = "";
+                }
+            }
         }
     }
 
