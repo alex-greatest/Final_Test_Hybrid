@@ -24,7 +24,8 @@
       "Bash(git -C \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\" show ca5ea32:Services/OpcUa/OpcUaConnectionService.cs)",
       "Bash(git -C \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\" log --all --full-history -- \"Services/OpcUa/OpcUaConnectionService.cs\")",
       "Bash(git -C \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\" show d48224e:Services/OpcUa/OpcUaConnectionService.cs)",
-      "Bash(git -C \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\" show:*)"
+      "Bash(git -C \"D:\\projects\\Final_Test_Hybrid\\Final_Test_Hybrid\" show:*)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

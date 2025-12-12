@@ -15,8 +15,9 @@ public class OpcUaSubscription(
 {
     private readonly OpcUaSubscriptionSettings _settings = settingsOptions.Value.Subscription;
     private readonly ConcurrentDictionary<string, object?> _values = new();
-    private readonly Dictionary<string, List<Func<object?, Task>>> _callbacks = new();
-    private readonly Dictionary<string, MonitoredItem> _monitoredItems = new();
+    private readonly ConcurrentDictionary<string, List<Func<object?, Task>>> _callbacks = new();
+    private readonly ConcurrentDictionary<string, MonitoredItem> _monitoredItems = new();
+    private readonly SemaphoreSlim _subscriptionLock = new(1, 1);
     private Opc.Ua.Client.Subscription? _subscription;
     
     public async Task CreateAsync(ISession session, CancellationToken ct = default)
@@ -48,15 +49,26 @@ public class OpcUaSubscription(
     private async Task<TagError?> RunAddTagAsync(string nodeId, CancellationToken ct = default)
     {
         var item = CreateMonitoredItem(nodeId);
-        _monitoredItems[nodeId] = item;
-        _subscription!.AddItem(item);
-        await _subscription.ApplyChangesAsync(ct).ConfigureAwait(false);
+        if (!_monitoredItems.TryAdd(nodeId, item))
+        {
+            return null;
+        }
+        await _subscriptionLock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            _subscription!.AddItem(item);
+            await _subscription.ApplyChangesAsync(ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _subscriptionLock.Release();
+        }
         if (!ServiceResult.IsBad(item.Status.Error))
         {
             logger.LogInformation("Тег {NodeId} добавлен в подписку", nodeId);
             return null;
         }
-        _monitoredItems.Remove(nodeId);
+        _monitoredItems.TryRemove(nodeId, out _);
         var message = OpcUaErrorMapper.ToHumanReadable(item.Status.Error.StatusCode);
         logger.LogWarning("Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
         return new TagError(nodeId, message);
@@ -64,23 +76,34 @@ public class OpcUaSubscription(
 
     public async Task<IReadOnlyList<TagError>> AddTagsAsync(IEnumerable<string> nodeIds, CancellationToken ct = default)
     {
-        var newItems = CreateNewMonitoredItems(nodeIds);
-        if (newItems.Count == 0)
+        await _subscriptionLock.WaitAsync(ct).ConfigureAwait(false);
+        List<MonitoredItem> newItems;
+        try
         {
-            return [];
+            newItems = CreateNewMonitoredItems(nodeIds);
+            if (newItems.Count == 0)
+            {
+                return [];
+            }
+            await _subscription!.ApplyChangesAsync(ct).ConfigureAwait(false);
         }
-        await _subscription!.ApplyChangesAsync(ct).ConfigureAwait(false);
+        finally
+        {
+            _subscriptionLock.Release();
+        }
         return CollectErrors(newItems);
     }
 
     private List<MonitoredItem> CreateNewMonitoredItems(IEnumerable<string> nodeIds)
     {
         var newItems = new List<MonitoredItem>();
-        var newNodeIds = nodeIds.Where(id => !_monitoredItems.ContainsKey(id));
-        foreach (var nodeId in newNodeIds)
+        foreach (var nodeId in nodeIds)
         {
             var item = CreateMonitoredItem(nodeId);
-            _monitoredItems[nodeId] = item;
+            if (!_monitoredItems.TryAdd(nodeId, item))
+            {
+                continue;
+            }
             _subscription!.AddItem(item);
             newItems.Add(item);
         }
@@ -98,7 +121,7 @@ public class OpcUaSubscription(
                 logger.LogInformation("Тег {NodeId} добавлен в подписку", nodeId);
                 continue;
             }
-            _monitoredItems.Remove(nodeId);
+            _monitoredItems.TryRemove(nodeId, out _);
             var message = OpcUaErrorMapper.ToHumanReadable(item.Status.Error.StatusCode);
             logger.LogWarning("Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
             errors.Add(new TagError(nodeId, message));
@@ -149,21 +172,29 @@ public class OpcUaSubscription(
         {
             return;
         }
-        _callbacks.Remove(nodeId);
+        _callbacks.TryRemove(nodeId, out _);
         await RemoveTagAsync(nodeId, ct).ConfigureAwait(false);
     }
 
     public async Task RemoveTagAsync(string nodeId, CancellationToken ct = default)
     {
-        if (!_monitoredItems.Remove(nodeId, out var item))
+        if (!_monitoredItems.TryRemove(nodeId, out var item))
         {
             return;
         }
         item.Notification -= OnNotification;
-        _subscription!.RemoveItem(item);
-        await _subscription.ApplyChangesAsync(ct).ConfigureAwait(false);
+        await _subscriptionLock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            _subscription!.RemoveItem(item);
+            await _subscription.ApplyChangesAsync(ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _subscriptionLock.Release();
+        }
         _values.TryRemove(nodeId, out _);
-        _callbacks.Remove(nodeId);
+        _callbacks.TryRemove(nodeId, out _);
     }
 
     public object? GetValue(string nodeId) => _values.GetValueOrDefault(nodeId);
