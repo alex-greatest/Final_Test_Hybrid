@@ -1,7 +1,8 @@
 using AsyncAwaitBestPractices;
-using Final_Test_Hybrid.Models.Plc.Settings;
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
+using Final_Test_Hybrid.Settings;
+using Final_Test_Hybrid.Settings.OpcUa;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Opc.Ua;

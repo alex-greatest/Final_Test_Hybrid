@@ -1,4 +1,4 @@
-namespace Final_Test_Hybrid.Models.Plc.Settings;
+namespace Final_Test_Hybrid.Settings.OpcUa;
 
 public class OpcUaSubscriptionSettings
 {

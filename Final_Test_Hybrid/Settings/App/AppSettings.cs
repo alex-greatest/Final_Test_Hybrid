@@ -1,4 +1,4 @@
-namespace Final_Test_Hybrid.Services.Common.Settings;
+namespace Final_Test_Hybrid.Settings.App;
 
 public class AppSettings
 {

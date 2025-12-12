@@ -1,4 +1,5 @@
-﻿using Final_Test_Hybrid.Models.Plc.Settings;
+﻿using Final_Test_Hybrid.Settings;
+using Final_Test_Hybrid.Settings.OpcUa;
 using Opc.Ua;
 using Opc.Ua.Client;
 using Opc.Ua.Configuration;

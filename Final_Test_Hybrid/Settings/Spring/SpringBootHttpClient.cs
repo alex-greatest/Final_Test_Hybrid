@@ -1,9 +1,8 @@
 using System.Net.Http.Json;
-using Final_Test_Hybrid.Services.SpringBoot.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Final_Test_Hybrid.Services.SpringBoot.Http;
+namespace Final_Test_Hybrid.Settings.Spring;
 
 public class SpringBootHttpClient
 {

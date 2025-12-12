@@ -1,5 +1,4 @@
-using Final_Test_Hybrid.Services.SpringBoot.Http;
-using Final_Test_Hybrid.Services.SpringBoot.Settings;
+using Final_Test_Hybrid.Settings.Spring;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
