@@ -6,30 +6,36 @@ namespace Final_Test_Hybrid.Components.Engineer.Sequence;
 
 public partial class TestSequenceEditor
 {
-    private void OnStepSelected(SequenceRow row, int colIndex, object value)
+    private async Task OnStepSelected(SequenceRow row, int colIndex, object value)
     {
         var newStepId = value?.ToString() ?? "";
         if (newStepId == TestStepPlaceholder.StepId)
         {
-            FillRowWithTestStep(row);
+            await FillOtherCellsWithTestStep(row, colIndex);
             return;
         }
         if (HasTestStepPlaceholder(row))
         {
-            ClearTestStepsAndSetValue(row, colIndex, newStepId);
-            return;
+            await ClearOtherTestSteps(row, colIndex);
         }
-        row.Columns[colIndex] = newStepId;
-        StateHasChanged();
     }
 
-    private void FillRowWithTestStep(SequenceRow row)
+    private async Task FillOtherCellsWithTestStep(SequenceRow row, int currentIndex)
     {
+        var hasOtherCells = false;
         for (var i = 0; i < row.Columns.Count; i++)
         {
+            if (i == currentIndex)
+            {
+                continue;
+            }
             row.Columns[i] = TestStepPlaceholder.StepId;
+            hasOtherCells = true;
         }
-        StateHasChanged();
+        if (hasOtherCells)
+        {
+            await RefreshGrid();
+        }
     }
 
     private static bool HasTestStepPlaceholder(SequenceRow row)
@@ -37,13 +43,25 @@ public partial class TestSequenceEditor
         return row.Columns.Any(c => c == TestStepPlaceholder.StepId);
     }
 
-    private void ClearTestStepsAndSetValue(SequenceRow row, int colIndex, string newStepId)
+    private async Task ClearOtherTestSteps(SequenceRow row, int currentIndex)
     {
+        var hasChanges = false;
         for (var i = 0; i < row.Columns.Count; i++)
         {
-            row.Columns[i] = i == colIndex ? newStepId : "";
+            if (i == currentIndex)
+            {
+                continue;
+            }
+            if (row.Columns[i] == TestStepPlaceholder.StepId)
+            {
+                row.Columns[i] = "";
+                hasChanges = true;
+            }
         }
-        StateHasChanged();
+        if (hasChanges)
+        {
+            await RefreshGrid();
+        }
     }
 
     private void OnRowRender(RowRenderEventArgs<SequenceRow> args)
