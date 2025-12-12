@@ -64,22 +64,6 @@ public partial class TestSequenceEditor
         NotifySuccess("Создано", $"Файл создан: {TestSequenceService.CurrentFileName}");
     }
 
-    private void OpenFolder(SequenceRow row, int colIndex)
-    {
-        try
-        {
-            var rootPath = TestSequenceService.GetValidRootPath();
-            var relativePath = FilePickerService.PickFileRelative(rootPath);
-            TestSequenceService.UpdateCell(row, colIndex, relativePath);
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Ошибка выбора файла");
-            NotifyError("Не удалось выбрать файл");
-        }
-    }
-
     private async Task OpenSequence()
     {
         try

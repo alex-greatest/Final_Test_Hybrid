@@ -1,5 +1,6 @@
 using Final_Test_Hybrid.Models;
 using Final_Test_Hybrid.Services.Settings.IO;
+using Final_Test_Hybrid.Services.Steps;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Radzen.Blazor;
@@ -12,8 +13,11 @@ public partial class TestSequenceEditor : IAsyncDisposable
     public required IFilePickerService FilePickerService { get; set; }
     [Inject]
     public required IJSRuntime JsRuntime { get; set; }
+    [Inject]
+    public required ITestStepRegistry StepRegistry { get; set; }
     private RadzenDataGrid<SequenceRow>? _grid;
     private List<SequenceRow> _rows = [];
+    private IReadOnlyList<ITestStep> _steps = [];
     private readonly CancellationTokenSource _cts = new();
     private readonly int _columnCount = 4;
     private bool _disposed;
@@ -23,6 +27,7 @@ public partial class TestSequenceEditor : IAsyncDisposable
     protected override async Task OnInitializedAsync()
     {
         await Task.Yield();
+        _steps = StepRegistry.Steps;
         _rows = TestSequenceService.InitializeRows(20, _columnCount);
         _isFileActive = !string.IsNullOrEmpty(TestSequenceService.CurrentFilePath);
         _isLoading = false;

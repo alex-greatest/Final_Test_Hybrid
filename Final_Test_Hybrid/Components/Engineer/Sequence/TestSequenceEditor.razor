@@ -52,12 +52,18 @@
                         <HeaderTemplate>
                         </HeaderTemplate>
                         <Template Context="data">
-                            <div class="cell-content">
-                                <input class="cell-input" @bind="data.Columns[index]" placeholder="" disabled="@(!_isFileActive)" />
-                                <button class="folder-btn" @onclick="@(() => OpenFolder(data, index))" disabled="@(!_isFileActive)">
-                                    <RadzenIcon Icon="folder" Style="font-size: 26px; color: #FFC107;" />
-                                </button>
-                            </div>
+                            <RadzenDropDown TValue="string"
+                                            Data="@_steps"
+                                            TextProperty="Name"
+                                            ValueProperty="Id"
+                                            Value="@data.Columns[index]"
+                                            Change="@(args => OnStepSelected(data, index, args))"
+                                            AllowFiltering="true"
+                                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                            Placeholder="Выберите шаг..."
+                                            AllowClear="true"
+                                            Style="width: 100%"
+                                            Disabled="@(!_isFileActive)" />
                         </Template>
                     </RadzenDataGridColumn>
                 }

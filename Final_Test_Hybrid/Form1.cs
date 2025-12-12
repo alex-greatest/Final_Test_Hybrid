@@ -6,6 +6,7 @@ using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.Sequence;
 using Final_Test_Hybrid.Services.Settings.IO;
 using Final_Test_Hybrid.Services.Settings.UI;
+using Final_Test_Hybrid.Services.Steps;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +30,7 @@ namespace Final_Test_Hybrid
             services.AddScoped<ISequenceExcelService, SequenceExcelService>();
             services.AddScoped<INotificationService, NotificationServiceWrapper>();
             services.AddScoped<TestSequenceService>();
+            services.AddSingleton<ITestStepRegistry, TestStepRegistry>();
             RegisterOpcUaServices(services);
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
