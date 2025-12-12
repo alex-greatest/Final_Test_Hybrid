@@ -8,7 +8,9 @@ using Final_Test_Hybrid.Services.Common.IO;
 using Final_Test_Hybrid.Services.Common.UI;
 using Final_Test_Hybrid.Services.Steps;
 using Final_Test_Hybrid.Services.SpringBoot.Health;
+using Final_Test_Hybrid.Services.Shift;
 using Final_Test_Hybrid.Services.Common.Settings;
+using Final_Test_Hybrid.Settings.Shift;
 using Final_Test_Hybrid.Settings;
 using Final_Test_Hybrid.Settings.App;
 using Final_Test_Hybrid.Settings.OpcUa;
@@ -27,6 +29,7 @@ namespace Final_Test_Hybrid
         private IConfiguration? _config;
         private OpcUaConnectionService? _opcUaService;
         private SpringBootHealthService? _springBootHealthService;
+        private ShiftService? _shiftService;
 
         public Form1()
         {
@@ -43,6 +46,7 @@ namespace Final_Test_Hybrid
             services.AddSingleton<AppSettingsService>();
             RegisterOpcUaServices(services);
             RegisterSpringBootServices(services);
+            RegisterShiftServices(services);
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();
@@ -53,6 +57,7 @@ namespace Final_Test_Hybrid
             blazorWebView1.Services = serviceProvider;
             StartOpcUaConnection(serviceProvider);
             StartSpringBootHealthCheck(serviceProvider);
+            StartShiftService(serviceProvider);
             blazorWebView1.RootComponents.Add<MyComponent>("#app");
         }
 
@@ -135,10 +140,23 @@ namespace Final_Test_Hybrid
             services.AddSingleton<SpringBootHealthService>();
         }
 
+        private void RegisterShiftServices(ServiceCollection services)
+        {
+            services.Configure<ShiftSettings>(_config!.GetSection("Shift"));
+            services.AddSingleton<ShiftState>();
+            services.AddSingleton<ShiftService>();
+        }
+
         private void StartSpringBootHealthCheck(ServiceProvider serviceProvider)
         {
             _springBootHealthService = serviceProvider.GetRequiredService<SpringBootHealthService>();
             _springBootHealthService.Start();
+        }
+
+        private void StartShiftService(ServiceProvider serviceProvider)
+        {
+            _shiftService = serviceProvider.GetRequiredService<ShiftService>();
+            _shiftService.Start();
         }
 
         // async void намеренно: исключения должны попадать в Application.ThreadException
@@ -153,6 +171,7 @@ namespace Final_Test_Hybrid
         protected override async void OnFormClosing(FormClosingEventArgs e)
         {
             _springBootHealthService?.Stop();
+            _shiftService?.Stop();
             if (_opcUaService != null)
             {
                 await _opcUaService.DisconnectAsync();

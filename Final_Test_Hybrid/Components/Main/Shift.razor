@@ -1,10 +1,81 @@
+@using Final_Test_Hybrid.Services.Shift
+@using Final_Test_Hybrid.Services.Common.Settings
+@inject ShiftState ShiftState
+@inject AppSettingsService AppSettingsService
+@implements IDisposable
+
 <div class="field-row">
     <RadzenLabel Text="Номер смены"/>
-    <RadzenTextBox Style="width:100%"/>
+    <RadzenTextBox Style="width:100%"
+                   Value="@_displayValue"
+                   ReadOnly="@AppSettingsService.UseMes"
+                   Change="@OnManualInput"/>
 </div>
 
 @code {
+    private string _displayValue = string.Empty;
 
-    
+    protected override void OnInitialized()
+    {
+        UpdateDisplayValue();
+        ShiftState.ShiftNumberChanged += OnShiftNumberChanged;
+        AppSettingsService.UseMesChanged += OnUseMesChanged;
+    }
 
+    private void UpdateDisplayValue()
+    {
+        _displayValue = ShiftState.ShiftNumber?.ToString() ?? string.Empty;
+    }
+
+    private async void OnShiftNumberChanged(int? shiftNumber)
+    {
+        try
+        {
+            _displayValue = shiftNumber?.ToString() ?? string.Empty;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // ignored - component may be disposed
+        }
+    }
+
+    private async void OnUseMesChanged(bool useMes)
+    {
+        try
+        {
+            if (!useMes)
+            {
+                _displayValue = string.Empty;
+            }
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // ignored - component may be disposed
+        }
+    }
+
+    private void OnManualInput(string value)
+    {
+        if (AppSettingsService.UseMes)
+        {
+            return;
+        }
+        _displayValue = value;
+        if (int.TryParse(value, out var shiftNumber))
+        {
+            ShiftState.SetShiftNumber(shiftNumber);
+        }
+        else if (string.IsNullOrWhiteSpace(value))
+        {
+            ShiftState.SetShiftNumber(null);
+        }
+    }
+
+    public void Dispose()
+    {
+        ShiftState.ShiftNumberChanged -= OnShiftNumberChanged;
+        AppSettingsService.UseMesChanged -= OnUseMesChanged;
+    }
 }
