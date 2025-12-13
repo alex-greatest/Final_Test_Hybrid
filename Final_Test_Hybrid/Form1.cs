@@ -89,7 +89,7 @@ namespace Final_Test_Hybrid
             _config = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .Build();
-            services.AddSingleton<IConfiguration>(_config);
+            services.AddSingleton(_config);
         }
         
         private void SettingDevTools(ServiceCollection services)

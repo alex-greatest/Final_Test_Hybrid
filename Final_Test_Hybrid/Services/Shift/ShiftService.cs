@@ -32,8 +32,9 @@ public class ShiftService(
     {
         if (useMes)
         {
-            // Переключение false → true: НЕ запускаем таймер (пользователь вводит вручную)
-            logger.LogInformation("UseMes changed to true, manual input mode");
+            // Переключение false → true: запускаем таймер (работа с MES)
+            StartPolling();
+            logger.LogInformation("UseMes changed to true, MES polling started");
         }
         else
         {
@@ -86,7 +87,7 @@ public class ShiftService(
     {
         try
         {
-            var request = new ShiftRequest { NameStation = _settings.NameStation };
+            var request = new ShiftRequest { NameStation = appSettingsService.NameStation };
             var response = await httpClient.PostAsync<ShiftRequest, ShiftResponse>(_settings.Endpoint, request, ct).ConfigureAwait(false);
             shiftState.SetShiftNumber(response?.ShiftNumber);
         }
