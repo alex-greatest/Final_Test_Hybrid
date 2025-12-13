@@ -1,4 +1,4 @@
-namespace Final_Test_Hybrid.Services.Shift;
+namespace Final_Test_Hybrid.Services.SpringBoot.Shift;
 
 public class ShiftState
 {

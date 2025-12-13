@@ -1,11 +1,11 @@
 using Final_Test_Hybrid.Models.Shift;
 using Final_Test_Hybrid.Services.Common.Settings;
-using Final_Test_Hybrid.Settings.Shift;
 using Final_Test_Hybrid.Settings.Spring;
+using Final_Test_Hybrid.Settings.Spring.Shift;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Final_Test_Hybrid.Services.Shift;
+namespace Final_Test_Hybrid.Services.SpringBoot.Shift;
 
 public class ShiftService(
     SpringBootHttpClient httpClient,
