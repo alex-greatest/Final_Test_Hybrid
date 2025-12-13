@@ -87,8 +87,8 @@ public class ShiftService(
     {
         try
         {
-            var request = new ShiftRequest { NameStation = appSettingsService.NameStation };
-            var response = await httpClient.PostAsync<ShiftRequest, ShiftResponse>(_settings.Endpoint, request, ct).ConfigureAwait(false);
+            var endpoint = $"{_settings.Endpoint}?nameStation={Uri.EscapeDataString(appSettingsService.NameStation)}";
+            var response = await httpClient.GetAsync<ShiftResponse>(endpoint, ct).ConfigureAwait(false);
             shiftState.SetShiftNumber(response?.ShiftNumber);
         }
         catch (Exception ex)

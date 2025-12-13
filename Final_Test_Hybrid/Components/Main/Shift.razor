@@ -6,32 +6,27 @@
 
 <div class="field-row">
     <RadzenLabel Text="Номер смены"/>
-    <RadzenTextBox Style="width:100%"
-                   Value="@_displayValue"
+    <RadzenNumeric TValue="int?" Style="width:100%"
+                   Value="@_shiftNumber"
                    ReadOnly="@AppSettingsService.UseMes"
                    Change="@OnManualInput"/>
 </div>
 
 @code {
-    private string _displayValue = string.Empty;
+    private int? _shiftNumber;
 
     protected override void OnInitialized()
     {
-        UpdateDisplayValue();
+        _shiftNumber = ShiftState.ShiftNumber;
         ShiftState.ShiftNumberChanged += OnShiftNumberChanged;
         AppSettingsService.UseMesChanged += OnUseMesChanged;
-    }
-
-    private void UpdateDisplayValue()
-    {
-        _displayValue = ShiftState.ShiftNumber?.ToString() ?? string.Empty;
     }
 
     private async void OnShiftNumberChanged(int? shiftNumber)
     {
         try
         {
-            _displayValue = shiftNumber?.ToString() ?? string.Empty;
+            _shiftNumber = shiftNumber;
             await InvokeAsync(StateHasChanged);
         }
         catch
@@ -44,7 +39,7 @@
     {
         try
         {
-            _displayValue = string.Empty;
+            _shiftNumber = null;
             await InvokeAsync(StateHasChanged);
         }
         catch
@@ -53,21 +48,14 @@
         }
     }
 
-    private void OnManualInput(string value)
+    private void OnManualInput(int? value)
     {
         if (AppSettingsService.UseMes)
         {
             return;
         }
-        _displayValue = value;
-        if (int.TryParse(value, out var shiftNumber))
-        {
-            ShiftState.SetShiftNumber(shiftNumber);
-        }
-        else if (string.IsNullOrWhiteSpace(value))
-        {
-            ShiftState.SetShiftNumber(null);
-        }
+        _shiftNumber = value;
+        ShiftState.SetShiftNumber(value);
     }
 
     public void Dispose()
