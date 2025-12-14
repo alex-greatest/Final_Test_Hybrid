@@ -14,6 +14,7 @@ using Final_Test_Hybrid.Services.SpringBoot.Shift;
 using Final_Test_Hybrid.Settings.App;
 using Final_Test_Hybrid.Settings.OpcUa;
 using Final_Test_Hybrid.Settings.Spring;
+using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Settings.Spring.Shift;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;

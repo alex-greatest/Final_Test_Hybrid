@@ -1,0 +1,45 @@
+.user-scan-dialog {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 30px 40px;
+}
+
+::deep .qr-icon {
+    font-size: 80px !important;
+    color: #333;
+}
+
+.instruction-text {
+    font-size: 20px;
+    font-weight: 600;
+    color: #3b82f6;
+    text-align: center;
+}
+
+.hidden-input {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.dialog-buttons {
+    margin-top: 10px;
+}
+
+::deep .dialog-buttons .rz-button {
+    padding: 10px 30px;
+    font-size: 16px;
+    font-weight: 600;
+    border: 1px solid #3b82f6;
+    border-radius: 6px;
+    color: #3b82f6;
+    background-color: white;
+}
+
+::deep .dialog-buttons .rz-button:hover {
+    background-color: #f0f7ff;
+}

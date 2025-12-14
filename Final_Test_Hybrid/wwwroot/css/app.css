@@ -223,3 +223,12 @@ svg {
     font-size: 28px !important;
     font-weight: 700 !important;
 }
+
+/* ===== USER SCAN DIALOG ===== */
+.user-scan-dialog .rz-dialog-titlebar {
+    display: none !important;
+}
+
+.user-scan-dialog .rz-dialog-content {
+    padding: 0 !important;
+}

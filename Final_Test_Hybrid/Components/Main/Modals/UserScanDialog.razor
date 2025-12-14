@@ -1,0 +1,59 @@
+@inject DialogService DialogService
+
+<div class="user-scan-dialog">
+    <RadzenIcon Icon="qr_code_scanner" class="qr-icon" />
+
+    <div class="instruction-text">
+        @Text
+    </div>
+
+    <input @ref="_inputRef"
+           @bind="_scannedCode"
+           @bind:event="oninput"
+           @onkeydown="OnKeyDown"
+           class="hidden-input" />
+
+    <div class="dialog-buttons">
+        <RadzenButton Text="Отмена"
+                      Click="@OnCancel"
+                      ButtonStyle="ButtonStyle.Light" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Text { get; set; } = "Отсканируйте код";
+
+    [Parameter]
+    public EventCallback<string> OnCodeScanned { get; set; }
+
+    private ElementReference _inputRef;
+    private string _scannedCode = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await _inputRef.FocusAsync();
+        }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key != "Enter")
+        {
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_scannedCode))
+        {
+            return;
+        }
+        await OnCodeScanned.InvokeAsync(_scannedCode);
+        DialogService.Close(_scannedCode);
+    }
+
+    private void OnCancel()
+    {
+        DialogService.Close(null);
+    }
+}

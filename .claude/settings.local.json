@@ -3,7 +3,8 @@
     "allow": [
       "Bash(cd:*)",
       "Bash(dir:*)",
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Bash(git log:*)"
     ]
   }
 }
