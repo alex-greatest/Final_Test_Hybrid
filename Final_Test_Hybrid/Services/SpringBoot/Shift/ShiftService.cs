@@ -94,6 +94,7 @@ public class ShiftService(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to fetch shift number");
+            shiftState.SetShiftNumber(0);
         }
     }
 
