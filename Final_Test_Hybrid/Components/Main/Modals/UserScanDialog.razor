@@ -1,4 +1,7 @@
+@using Final_Test_Hybrid.Services.Scanner.RawInput
 @inject DialogService DialogService
+@inject RawInputService ScannerService
+@implements IDisposable
 
 <div class="user-scan-dialog">
     <RadzenIcon Icon="qr_code_scanner" class="qr-icon" />
@@ -6,12 +9,6 @@
     <div class="instruction-text">
         @Text
     </div>
-
-    <input @ref="_inputRef"
-           @bind="_scannedCode"
-           @bind:event="oninput"
-           @onkeydown="OnKeyDown"
-           class="hidden-input" />
 
     <div class="dialog-buttons">
         <RadzenButton Text="Отмена"
@@ -27,33 +24,50 @@
     [Parameter]
     public EventCallback<string> OnCodeScanned { get; set; }
 
-    private ElementReference _inputRef;
-    private string _scannedCode = string.Empty;
+    private ScanSession? _scanSession;
+    private bool _disposed;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override void OnInitialized()
     {
-        if (firstRender)
-        {
-            await _inputRef.FocusAsync();
-        }
+        _scanSession = ScannerService.RequestScan(OnBarcodeScanned);
     }
 
-    private async Task OnKeyDown(KeyboardEventArgs e)
+    private async void OnBarcodeScanned(string barcode)
     {
-        if (e.Key != "Enter")
+        if (_disposed)
         {
             return;
         }
-        if (string.IsNullOrWhiteSpace(_scannedCode))
+        try
         {
-            return;
+            await InvokeAsync(async () =>
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+                await OnCodeScanned.InvokeAsync(barcode);
+                DialogService.Close(barcode);
+            });
         }
-        await OnCodeScanned.InvokeAsync(_scannedCode);
-        DialogService.Close(_scannedCode);
+        catch (ObjectDisposedException)
+        {
+            // Component disposed during invocation
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer disposed
+        }
     }
 
     private void OnCancel()
     {
         DialogService.Close(null);
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        _scanSession?.Dispose();
     }
 }

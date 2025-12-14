@@ -15,6 +15,7 @@ using Final_Test_Hybrid.Settings.App;
 using Final_Test_Hybrid.Settings.OpcUa;
 using Final_Test_Hybrid.Settings.Spring;
 using Final_Test_Hybrid.Services.Scanner;
+using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Final_Test_Hybrid.Settings.Spring.Shift;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;
@@ -32,6 +33,8 @@ namespace Final_Test_Hybrid
         private OpcUaConnectionService? _opcUaService;
         private SpringBootHealthService? _springBootHealthService;
         private ShiftService? _shiftService;
+        private RawInputService? _rawInputService;
+        private RawInputMessageFilter? _rawInputMessageFilter;
 
         public Form1()
         {
@@ -61,7 +64,27 @@ namespace Final_Test_Hybrid
             StartOpcUaConnection(_serviceProvider);
             StartSpringBootHealthCheck(_serviceProvider);
             StartShiftService(_serviceProvider);
+            StartRawInputService(_serviceProvider);
             blazorWebView1.RootComponents.Add<MyComponent>("#app");
+        }
+
+        private void StartRawInputService(ServiceProvider serviceProvider)
+        {
+            _rawInputService = serviceProvider.GetRequiredService<RawInputService>();
+            Load += (_, _) =>
+            {
+                try
+                {
+                    _rawInputService.Register(Handle);
+                    _rawInputMessageFilter = new RawInputMessageFilter(_rawInputService);
+                    Application.AddMessageFilter(_rawInputMessageFilter);
+                }
+                catch (Exception ex)
+                {
+                    var logger = serviceProvider.GetService<ILogger<Form1>>();
+                    logger?.LogError(ex, "Ошибка инициализации Raw Input");
+                }
+            };
         }
 
         private static void HandleException(Microsoft.Extensions.Logging.ILogger logger)
@@ -155,6 +178,7 @@ namespace Final_Test_Hybrid
         private void RegisterScannerServices(ServiceCollection services)
         {
             services.AddSingleton<ScannerConnectionState>();
+            services.AddSingleton<RawInputService>();
         }
 
         private void StartSpringBootHealthCheck(ServiceProvider serviceProvider)
@@ -180,6 +204,12 @@ namespace Final_Test_Hybrid
 
         protected override async void OnFormClosing(FormClosingEventArgs e)
         {
+            if (_rawInputMessageFilter != null)
+            {
+                Application.RemoveMessageFilter(_rawInputMessageFilter);
+                _rawInputMessageFilter = null;
+            }
+            _rawInputService?.Unregister();
             _springBootHealthService?.Stop();
             _shiftService?.Stop();
             if (_opcUaService != null)

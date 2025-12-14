@@ -11,10 +11,10 @@ public class ScannerConnectionState : IDisposable
     private readonly string _vendorId;
     private readonly string _productId;
     private readonly ILogger<ScannerConnectionState> _logger;
-    private ManagementEventWatcher? _watcher;
-    private bool _disposed;
-    private DateTime _lastCheck = DateTime.MinValue;
     private readonly Lock _lock = new();
+    private ManagementEventWatcher? _watcher;
+    private volatile bool _disposed;
+    private DateTime _lastCheck = DateTime.MinValue;
 
     public ScannerConnectionState(IConfiguration configuration, ILogger<ScannerConnectionState> logger)
     {
@@ -95,6 +95,10 @@ public class ScannerConnectionState : IDisposable
         {
             lock (_lock)
             {
+                if (_disposed)
+                {
+                    return;
+                }
                 var now = DateTime.UtcNow;
                 if ((now - _lastCheck).TotalMilliseconds < 500)
                 {
@@ -116,11 +120,24 @@ public class ScannerConnectionState : IDisposable
         {
             return;
         }
-        if (IsConnected == connected)
+        bool shouldNotify;
+        lock (_lock)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            if (IsConnected == connected)
+            {
+                return;
+            }
+            IsConnected = connected;
+            shouldNotify = true;
+        }
+        if (!shouldNotify)
         {
             return;
         }
-        IsConnected = connected;
         _logger.LogInformation("Состояние сканера: {State}", connected ? "подключен" : "отключен");
         try
         {
@@ -138,7 +155,14 @@ public class ScannerConnectionState : IDisposable
         {
             return;
         }
-        _disposed = true;
+        lock (_lock)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            _disposed = true;
+        }
         try
         {
             if (_watcher != null)
@@ -154,6 +178,5 @@ public class ScannerConnectionState : IDisposable
         {
             _logger.LogWarning(ex, "Ошибка при Dispose ScannerConnectionState");
         }
-        GC.SuppressFinalize(this);
     }
 }
