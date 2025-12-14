@@ -28,6 +28,7 @@ namespace Final_Test_Hybrid
     public partial class Form1 : Form
     {
         private IConfiguration? _config;
+        private ServiceProvider? _serviceProvider;
         private OpcUaConnectionService? _opcUaService;
         private SpringBootHealthService? _springBootHealthService;
         private ShiftService? _shiftService;
@@ -48,17 +49,18 @@ namespace Final_Test_Hybrid
             RegisterOpcUaServices(services);
             RegisterSpringBootServices(services);
             RegisterShiftServices(services);
+            RegisterScannerServices(services);
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();
             blazorWebView1.HostPage = "wwwroot\\index.html";
-            var serviceProvider = services.BuildServiceProvider();
-            var logger = serviceProvider.GetRequiredService<ILogger<Form1>>();
+            _serviceProvider = services.BuildServiceProvider();
+            var logger = _serviceProvider.GetRequiredService<ILogger<Form1>>();
             HandleException(logger);
-            blazorWebView1.Services = serviceProvider;
-            StartOpcUaConnection(serviceProvider);
-            StartSpringBootHealthCheck(serviceProvider);
-            StartShiftService(serviceProvider);
+            blazorWebView1.Services = _serviceProvider;
+            StartOpcUaConnection(_serviceProvider);
+            StartSpringBootHealthCheck(_serviceProvider);
+            StartShiftService(_serviceProvider);
             blazorWebView1.RootComponents.Add<MyComponent>("#app");
         }
 
@@ -150,6 +152,11 @@ namespace Final_Test_Hybrid
             services.AddSingleton<ShiftService>();
         }
 
+        private void RegisterScannerServices(ServiceCollection services)
+        {
+            services.AddSingleton<ScannerConnectionState>();
+        }
+
         private void StartSpringBootHealthCheck(ServiceProvider serviceProvider)
         {
             _springBootHealthService = serviceProvider.GetRequiredService<SpringBootHealthService>();
@@ -178,6 +185,10 @@ namespace Final_Test_Hybrid
             if (_opcUaService != null)
             {
                 await _opcUaService.DisconnectAsync();
+            }
+            if (_serviceProvider != null)
+            {
+                await _serviceProvider.DisposeAsync();
             }
             base.OnFormClosing(e);
         }
