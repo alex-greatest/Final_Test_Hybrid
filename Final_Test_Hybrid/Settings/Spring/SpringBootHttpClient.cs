@@ -89,4 +89,9 @@ public class SpringBootHttpClient
             throw;
         }
     }
+
+    public async Task<HttpResponseMessage> PostWithResponseAsync<TRequest>(string endpoint, TRequest data, CancellationToken ct = default)
+    {
+        return await _httpClient.PostAsJsonAsync(endpoint, data, ct).ConfigureAwait(false);
+    }
 }

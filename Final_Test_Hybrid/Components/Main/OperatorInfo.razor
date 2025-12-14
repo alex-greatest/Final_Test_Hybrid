@@ -1,11 +1,14 @@
 @using Final_Test_Hybrid.Components.Main.Modals
+@using Final_Test_Hybrid.Services.SpringBoot.Operator
+@implements IDisposable
 
 <div class="buttons-row">
     <RadzenButton Text="Авторизация оператора"
                   Icon="person"
                   ButtonStyle="ButtonStyle.Primary"
                   Style="background-color: #1e5fcf"
-                  Click="@OpenLoginDialog"/>
+                  Click="@OpenLoginDialog"
+                  Disabled="@OperatorState.IsAuthenticated"/>
     <RadzenButton Text="Выйти"
                   Icon="logout"
                   ButtonStyle="ButtonStyle.Light"
@@ -13,17 +16,28 @@
 </div>
 <div class="field-row field-row-operator">
     <RadzenLabel Text="Имя оператора"/>
-    <RadzenTextBox Style="width:100%" @bind-Value="_operatorName" ReadOnly="true"/>
+    <RadzenTextBox Style="width:100%" Value="@OperatorState.Username" ReadOnly="true"/>
 </div>
 
 @code {
     [Inject]
     public required DialogService DialogService { get; set; }
-    private string _operatorName = string.Empty;
+    [Inject]
+    public required OperatorState OperatorState { get; set; }
+
+    protected override void OnInitialized()
+    {
+        OperatorState.OnChange += OnStateChanged;
+    }
+
+    private void OnStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
 
     private async Task OpenLoginDialog()
     {
-        var result = await DialogService.OpenAsync<OperatorLoginDialog>("Авторизация оператора",
+        await DialogService.OpenAsync<OperatorLoginDialog>("Авторизация оператора",
             options: new DialogOptions
             {
                 Width = "450px",
@@ -31,10 +45,10 @@
                 ShowClose = true,
                 CssClass = "operator-login-dialog"
             });
+    }
 
-        if (result is OperatorLoginDialog.OperatorLoginResult loginResult)
-        {
-            _operatorName = loginResult.Login;
-        }
+    public void Dispose()
+    {
+        OperatorState.OnChange -= OnStateChanged;
     }
 }
