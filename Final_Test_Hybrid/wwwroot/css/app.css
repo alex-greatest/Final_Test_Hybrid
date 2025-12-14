@@ -202,3 +202,24 @@ svg {
 .rz-switch.rz-state-disabled {
     opacity: 1 !important;
 }
+
+/* ===== OPERATOR LOGIN DIALOG ===== */
+.operator-login-dialog .rz-dialog-titlebar {
+    justify-content: space-between !important;
+}
+
+.operator-login-dialog .rz-dialog-titlebar-close {
+    width: 50px !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-right: -10px !important;
+    margin-left: auto !important;
+    padding-right: 0 !important;
+}
+
+.operator-login-dialog .rz-dialog-titlebar-close .rzi {
+    font-size: 28px !important;
+    font-weight: 700 !important;
+}

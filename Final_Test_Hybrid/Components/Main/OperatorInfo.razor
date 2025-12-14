@@ -1,8 +1,11 @@
+@using Final_Test_Hybrid.Components.Main.Modals
+
 <div class="buttons-row">
     <RadzenButton Text="Авторизация оператора"
                   Icon="person"
                   ButtonStyle="ButtonStyle.Primary"
-                  Style="background-color: #1e5fcf"/>
+                  Style="background-color: #1e5fcf"
+                  Click="@OpenLoginDialog"/>
     <RadzenButton Text="Выйти"
                   Icon="logout"
                   ButtonStyle="ButtonStyle.Light"
@@ -10,5 +13,28 @@
 </div>
 <div class="field-row field-row-operator">
     <RadzenLabel Text="Имя оператора"/>
-    <RadzenTextBox Style="width:100%"/>
+    <RadzenTextBox Style="width:100%" @bind-Value="_operatorName" ReadOnly="true"/>
 </div>
+
+@code {
+    [Inject]
+    public required DialogService DialogService { get; set; }
+    private string _operatorName = string.Empty;
+
+    private async Task OpenLoginDialog()
+    {
+        var result = await DialogService.OpenAsync<OperatorLoginDialog>("Авторизация оператора",
+            options: new DialogOptions
+            {
+                Width = "450px",
+                CloseDialogOnOverlayClick = false,
+                ShowClose = true,
+                CssClass = "operator-login-dialog"
+            });
+
+        if (result is OperatorLoginDialog.OperatorLoginResult loginResult)
+        {
+            _operatorName = loginResult.Login;
+        }
+    }
+}
