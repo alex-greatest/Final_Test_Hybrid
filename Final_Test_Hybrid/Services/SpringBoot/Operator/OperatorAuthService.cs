@@ -12,7 +12,8 @@ public class OperatorAuthService(
     OperatorState operatorState,
     ILogger<OperatorAuthService> logger)
 {
-    private const string Endpoint = "/api/operator/auth";
+    private const string AuthEndpoint = "/api/operator/auth";
+    private const string LogoutEndpoint = "/api/operator/logout";
 
     public async Task<OperatorAuthResult> AuthenticateAsync(string login, string password, CancellationToken ct = default)
     {
@@ -37,7 +38,7 @@ public class OperatorAuthService(
 
     private async Task<OperatorAuthResult> SendRequestAsync(OperatorAuthRequest request, CancellationToken ct)
     {
-        var response = await httpClient.PostWithResponseAsync(Endpoint, request, ct);
+        var response = await httpClient.PostWithResponseAsync(AuthEndpoint, request, ct);
         return response.StatusCode switch
         {
             HttpStatusCode.OK => await HandleSuccessAsync(response, ct),
@@ -68,6 +69,57 @@ public class OperatorAuthService(
     private OperatorAuthResult HandleUnexpectedStatus(HttpStatusCode statusCode)
     {
         logger.LogError("Unexpected status code {StatusCode} for authentication", statusCode);
+        return OperatorAuthResult.Fail("Неизвестная ошибка", isKnownError: false);
+    }
+
+    public async Task<OperatorAuthResult> LogoutAsync(CancellationToken ct = default)
+    {
+        var request = CreateLogoutRequest();
+        try
+        {
+            return await SendLogoutRequestAsync(request, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Logout request failed for {Username}", request.Username);
+            return OperatorAuthResult.Fail("Неизвестная ошибка", isKnownError: false);
+        }
+    }
+
+    private OperatorLogoutRequest CreateLogoutRequest() => new()
+    {
+        Username = operatorState.Username ?? string.Empty,
+        StationName = appSettingsService.NameStation
+    };
+
+    private async Task<OperatorAuthResult> SendLogoutRequestAsync(OperatorLogoutRequest request, CancellationToken ct)
+    {
+        var response = await httpClient.PostWithResponseAsync(LogoutEndpoint, request, ct);
+        return response.StatusCode switch
+        {
+            HttpStatusCode.OK => HandleLogoutSuccess(),
+            HttpStatusCode.NotFound => await HandleLogoutErrorAsync(response, request.Username, ct),
+            _ => HandleLogoutUnexpectedStatus(response.StatusCode)
+        };
+    }
+
+    private OperatorAuthResult HandleLogoutSuccess()
+    {
+        operatorState.Logout();
+        return OperatorAuthResult.Ok();
+    }
+
+    private async Task<OperatorAuthResult> HandleLogoutErrorAsync(HttpResponseMessage response, string username, CancellationToken ct)
+    {
+        var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>(ct);
+        var message = errorResponse?.Message ?? "Неизвестная ошибка";
+        logger.LogWarning("Logout failed for {Username}: {Message}", username, message);
+        return OperatorAuthResult.Fail(message, isKnownError: true);
+    }
+
+    private OperatorAuthResult HandleLogoutUnexpectedStatus(HttpStatusCode statusCode)
+    {
+        logger.LogError("Unexpected status code {StatusCode} for logout", statusCode);
         return OperatorAuthResult.Fail("Неизвестная ошибка", isKnownError: false);
     }
 }

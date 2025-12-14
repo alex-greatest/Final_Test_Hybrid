@@ -12,7 +12,9 @@
     <RadzenButton Text="Выйти"
                   Icon="logout"
                   ButtonStyle="ButtonStyle.Light"
-                  Style="color: black"/>
+                  Style="color: black"
+                  Click="@OnLogout"
+                  Disabled="@(!OperatorState.IsAuthenticated)"/>
 </div>
 <div class="field-row field-row-operator">
     <RadzenLabel Text="Имя оператора"/>
@@ -23,7 +25,11 @@
     [Inject]
     public required DialogService DialogService { get; set; }
     [Inject]
+    public required NotificationService NotificationService { get; set; }
+    [Inject]
     public required OperatorState OperatorState { get; set; }
+    [Inject]
+    public required OperatorAuthService OperatorAuthService { get; set; }
 
     protected override void OnInitialized()
     {
@@ -45,6 +51,17 @@
                 ShowClose = true,
                 CssClass = "operator-login-dialog"
             });
+    }
+
+    private async Task OnLogout()
+    {
+        var result = await OperatorAuthService.LogoutAsync();
+        if (result.Success)
+        {
+            NotificationService.Notify(NotificationSeverity.Success, "Выход выполнен");
+            return;
+        }
+        NotificationService.Notify(NotificationSeverity.Error, result.ErrorMessage ?? "Неизвестная ошибка");
     }
 
     public void Dispose()
