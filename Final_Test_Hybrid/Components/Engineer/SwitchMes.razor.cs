@@ -42,10 +42,20 @@ public partial class SwitchMes
 
     private async Task<bool> TryLogoutBeforeModeSwitch()
     {
-        if (!_useMes || !OperatorState.IsAuthenticated)
+        if (!OperatorState.IsAuthenticated)
         {
             return true;
         }
+        if (_useMes)
+        {
+            return await TryMesLogout();
+        }
+        ManualLogoutOnModeSwitch();
+        return true;
+    }
+
+    private async Task<bool> TryMesLogout()
+    {
         var logoutResult = await OperatorAuthService.LogoutAsync();
         if (logoutResult.Success)
         {
@@ -54,6 +64,12 @@ public partial class SwitchMes
         }
         NotificationService.Notify(NotificationSeverity.Error, "Не удалось выйти: " + (logoutResult.ErrorMessage ?? "Неизвестная ошибка"));
         return false;
+    }
+
+    private void ManualLogoutOnModeSwitch()
+    {
+        OperatorAuthService.ManualLogout();
+        NotificationService.Notify(NotificationSeverity.Info, "Выход выполнен при смене режима");
     }
 
     private async Task<bool> ShowPasswordDialog()
