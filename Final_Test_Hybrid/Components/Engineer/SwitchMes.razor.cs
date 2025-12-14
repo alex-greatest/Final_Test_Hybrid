@@ -59,7 +59,6 @@ public partial class SwitchMes
         var logoutResult = await OperatorAuthService.LogoutAsync();
         if (logoutResult.Success)
         {
-            NotificationService.Notify(NotificationSeverity.Info, "Выход выполнен при смене режима");
             return true;
         }
         NotificationService.Notify(NotificationSeverity.Error, "Не удалось выйти: " + (logoutResult.ErrorMessage ?? "Неизвестная ошибка"));
