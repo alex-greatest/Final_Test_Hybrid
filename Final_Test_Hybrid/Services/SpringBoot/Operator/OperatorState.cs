@@ -32,4 +32,15 @@ public class OperatorState
         }
         OnChange?.Invoke();
     }
+
+    public void SetManualAuth(string username)
+    {
+        lock (_lock)
+        {
+            _isAuthenticated = true;
+            _username = username;
+            _role = null;
+        }
+        OnChange?.Invoke();
+    }
 }

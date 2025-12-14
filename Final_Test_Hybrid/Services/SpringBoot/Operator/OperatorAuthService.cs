@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Final_Test_Hybrid.Services.Common.Settings;
+using Final_Test_Hybrid.Services.SpringBoot.Shift;
 using Final_Test_Hybrid.Settings.Spring;
 using Microsoft.Extensions.Logging;
 
@@ -10,6 +11,7 @@ public class OperatorAuthService(
     SpringBootHttpClient httpClient,
     AppSettingsService appSettingsService,
     OperatorState operatorState,
+    ShiftState shiftState,
     ILogger<OperatorAuthService> logger)
 {
     private const string AuthEndpoint = "/api/operator/auth";
@@ -121,5 +123,11 @@ public class OperatorAuthService(
     {
         logger.LogError("Unexpected status code {StatusCode} for logout", statusCode);
         return OperatorAuthResult.Fail("Неизвестная ошибка", isKnownError: false);
+    }
+
+    public void ManualLogout()
+    {
+        operatorState.Logout();
+        shiftState.SetShiftNumber(null);
     }
 }

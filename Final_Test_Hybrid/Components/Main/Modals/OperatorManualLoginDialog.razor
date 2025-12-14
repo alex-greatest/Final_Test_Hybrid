@@ -1,0 +1,63 @@
+@using Final_Test_Hybrid.Services.SpringBoot.Operator
+@using Final_Test_Hybrid.Services.SpringBoot.Shift
+
+<div class="operator-login-dialog">
+    <div class="field-group">
+        <label class="field-label">Логин</label>
+        <RadzenTextBox @bind-Value="_login" Placeholder="Логин" Style="width: 100%;" />
+    </div>
+    <div class="field-group">
+        <label class="field-label">Номер смены</label>
+        <RadzenNumeric TValue="int?" @bind-Value="_shiftNumber" Placeholder="Номер смены" Style="width: 100%;" />
+    </div>
+    @if (!string.IsNullOrEmpty(_validationError))
+    {
+        <div class="validation-error">@_validationError</div>
+    }
+    <div class="dialog-buttons">
+        <RadzenButton Text="Подтвердить" Icon="check" Click="@OnConfirm"
+                      ButtonStyle="ButtonStyle.Primary" />
+    </div>
+</div>
+
+@code {
+    [Inject]
+    public required DialogService DialogService { get; set; }
+    [Inject]
+    public required NotificationService NotificationService { get; set; }
+    [Inject]
+    public required OperatorState OperatorState { get; set; }
+    [Inject]
+    public required ShiftState ShiftState { get; set; }
+    private string _login = string.Empty;
+    private int? _shiftNumber;
+    private string _validationError = string.Empty;
+
+    private void OnConfirm()
+    {
+        _validationError = string.Empty;
+        if (!ValidateFields())
+        {
+            return;
+        }
+        ApplyManualAuth();
+    }
+
+    private bool ValidateFields()
+    {
+        if (!string.IsNullOrWhiteSpace(_login) && _shiftNumber.HasValue)
+        {
+            return true;
+        }
+        _validationError = "Заполните все поля";
+        return false;
+    }
+
+    private void ApplyManualAuth()
+    {
+        OperatorState.SetManualAuth(_login);
+        ShiftState.SetShiftNumber(_shiftNumber);
+        NotificationService.Notify(NotificationSeverity.Success, "Авторизация успешна");
+        DialogService.Close(true);
+    }
+}

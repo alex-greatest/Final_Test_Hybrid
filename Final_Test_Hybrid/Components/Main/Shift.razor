@@ -1,15 +1,12 @@
-@using Final_Test_Hybrid.Services.Common.Settings
 @using Final_Test_Hybrid.Services.SpringBoot.Shift
 @inject ShiftState ShiftState
-@inject AppSettingsService AppSettingsService
 @implements IDisposable
 
 <div class="field-row">
     <RadzenLabel Text="Номер смены"/>
     <RadzenNumeric TValue="int?" Style="width:100%"
                    Value="@_shiftNumber"
-                   ReadOnly="@AppSettingsService.UseMes"
-                   Change="@OnManualInput"/>
+                   ReadOnly="true"/>
 </div>
 
 @code {
@@ -19,7 +16,6 @@
     {
         _shiftNumber = ShiftState.ShiftNumber;
         ShiftState.ShiftNumberChanged += OnShiftNumberChanged;
-        AppSettingsService.UseMesChanged += OnUseMesChanged;
     }
 
     private async void OnShiftNumberChanged(int? shiftNumber)
@@ -35,32 +31,8 @@
         }
     }
 
-    private async void OnUseMesChanged(bool useMes)
-    {
-        try
-        {
-            _shiftNumber = null;
-            await InvokeAsync(StateHasChanged);
-        }
-        catch
-        {
-            // ignored - component may be disposed
-        }
-    }
-
-    private void OnManualInput(int? value)
-    {
-        if (AppSettingsService.UseMes)
-        {
-            return;
-        }
-        _shiftNumber = value;
-        ShiftState.SetShiftNumber(value);
-    }
-
     public void Dispose()
     {
         ShiftState.ShiftNumberChanged -= OnShiftNumberChanged;
-        AppSettingsService.UseMesChanged -= OnUseMesChanged;
     }
 }
