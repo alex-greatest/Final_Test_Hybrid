@@ -19,21 +19,23 @@
                             Placeholder="Все типы котлов"
                             AllowClear="true"
                             Change="@OnBoilerTypeFilterChanged"
-                            class="filter-dropdown" />
-            <RadzenButton Icon="refresh" Text="Обновить"
-                          Click="@LoadDataAsync" />
-            <RadzenButton Icon="add" Text="Добавить"
-                          Click="@AddNewRow"
-                          Disabled="@(_selectedBoilerTypeId == null)" />
+                            Style="min-width: 400px; height: 40px; font-size: 20px; font-weight: 700; color: black;" />
+            <div class="toolbar-buttons">
+                <RadzenButton Icon="refresh" Text="Обновить"
+                              Click="@LoadDataAsync" />
+                <RadzenButton Icon="add" Text="Добавить"
+                              Click="@AddNewRow"
+                              Disabled="@(_selectedBoilerTypeId == null)" />
+            </div>
         </div>
         <RadzenDataGrid @ref="_grid" Data="@_filteredRecipes" TItem="RecipeEditModel"
                         EditMode="DataGridEditMode.Single"
                         AllowFiltering="true" AllowSorting="true"
-                        AllowColumnResize="true"
+                        AllowColumnResize="true" AllowPaging="false"
                         RowUpdate="@OnRowUpdate" RowCreate="@OnRowCreate">
             <Columns>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="BoilerTypeName"
-                                      Title="Тип котла" Width="150px">
+                                      Title="Тип котла" MinWidth="140px">
                     <Template Context="item">
                         @item.BoilerTypeName
                     </Template>
@@ -46,7 +48,7 @@
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="PlcType"
-                                      Title="Тип PLC" Width="100px">
+                                      Title="Тип PLC" MinWidth="120px">
                     <Template Context="item">
                         @item.PlcType
                     </Template>
@@ -57,7 +59,7 @@
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="IsPlc"
-                                      Title="PLC" Width="60px" TextAlign="TextAlign.Center">
+                                      Title="PLC" MinWidth="70px" TextAlign="TextAlign.Center">
                     <Template Context="item">
                         <RadzenCheckBox Value="@item.IsPlc" Disabled="true" />
                     </Template>
@@ -66,19 +68,19 @@
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="Address"
-                                      Title="Адрес" Width="120px">
+                                      Title="Адрес" MinWidth="120px">
                     <EditTemplate Context="item">
                         <RadzenTextBox @bind-Value="item.Address" class="w-full" />
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="TagName"
-                                      Title="Имя тега" Width="150px">
+                                      Title="Имя тега" MinWidth="140px">
                     <EditTemplate Context="item">
                         <RadzenTextBox @bind-Value="item.TagName" class="w-full" />
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="Value"
-                                      Title="Значение" Width="100px">
+                                      Title="Значение" MinWidth="130px">
                     <EditTemplate Context="item">
                         @if (item.PlcType == PlcType.Bool)
                         {
@@ -95,20 +97,20 @@
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="Unit"
-                                      Title="Ед.изм." Width="80px">
+                                      Title="Ед.изм." MinWidth="100px">
                     <EditTemplate Context="item">
                         <RadzenTextBox @bind-Value="item.Unit" MaxLength="20" class="w-full" />
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="Description"
-                                      Title="Описание">
+                                      Title="Описание" MinWidth="150px">
                     <EditTemplate Context="item">
                         <RadzenTextBox @bind-Value="item.Description" class="w-full" />
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel"
                                       TextAlign="TextAlign.Center" Sortable="false"
-                                      Filterable="false" Width="90px">
+                                      Filterable="false" MinWidth="100px">
                     <Template Context="item">
                         <RadzenButton Icon="edit" Size="ButtonSize.Small"
                                       Click="@(() => EditRow(item))"/>

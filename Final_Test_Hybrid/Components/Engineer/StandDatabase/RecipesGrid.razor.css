@@ -8,23 +8,39 @@
 
 .grid-toolbar {
     display: flex;
-    gap: 8px;
-    padding-bottom: 4px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding-bottom: 8px;
 }
 
-.filter-dropdown {
-    min-width: 200px;
+.toolbar-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+/* Кнопки в toolbar */
+.toolbar-buttons ::deep .rz-button {
+    font-size: 20px;
+    padding: 12px 24px;
+}
+
+/* Элементы выпадающего списка */
+::deep .rz-popup .rz-dropdown-item {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    color: black !important;
+    padding: 14px 18px !important;
+}
+
+/* Выпадающий список поверх всего */
+::deep .rz-popup {
+    z-index: 10000 !important;
 }
 
 ::deep .rz-data-grid {
     flex: 1;
     min-height: 0;
-}
-
-/* Кнопки в toolbar */
-.grid-toolbar ::deep .rz-button {
-    font-size: 20px;
-    padding: 12px 24px;
 }
 
 /* Заголовки колонок */
@@ -43,16 +59,23 @@
 ::deep .rz-data-grid .rz-textbox {
     font-size: 19px;
     color: black !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
 }
 
-/* Выпадающие списки */
+/* Ячейки в режиме редактирования */
+::deep .rz-data-grid .rz-cell-editing {
+    overflow: visible !important;
+}
+
+::deep .rz-data-grid .rz-cell-editing .rz-cell-data {
+    overflow: visible !important;
+    text-overflow: clip !important;
+}
+
+/* Выпадающие списки в таблице */
 ::deep .rz-data-grid .rz-dropdown {
     font-size: 19px;
-}
-
-/* Кнопки действий в строках */
-::deep .rz-data-grid td .rz-button {
-    font-size: 18px;
 }
 
 /* Сетка таблицы */
@@ -65,7 +88,7 @@
     border: 1px solid #ccc !important;
 }
 
-/* Высота заголовка */
+/* Заголовки */
 ::deep .rz-data-grid th {
     padding: 10px 8px !important;
     overflow: visible !important;
@@ -83,11 +106,12 @@
     height: auto !important;
 }
 
-/* Кнопки редактирования/удаления */
+/* Кнопки в строках */
 ::deep .rz-data-grid td .rz-button {
     width: 35px;
     height: 35px;
     min-width: 35px;
+    font-size: 18px;
 }
 
 ::deep .rz-data-grid td .rz-button .rzi {
