@@ -44,14 +44,24 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private async Task OpenLoginDialog()
+    private Task OpenLoginDialog() => (AppSettingsService.UseMes, AppSettingsService.UseOperatorQrAuth) switch
     {
-        if (AppSettingsService.UseMes)
-        {
-            await OpenMesLoginDialog();
-            return;
-        }
-        await OpenManualLoginDialog();
+        (false, _) => OpenManualLoginDialog(),
+        (true, true) => OpenUserScanDialog(),
+        _ => OpenMesLoginDialog()
+    };
+
+    private async Task OpenUserScanDialog()
+    {
+        await DialogService.OpenAsync<UserScanDialog>("Авторизация оператора",
+            new Dictionary<string, object> { { "Text", "Отсканируйте бейдж оператора" } },
+            options: new DialogOptions
+            {
+                Width = "450px",
+                CloseDialogOnOverlayClick = false,
+                ShowClose = true,
+                CssClass = "operator-login-dialog"
+            });
     }
 
     private async Task OpenMesLoginDialog()

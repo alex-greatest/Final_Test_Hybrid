@@ -1,17 +1,17 @@
-.switch-mes {
+.checkbox-setting {
     display: flex;
     align-items: center;
     gap: 15px;
     margin-top: 20px;
 }
 
-.switch-mes-label {
+.checkbox-setting-label {
     font-weight: bold;
     font-size: 20px;
     color: black;
 }
 
-.switch-wrapper {
+.checkbox-wrapper {
     cursor: pointer;
 }
 

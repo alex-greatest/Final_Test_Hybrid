@@ -9,6 +9,8 @@ public class AppSettingsService(IOptions<AppSettings> options)
 {
     private readonly string _settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
     public bool UseMes { get; private set; } = options.Value.UseMes;
+    public bool UseOperatorQrAuth { get; private set; } = options.Value.UseOperatorQrAuth;
+    public bool UseAdminQrAuth { get; private set; } = options.Value.UseAdminQrAuth;
     public string EngineerPassword { get; } = options.Value.EngineerPassword;
     public string NameStation { get; } = options.Value.NameStation;
     public event Action<bool>? UseMesChanged;
@@ -16,16 +18,28 @@ public class AppSettingsService(IOptions<AppSettings> options)
     public void SaveUseMes(bool value)
     {
         UseMes = value;
-        SaveToFile();
+        SaveSettingToFile(nameof(UseMes), value);
         UseMesChanged?.Invoke(value);
     }
 
-    private void SaveToFile()
+    public void SaveUseOperatorQrAuth(bool value)
+    {
+        UseOperatorQrAuth = value;
+        SaveSettingToFile(nameof(UseOperatorQrAuth), value);
+    }
+
+    public void SaveUseAdminQrAuth(bool value)
+    {
+        UseAdminQrAuth = value;
+        SaveSettingToFile(nameof(UseAdminQrAuth), value);
+    }
+
+    private void SaveSettingToFile(string settingName, bool value)
     {
         var json = File.ReadAllText(_settingsPath);
         var jsonNode = JsonNode.Parse(json)!;
-        jsonNode["Settings"]![nameof(UseMes)] = UseMes;
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        File.WriteAllText(_settingsPath, jsonNode.ToJsonString(options));
+        jsonNode["Settings"]![settingName] = value;
+        var opts = new JsonSerializerOptions { WriteIndented = true };
+        File.WriteAllText(_settingsPath, jsonNode.ToJsonString(opts));
     }
 }
