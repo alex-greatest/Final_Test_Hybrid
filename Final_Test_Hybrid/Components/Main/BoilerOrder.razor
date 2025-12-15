@@ -1,12 +1,40 @@
+@using Final_Test_Hybrid.Services.Common.Settings
+@inject AppSettingsService AppSettingsService
+@implements IDisposable
+
 <div class="field-row">
     <RadzenLabel Text="Номер заказа"/>
-    <RadzenTextBox Style="width:100%"/>
+    <RadzenTextBox Style="width:100%" Disabled="@(!AppSettingsService.UseMes)" ReadOnly="true"/>
 </div>
 <div class="field-row">
     <RadzenLabel Text="Котлов в заказе"/>
-    <RadzenTextBox Style="width:100%"/>
+    <RadzenTextBox Style="width:100%" Disabled="@(!AppSettingsService.UseMes)" ReadOnly="true"/>
 </div>
 <div class="field-row">
     <RadzenLabel Text="Котлов сделано"/>
-    <RadzenTextBox Style="width:100%"/>
+    <RadzenTextBox Style="width:100%" Disabled="@(!AppSettingsService.UseMes)" ReadOnly="true"/>
 </div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        AppSettingsService.UseMesChanged += OnUseMesChanged;
+    }
+
+    private async void OnUseMesChanged(bool _)
+    {
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // ignored - component may be disposed
+        }
+    }
+
+    public void Dispose()
+    {
+        AppSettingsService.UseMesChanged -= OnUseMesChanged;
+    }
+}

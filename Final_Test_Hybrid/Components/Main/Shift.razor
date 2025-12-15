@@ -4,8 +4,8 @@
 
 <div class="field-row">
     <RadzenLabel Text="Номер смены"/>
-    <RadzenNumeric TValue="int?" Style="width:100%"
-                   Value="@_shiftNumber"
+    <RadzenTextBox Style="width:100%"
+                   Value="@_shiftNumber?.ToString()"
                    ReadOnly="true"/>
 </div>
 
