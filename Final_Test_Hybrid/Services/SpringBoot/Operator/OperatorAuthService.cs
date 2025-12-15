@@ -25,6 +25,14 @@ public class OperatorAuthService(
         {
             return await SendRequestAsync(request, ct);
         }
+        catch (TaskCanceledException)
+        {
+            return OperatorAuthResult.Fail("Таймаут соединения", isKnownError: false);
+        }
+        catch (HttpRequestException)
+        {
+            return OperatorAuthResult.Fail("Нет соединения с сервером", isKnownError: false);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Authentication request failed for {Login}", login);
@@ -38,6 +46,14 @@ public class OperatorAuthService(
         try
         {
             return await SendQrRequestAsync(request, ct);
+        }
+        catch (TaskCanceledException)
+        {
+            return OperatorAuthResult.Fail("Нет ответа от сервера", isKnownError: false);
+        }
+        catch (HttpRequestException)
+        {
+            return OperatorAuthResult.Fail("Нет соединения с сервером", isKnownError: false);
         }
         catch (Exception ex)
         {
@@ -120,6 +136,14 @@ public class OperatorAuthService(
         try
         {
             return await SendLogoutRequestAsync(request, ct);
+        }
+        catch (TaskCanceledException)
+        {
+            return OperatorAuthResult.Fail("Нет ответа от сервера", isKnownError: false);
+        }
+        catch (HttpRequestException)
+        {
+            return OperatorAuthResult.Fail("Нет соединения с сервером", isKnownError: false);
         }
         catch (Exception ex)
         {
