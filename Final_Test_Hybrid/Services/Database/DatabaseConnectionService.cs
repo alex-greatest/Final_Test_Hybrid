@@ -14,7 +14,6 @@ public class DatabaseConnectionService(
     private readonly int _intervalMs = options.Value.HealthCheckIntervalMs;
     private PeriodicTimer? _timer;
     private CancellationTokenSource? _cts;
-    private bool _tablesEnsured;
 
     public void Start()
     {
@@ -51,12 +50,6 @@ public class DatabaseConnectionService(
             using var scope = serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var canConnect = await dbContext.Database.CanConnectAsync().ConfigureAwait(false);
-            if (canConnect && !_tablesEnsured)
-            {
-                await dbContext.Database.EnsureCreatedAsync().ConfigureAwait(false);
-                _tablesEnsured = true;
-                logger.LogInformation("Database tables ensured");
-            }
             connectionState.SetConnected(canConnect);
             if (!canConnect)
             {
