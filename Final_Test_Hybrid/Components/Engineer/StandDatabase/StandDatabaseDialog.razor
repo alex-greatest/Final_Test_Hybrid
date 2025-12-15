@@ -23,6 +23,7 @@
                             <RadzenDataGrid @ref="_grid" Data="@_boilerTypes" TItem="BoilerTypeEditModel"
                                             EditMode="DataGridEditMode.Single"
                                             AllowFiltering="true" AllowSorting="true"
+                                            AllowColumnResize="true"
                                             RowUpdate="@OnRowUpdate" RowCreate="@OnRowCreate">
                                 <Columns>
                                     <RadzenDataGridColumn TItem="BoilerTypeEditModel" Property="Article"

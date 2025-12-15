@@ -114,3 +114,40 @@
     flex: 1;
     min-height: 0;
 }
+
+/* Кнопки в toolbar */
+.grid-toolbar ::deep .rz-button {
+    font-size: 23px;
+    padding: 12px 24px;
+}
+
+/* Заголовки колонок */
+::deep .rz-data-grid .rz-column-title {
+    font-size: 25px;
+    font-weight: 600;
+}
+
+/* Ячейки таблицы */
+::deep .rz-data-grid .rz-cell-data {
+    font-size: 23px;
+}
+
+/* Поля ввода при редактировании */
+::deep .rz-data-grid .rz-textbox {
+    font-size: 23px;
+}
+
+/* Кнопки действий в строках */
+::deep .rz-data-grid td .rz-button {
+    font-size: 21px;
+}
+
+/* Сетка таблицы */
+::deep .rz-data-grid .rz-grid-table {
+    border-collapse: collapse;
+}
+
+::deep .rz-data-grid th,
+::deep .rz-data-grid td {
+    border: 1px solid #ccc !important;
+}
