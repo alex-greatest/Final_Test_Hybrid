@@ -200,6 +200,7 @@ namespace Final_Test_Hybrid
             });
             services.AddSingleton<DatabaseConnectionState>();
             services.AddSingleton<DatabaseConnectionService>();
+            services.AddScoped<BoilerTypeService>();
         }
 
         private void StartDatabaseService(ServiceProvider serviceProvider)

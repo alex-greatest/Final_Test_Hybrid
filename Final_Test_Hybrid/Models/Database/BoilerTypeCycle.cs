@@ -8,10 +8,12 @@ public class BoilerTypeCycle
     [Required]
     public long BoilerTypeId { get; set; }
     [Required]
+    [StringLength(100)]
     public string Type { get; set; } = string.Empty;
     [Required]
     public bool IsActive { get; set; }
     [Required]
+    [StringLength(10)]
     public string Article { get; set; } = string.Empty;
     [ConcurrencyCheck]
     public int Version { get; set; }
