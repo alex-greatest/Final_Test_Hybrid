@@ -4,7 +4,10 @@
       "Bash(cd:*)",
       "Bash(dir:*)",
       "Bash(dotnet build:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "WebFetch(domain:blazor.radzen.com)",
+      "WebSearch",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

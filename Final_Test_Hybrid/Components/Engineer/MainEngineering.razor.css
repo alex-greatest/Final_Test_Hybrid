@@ -93,4 +93,5 @@
     justify-content: center;
     height: 100%;
     justify-self: center;
+    gap: 20px;
 }

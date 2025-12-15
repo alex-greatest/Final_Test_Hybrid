@@ -232,3 +232,22 @@ svg {
 .user-scan-dialog .rz-dialog-content {
     padding: 0 !important;
 }
+
+/* ===== SETTINGS CHECKBOXES ===== */
+.settings-panel .rz-chkbox-box {
+    width: 28px !important;
+    height: 28px !important;
+    border-color: #1976d2 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.settings-panel .rz-chkbox-box .rzi {
+    font-size: 22px !important;
+}
+
+.settings-panel .rz-state-active .rz-chkbox-box {
+    background-color: #1976d2 !important;
+    border-color: #1976d2 !important;
+}
