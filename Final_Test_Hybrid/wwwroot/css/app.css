@@ -303,3 +303,50 @@ svg {
     height: calc(100% - 46px) !important;
     padding: 0 !important;
 }
+
+/* ===== RECIPES GRID - GLOBAL STYLES ===== */
+/* Popup dropdown рендерится вне компонента, нужны глобальные стили */
+
+/* Элементы выпадающего списка фильтра */
+.rz-popup .rz-dropdown-item {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    color: black !important;
+    padding: 14px 18px !important;
+}
+
+/* Выпадающий список поверх всего */
+.rz-popup {
+    z-index: 10000 !important;
+}
+
+/* Ячейки редактирования в DataGrid */
+.rz-data-grid td,
+.rz-data-grid td > *,
+.rz-data-grid .rz-cell-data,
+.rz-data-grid .rz-stack {
+    overflow: visible !important;
+    text-overflow: clip !important;
+}
+
+.rz-data-grid .rz-textbox {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 36px !important;
+}
+
+.rz-data-grid .rz-textbox input {
+    height: 100% !important;
+    padding: 6px 8px !important;
+    line-height: 1.4 !important;
+}
+
+.rz-data-grid .rz-dropdown {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 36px !important;
+}
+
+.rz-data-grid .rz-dropdown .rz-dropdown-label {
+    line-height: 32px !important;
+}

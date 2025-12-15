@@ -25,18 +25,6 @@
     padding: 12px 24px;
 }
 
-/* Элементы выпадающего списка */
-::deep .rz-popup .rz-dropdown-item {
-    font-size: 20px !important;
-    font-weight: 700 !important;
-    color: black !important;
-    padding: 14px 18px !important;
-}
-
-/* Выпадающий список поверх всего */
-::deep .rz-popup {
-    z-index: 10000 !important;
-}
 
 ::deep .rz-data-grid {
     flex: 1;
@@ -59,18 +47,6 @@
 ::deep .rz-data-grid .rz-textbox {
     font-size: 19px;
     color: black !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-}
-
-/* Ячейки в режиме редактирования */
-::deep .rz-data-grid .rz-cell-editing {
-    overflow: visible !important;
-}
-
-::deep .rz-data-grid .rz-cell-editing .rz-cell-data {
-    overflow: visible !important;
-    text-overflow: clip !important;
 }
 
 /* Выпадающие списки в таблице */
