@@ -22,13 +22,6 @@
                         AllowColumnResize="true"
                         RowUpdate="@OnRowUpdate" RowCreate="@OnRowCreate">
             <Columns>
-                <RadzenDataGridColumn TItem="BoilerTypeEditModel" Property="Article"
-                                      Title="Артикул">
-                    <EditTemplate Context="item">
-                        <RadzenTextBox @bind-Value="item.Article"
-                                       MaxLength="10" class="w-full" />
-                    </EditTemplate>
-                </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="BoilerTypeEditModel" Property="Type"
                                       Title="Тип">
                     <EditTemplate Context="item">
@@ -36,21 +29,28 @@
                                        MaxLength="100" class="w-full" />
                     </EditTemplate>
                 </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="BoilerTypeEditModel" Property="Article"
+                                      Title="Артикул">
+                    <EditTemplate Context="item">
+                        <RadzenTextBox @bind-Value="item.Article"
+                                       MaxLength="10" class="w-full"/>
+                    </EditTemplate>
+                </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="BoilerTypeEditModel"
                                       TextAlign="TextAlign.Center" Sortable="false"
                                       Filterable="false">
                     <Template Context="item">
                         <RadzenButton Icon="edit" Size="ButtonSize.Small"
-                                      Click="@(() => EditRow(item))" />
+                                      Click="@(() => EditRow(item))"/>
                         <RadzenButton Icon="delete" Size="ButtonSize.Small"
                                       ButtonStyle="ButtonStyle.Danger"
-                                      Click="@(() => DeleteRow(item))" />
+                                      Click="@(() => DeleteRow(item))"/>
                     </Template>
                     <EditTemplate Context="item">
                         <RadzenButton Icon="check" Size="ButtonSize.Small"
-                                      Click="@(() => SaveRow(item))" />
+                                      Click="@(() => SaveRow(item))"/>
                         <RadzenButton Icon="close" Size="ButtonSize.Small"
-                                      Click="@(() => CancelEdit(item))" />
+                                      Click="@(() => CancelEdit(item))"/>
                     </EditTemplate>
                 </RadzenDataGridColumn>
             </Columns>

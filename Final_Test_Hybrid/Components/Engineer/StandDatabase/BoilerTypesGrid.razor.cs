@@ -20,6 +20,7 @@ public partial class BoilerTypesGrid
     private RadzenDataGrid<BoilerTypeEditModel>? _grid;
     private bool _loadError;
     private BoilerTypeEditModel? _itemToInsert;
+    private BoilerTypeEditModel? _originalItem;
 
     protected override async Task OnInitializedAsync()
     {
@@ -50,11 +51,19 @@ public partial class BoilerTypesGrid
 
     private async Task EditRow(BoilerTypeEditModel item)
     {
+        _originalItem = new BoilerTypeEditModel
+        {
+            Id = item.Id,
+            Article = item.Article,
+            Type = item.Type,
+            Version = item.Version
+        };
         await _grid!.EditRow(item);
     }
 
     private async Task SaveRow(BoilerTypeEditModel item)
     {
+        _originalItem = null;
         await _grid!.UpdateRow(item);
     }
 
@@ -63,6 +72,12 @@ public partial class BoilerTypesGrid
         if (item == _itemToInsert)
         {
             _itemToInsert = null;
+        }
+        else if (_originalItem != null)
+        {
+            item.Article = _originalItem.Article;
+            item.Type = _originalItem.Type;
+            _originalItem = null;
         }
         _grid!.CancelEditRow(item);
     }
