@@ -1,7 +1,7 @@
 using Final_Test_Hybrid.Models.Database;
 using Microsoft.EntityFrameworkCore;
 
-namespace Final_Test_Hybrid.Services.Database;
+namespace Final_Test_Hybrid.Services.Database.Config;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {

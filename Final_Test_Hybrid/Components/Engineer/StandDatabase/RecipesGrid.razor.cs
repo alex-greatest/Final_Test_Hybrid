@@ -28,6 +28,7 @@ public partial class RecipesGrid
     private RecipeEditModel? _originalItem;
     private long? _selectedBoilerTypeId;
     private readonly PlcType[] _plcTypes = Enum.GetValues<PlcType>();
+    private readonly string[] _boolValues = ["true", "false"];
 
     protected override async Task OnInitializedAsync()
     {
@@ -176,6 +177,24 @@ public partial class RecipesGrid
         {
             Logger.LogError(ex, "Failed to delete Recipe");
             NotificationService.Notify(NotificationSeverity.Error, "Ошибка", ex.Message);
+        }
+    }
+
+    private void ValidateValue(RecipeEditModel item)
+    {
+        var error = item.PlcType switch
+        {
+            PlcType.Real => !double.TryParse(item.Value, out _)
+                ? "Введите число" : null,
+            PlcType.Int16 => !short.TryParse(item.Value, out _)
+                ? "Введите целое число (-32768..32767)" : null,
+            PlcType.Dint => !int.TryParse(item.Value, out _)
+                ? "Введите целое число" : null,
+            _ => null
+        };
+        if (error != null)
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Внимание", error);
         }
     }
 }

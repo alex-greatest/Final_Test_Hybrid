@@ -1,12 +1,12 @@
 using Final_Test_Hybrid.Settings.Database;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Final_Test_Hybrid.Services.Database;
+namespace Final_Test_Hybrid.Services.Database.Config;
 
 public class DatabaseConnectionService(
-    IServiceProvider serviceProvider,
+    IDbContextFactory<AppDbContext> dbContextFactory,
     DatabaseConnectionState connectionState,
     IOptions<DatabaseSettings> options,
     ILogger<DatabaseConnectionService> logger)
@@ -47,8 +47,7 @@ public class DatabaseConnectionService(
     {
         try
         {
-            using var scope = serviceProvider.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync().ConfigureAwait(false);
             var canConnect = await dbContext.Database.CanConnectAsync().ConfigureAwait(false);
             connectionState.SetConnected(canConnect);
             if (!canConnect)

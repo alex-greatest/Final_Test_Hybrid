@@ -1,6 +1,7 @@
 using System.Globalization;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Database;
+using Final_Test_Hybrid.Services.Database.Config;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
@@ -191,7 +192,7 @@ namespace Final_Test_Hybrid
         {
             var dbSettings = _config!.GetSection("Database").Get<DatabaseSettings>();
             services.Configure<DatabaseSettings>(_config!.GetSection("Database"));
-            services.AddDbContext<AppDbContext>(options =>
+            services.AddDbContextFactory<AppDbContext>(options =>
             {
                 options.UseNpgsql(dbSettings?.ConnectionString ?? string.Empty, npgsqlOptions =>
                 {

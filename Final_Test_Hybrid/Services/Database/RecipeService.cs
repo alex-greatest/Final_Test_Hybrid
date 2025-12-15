@@ -1,15 +1,17 @@
 using Final_Test_Hybrid.Models.Database;
+using Final_Test_Hybrid.Services.Database.Config;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Database;
 
 public class RecipeService(
-    AppDbContext dbContext,
+    IDbContextFactory<AppDbContext> dbContextFactory,
     ILogger<RecipeService> logger)
 {
     public async Task<List<Recipe>> GetAllAsync()
     {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         return await dbContext.Recipes
             .Include(r => r.BoilerType)
             .AsNoTracking()
@@ -18,6 +20,7 @@ public class RecipeService(
 
     public async Task<List<Recipe>> GetByBoilerTypeIdAsync(long boilerTypeId)
     {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         return await dbContext.Recipes
             .Include(r => r.BoilerType)
             .Where(r => r.BoilerTypeId == boilerTypeId)
@@ -27,6 +30,7 @@ public class RecipeService(
 
     public async Task<Recipe> CreateAsync(Recipe recipe)
     {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         try
         {
             dbContext.Recipes.Add(recipe);
@@ -43,6 +47,7 @@ public class RecipeService(
 
     public async Task<Recipe> UpdateAsync(Recipe recipe)
     {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         try
         {
             dbContext.Recipes.Update(recipe);
@@ -59,6 +64,7 @@ public class RecipeService(
 
     public async Task DeleteAsync(long id)
     {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         try
         {
             var recipe = await dbContext.Recipes.FirstOrDefaultAsync(r => r.Id == id);

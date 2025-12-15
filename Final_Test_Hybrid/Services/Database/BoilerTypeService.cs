@@ -1,25 +1,29 @@
 using Final_Test_Hybrid.Models.Database;
+using Final_Test_Hybrid.Services.Database.Config;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Database;
 
 public class BoilerTypeService(
-    AppDbContext dbContext,
+    IDbContextFactory<AppDbContext> dbContextFactory,
     ILogger<BoilerTypeService> logger)
 {
     public async Task<List<BoilerType>> GetAllAsync()
     {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         return await dbContext.BoilerTypes.AsNoTracking().ToListAsync();
     }
 
     public async Task<BoilerType?> GetByIdAsync(long id)
     {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         return await dbContext.BoilerTypes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
     }
 
     public async Task<BoilerType> CreateAsync(BoilerType boilerType)
     {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
         try
         {
@@ -48,6 +52,7 @@ public class BoilerTypeService(
 
     public async Task<BoilerType> UpdateAsync(BoilerType boilerType)
     {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
         try
         {
@@ -78,6 +83,7 @@ public class BoilerTypeService(
 
     public async Task DeleteAsync(long id)
     {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
         try
         {

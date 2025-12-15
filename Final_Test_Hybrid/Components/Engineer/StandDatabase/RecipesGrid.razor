@@ -80,7 +80,18 @@
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="Value"
                                       Title="Значение" Width="100px">
                     <EditTemplate Context="item">
-                        <RadzenTextBox @bind-Value="item.Value" class="w-full" />
+                        @if (item.PlcType == PlcType.Bool)
+                        {
+                            <RadzenDropDown @bind-Value="item.Value"
+                                            Data="@_boolValues"
+                                            class="w-full" />
+                        }
+                        else
+                        {
+                            <RadzenTextBox @bind-Value="item.Value"
+                                           class="w-full"
+                                           Change="@(() => ValidateValue(item))" />
+                        }
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="Unit"

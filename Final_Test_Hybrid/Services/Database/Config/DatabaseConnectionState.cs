@@ -1,4 +1,4 @@
-namespace Final_Test_Hybrid.Services.Database;
+namespace Final_Test_Hybrid.Services.Database.Config;
 
 public class DatabaseConnectionState
 {
