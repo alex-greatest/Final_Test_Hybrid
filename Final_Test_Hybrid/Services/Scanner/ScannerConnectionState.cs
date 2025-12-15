@@ -120,23 +120,13 @@ public class ScannerConnectionState : IDisposable
         {
             return;
         }
-        bool shouldNotify;
         lock (_lock)
         {
-            if (_disposed)
-            {
-                return;
-            }
-            if (IsConnected == connected)
+            if (_disposed || IsConnected == connected)
             {
                 return;
             }
             IsConnected = connected;
-            shouldNotify = true;
-        }
-        if (!shouldNotify)
-        {
-            return;
         }
         _logger.LogInformation("Состояние сканера: {State}", connected ? "подключен" : "отключен");
         try

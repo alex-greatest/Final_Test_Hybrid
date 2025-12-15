@@ -56,11 +56,7 @@ public class RawInputService : IDisposable
 
     private void OnScannerConnectionChanged(bool connected)
     {
-        if (_disposed)
-        {
-            return;
-        }
-        if (connected)
+        if (_disposed || connected)
         {
             return;
         }
@@ -163,40 +159,10 @@ public class RawInputService : IDisposable
         }
         try
         {
-            uint size = 0;
-            GetRawInputData(
-                lParam,
-                RID_INPUT,
-                IntPtr.Zero,
-                ref size,
-                (uint)Marshal.SizeOf<RawInputHeader>());
-            if (size == 0)
+            var raw = ReadRawInput(lParam);
+            if (raw.HasValue && !_disposed)
             {
-                return;
-            }
-            var buffer = Marshal.AllocHGlobal((int)size);
-            try
-            {
-                var result = GetRawInputData(
-                    lParam,
-                    RID_INPUT,
-                    buffer,
-                    ref size,
-                    (uint)Marshal.SizeOf<RawInputHeader>());
-                if (result == unchecked((uint)-1))
-                {
-                    return;
-                }
-                if (_disposed)
-                {
-                    return;
-                }
-                var raw = Marshal.PtrToStructure<RawInput>(buffer);
-                ProcessKeyboardInput(raw);
-            }
-            finally
-            {
-                Marshal.FreeHGlobal(buffer);
+                ProcessKeyboardInput(raw.Value);
             }
         }
         catch (ObjectDisposedException)
@@ -212,13 +178,43 @@ public class RawInputService : IDisposable
         }
     }
 
+    private RawInput? ReadRawInput(IntPtr lParam)
+    {
+        uint size = 0;
+        GetRawInputData(
+            lParam,
+            RID_INPUT,
+            IntPtr.Zero,
+            ref size,
+            (uint)Marshal.SizeOf<RawInputHeader>());
+        if (size == 0)
+        {
+            return null;
+        }
+        var buffer = Marshal.AllocHGlobal((int)size);
+        try
+        {
+            var result = GetRawInputData(
+                lParam,
+                RID_INPUT,
+                buffer,
+                ref size,
+                (uint)Marshal.SizeOf<RawInputHeader>());
+            if (result == unchecked((uint)-1))
+            {
+                return null;
+            }
+            return Marshal.PtrToStructure<RawInput>(buffer);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+    }
+
     private void ProcessKeyboardInput(RawInput raw)
     {
-        if (_disposed)
-        {
-            return;
-        }
-        if (raw.Header.Type != RIM_TYPEKEYBOARD)
+        if (_disposed || raw.Header.Type != RIM_TYPEKEYBOARD)
         {
             return;
         }
@@ -289,44 +285,41 @@ public class RawInputService : IDisposable
         }
         try
         {
-            uint size = 0;
-            GetRawInputDeviceInfoW(
-                hDevice,
-                RIDI_DEVICENAME,
-                IntPtr.Zero,
-                ref size);
-            if (size == 0)
+            var deviceName = ReadDeviceName(hDevice);
+            if (!string.IsNullOrEmpty(deviceName))
             {
-                return null;
+                _deviceNameCache.TryAdd(hDevice, deviceName);
             }
-            var buffer = Marshal.AllocHGlobal((int)(size * 2));
-            try
-            {
-                var result = GetRawInputDeviceInfoW(
-                    hDevice,
-                    RIDI_DEVICENAME,
-                    buffer,
-                    ref size);
-                if (result == unchecked((uint)-1))
-                {
-                    return null;
-                }
-                var deviceName = Marshal.PtrToStringUni(buffer);
-                if (!string.IsNullOrEmpty(deviceName))
-                {
-                    _deviceNameCache.TryAdd(hDevice, deviceName);
-                }
-                return deviceName;
-            }
-            finally
-            {
-                Marshal.FreeHGlobal(buffer);
-            }
+            return deviceName;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Ошибка получения имени устройства");
             return null;
+        }
+    }
+
+    private static string? ReadDeviceName(IntPtr hDevice)
+    {
+        uint size = 0;
+        GetRawInputDeviceInfoW(hDevice, RIDI_DEVICENAME, IntPtr.Zero, ref size);
+        if (size == 0)
+        {
+            return null;
+        }
+        var buffer = Marshal.AllocHGlobal((int)(size * 2));
+        try
+        {
+            var result = GetRawInputDeviceInfoW(hDevice, RIDI_DEVICENAME, buffer, ref size);
+            if (result == unchecked((uint)-1))
+            {
+                return null;
+            }
+            return Marshal.PtrToStringUni(buffer);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
         }
     }
 
@@ -401,6 +394,7 @@ public class RawInputService : IDisposable
             _buffer.Clear();
             _scannerDevice = IntPtr.Zero;
         }
+        Unregister();
         _connectionState.ConnectionStateChanged -= OnScannerConnectionChanged;
         _deviceNameCache.Clear();
         _logger.LogInformation("RawInputService disposed");

@@ -34,30 +34,32 @@
 
     private async void OnBarcodeScanned(string barcode)
     {
+        try
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            await InvokeAsync(() => ProcessBarcodeAsync(barcode));
+        }
+        catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException)
+        {
+            // Component or renderer disposed
+        }
+        catch (Exception)
+        {
+            // Async void cannot propagate exceptions
+        }
+    }
+
+    private async Task ProcessBarcodeAsync(string barcode)
+    {
         if (_disposed)
         {
             return;
         }
-        try
-        {
-            await InvokeAsync(async () =>
-            {
-                if (_disposed)
-                {
-                    return;
-                }
-                await OnCodeScanned.InvokeAsync(barcode);
-                DialogService.Close(barcode);
-            });
-        }
-        catch (ObjectDisposedException)
-        {
-            // Component disposed during invocation
-        }
-        catch (InvalidOperationException)
-        {
-            // Renderer disposed
-        }
+        await OnCodeScanned.InvokeAsync(barcode);
+        DialogService.Close(barcode);
     }
 
     private void OnCancel()
