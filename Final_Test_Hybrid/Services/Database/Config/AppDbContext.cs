@@ -66,7 +66,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(e => e.Value).HasColumnName("VALUE").IsRequired().HasMaxLength(255);
             entity.Property(e => e.Description).HasColumnName("DESCRIPTION").HasMaxLength(500);
             entity.Property(e => e.Unit).HasColumnName("UNIT").HasMaxLength(20);
-            entity.Property(e => e.Version).HasColumnName("VERSION").IsConcurrencyToken();
             entity.HasOne(e => e.BoilerType)
                 .WithMany()
                 .HasForeignKey(e => e.BoilerTypeId)

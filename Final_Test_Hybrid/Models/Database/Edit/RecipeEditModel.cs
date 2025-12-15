@@ -11,7 +11,6 @@ public class RecipeEditModel
     public string Value { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? Unit { get; set; }
-    public int Version { get; init; }
     public string? BoilerTypeName { get; set; }
 
     public RecipeEditModel()
@@ -29,7 +28,6 @@ public class RecipeEditModel
         Value = entity.Value;
         Description = entity.Description;
         Unit = entity.Unit;
-        Version = entity.Version;
         BoilerTypeName = entity.BoilerType?.Type;
     }
 
@@ -45,8 +43,7 @@ public class RecipeEditModel
             TagName = TagName,
             Value = Value,
             Description = Description,
-            Unit = Unit,
-            Version = Version
+            Unit = Unit
         };
     }
 }

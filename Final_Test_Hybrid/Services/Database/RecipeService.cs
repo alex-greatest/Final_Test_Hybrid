@@ -18,16 +18,6 @@ public class RecipeService(
             .ToListAsync();
     }
 
-    public async Task<List<Recipe>> GetByBoilerTypeIdAsync(long boilerTypeId)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        return await dbContext.Recipes
-            .Include(r => r.BoilerType)
-            .Where(r => r.BoilerTypeId == boilerTypeId)
-            .AsNoTracking()
-            .ToListAsync();
-    }
-
     public async Task<Recipe> CreateAsync(Recipe recipe)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -45,15 +35,30 @@ public class RecipeService(
         }
     }
 
-    public async Task<Recipe> UpdateAsync(Recipe recipe)
+    public async Task UpdateAsync(Recipe recipe)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         try
         {
-            dbContext.Recipes.Update(recipe);
+            var existing = await dbContext.Recipes.FirstOrDefaultAsync(r => r.Id == recipe.Id);
+            if (existing == null)
+            {
+                throw new InvalidOperationException("Рецепт не найден");
+            }
+            existing.BoilerTypeId = recipe.BoilerTypeId;
+            existing.PlcType = recipe.PlcType;
+            existing.IsPlc = recipe.IsPlc;
+            existing.Address = recipe.Address;
+            existing.TagName = recipe.TagName;
+            existing.Value = recipe.Value;
+            existing.Description = recipe.Description;
+            existing.Unit = recipe.Unit;
             await dbContext.SaveChangesAsync();
             logger.LogInformation("Updated Recipe {Id}", recipe.Id);
-            return recipe;
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -67,11 +72,9 @@ public class RecipeService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         try
         {
-            var recipe = await dbContext.Recipes.FirstOrDefaultAsync(r => r.Id == id);
-            if (recipe != null)
+            var deleted = await dbContext.Recipes.Where(r => r.Id == id).ExecuteDeleteAsync();
+            if (deleted > 0)
             {
-                dbContext.Recipes.Remove(recipe);
-                await dbContext.SaveChangesAsync();
                 logger.LogInformation("Deleted Recipe {Id}", id);
             }
         }

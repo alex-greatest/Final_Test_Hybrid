@@ -10,14 +10,11 @@ namespace Final_Test_Hybrid.Components.Engineer.StandDatabase;
 
 public partial class RecipesGrid
 {
-    [Inject]
-    public required RecipeService RecipeService { get; set; }
-    [Inject]
-    public required BoilerTypeService BoilerTypeService { get; set; }
-    [Inject]
-    public required ILogger<RecipesGrid> Logger { get; set; }
-    [Inject]
-    public required NotificationService NotificationService { get; set; }
+    [Inject] public required RecipeService RecipeService { get; set; }
+    [Inject] public required BoilerTypeService BoilerTypeService { get; set; }
+    [Inject] public required ILogger<RecipesGrid> Logger { get; set; }
+    [Inject] public required NotificationService NotificationService { get; set; }
+    [Inject] public required DialogService DialogService { get; set; }
 
     private List<RecipeEditModel> _recipes = [];
     private List<RecipeEditModel> _filteredRecipes = [];
@@ -35,6 +32,8 @@ public partial class RecipesGrid
         await LoadDataAsync();
     }
 
+    #region Data Loading
+
     private async Task LoadDataAsync()
     {
         try
@@ -44,7 +43,6 @@ public partial class RecipesGrid
             var items = await RecipeService.GetAllAsync();
             _recipes = items.Select(x => new RecipeEditModel(x)).ToList();
             ApplyFilter();
-            StateHasChanged();
         }
         catch (Exception ex)
         {
@@ -60,10 +58,11 @@ public partial class RecipesGrid
             : [];
     }
 
-    private void OnBoilerTypeFilterChanged()
-    {
-        ApplyFilter();
-    }
+    private void OnBoilerTypeFilterChanged() => ApplyFilter();
+
+    #endregion
+
+    #region Row Operations
 
     private async Task AddNewRow()
     {
@@ -71,7 +70,7 @@ public partial class RecipesGrid
         {
             return;
         }
-        var boilerType = _boilerTypes.FirstOrDefault(b => b.Id == _selectedBoilerTypeId.Value);
+        var boilerType = FindBoilerType(_selectedBoilerTypeId.Value);
         _itemToInsert = new RecipeEditModel
         {
             BoilerTypeId = _selectedBoilerTypeId.Value,
@@ -83,26 +82,19 @@ public partial class RecipesGrid
 
     private async Task EditRow(RecipeEditModel item)
     {
-        _originalItem = new RecipeEditModel
-        {
-            Id = item.Id,
-            BoilerTypeId = item.BoilerTypeId,
-            PlcType = item.PlcType,
-            IsPlc = item.IsPlc,
-            Address = item.Address,
-            TagName = item.TagName,
-            Value = item.Value,
-            Description = item.Description,
-            Unit = item.Unit,
-            Version = item.Version,
-            BoilerTypeName = item.BoilerTypeName
-        };
+        _originalItem = CloneEditModel(item);
         await _grid!.EditRow(item);
     }
 
     private async Task SaveRow(RecipeEditModel item)
     {
-        var boilerType = _boilerTypes.FirstOrDefault(b => b.Id == item.BoilerTypeId);
+        var error = GetValueValidationError(item);
+        if (error != null)
+        {
+            ShowError(error);
+            return;
+        }
+        var boilerType = FindBoilerType(item.BoilerTypeId);
         item.BoilerTypeName = boilerType?.Type;
         _originalItem = null;
         await _grid!.UpdateRow(item);
@@ -116,19 +108,39 @@ public partial class RecipesGrid
         }
         else if (_originalItem != null)
         {
-            item.BoilerTypeId = _originalItem.BoilerTypeId;
-            item.PlcType = _originalItem.PlcType;
-            item.IsPlc = _originalItem.IsPlc;
-            item.Address = _originalItem.Address;
-            item.TagName = _originalItem.TagName;
-            item.Value = _originalItem.Value;
-            item.Description = _originalItem.Description;
-            item.Unit = _originalItem.Unit;
-            item.BoilerTypeName = _originalItem.BoilerTypeName;
+            RestoreFromOriginal(item);
             _originalItem = null;
         }
         _grid!.CancelEditRow(item);
     }
+
+    private async Task DeleteRow(RecipeEditModel item)
+    {
+        var confirmed = await DialogService.Confirm(
+            "Удалить рецепт?",
+            "Подтверждение",
+            new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Нет" });
+        if (confirmed != true)
+        {
+            return;
+        }
+        try
+        {
+            await RecipeService.DeleteAsync(item.Id);
+            _recipes.Remove(item);
+            ApplyFilter();
+            ShowSuccess("Рецепт удалён");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete Recipe");
+            ShowError(ex.Message);
+        }
+    }
+
+    #endregion
+
+    #region Grid Events
 
     private async Task OnRowCreate(RecipeEditModel item)
     {
@@ -137,13 +149,13 @@ public partial class RecipesGrid
             var entity = item.ToEntity();
             await RecipeService.CreateAsync(entity);
             _itemToInsert = null;
-            NotificationService.Notify(NotificationSeverity.Success, "Успех", "Рецепт создан");
+            ShowSuccess("Рецепт создан");
             await LoadDataAsync();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to create Recipe");
-            NotificationService.Notify(NotificationSeverity.Error, "Ошибка", ex.Message);
+            ShowError(ex.Message);
             await LoadDataAsync();
         }
     }
@@ -154,31 +166,19 @@ public partial class RecipesGrid
         {
             var entity = item.ToEntity();
             await RecipeService.UpdateAsync(entity);
-            NotificationService.Notify(NotificationSeverity.Success, "Успех", "Рецепт обновлён");
+            ShowSuccess("Рецепт обновлён");
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to update Recipe");
-            NotificationService.Notify(NotificationSeverity.Error, "Ошибка", ex.Message);
+            ShowError(ex.Message);
             await LoadDataAsync();
         }
     }
 
-    private async Task DeleteRow(RecipeEditModel item)
-    {
-        try
-        {
-            await RecipeService.DeleteAsync(item.Id);
-            _recipes.Remove(item);
-            ApplyFilter();
-            NotificationService.Notify(NotificationSeverity.Success, "Успех", "Рецепт удалён");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to delete Recipe");
-            NotificationService.Notify(NotificationSeverity.Error, "Ошибка", ex.Message);
-        }
-    }
+    #endregion
+
+    #region Validation
 
     private void OnPlcTypeChanged(RecipeEditModel item)
     {
@@ -187,19 +187,59 @@ public partial class RecipesGrid
 
     private void ValidateValue(RecipeEditModel item)
     {
-        var error = item.PlcType switch
-        {
-            PlcType.Real => !double.TryParse(item.Value, out _)
-                ? "Введите число" : null,
-            PlcType.Int16 => !short.TryParse(item.Value, out _)
-                ? "Введите целое число (-32768..32767)" : null,
-            PlcType.Dint => !int.TryParse(item.Value, out _)
-                ? "Введите целое число" : null,
-            _ => null
-        };
+        var error = GetValueValidationError(item);
         if (error != null)
         {
             NotificationService.Notify(NotificationSeverity.Warning, "Внимание", error);
         }
     }
+
+    private static string? GetValueValidationError(RecipeEditModel item)
+    {
+        return item.PlcType switch
+        {
+            PlcType.Real => !double.TryParse(item.Value, out _) ? "Введите число" : null,
+            PlcType.Int16 => !short.TryParse(item.Value, out _) ? "Введите целое число (-32768..32767)" : null,
+            PlcType.Dint => !int.TryParse(item.Value, out _) ? "Введите целое число" : null,
+            _ => null
+        };
+    }
+
+    #endregion
+
+    #region Helpers
+
+    private BoilerType? FindBoilerType(long id) =>
+        _boilerTypes.FirstOrDefault(b => b.Id == id);
+
+    private static void CopyEditableProperties(RecipeEditModel source, RecipeEditModel target)
+    {
+        target.BoilerTypeId = source.BoilerTypeId;
+        target.PlcType = source.PlcType;
+        target.IsPlc = source.IsPlc;
+        target.Address = source.Address;
+        target.TagName = source.TagName;
+        target.Value = source.Value;
+        target.Description = source.Description;
+        target.Unit = source.Unit;
+        target.BoilerTypeName = source.BoilerTypeName;
+    }
+
+    private static RecipeEditModel CloneEditModel(RecipeEditModel source)
+    {
+        var clone = new RecipeEditModel { Id = source.Id };
+        CopyEditableProperties(source, clone);
+        return clone;
+    }
+
+    private void RestoreFromOriginal(RecipeEditModel target) =>
+        CopyEditableProperties(_originalItem!, target);
+
+    private void ShowSuccess(string message) =>
+        NotificationService.Notify(NotificationSeverity.Success, "Успех", message);
+
+    private void ShowError(string message) =>
+        NotificationService.Notify(NotificationSeverity.Error, "Ошибка", message);
+
+    #endregion
 }

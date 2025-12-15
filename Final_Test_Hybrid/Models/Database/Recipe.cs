@@ -22,7 +22,5 @@ public class Recipe
     public string? Description { get; set; }
     [StringLength(20)]
     public string? Unit { get; set; }
-    [ConcurrencyCheck]
-    public int Version { get; set; }
     public BoilerType? BoilerType { get; set; }
 }
