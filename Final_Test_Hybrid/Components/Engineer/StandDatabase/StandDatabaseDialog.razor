@@ -27,20 +27,20 @@
                                             RowUpdate="@OnRowUpdate" RowCreate="@OnRowCreate">
                                 <Columns>
                                     <RadzenDataGridColumn TItem="BoilerTypeEditModel" Property="Article"
-                                                          Title="Артикул" Width="150px">
+                                                          Title="Артикул">
                                         <EditTemplate Context="item">
                                             <RadzenTextBox @bind-Value="item.Article"
                                                            MaxLength="10" class="w-full" />
                                         </EditTemplate>
                                     </RadzenDataGridColumn>
                                     <RadzenDataGridColumn TItem="BoilerTypeEditModel" Property="Type"
-                                                          Title="Тип" Width="300px">
+                                                          Title="Тип">
                                         <EditTemplate Context="item">
                                             <RadzenTextBox @bind-Value="item.Type"
                                                            MaxLength="100" class="w-full" />
                                         </EditTemplate>
                                     </RadzenDataGridColumn>
-                                    <RadzenDataGridColumn TItem="BoilerTypeEditModel" Width="120px"
+                                    <RadzenDataGridColumn TItem="BoilerTypeEditModel"
                                                           TextAlign="TextAlign.Center" Sortable="false"
                                                           Filterable="false">
                                         <Template Context="item">
