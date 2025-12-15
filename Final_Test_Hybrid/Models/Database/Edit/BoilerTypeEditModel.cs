@@ -4,10 +4,10 @@ namespace Final_Test_Hybrid.Models.Database.Edit;
 
 public class BoilerTypeEditModel
 {
-    public long Id { get; set; }
+    public long Id { get; init; }
     public string Article { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
-    public int Version { get; set; }
+    public int Version { get; init; }
 
     public BoilerTypeEditModel()
     {
