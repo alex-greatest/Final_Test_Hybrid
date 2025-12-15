@@ -243,8 +243,11 @@ svg {
     justify-content: center !important;
 }
 
-.settings-panel .rz-chkbox-box .rzi {
-    font-size: 22px !important;
+.settings-panel .rzi-check {
+    font-size: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
 .settings-panel .rz-state-active .rz-chkbox-box {
