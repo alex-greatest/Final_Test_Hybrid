@@ -54,7 +54,7 @@
     private async Task OpenUserScanDialog()
     {
         await DialogService.OpenAsync<UserScanDialog>("Авторизация оператора",
-            new Dictionary<string, object> { { "Text", "Отсканируйте бейдж оператора" } },
+            new Dictionary<string, object> { { "Text", "Отсканируйте код оператора" } },
             options: new DialogOptions
             {
                 Width = "450px",
