@@ -12,6 +12,7 @@ internal static class RawInputInterop
     public const uint RIDEV_REMOVE = 0x00000001;
     public const ushort HID_USAGE_PAGE_GENERIC = 0x01;
     public const ushort HID_USAGE_GENERIC_KEYBOARD = 0x06;
+    public const int VK_SHIFT = 0x10;
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool RegisterRawInputDevices(

@@ -30,7 +30,7 @@
     [Parameter]
     public string Text { get; set; } = "Отсканируйте код";
 
-    private ScanSession? _scanSession;
+    private IDisposable? _scanSession;
     private bool _disposed;
     private bool _isLoading;
 

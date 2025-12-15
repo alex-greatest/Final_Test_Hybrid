@@ -162,6 +162,7 @@ public class ScannerConnectionState : IDisposable
                 _watcher.Dispose();
                 _watcher = null;
             }
+            ConnectionStateChanged = null;
             _logger.LogInformation("ScannerConnectionState disposed");
         }
         catch (Exception ex)

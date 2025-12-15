@@ -7,7 +7,7 @@ using static Final_Test_Hybrid.Services.Scanner.RawInput.RawInputInterop;
 
 namespace Final_Test_Hybrid.Services.Scanner.RawInput;
 
-public sealed class ScanSession : IDisposable
+internal sealed class ScanSession : IDisposable
 {
     private readonly Action _onDispose;
     private bool _disposed;
@@ -40,6 +40,7 @@ public class RawInputService : IDisposable
     private IntPtr _scannerDevice = IntPtr.Zero;
     private volatile bool _isRegistered;
     private volatile bool _disposed;
+    private volatile bool _shiftPressed;
 
     public RawInputService(
         IConfiguration configuration,
@@ -133,7 +134,7 @@ public class RawInputService : IDisposable
         }
     }
 
-    public ScanSession RequestScan(Action<string> handler)
+    public IDisposable RequestScan(Action<string> handler)
     {
         lock (_handlerLock)
         {
@@ -222,17 +223,23 @@ public class RawInputService : IDisposable
         {
             return;
         }
-        if (raw.Keyboard.Flags != 0)
+        var vKey = raw.Keyboard.VKey;
+        var isKeyUp = (raw.Keyboard.Flags & 1) != 0;
+        if (vKey is VK_SHIFT or 0xA0 or 0xA1)
+        {
+            _shiftPressed = !isKeyUp;
+            return;
+        }
+        if (isKeyUp)
         {
             return;
         }
-        var vKey = raw.Keyboard.VKey;
         if (vKey == 0x0D)
         {
             CompleteBarcode();
             return;
         }
-        var ch = VKeyToChar(vKey);
+        var ch = VKeyToChar(vKey, _shiftPressed);
         if (ch.HasValue)
         {
             lock (_lock)
@@ -360,11 +367,15 @@ public class RawInputService : IDisposable
         }
     }
 
-    private static char? VKeyToChar(ushort vKey)
+    private static char? VKeyToChar(ushort vKey, bool shiftPressed)
     {
-        if (vKey is >= 0x30 and <= 0x39 or >= 0x41 and <= 0x5A)
+        if (vKey is >= 0x30 and <= 0x39)
         {
             return (char)vKey;
+        }
+        if (vKey is >= 0x41 and <= 0x5A)
+        {
+            return shiftPressed ? (char)vKey : (char)(vKey + 32);
         }
         return vKey switch
         {
@@ -397,6 +408,7 @@ public class RawInputService : IDisposable
         Unregister();
         _connectionState.ConnectionStateChanged -= OnScannerConnectionChanged;
         _deviceNameCache.Clear();
+        BarcodeScanned = null;
         _logger.LogInformation("RawInputService disposed");
         GC.SuppressFinalize(this);
     }
