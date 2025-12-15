@@ -71,4 +71,19 @@ public partial class MainEngineering
     {
         return Task.CompletedTask;
     }
+
+    private async Task OpenStandDatabase()
+    {
+        await DialogService.OpenAsync<StandDatabase.StandDatabaseDialog>("База данных стенда",
+            new Dictionary<string, object>(),
+            new DialogOptions
+            {
+                Width = "95vw",
+                Height = "95vh",
+                Resizable = true,
+                Draggable = true,
+                CssClass = "stand-database-dialog",
+                CloseDialogOnOverlayClick = false
+            });
+    }
 }
