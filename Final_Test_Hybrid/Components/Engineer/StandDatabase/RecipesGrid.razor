@@ -34,19 +34,6 @@
                         AllowColumnResize="true" AllowPaging="false"
                         RowUpdate="@OnRowUpdate" RowCreate="@OnRowCreate">
             <Columns>
-                <RadzenDataGridColumn TItem="RecipeEditModel" Property="BoilerTypeName"
-                                      Title="Тип котла" MinWidth="140px">
-                    <Template Context="item">
-                        @item.BoilerTypeName
-                    </Template>
-                    <EditTemplate Context="item">
-                        <RadzenDropDown @bind-Value="item.BoilerTypeId"
-                                        Data="@_boilerTypes"
-                                        TextProperty="Type"
-                                        ValueProperty="Id"
-                                        class="w-full" />
-                    </EditTemplate>
-                </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="PlcType"
                                       Title="Тип PLC" MinWidth="120px">
                     <Template Context="item">
@@ -55,6 +42,7 @@
                     <EditTemplate Context="item">
                         <RadzenDropDown @bind-Value="item.PlcType"
                                         Data="@_plcTypes"
+                                        Change="@(() => OnPlcTypeChanged(item))"
                                         class="w-full" />
                     </EditTemplate>
                 </RadzenDataGridColumn>
@@ -103,9 +91,9 @@
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="Description"
-                                      Title="Описание" MinWidth="150px">
+                                      Title="Описание" MinWidth="200px">
                     <EditTemplate Context="item">
-                        <RadzenTextBox @bind-Value="item.Description" class="w-full" />
+                        <RadzenTextArea @bind-Value="item.Description" Rows="3" class="w-full" />
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel"

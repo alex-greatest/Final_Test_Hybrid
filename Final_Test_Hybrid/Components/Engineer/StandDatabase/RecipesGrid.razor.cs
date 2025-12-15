@@ -180,6 +180,11 @@ public partial class RecipesGrid
         }
     }
 
+    private void OnPlcTypeChanged(RecipeEditModel item)
+    {
+        item.Value = item.PlcType == PlcType.Bool ? "false" : string.Empty;
+    }
+
     private void ValidateValue(RecipeEditModel item)
     {
         var error = item.PlcType switch
