@@ -9,7 +9,9 @@ public static class DbConstraintErrorHandler
     private static readonly FrozenDictionary<string, string> ConstraintMessages = new Dictionary<string, string>
     {
         ["IDX_TB_BOILER_TYPE_UNQ_ARTICLE"] = "Тип котла с таким артикулом уже существует",
-        ["IDX_TB_BOILER_TYPE_CYCLE_UNQ_ACTIVE"] = "Активная запись для данного типа котла уже существует"
+        ["IDX_TB_BOILER_TYPE_CYCLE_UNQ_ACTIVE"] = "Активная запись для данного типа котла уже существует",
+        ["IDX_TB_RECIPE_UNQ_ADDRESS_BOILER_TYPE"] = "Рецепт с таким адресом для данного типа котла уже существует",
+        ["IDX_TB_RECIPE_UNQ_TAG_NAME_BOILER_TYPE"] = "Рецепт с таким именем тега для данного типа котла уже существует"
     }.ToFrozenDictionary();
 
     private const string DefaultErrorMessage = "Ошибка при работе с базой данных";

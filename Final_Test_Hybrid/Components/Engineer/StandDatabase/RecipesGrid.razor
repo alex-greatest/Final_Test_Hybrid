@@ -1,0 +1,118 @@
+@using Final_Test_Hybrid.Models.Database
+@using Final_Test_Hybrid.Models.Database.Edit
+
+<div class="tab-content">
+    @if (_loadError)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Danger" Shade="Shade.Lighter"
+                     AllowClose="false">
+            Не удалось загрузить данные из базы данных
+        </RadzenAlert>
+    }
+    else
+    {
+        <div class="grid-toolbar">
+            <RadzenDropDown @bind-Value="_selectedBoilerTypeId"
+                            Data="@_boilerTypes"
+                            TextProperty="Type"
+                            ValueProperty="Id"
+                            Placeholder="Все типы котлов"
+                            AllowClear="true"
+                            Change="@OnBoilerTypeFilterChanged"
+                            class="filter-dropdown" />
+            <RadzenButton Icon="refresh" Text="Обновить"
+                          Click="@LoadDataAsync" />
+            <RadzenButton Icon="add" Text="Добавить"
+                          Click="@AddNewRow"
+                          Disabled="@(_selectedBoilerTypeId == null)" />
+        </div>
+        <RadzenDataGrid @ref="_grid" Data="@_filteredRecipes" TItem="RecipeEditModel"
+                        EditMode="DataGridEditMode.Single"
+                        AllowFiltering="true" AllowSorting="true"
+                        AllowColumnResize="true"
+                        RowUpdate="@OnRowUpdate" RowCreate="@OnRowCreate">
+            <Columns>
+                <RadzenDataGridColumn TItem="RecipeEditModel" Property="BoilerTypeName"
+                                      Title="Тип котла" Width="150px">
+                    <Template Context="item">
+                        @item.BoilerTypeName
+                    </Template>
+                    <EditTemplate Context="item">
+                        <RadzenDropDown @bind-Value="item.BoilerTypeId"
+                                        Data="@_boilerTypes"
+                                        TextProperty="Type"
+                                        ValueProperty="Id"
+                                        class="w-full" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RecipeEditModel" Property="PlcType"
+                                      Title="Тип PLC" Width="100px">
+                    <Template Context="item">
+                        @item.PlcType
+                    </Template>
+                    <EditTemplate Context="item">
+                        <RadzenDropDown @bind-Value="item.PlcType"
+                                        Data="@_plcTypes"
+                                        class="w-full" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RecipeEditModel" Property="IsPlc"
+                                      Title="PLC" Width="60px" TextAlign="TextAlign.Center">
+                    <Template Context="item">
+                        <RadzenCheckBox Value="@item.IsPlc" Disabled="true" />
+                    </Template>
+                    <EditTemplate Context="item">
+                        <RadzenCheckBox @bind-Value="item.IsPlc" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RecipeEditModel" Property="Address"
+                                      Title="Адрес" Width="120px">
+                    <EditTemplate Context="item">
+                        <RadzenTextBox @bind-Value="item.Address" class="w-full" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RecipeEditModel" Property="TagName"
+                                      Title="Имя тега" Width="150px">
+                    <EditTemplate Context="item">
+                        <RadzenTextBox @bind-Value="item.TagName" class="w-full" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RecipeEditModel" Property="Value"
+                                      Title="Значение" Width="100px">
+                    <EditTemplate Context="item">
+                        <RadzenTextBox @bind-Value="item.Value" class="w-full" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RecipeEditModel" Property="Unit"
+                                      Title="Ед.изм." Width="80px">
+                    <EditTemplate Context="item">
+                        <RadzenTextBox @bind-Value="item.Unit" MaxLength="20" class="w-full" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RecipeEditModel" Property="Description"
+                                      Title="Описание">
+                    <EditTemplate Context="item">
+                        <RadzenTextBox @bind-Value="item.Description" class="w-full" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RecipeEditModel"
+                                      TextAlign="TextAlign.Center" Sortable="false"
+                                      Filterable="false" Width="90px">
+                    <Template Context="item">
+                        <RadzenButton Icon="edit" Size="ButtonSize.Small"
+                                      Click="@(() => EditRow(item))"/>
+                        <RadzenButton Icon="delete" Size="ButtonSize.Small"
+                                      ButtonStyle="ButtonStyle.Danger"
+                                      Click="@(() => DeleteRow(item))"/>
+                    </Template>
+                    <EditTemplate Context="item">
+                        <RadzenButton Icon="check" Size="ButtonSize.Small"
+                                      Click="@(() => SaveRow(item))"/>
+                        <RadzenButton Icon="close" Size="ButtonSize.Small"
+                                      Click="@(() => CancelEdit(item))"/>
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    }
+</div>

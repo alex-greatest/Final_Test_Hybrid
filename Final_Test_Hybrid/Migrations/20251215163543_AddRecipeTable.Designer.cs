@@ -2,6 +2,7 @@
 using Final_Test_Hybrid.Services.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -10,9 +11,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Final_Test_Hybrid.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251215163543_AddRecipeTable")]
+    partial class AddRecipeTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -113,8 +116,7 @@ namespace Final_Test_Hybrid.Migrations
 
                     b.Property<string>("Address")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("text")
                         .HasColumnName("ADDRESS");
 
                     b.Property<long>("BoilerTypeId")
@@ -122,8 +124,7 @@ namespace Final_Test_Hybrid.Migrations
                         .HasColumnName("BOILER_TYPE_ID");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
+                        .HasColumnType("text")
                         .HasColumnName("DESCRIPTION");
 
                     b.Property<bool>("IsPlc")
@@ -140,8 +141,7 @@ namespace Final_Test_Hybrid.Migrations
 
                     b.Property<string>("TagName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("text")
                         .HasColumnName("TAG_NAME");
 
                     b.Property<string>("Unit")
@@ -151,8 +151,7 @@ namespace Final_Test_Hybrid.Migrations
 
                     b.Property<string>("Value")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
+                        .HasColumnType("text")
                         .HasColumnName("VALUE");
 
                     b.Property<int>("Version")

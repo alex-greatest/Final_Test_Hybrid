@@ -1,0 +1,157 @@
+package com.company.traceability_boiler.entity;
+
+import io.jmix.core.DeletePolicy;
+import io.jmix.core.entity.annotation.JmixGeneratedValue;
+import io.jmix.core.entity.annotation.OnDeleteInverse;
+import io.jmix.core.metamodel.annotation.InstanceName;
+import io.jmix.core.metamodel.annotation.JmixEntity;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+
+@JmixEntity
+@Table(name = "TB_RECIPE", indexes = {
+        @Index(name = "IDX_TB_RECIPE_STATION", columnList = "STATION_ID"),
+        @Index(name = "IDX_TB_RECIPE_BOILER_TYPE", columnList = "BOILER_TYPE_ID")
+}, uniqueConstraints = {
+        @UniqueConstraint(name = "IDX_TB_RECIPE_UNQ_STATION_ID_ADDRESS", columnNames = {"ADDRESS", "STATION_ID", "BOILER_TYPE_ID"}),
+        @UniqueConstraint(name = "IDX_TB_RECIPE_UNQ_STATION_ID_TAG_NAME", columnNames = {"TAG_NAME", "STATION_ID", "BOILER_TYPE_ID"})
+})
+@Entity(name = "tb_Recipe")
+public class Recipe {
+    @JmixGeneratedValue
+    @Column(name = "ID", nullable = false)
+    @Id
+    private Long id;
+
+    @OnDeleteInverse(DeletePolicy.CASCADE)
+    @JoinColumn(name = "BOILER_TYPE_ID", nullable = false)
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    private BoilerType boilerType;
+
+    @Column(name = "PLC_TYPE", nullable = false, length = 30)
+    @NotNull
+    private String plcType;
+
+    @OnDeleteInverse(DeletePolicy.CASCADE)
+    @JoinColumn(name = "STATION_ID", nullable = false)
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    private Station station;
+
+    @Column(name = "IS_PLC")
+    private Boolean isPlc = false;
+
+    @Column(name = "VALUE_", nullable = false)
+    @NotNull
+    private String value;
+
+    @Column(name = "ADDRESS", nullable = false)
+    @NotNull
+    private String address;
+
+    @Column(name = "TAG_NAME", nullable = false)
+    @NotNull
+    private String tagName;
+
+    @InstanceName
+    @Column(name = "DESCRIPTION")
+    @Lob
+    private String description;
+
+    @Column(name = "UNIT", length = 20)
+    private String unit;
+
+    @Column(name = "VERSION", nullable = false)
+    @Version
+    private Integer version;
+
+    public Boolean getIsPlc() {
+        return isPlc;
+    }
+
+    public void setIsPlc(Boolean isPlc) {
+        this.isPlc = isPlc;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
+    }
+
+    public PlcType getPlcType() {
+        return plcType == null ? null : PlcType.fromId(plcType);
+    }
+
+    public void setPlcType(PlcType plcType) {
+        this.plcType = plcType == null ? null : plcType.getId();
+    }
+
+    public BoilerType getBoilerType() {
+        return boilerType;
+    }
+
+    public void setBoilerType(BoilerType boilerType) {
+        this.boilerType = boilerType;
+    }
+
+    public Station getStation() {
+        return station;
+    }
+
+    public void setStation(Station station) {
+        this.station = station;
+    }
+
+    public String getUnit() {
+        return unit;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getTagName() {
+        return tagName;
+    }
+
+    public void setTagName(String tagName) {
+        this.tagName = tagName;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public Integer getVersion() {
+        return version;
+    }
+
+    public void setVersion(Integer version) {
+        this.version = version;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+}
