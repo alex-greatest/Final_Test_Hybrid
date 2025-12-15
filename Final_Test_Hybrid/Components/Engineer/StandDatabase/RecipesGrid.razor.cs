@@ -57,7 +57,7 @@ public partial class RecipesGrid
     {
         _filteredRecipes = _selectedBoilerTypeId.HasValue
             ? _recipes.Where(r => r.BoilerTypeId == _selectedBoilerTypeId.Value).ToList()
-            : _recipes;
+            : [];
     }
 
     private void OnBoilerTypeFilterChanged()

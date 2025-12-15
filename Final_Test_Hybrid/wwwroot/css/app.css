@@ -349,6 +349,7 @@ svg {
 
 .rz-data-grid .rz-dropdown .rz-dropdown-label {
     line-height: 42px !important;
+    color: black !important;
 }
 
 /* TextArea для описания */

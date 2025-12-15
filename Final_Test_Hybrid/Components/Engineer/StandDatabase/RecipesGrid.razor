@@ -31,7 +31,8 @@
         <RadzenDataGrid @ref="_grid" Data="@_filteredRecipes" TItem="RecipeEditModel"
                         EditMode="DataGridEditMode.Single"
                         AllowFiltering="true" AllowSorting="true"
-                        AllowColumnResize="true" AllowPaging="false"
+                        AllowColumnResize="true" AllowColumnReorder="true"
+                        AllowPaging="false"
                         RowUpdate="@OnRowUpdate" RowCreate="@OnRowCreate">
             <Columns>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="PlcType"
