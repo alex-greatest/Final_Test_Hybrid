@@ -18,6 +18,12 @@
     text-align: center;
 }
 
+.loading-text {
+    font-size: 16px;
+    font-weight: 500;
+    color: #666;
+}
+
 .dialog-buttons {
     margin-top: 10px;
 }

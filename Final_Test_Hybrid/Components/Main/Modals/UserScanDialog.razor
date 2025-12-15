@@ -1,6 +1,9 @@
 @using Final_Test_Hybrid.Services.Scanner.RawInput
+@using Final_Test_Hybrid.Services.SpringBoot.Operator
 @inject DialogService DialogService
+@inject NotificationService NotificationService
 @inject RawInputService ScannerService
+@inject OperatorAuthService OperatorAuthService
 @implements IDisposable
 
 <div class="user-scan-dialog">
@@ -10,10 +13,16 @@
         @Text
     </div>
 
+    @if (_isLoading)
+    {
+        <div class="loading-text">Авторизация...</div>
+    }
+
     <div class="dialog-buttons">
         <RadzenButton Text="Отмена"
                       Click="@OnCancel"
-                      ButtonStyle="ButtonStyle.Light" />
+                      ButtonStyle="ButtonStyle.Light"
+                      Disabled="@_isLoading" />
     </div>
 </div>
 
@@ -21,11 +30,9 @@
     [Parameter]
     public string Text { get; set; } = "Отсканируйте код";
 
-    [Parameter]
-    public EventCallback<string> OnCodeScanned { get; set; }
-
     private ScanSession? _scanSession;
     private bool _disposed;
+    private bool _isLoading;
 
     protected override void OnInitialized()
     {
@@ -54,12 +61,32 @@
 
     private async Task ProcessBarcodeAsync(string barcode)
     {
-        if (_disposed)
+        if (_disposed || _isLoading)
         {
             return;
         }
-        await OnCodeScanned.InvokeAsync(barcode);
-        DialogService.Close(barcode);
+        await AuthenticateAsync(barcode);
+    }
+
+    private async Task AuthenticateAsync(string qrCode)
+    {
+        _isLoading = true;
+        StateHasChanged();
+        var result = await OperatorAuthService.AuthenticateByQrAsync(qrCode);
+        _isLoading = false;
+        HandleResult(result);
+    }
+
+    private void HandleResult(OperatorAuthResult result)
+    {
+        if (result.Success)
+        {
+            NotificationService.Notify(NotificationSeverity.Success, "Авторизация успешна");
+            DialogService.Close(true);
+            return;
+        }
+        NotificationService.Notify(NotificationSeverity.Error, result.ErrorMessage ?? "Неизвестная ошибка");
+        StateHasChanged();
     }
 
     private void OnCancel()

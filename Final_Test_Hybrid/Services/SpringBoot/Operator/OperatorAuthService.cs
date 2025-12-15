@@ -15,6 +15,7 @@ public class OperatorAuthService(
     ILogger<OperatorAuthService> logger)
 {
     private const string AuthEndpoint = "/api/operator/auth";
+    private const string QrAuthEndpoint = "/api/operator/auth/Qr";
     private const string LogoutEndpoint = "/api/operator/logout";
 
     public async Task<OperatorAuthResult> AuthenticateAsync(string login, string password, CancellationToken ct = default)
@@ -31,12 +32,51 @@ public class OperatorAuthService(
         }
     }
 
+    public async Task<OperatorAuthResult> AuthenticateByQrAsync(string qrCode, CancellationToken ct = default)
+    {
+        var request = CreateQrRequest(qrCode);
+        try
+        {
+            return await SendQrRequestAsync(request, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "QR authentication request failed");
+            return OperatorAuthResult.Fail("Неизвестная ошибка", isKnownError: false);
+        }
+    }
+
     private OperatorAuthRequest CreateRequest(string login, string password) => new()
     {
         Login = login,
         Password = password,
         StationName = appSettingsService.NameStation
     };
+
+    private OperatorQrAuthRequest CreateQrRequest(string qrCode) => new()
+    {
+        Login = qrCode,
+        Station = appSettingsService.NameStation
+    };
+
+    private async Task<OperatorAuthResult> SendQrRequestAsync(OperatorQrAuthRequest request, CancellationToken ct)
+    {
+        var response = await httpClient.PostWithResponseAsync(QrAuthEndpoint, request, ct);
+        return response.StatusCode switch
+        {
+            HttpStatusCode.OK => await HandleSuccessAsync(response, ct),
+            HttpStatusCode.NotFound => await HandleQrErrorAsync(response, ct),
+            _ => HandleUnexpectedStatus(response.StatusCode)
+        };
+    }
+
+    private async Task<OperatorAuthResult> HandleQrErrorAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>(ct);
+        var message = errorResponse?.Message ?? "Неизвестная ошибка";
+        logger.LogWarning("QR authentication failed: {Message}", message);
+        return OperatorAuthResult.Fail(message, isKnownError: true);
+    }
 
     private async Task<OperatorAuthResult> SendRequestAsync(OperatorAuthRequest request, CancellationToken ct)
     {

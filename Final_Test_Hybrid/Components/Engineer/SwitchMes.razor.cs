@@ -68,7 +68,7 @@ public partial class SwitchMes
     private void ManualLogoutOnModeSwitch()
     {
         OperatorAuthService.ManualLogout();
-        NotificationService.Notify(NotificationSeverity.Info, "Выход выполнен при смене режима");
+        NotificationService.Notify(NotificationSeverity.Info, "Выход из под аккаунта администратора выполнен при смене режима");
     }
 
     private async Task<bool> ShowPasswordDialog()
