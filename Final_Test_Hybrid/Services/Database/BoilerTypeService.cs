@@ -42,7 +42,7 @@ public class BoilerTypeService(
         {
             await transaction.RollbackAsync();
             logger.LogError(ex, "Failed to create BoilerType");
-            throw;
+            throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
 
@@ -53,10 +53,7 @@ public class BoilerTypeService(
         {
             var existingCycle = await dbContext.BoilerTypeCycles
                 .FirstOrDefaultAsync(x => x.BoilerTypeId == boilerType.Id && x.IsActive);
-            if (existingCycle != null)
-            {
-                existingCycle.IsActive = false;
-            }
+            existingCycle?.IsActive = false;
             var newCycle = new BoilerTypeCycle
             {
                 BoilerTypeId = boilerType.Id,
@@ -75,7 +72,7 @@ public class BoilerTypeService(
         {
             await transaction.RollbackAsync();
             logger.LogError(ex, "Failed to update BoilerType {Id}", boilerType.Id);
-            throw;
+            throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
 
@@ -100,7 +97,7 @@ public class BoilerTypeService(
         {
             await transaction.RollbackAsync();
             logger.LogError(ex, "Failed to delete BoilerType {Id}", id);
-            throw;
+            throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
 }
