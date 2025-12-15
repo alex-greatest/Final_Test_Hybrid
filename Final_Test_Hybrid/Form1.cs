@@ -1,5 +1,6 @@
 using System.Globalization;
 using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Database;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
@@ -12,11 +13,13 @@ using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.SpringBoot.Shift;
 using Final_Test_Hybrid.Settings.App;
+using Final_Test_Hybrid.Settings.Database;
 using Final_Test_Hybrid.Settings.OpcUa;
 using Final_Test_Hybrid.Settings.Spring;
 using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Final_Test_Hybrid.Settings.Spring.Shift;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +38,7 @@ namespace Final_Test_Hybrid
         private ShiftService? _shiftService;
         private RawInputService? _rawInputService;
         private RawInputMessageFilter? _rawInputMessageFilter;
+        private DatabaseConnectionService? _databaseConnectionService;
 
         public Form1()
         {
@@ -53,6 +57,7 @@ namespace Final_Test_Hybrid
             RegisterSpringBootServices(services);
             RegisterShiftServices(services);
             RegisterScannerServices(services);
+            RegisterDatabaseServices(services);
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();
@@ -65,6 +70,7 @@ namespace Final_Test_Hybrid
             StartSpringBootHealthCheck(_serviceProvider);
             StartShiftService(_serviceProvider);
             StartRawInputService(_serviceProvider);
+            StartDatabaseService(_serviceProvider);
             blazorWebView1.RootComponents.Add<MyComponent>("#app");
         }
 
@@ -181,6 +187,27 @@ namespace Final_Test_Hybrid
             services.AddSingleton<RawInputService>();
         }
 
+        private void RegisterDatabaseServices(ServiceCollection services)
+        {
+            var dbSettings = _config!.GetSection("Database").Get<DatabaseSettings>();
+            services.Configure<DatabaseSettings>(_config!.GetSection("Database"));
+            services.AddDbContext<AppDbContext>(options =>
+            {
+                options.UseNpgsql(dbSettings?.ConnectionString ?? string.Empty, npgsqlOptions =>
+                {
+                    npgsqlOptions.CommandTimeout(dbSettings?.ConnectionTimeoutSeconds ?? 5);
+                });
+            });
+            services.AddSingleton<DatabaseConnectionState>();
+            services.AddSingleton<DatabaseConnectionService>();
+        }
+
+        private void StartDatabaseService(ServiceProvider serviceProvider)
+        {
+            _databaseConnectionService = serviceProvider.GetRequiredService<DatabaseConnectionService>();
+            _databaseConnectionService.Start();
+        }
+
         private void StartSpringBootHealthCheck(ServiceProvider serviceProvider)
         {
             _springBootHealthService = serviceProvider.GetRequiredService<SpringBootHealthService>();
@@ -212,6 +239,7 @@ namespace Final_Test_Hybrid
             _rawInputService?.Unregister();
             _springBootHealthService?.Stop();
             _shiftService?.Stop();
+            _databaseConnectionService?.Stop();
             if (_opcUaService != null)
             {
                 await _opcUaService.DisconnectAsync();
