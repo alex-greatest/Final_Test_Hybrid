@@ -95,3 +95,22 @@
 ::deep .database-tabs .rz-tabview-title {
     font-size: 25px;
 }
+
+.tab-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 8px;
+    gap: 8px;
+}
+
+.grid-toolbar {
+    display: flex;
+    gap: 8px;
+    padding-bottom: 4px;
+}
+
+::deep .rz-data-grid {
+    flex: 1;
+    min-height: 0;
+}

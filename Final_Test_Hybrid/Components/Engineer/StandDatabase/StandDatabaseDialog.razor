@@ -4,6 +4,62 @@
                     class="database-tabs">
             <Tabs>
                 <RadzenTabsItem Text="Типы котлов">
+                    <div class="tab-content">
+                        @if (_loadError)
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Danger" Shade="Shade.Lighter"
+                                         AllowClose="false">
+                                Не удалось загрузить данные из базы данных
+                            </RadzenAlert>
+                        }
+                        else
+                        {
+                            <div class="grid-toolbar">
+                                <RadzenButton Icon="refresh" Text="Обновить"
+                                              Click="@LoadDataAsync" />
+                                <RadzenButton Icon="add" Text="Добавить"
+                                              Click="@AddNewRow" />
+                            </div>
+                            <RadzenDataGrid @ref="_grid" Data="@_boilerTypes" TItem="BoilerTypeEditModel"
+                                            EditMode="DataGridEditMode.Single"
+                                            AllowFiltering="true" AllowSorting="true"
+                                            RowUpdate="@OnRowUpdate" RowCreate="@OnRowCreate">
+                                <Columns>
+                                    <RadzenDataGridColumn TItem="BoilerTypeEditModel" Property="Article"
+                                                          Title="Артикул" Width="150px">
+                                        <EditTemplate Context="item">
+                                            <RadzenTextBox @bind-Value="item.Article"
+                                                           MaxLength="10" class="w-full" />
+                                        </EditTemplate>
+                                    </RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="BoilerTypeEditModel" Property="Type"
+                                                          Title="Тип" Width="300px">
+                                        <EditTemplate Context="item">
+                                            <RadzenTextBox @bind-Value="item.Type"
+                                                           MaxLength="100" class="w-full" />
+                                        </EditTemplate>
+                                    </RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="BoilerTypeEditModel" Width="120px"
+                                                          TextAlign="TextAlign.Center" Sortable="false"
+                                                          Filterable="false">
+                                        <Template Context="item">
+                                            <RadzenButton Icon="edit" Size="ButtonSize.Small"
+                                                          Click="@(() => EditRow(item))" />
+                                            <RadzenButton Icon="delete" Size="ButtonSize.Small"
+                                                          ButtonStyle="ButtonStyle.Danger"
+                                                          Click="@(() => DeleteRow(item))" />
+                                        </Template>
+                                        <EditTemplate Context="item">
+                                            <RadzenButton Icon="check" Size="ButtonSize.Small"
+                                                          Click="@(() => SaveRow(item))" />
+                                            <RadzenButton Icon="close" Size="ButtonSize.Small"
+                                                          Click="@(() => CancelEdit(item))" />
+                                        </EditTemplate>
+                                    </RadzenDataGridColumn>
+                                </Columns>
+                            </RadzenDataGrid>
+                        }
+                    </div>
                 </RadzenTabsItem>
             </Tabs>
         </RadzenTabs>
