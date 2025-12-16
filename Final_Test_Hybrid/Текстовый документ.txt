@@ -9,19 +9,40 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
 @JmixEntity
-@Table(name = "TB_RECIPE", indexes = {
-        @Index(name = "IDX_TB_RECIPE_STATION", columnList = "STATION_ID"),
-        @Index(name = "IDX_TB_RECIPE_BOILER_TYPE", columnList = "BOILER_TYPE_ID")
+@Table(name = "TB_RESULT_SETTINGS", indexes = {
+        @Index(name = "IDX_TB_RESULT_SETTINGS_BOILER_TYPE", columnList = "BOILER_TYPE_ID"),
+        @Index(name = "IDX_TB_RESULT_SETTINGS_ADDREES_MIN", columnList = "ADDREES_MIN")
 }, uniqueConstraints = {
-        @UniqueConstraint(name = "IDX_TB_RECIPE_UNQ_STATION_ID_ADDRESS", columnNames = {"ADDRESS", "STATION_ID", "BOILER_TYPE_ID"}),
-        @UniqueConstraint(name = "IDX_TB_RECIPE_UNQ_STATION_ID_TAG_NAME", columnNames = {"TAG_NAME", "STATION_ID", "BOILER_TYPE_ID"})
+        @UniqueConstraint(name = "IDX_TB_RESULT_SETTINGS_UNQ_PARAMETER_NAME_BOILER_STATION", columnNames = {"PARAMETER_NAME", "BOILER_TYPE_ID", "STATION_ID"}),
+        @UniqueConstraint(name = "IDX_TB_RESULT_SETTINGS_VALUE_BOILER_STATION", columnNames = {"BOILER_TYPE_ID", "STATION_ID", "ADDRESS_VALUE"})
 })
-@Entity(name = "tb_Recipe")
-public class Recipe {
+@Entity(name = "tb_ResultSettings")
+public class ResultSettings {
     @JmixGeneratedValue
     @Column(name = "ID", nullable = false)
     @Id
     private Long id;
+
+    @Column(name = "PARAMETER_NAME", nullable = false)
+    @NotNull
+    private String parameterName;
+
+    @Column(name = "ADDRESS_VALUE", nullable = false)
+    @NotNull
+    private String addressValue;
+
+    @Column(name = "ADDREES_MIN")
+    private String addreesMin;
+
+    @Column(name = "ADDRESS_MAX")
+    private String addressMax;
+
+    @Column(name = "ADDRESS_STATUS")
+    private String addressStatus;
+
+    @Column(name = "PLC_TYPE", nullable = false)
+    @NotNull
+    private String plcType;
 
     @OnDeleteInverse(DeletePolicy.CASCADE)
     @JoinColumn(name = "BOILER_TYPE_ID", nullable = false)
@@ -29,57 +50,31 @@ public class Recipe {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private BoilerType boilerType;
 
-    @Column(name = "PLC_TYPE", nullable = false, length = 30)
-    @NotNull
-    private String plcType;
+    @Column(name = "NOMINAL", length = 30)
+    private String nominal;
 
-    @OnDeleteInverse(DeletePolicy.CASCADE)
-    @JoinColumn(name = "STATION_ID", nullable = false)
-    @NotNull
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    private Station station;
-
-    @Column(name = "IS_PLC")
-    private Boolean isPlc = false;
-
-    @Column(name = "VALUE_", nullable = false)
-    @NotNull
-    private String value;
-
-    @Column(name = "ADDRESS", nullable = false)
-    @NotNull
-    private String address;
-
-    @Column(name = "TAG_NAME", nullable = false)
-    @NotNull
-    private String tagName;
+    @Column(name = "UNIT", length = 20)
+    private String unit;
 
     @InstanceName
     @Column(name = "DESCRIPTION")
     @Lob
     private String description;
 
-    @Column(name = "UNIT", length = 20)
-    private String unit;
+    @Column(name = "AUDIT_TYPE", nullable = false)
+    @NotNull
+    private String auditType;
 
     @Column(name = "VERSION", nullable = false)
     @Version
     private Integer version;
 
-    public Boolean getIsPlc() {
-        return isPlc;
+    public String getNominal() {
+        return nominal;
     }
 
-    public void setIsPlc(Boolean isPlc) {
-        this.isPlc = isPlc;
-    }
-
-    public String getValue() {
-        return value;
-    }
-
-    public void setValue(String value) {
-        this.value = value;
+    public void setNominal(String nominal) {
+        this.nominal = nominal;
     }
 
     public PlcType getPlcType() {
@@ -90,28 +85,52 @@ public class Recipe {
         this.plcType = plcType == null ? null : plcType.getId();
     }
 
-    public BoilerType getBoilerType() {
-        return boilerType;
+    public void setAddressStatus(String addressStatus) {
+        this.addressStatus = addressStatus;
     }
 
-    public void setBoilerType(BoilerType boilerType) {
-        this.boilerType = boilerType;
-    }
-
-    public Station getStation() {
-        return station;
+    public String getAddressStatus() {
+        return addressStatus;
     }
 
     public void setStation(Station station) {
         this.station = station;
     }
 
-    public String getUnit() {
-        return unit;
+    public Station getStation() {
+        return station;
     }
 
-    public void setUnit(String unit) {
-        this.unit = unit;
+    public String getAddressMax() {
+        return addressMax;
+    }
+
+    public void setAddressMax(String addressMax) {
+        this.addressMax = addressMax;
+    }
+
+    public String getAddreesMin() {
+        return addreesMin;
+    }
+
+    public void setAddreesMin(String addreesMin) {
+        this.addreesMin = addreesMin;
+    }
+
+    public String getAddressValue() {
+        return addressValue;
+    }
+
+    public void setAddressValue(String addressValue) {
+        this.addressValue = addressValue;
+    }
+
+    public AuditType getAuditType() {
+        return auditType == null ? null : AuditType.fromId(auditType);
+    }
+
+    public void setAuditType(AuditType auditType) {
+        this.auditType = auditType == null ? null : auditType.getId();
     }
 
     public String getDescription() {
@@ -122,24 +141,222 @@ public class Recipe {
         this.description = description;
     }
 
-    public String getTagName() {
-        return tagName;
+    public String getUnit() {
+        return unit;
     }
 
-    public void setTagName(String tagName) {
-        this.tagName = tagName;
+    public void setUnit(String unit) {
+        this.unit = unit;
     }
 
-    public String getAddress() {
-        return address;
+    public BoilerType getBoilerType() {
+        return boilerType;
     }
 
-    public void setAddress(String address) {
-        this.address = address;
+    public void setBoilerType(BoilerType boilerType) {
+        this.boilerType = boilerType;
+    }
+
+    public String getParameterName() {
+        return parameterName;
+    }
+
+    public void setParameterName(String parameterName) {
+        this.parameterName = parameterName;
     }
 
     public Integer getVersion() {
         return version;
+    }
+
+  
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+}
+
+
+
+
+
+package com.company.traceability_boiler.entity;
+
+import io.jmix.core.entity.annotation.JmixGeneratedValue;
+import io.jmix.core.metamodel.annotation.InstanceName;
+import io.jmix.core.metamodel.annotation.JmixEntity;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+
+@JmixEntity
+@Table(name = "TB_RESULT_SETTING_HISTORY", indexes = {
+        @Index(name = "IDX_TB_RESULT_SETTING_HISTORY_RESULTS_SETTINGS_ID", columnList = "RESULTS_SETTINGS_ID"),
+        @Index(name = "IDX_TB_RESULT_SETTING_HISTORY_BOILER_TYPE", columnList = "BOILER_TYPE"),
+        @Index(name = "IDX_TB_RESULT_SETTING_HISTORY_STATION_HISTORY", columnList = "STATION_HISTORY")
+})
+@Entity(name = "tb_ResultSettingHistory")
+public class ResultSettingHistory {
+    @JmixGeneratedValue
+    @Column(name = "ID", nullable = false)
+    @Id
+    private Long id;
+
+    @Column(name = "RESULTS_SETTINGS_ID", nullable = false)
+    @NotNull
+    private Long resultsSettingsId;
+
+    @Column(name = "BOILER_TYPE", nullable = false)
+    @NotNull
+    private Long boilerTypeId;
+
+    @Column(name = "PARAMETER_NAME", nullable = false)
+    @NotNull
+    private String parameterName;
+
+    @Column(name = "ADDRESS_VALUE", nullable = false)
+    @NotNull
+    private String addressValue;
+
+    @Column(name = "ADDREES_MIN")
+    private String addreesMin;
+
+    @Column(name = "ADDRESS_MAX")
+    private String addressMax;
+
+    @Column(name = "ADDRESS_STATUS")
+    private String addressStatus;
+
+    @Column(name = "NOMINAL", length = 30)
+    private String nominal;
+
+    @Column(name = "PLC_TYPE", nullable = false)
+    @NotNull
+    private String plcType;
+
+    @Column(name = "UNIT", length = 20)
+    private String unit;
+
+    @InstanceName
+    @Column(name = "DESCRIPTION")
+    @Lob
+    private String description;
+
+    @Column(name = "AUDI_TYPE", nullable = false)
+    @NotNull
+    private String audiType;
+
+    @Column(name = "IS_ACTIVE", nullable = false)
+    @NotNull
+    private Boolean isActive = false;
+
+
+    public String getNominal() {
+        return nominal;
+    }
+
+    public void setNominal(String nominal) {
+        this.nominal = nominal;
+    }
+
+    public void setBoilerTypeId(Long boilerType) {
+        this.boilerTypeId = boilerType;
+    }
+
+    public Long getBoilerTypeId() {
+        return boilerTypeId;
+    }
+
+    public PlcType getPlcType() {
+        return plcType == null ? null : PlcType.fromId(plcType);
+    }
+
+    public void setPlcType(PlcType plcType) {
+        this.plcType = plcType == null ? null : plcType.getId();
+    }
+
+    public void setAddressStatus(String addressStatus) {
+        this.addressStatus = addressStatus;
+    }
+
+    public String getAddressStatus() {
+        return addressStatus;
+    }
+
+    public Long getResultsSettingsId() {
+        return resultsSettingsId;
+    }
+
+    public void setResultsSettingsId(Long resultsSettingsId) {
+        this.resultsSettingsId = resultsSettingsId;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
+    }
+
+    public AuditType getAudiType() {
+        return audiType == null ? null : AuditType.fromId(audiType);
+    }
+
+    public void setAudiType(AuditType audiType) {
+        this.audiType = audiType == null ? null : audiType.getId();
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getUnit() {
+        return unit;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
+    }
+
+    public String getAddressMax() {
+        return addressMax;
+    }
+
+    public void setAddressMax(String addressMax) {
+        this.addressMax = addressMax;
+    }
+
+    public String getAddreesMin() {
+        return addreesMin;
+    }
+
+    public void setAddreesMin(String addreesMin) {
+        this.addreesMin = addreesMin;
+    }
+
+    public String getAddressValue() {
+        return addressValue;
+    }
+
+    public void setAddressValue(String addressValue) {
+        this.addressValue = addressValue;
+    }
+
+    public String getParameterName() {
+        return parameterName;
+    }
+
+    public void setParameterName(String parameterName) {
+        this.parameterName = parameterName;
     }
 
     public void setVersion(Integer version) {
@@ -154,4 +371,34 @@ public class Recipe {
         this.id = id;
     }
 
+}
+
+
+public enum AuditType implements EnumClass<String> {
+
+    NUMERIC_WITH_RANGE("Диапазон"),
+    STATUS("Статус"),
+    SIMPLE("Простое"),
+    SIMPLE_STATUS("Простое_Статус"),
+    BOARD_PARAMETERS("Параметры платы");
+
+    private final String id;
+
+    AuditType(String id) {
+        this.id = id;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    @Nullable
+    public static AuditType fromId(String id) {
+        for (AuditType at : AuditType.values()) {
+            if (at.getId().equals(id)) {
+                return at;
+            }
+        }
+        return null;
+    }
 }
