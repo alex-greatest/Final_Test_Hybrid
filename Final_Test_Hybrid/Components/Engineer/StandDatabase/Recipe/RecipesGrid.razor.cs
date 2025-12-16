@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using Radzen;
 using Radzen.Blazor;
 
-namespace Final_Test_Hybrid.Components.Engineer.StandDatabase;
+namespace Final_Test_Hybrid.Components.Engineer.StandDatabase.Recipe;
 
 public partial class RecipesGrid
 {
@@ -15,7 +15,6 @@ public partial class RecipesGrid
     [Inject] public required ILogger<RecipesGrid> Logger { get; set; }
     [Inject] public required NotificationService NotificationService { get; set; }
     [Inject] public required DialogService DialogService { get; set; }
-
     private List<RecipeEditModel> _recipes = [];
     private List<RecipeEditModel> _filteredRecipes = [];
     private List<BoilerType> _boilerTypes = [];

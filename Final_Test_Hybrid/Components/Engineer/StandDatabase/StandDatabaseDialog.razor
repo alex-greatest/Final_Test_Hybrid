@@ -1,6 +1,9 @@
+@using Final_Test_Hybrid.Components.Engineer.StandDatabase.Recipe
+
 <div class="stand-database-container">
     <div class="tabs-shell">
         <RadzenTabs RenderMode="TabRenderMode.Client" @bind-SelectedIndex="@_selectedIndex"
+                    Change="@OnTabChanged"
                     class="database-tabs">
             <Tabs>
                 <RadzenTabsItem Text="Типы котлов">

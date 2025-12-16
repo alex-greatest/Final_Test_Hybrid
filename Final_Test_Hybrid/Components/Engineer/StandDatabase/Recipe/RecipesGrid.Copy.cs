@@ -1,7 +1,7 @@
 using Final_Test_Hybrid.Models.Database.Edit;
 using Radzen;
 
-namespace Final_Test_Hybrid.Components.Engineer.StandDatabase;
+namespace Final_Test_Hybrid.Components.Engineer.StandDatabase.Recipe;
 
 public partial class RecipesGrid
 {

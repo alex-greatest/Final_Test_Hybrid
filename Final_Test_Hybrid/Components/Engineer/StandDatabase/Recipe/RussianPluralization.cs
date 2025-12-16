@@ -1,4 +1,4 @@
-namespace Final_Test_Hybrid.Components.Engineer.StandDatabase;
+namespace Final_Test_Hybrid.Components.Engineer.StandDatabase.Recipe;
 
 public static class RussianPluralization
 {
