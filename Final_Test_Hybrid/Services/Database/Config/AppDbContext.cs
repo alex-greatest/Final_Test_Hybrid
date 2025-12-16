@@ -101,11 +101,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(e => e.Description).HasColumnName("DESCRIPTION").HasMaxLength(500);
             entity.Property(e => e.AuditType).HasColumnName("AUDIT_TYPE").IsRequired()
                 .HasConversion<string>().HasMaxLength(30);
+            entity.Property(e => e.BoilerTypeId).HasColumnName("BOILER_TYPE_ID").IsRequired();
+            entity.HasOne(e => e.BoilerType).WithMany().HasForeignKey(e => e.BoilerTypeId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => e.BoilerTypeId).HasDatabaseName("IDX_TB_RESULT_SETTINGS_BOILER_TYPE");
             entity.HasIndex(e => e.AddressMin).HasDatabaseName("IDX_TB_RESULT_SETTINGS_ADDRESS_MIN");
-            entity.HasIndex(e => e.ParameterName).IsUnique()
-                .HasDatabaseName("IDX_TB_RESULT_SETTINGS_UNQ_PARAMETER_NAME");
-            entity.HasIndex(e => e.AddressValue).IsUnique()
-                .HasDatabaseName("IDX_TB_RESULT_SETTINGS_UNQ_ADDRESS_VALUE");
+            entity.HasIndex(e => new { e.ParameterName, e.BoilerTypeId }).IsUnique()
+                .HasDatabaseName("IDX_TB_RESULT_SETTINGS_UNQ_PARAMETER_NAME_BOILER_TYPE");
+            entity.HasIndex(e => new { e.AddressValue, e.BoilerTypeId }).IsUnique()
+                .HasDatabaseName("IDX_TB_RESULT_SETTINGS_UNQ_ADDRESS_VALUE_BOILER_TYPE");
         });
     }
 

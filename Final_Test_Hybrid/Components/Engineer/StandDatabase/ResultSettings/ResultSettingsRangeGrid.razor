@@ -1,0 +1,103 @@
+@using Final_Test_Hybrid.Models.Database
+@using Final_Test_Hybrid.Models.Database.Edit
+
+<div class="grid-container">
+    <div class="grid-toolbar">
+        <div class="toolbar-buttons">
+            <RadzenButton Icon="add" Text="Добавить"
+                          Click="@AddNewRow"
+                          Disabled="@(SelectedBoilerTypeId == null)" />
+        </div>
+    </div>
+    <RadzenDataGrid @ref="_grid" Data="@Items" TItem="ResultSettingsEditModel"
+                EditMode="DataGridEditMode.Single"
+                AllowFiltering="true" AllowSorting="true"
+                AllowColumnResize="true" AllowColumnReorder="true"
+                AllowPaging="false">
+    <Columns>
+        <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="ParameterName"
+                              Title="Имя параметра" MinWidth="140px">
+            <EditTemplate Context="item">
+                <RadzenTextBox @bind-Value="item.ParameterName" MaxLength="100" class="w-full" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="AddressValue"
+                              Title="Адрес значения" MinWidth="120px">
+            <EditTemplate Context="item">
+                <RadzenTextBox @bind-Value="item.AddressValue" MaxLength="100" class="w-full" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="AddressMin"
+                              Title="Адрес мин" MinWidth="120px">
+            <EditTemplate Context="item">
+                <RadzenTextBox @bind-Value="item.AddressMin" MaxLength="100" class="w-full" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="AddressMax"
+                              Title="Адрес макс" MinWidth="120px">
+            <EditTemplate Context="item">
+                <RadzenTextBox @bind-Value="item.AddressMax" MaxLength="100" class="w-full" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="PlcType"
+                              Title="Тип PLC" MinWidth="120px">
+            <Template Context="item">
+                @item.PlcType
+            </Template>
+            <EditTemplate Context="item">
+                <RadzenDropDown @bind-Value="item.PlcType"
+                                Data="@_plcTypes"
+                                class="w-full" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="AuditType"
+                              Title="Тип" MinWidth="140px">
+            <Template Context="item">
+                @GetAuditTypeDisplayName(item.AuditType)
+            </Template>
+            <EditTemplate Context="item">
+                <RadzenDropDown @bind-Value="item.AuditType"
+                                Data="@_allowedAuditTypes"
+                                TextProperty="Value"
+                                ValueProperty="Key"
+                                class="w-full" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="Nominal"
+                              Title="Номинал" MinWidth="100px">
+            <EditTemplate Context="item">
+                <RadzenTextBox @bind-Value="item.Nominal" MaxLength="30" class="w-full" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="Unit"
+                              Title="Ед.изм." MinWidth="80px">
+            <EditTemplate Context="item">
+                <RadzenTextBox @bind-Value="item.Unit" MaxLength="20" class="w-full" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="Description"
+                              Title="Описание" MinWidth="200px">
+            <EditTemplate Context="item">
+                <RadzenTextArea @bind-Value="item.Description" MaxLength="500" Rows="2" class="w-full" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ResultSettingsEditModel"
+                              TextAlign="TextAlign.Center" Sortable="false"
+                              Filterable="false" MinWidth="100px">
+            <Template Context="item">
+                <RadzenButton Icon="edit" Size="ButtonSize.Small"
+                              Click="@(() => EditRow(item))"/>
+                <RadzenButton Icon="delete" Size="ButtonSize.Small"
+                              ButtonStyle="ButtonStyle.Danger"
+                              Click="@(() => DeleteRow(item))"/>
+            </Template>
+            <EditTemplate Context="item">
+                <RadzenButton Icon="check" Size="ButtonSize.Small"
+                              Click="@(() => SaveRow(item))"/>
+                <RadzenButton Icon="close" Size="ButtonSize.Small"
+                              Click="@(() => CancelEdit(item))"/>
+            </EditTemplate>
+        </RadzenDataGridColumn>
+    </Columns>
+    </RadzenDataGrid>
+</div>

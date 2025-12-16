@@ -1,0 +1,63 @@
+.tab-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 8px;
+    gap: 8px;
+}
+
+.grid-toolbar {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding-bottom: 8px;
+}
+
+.toolbar-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+/* Кнопки в toolbar */
+.toolbar-buttons ::deep .rz-button {
+    font-size: 20px;
+    padding: 12px 24px;
+}
+
+::deep .result-settings-tabs {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+::deep .result-settings-tabs .rz-tabview-nav li {
+    flex: 0 0 auto;
+}
+
+::deep .result-settings-tabs .rz-tabview-nav-link {
+    white-space: nowrap;
+    padding: 8px 16px;
+}
+
+::deep .result-settings-tabs .rz-tabview-title {
+    font-size: 18px;
+    white-space: nowrap;
+}
+
+::deep .result-settings-tabs .rz-tabview-panels {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+::deep .result-settings-tabs .rz-tabview-panel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}

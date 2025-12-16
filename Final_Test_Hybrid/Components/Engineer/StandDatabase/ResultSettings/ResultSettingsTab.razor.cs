@@ -1,0 +1,77 @@
+using Final_Test_Hybrid.Models.Database;
+using Final_Test_Hybrid.Models.Database.Edit;
+using Final_Test_Hybrid.Services.Database;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
+
+namespace Final_Test_Hybrid.Components.Engineer.StandDatabase.ResultSettings;
+
+public partial class ResultSettingsTab
+{
+    [Inject] public required ResultSettingsService ResultSettingsService { get; set; }
+    [Inject] public required BoilerTypeService BoilerTypeService { get; set; }
+    [Inject] public required ILogger<ResultSettingsTab> Logger { get; set; }
+    private List<ResultSettingsEditModel> _allItems = [];
+    private List<ResultSettingsEditModel> _itemsRange = [];
+    private List<ResultSettingsEditModel> _itemsSimple = [];
+    private List<ResultSettingsEditModel> _itemsBoard = [];
+    private List<BoilerType> _boilerTypes = [];
+    private ResultSettingsRangeGrid? _gridRange;
+    private ResultSettingsSimpleGrid? _gridSimple;
+    private ResultSettingsBoardGrid? _gridBoard;
+    private bool _loadError;
+    private long? _selectedBoilerTypeId;
+    private int _selectedTabIndex;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    public async Task RefreshAsync() => await LoadDataAsync();
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            _loadError = false;
+            _boilerTypes = await BoilerTypeService.GetAllAsync();
+            var items = await ResultSettingsService.GetAllAsync();
+            _allItems = items.Select(x => new ResultSettingsEditModel(x)).ToList();
+            ApplyFilter();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load ResultSettings");
+            _loadError = true;
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        var filtered = _selectedBoilerTypeId.HasValue
+            ? _allItems.Where(r => r.BoilerTypeId == _selectedBoilerTypeId.Value).ToList()
+            : [];
+        _itemsRange = filtered.Where(x => x.AuditType == AuditType.NumericWithRange).ToList();
+        _itemsSimple = filtered.Where(x => x.AuditType == AuditType.SimpleStatus).ToList();
+        _itemsBoard = filtered.Where(x => x.AuditType == AuditType.BoardParameters).ToList();
+    }
+
+    private void OnBoilerTypeFilterChanged()
+    {
+        ApplyFilter();
+        StateHasChanged();
+    }
+
+    private async Task OnItemSaved()
+    {
+        await LoadDataAsync();
+        SelectTabByAuditType();
+    }
+
+    private void SelectTabByAuditType()
+    {
+        // Tab selection will be handled by data refresh
+    }
+}

@@ -1,4 +1,5 @@
 @using Final_Test_Hybrid.Components.Engineer.StandDatabase.Recipe
+@using Final_Test_Hybrid.Components.Engineer.StandDatabase.ResultSettings
 
 <div class="stand-database-container">
     <div class="tabs-shell">
@@ -11,6 +12,9 @@
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Рецепты">
                     <RecipesGrid @ref="_recipesGrid" />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Настройки результатов">
+                    <ResultSettingsTab @ref="_resultSettingsTab" />
                 </RadzenTabsItem>
             </Tabs>
         </RadzenTabs>

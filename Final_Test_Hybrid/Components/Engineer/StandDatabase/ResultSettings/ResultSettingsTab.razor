@@ -1,0 +1,52 @@
+<div class="tab-content">
+    @if (_loadError)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Danger" Shade="Shade.Lighter"
+                     AllowClose="false">
+            Не удалось загрузить данные из базы данных
+        </RadzenAlert>
+    }
+    else
+    {
+        <div class="grid-toolbar">
+            <RadzenDropDown @bind-Value="_selectedBoilerTypeId"
+                            Data="@_boilerTypes"
+                            TextProperty="Type"
+                            ValueProperty="Id"
+                            Placeholder="Все типы котлов"
+                            AllowClear="true"
+                            Change="@OnBoilerTypeFilterChanged"
+                            Style="min-width: 400px; height: 40px; font-size: 20px; font-weight: 700; color: black;" />
+            <div class="toolbar-buttons">
+                <RadzenButton Icon="refresh" Text="Обновить"
+                              Click="@LoadDataAsync" />
+            </div>
+        </div>
+        <RadzenTabs RenderMode="TabRenderMode.Client" @bind-SelectedIndex="@_selectedTabIndex"
+                    class="result-settings-tabs">
+            <Tabs>
+                <RadzenTabsItem Text="Диапазон">
+                    <ResultSettingsRangeGrid @ref="_gridRange"
+                                             Items="@_itemsRange"
+                                             BoilerTypes="@_boilerTypes"
+                                             SelectedBoilerTypeId="@_selectedBoilerTypeId"
+                                             OnSaved="@OnItemSaved" />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Без диапазона">
+                    <ResultSettingsSimpleGrid @ref="_gridSimple"
+                                              Items="@_itemsSimple"
+                                              BoilerTypes="@_boilerTypes"
+                                              SelectedBoilerTypeId="@_selectedBoilerTypeId"
+                                              OnSaved="@OnItemSaved" />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Параметры платы">
+                    <ResultSettingsBoardGrid @ref="_gridBoard"
+                                             Items="@_itemsBoard"
+                                             BoilerTypes="@_boilerTypes"
+                                             SelectedBoilerTypeId="@_selectedBoilerTypeId"
+                                             OnSaved="@OnItemSaved" />
+                </RadzenTabsItem>
+            </Tabs>
+        </RadzenTabs>
+    }
+</div>

@@ -12,8 +12,8 @@ public static class DbConstraintErrorHandler
         ["IDX_TB_BOILER_TYPE_CYCLE_UNQ_ACTIVE"] = "Активная запись для данного типа котла уже существует",
         ["IDX_TB_RECIPE_UNQ_ADDRESS_BOILER_TYPE"] = "Рецепт с таким адресом для данного типа котла уже существует",
         ["IDX_TB_RECIPE_UNQ_TAG_NAME_BOILER_TYPE"] = "Рецепт с таким именем тега для данного типа котла уже существует",
-        ["IDX_TB_RESULT_SETTINGS_UNQ_PARAMETER_NAME"] = "Настройка результата с таким именем параметра уже существует",
-        ["IDX_TB_RESULT_SETTINGS_UNQ_ADDRESS_VALUE"] = "Настройка результата с таким адресом уже существует",
+        ["IDX_TB_RESULT_SETTINGS_UNQ_PARAMETER_NAME_BOILER_TYPE"] = "Настройка результата с таким именем параметра для данного типа котла уже существует",
+        ["IDX_TB_RESULT_SETTINGS_UNQ_ADDRESS_VALUE_BOILER_TYPE"] = "Настройка результата с таким адресом для данного типа котла уже существует",
         ["IDX_TB_RESULT_SETTING_HISTORY_UNQ_ACTIVE"] = "Активная запись истории для данной настройки уже существует"
     }.ToFrozenDictionary();
 
