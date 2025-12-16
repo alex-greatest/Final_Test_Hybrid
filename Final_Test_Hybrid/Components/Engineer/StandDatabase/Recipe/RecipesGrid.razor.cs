@@ -44,6 +44,7 @@ public partial class RecipesGrid
             var items = await RecipeService.GetAllAsync();
             _recipes = items.Select(x => new RecipeEditModel(x)).ToList();
             ApplyFilter();
+            StateHasChanged();
         }
         catch (Exception ex)
         {

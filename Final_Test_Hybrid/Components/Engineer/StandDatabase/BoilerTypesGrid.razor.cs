@@ -154,6 +154,7 @@ public partial class BoilerTypesGrid
         {
             await BoilerTypeService.DeleteAsync(item.Id);
             _boilerTypes.Remove(item);
+            await _grid!.Reload();
             NotificationService.Notify(NotificationSeverity.Success, "Успех", "Тип котла удалён");
             await OnDataChanged.InvokeAsync();
         }
