@@ -1,0 +1,33 @@
+<div class="failed-dialog">
+    <div class="info-message">
+        Не удалось скопировать @FailedRecipes.Count @RussianPluralization.GetRecipeWord(FailedRecipes.Count):
+    </div>
+    <RadzenDataGrid Data="@FailedRecipes" TItem="string"
+                    AllowPaging="false"
+                    AllowSorting="false">
+        <Columns>
+            <RadzenDataGridColumn TItem="string" Title="Имя тега" MinWidth="300px">
+                <Template Context="tagName">
+                    @tagName
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+    <div class="dialog-buttons">
+        <RadzenButton Text="Закрыть" Icon="close"
+                      Click="@OnClose"
+                      ButtonStyle="ButtonStyle.Primary" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public List<string> FailedRecipes { get; set; } = [];
+    [Inject]
+    public required DialogService DialogService { get; set; }
+
+    private void OnClose()
+    {
+        DialogService.Close();
+    }
+}

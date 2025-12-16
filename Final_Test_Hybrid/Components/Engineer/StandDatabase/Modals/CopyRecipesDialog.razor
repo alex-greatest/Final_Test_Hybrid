@@ -1,0 +1,48 @@
+@using Final_Test_Hybrid.Models.Database
+
+<div class="copy-dialog">
+    <div class="field-group">
+        <label class="field-label">Выберите тип котла для копирования:</label>
+        <RadzenDropDown @bind-Value="_selectedBoilerTypeId"
+                        Data="@_availableBoilerTypes"
+                        TextProperty="Type"
+                        ValueProperty="Id"
+                        Placeholder="Выберите тип котла" />
+    </div>
+    <div class="dialog-buttons">
+        <RadzenButton Text="Копировать" Icon="content_copy"
+                      Click="@OnCopy"
+                      ButtonStyle="ButtonStyle.Primary"
+                      Disabled="@(!_selectedBoilerTypeId.HasValue)" />
+        <RadzenButton Text="Отмена" Icon="close"
+                      Click="@OnCancel"
+                      ButtonStyle="ButtonStyle.Light" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public long CurrentBoilerTypeId { get; set; }
+    [Parameter]
+    public List<BoilerType> BoilerTypes { get; set; } = [];
+    [Inject]
+    public required DialogService DialogService { get; set; }
+
+    private long? _selectedBoilerTypeId;
+    private List<BoilerType> _availableBoilerTypes = [];
+
+    protected override void OnParametersSet()
+    {
+        _availableBoilerTypes = BoilerTypes.Where(b => b.Id != CurrentBoilerTypeId).ToList();
+    }
+
+    private void OnCopy()
+    {
+        DialogService.Close(_selectedBoilerTypeId);
+    }
+
+    private void OnCancel()
+    {
+        DialogService.Close(null);
+    }
+}

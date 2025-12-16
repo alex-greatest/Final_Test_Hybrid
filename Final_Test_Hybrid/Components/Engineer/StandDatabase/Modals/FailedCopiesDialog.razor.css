@@ -1,0 +1,58 @@
+.failed-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 10px;
+    height: 100%;
+}
+
+.info-message {
+    font-size: 18px;
+    color: #d32f2f;
+    font-weight: 600;
+}
+
+::deep .rz-data-grid {
+    flex: 1;
+    min-height: 0;
+}
+
+/* Заголовки колонок - из RecipesGrid.razor.css */
+::deep .rz-data-grid .rz-column-title {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+/* Ячейки таблицы - из RecipesGrid.razor.css */
+::deep .rz-data-grid .rz-cell-data {
+    font-size: 19px;
+    color: black !important;
+}
+
+/* Сетка таблицы - из RecipesGrid.razor.css */
+::deep .rz-data-grid .rz-grid-table {
+    border-collapse: collapse;
+}
+
+::deep .rz-data-grid th,
+::deep .rz-data-grid td {
+    border: 1px solid #ccc !important;
+}
+
+/* Заголовки - из RecipesGrid.razor.css */
+::deep .rz-data-grid th {
+    padding: 10px 8px !important;
+    overflow: visible !important;
+    line-height: 1.2 !important;
+    height: auto !important;
+}
+
+.dialog-buttons {
+    display: flex;
+    justify-content: flex-end;
+}
+
+::deep .dialog-buttons .rz-button {
+    font-size: 20px;
+    padding: 12px 24px;
+}

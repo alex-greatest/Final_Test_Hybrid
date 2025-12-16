@@ -34,6 +34,8 @@ public partial class RecipesGrid
 
     #region Data Loading
 
+    public async Task RefreshAsync() => await LoadDataAsync();
+
     private async Task LoadDataAsync()
     {
         try
@@ -56,6 +58,7 @@ public partial class RecipesGrid
         _filteredRecipes = _selectedBoilerTypeId.HasValue
             ? _recipes.Where(r => r.BoilerTypeId == _selectedBoilerTypeId.Value).ToList()
             : [];
+        _selectedRecipes = [];
     }
 
     private void OnBoilerTypeFilterChanged() => ApplyFilter();

@@ -84,4 +84,41 @@ public class RecipeService(
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
+
+    public async Task<List<string>> CopyRecipesToBoilerTypeAsync(
+        IEnumerable<Recipe> recipes,
+        long targetBoilerTypeId)
+    {
+        var failedRecipes = new List<string>();
+        foreach (var recipe in recipes)
+        {
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+            await using var transaction = await dbContext.Database.BeginTransactionAsync();
+            try
+            {
+                var copy = new Recipe
+                {
+                    BoilerTypeId = targetBoilerTypeId,
+                    PlcType = recipe.PlcType,
+                    IsPlc = recipe.IsPlc,
+                    Address = recipe.Address,
+                    TagName = recipe.TagName,
+                    Value = recipe.Value,
+                    Description = recipe.Description,
+                    Unit = recipe.Unit
+                };
+                dbContext.Recipes.Add(copy);
+                await dbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
+                logger.LogInformation("Copied Recipe {TagName} to BoilerType {BoilerTypeId}", recipe.TagName, targetBoilerTypeId);
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                logger.LogError(ex, "Failed to copy Recipe {TagName} to BoilerType {BoilerTypeId}", recipe.TagName, targetBoilerTypeId);
+                failedRecipes.Add(recipe.TagName);
+            }
+        }
+        return failedRecipes;
+    }
 }

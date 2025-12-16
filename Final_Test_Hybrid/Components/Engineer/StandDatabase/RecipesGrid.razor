@@ -26,6 +26,9 @@
                 <RadzenButton Icon="add" Text="Добавить"
                               Click="@AddNewRow"
                               Disabled="@(_selectedBoilerTypeId == null)" />
+                <RadzenButton Icon="content_copy" Text="Копировать"
+                              Click="@CopySelectedRecipes"
+                              Disabled="@(_selectedRecipes.Count == 0)" />
             </div>
         </div>
         <RadzenDataGrid @ref="_grid" Data="@_filteredRecipes" TItem="RecipeEditModel"
@@ -35,6 +38,20 @@
                         AllowPaging="false"
                         RowUpdate="@OnRowUpdate" RowCreate="@OnRowCreate">
             <Columns>
+                <RadzenDataGridColumn TItem="RecipeEditModel" Width="50px"
+                                      Sortable="false" Filterable="false"
+                                      TextAlign="TextAlign.Center">
+                    <HeaderTemplate>
+                        <RadzenCheckBox TValue="bool"
+                                        Value="@(_filteredRecipes.Count > 0 && _selectedRecipes.Count == _filteredRecipes.Count)"
+                                        Change="@OnSelectAllChanged" />
+                    </HeaderTemplate>
+                    <Template Context="item">
+                        <RadzenCheckBox TValue="bool"
+                                        Value="@_selectedRecipes.Contains(item)"
+                                        Change="@(value => OnRowSelectChanged(item, value))" />
+                    </Template>
+                </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="PlcType"
                                       Title="Тип PLC" MinWidth="120px">
                     <Template Context="item">

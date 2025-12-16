@@ -4,10 +4,10 @@
                     class="database-tabs">
             <Tabs>
                 <RadzenTabsItem Text="Типы котлов">
-                    <BoilerTypesGrid />
+                    <BoilerTypesGrid OnDataChanged="@OnBoilerTypesChanged" />
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Рецепты">
-                    <RecipesGrid />
+                    <RecipesGrid @ref="_recipesGrid" />
                 </RadzenTabsItem>
             </Tabs>
         </RadzenTabs>

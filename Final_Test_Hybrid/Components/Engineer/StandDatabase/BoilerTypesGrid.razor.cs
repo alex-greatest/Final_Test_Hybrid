@@ -17,6 +17,8 @@ public partial class BoilerTypesGrid
     public required NotificationService NotificationService { get; set; }
     [Inject]
     public required DialogService DialogService { get; set; }
+    [Parameter]
+    public EventCallback OnDataChanged { get; set; }
 
     private List<BoilerTypeEditModel> _boilerTypes = [];
     private RadzenDataGrid<BoilerTypeEditModel>? _grid;
@@ -111,6 +113,7 @@ public partial class BoilerTypesGrid
             _itemToInsert = null;
             NotificationService.Notify(NotificationSeverity.Success, "Успех", "Тип котла создан");
             await LoadDataAsync();
+            await OnDataChanged.InvokeAsync();
         }
         catch (Exception ex)
         {
@@ -127,6 +130,7 @@ public partial class BoilerTypesGrid
             var entity = item.ToEntity();
             await BoilerTypeService.UpdateAsync(entity);
             NotificationService.Notify(NotificationSeverity.Success, "Успех", "Тип котла обновлён");
+            await OnDataChanged.InvokeAsync();
         }
         catch (Exception ex)
         {
@@ -151,6 +155,7 @@ public partial class BoilerTypesGrid
             await BoilerTypeService.DeleteAsync(item.Id);
             _boilerTypes.Remove(item);
             NotificationService.Notify(NotificationSeverity.Success, "Успех", "Тип котла удалён");
+            await OnDataChanged.InvokeAsync();
         }
         catch (Exception ex)
         {
