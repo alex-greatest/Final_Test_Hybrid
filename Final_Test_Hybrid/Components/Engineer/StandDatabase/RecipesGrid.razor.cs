@@ -88,7 +88,7 @@ public partial class RecipesGrid
 
     private async Task SaveRow(RecipeEditModel item)
     {
-        var error = GetValueValidationError(item);
+        var error = GetValidationError(item);
         if (error != null)
         {
             ShowError(error);
@@ -187,20 +187,33 @@ public partial class RecipesGrid
 
     private void ValidateValue(RecipeEditModel item)
     {
-        var error = GetValueValidationError(item);
+        var error = GetValueTypeError(item);
         if (error != null)
         {
             NotificationService.Notify(NotificationSeverity.Warning, "Внимание", error);
         }
     }
 
-    private static string? GetValueValidationError(RecipeEditModel item)
+    private static string? GetValidationError(RecipeEditModel item)
+    {
+        if (string.IsNullOrWhiteSpace(item.Address))
+        {
+            return "Введите адрес";
+        }
+        if (string.IsNullOrWhiteSpace(item.TagName))
+        {
+            return "Введите имя тега";
+        }
+        return string.IsNullOrWhiteSpace(item.Value) ? "Введите значение" : GetValueTypeError(item);
+    }
+
+    private static string? GetValueTypeError(RecipeEditModel item)
     {
         return item.PlcType switch
         {
-            PlcType.Real => !double.TryParse(item.Value, out _) ? "Введите число" : null,
-            PlcType.Int16 => !short.TryParse(item.Value, out _) ? "Введите целое число (-32768..32767)" : null,
-            PlcType.Dint => !int.TryParse(item.Value, out _) ? "Введите целое число" : null,
+            PlcType.Real => !float.TryParse(item.Value, out _) ? "Значение: введите число" : null,
+            PlcType.Int16 => !short.TryParse(item.Value, out _) ? "Значение: введите целое число (-32768..32767)" : null,
+            PlcType.Dint => !int.TryParse(item.Value, out _) ? "Значение: введите целое число" : null,
             _ => null
         };
     }

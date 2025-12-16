@@ -15,6 +15,8 @@ public partial class BoilerTypesGrid
     public required ILogger<BoilerTypesGrid> Logger { get; set; }
     [Inject]
     public required NotificationService NotificationService { get; set; }
+    [Inject]
+    public required DialogService DialogService { get; set; }
 
     private List<BoilerTypeEditModel> _boilerTypes = [];
     private RadzenDataGrid<BoilerTypeEditModel>? _grid;
@@ -55,16 +57,34 @@ public partial class BoilerTypesGrid
         {
             Id = item.Id,
             Article = item.Article,
-            Type = item.Type,
-            Version = item.Version
+            Type = item.Type
         };
         await _grid!.EditRow(item);
     }
 
     private async Task SaveRow(BoilerTypeEditModel item)
     {
+        var error = GetValidationError(item);
+        if (error != null)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Ошибка", error);
+            return;
+        }
         _originalItem = null;
         await _grid!.UpdateRow(item);
+    }
+
+    private static string? GetValidationError(BoilerTypeEditModel item)
+    {
+        if (string.IsNullOrWhiteSpace(item.Type))
+        {
+            return "Введите тип котла";
+        }
+        if (string.IsNullOrWhiteSpace(item.Article) || item.Article.Length != 10)
+        {
+            return "Артикул должен содержать ровно 10 символов";
+        }
+        return null;
     }
 
     private void CancelEdit(BoilerTypeEditModel item)
@@ -118,6 +138,14 @@ public partial class BoilerTypesGrid
 
     private async Task DeleteRow(BoilerTypeEditModel item)
     {
+        var confirmed = await DialogService.Confirm(
+            "Удалить тип котла? Все связанные рецепты будут удалены.",
+            "Подтверждение",
+            new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Нет" });
+        if (confirmed != true)
+        {
+            return;
+        }
         try
         {
             await BoilerTypeService.DeleteAsync(item.Id);

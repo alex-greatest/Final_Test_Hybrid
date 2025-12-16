@@ -15,12 +15,6 @@ public class BoilerTypeService(
         return await dbContext.BoilerTypes.AsNoTracking().ToListAsync();
     }
 
-    public async Task<BoilerType?> GetByIdAsync(long id)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        return await dbContext.BoilerTypes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
-    }
-
     public async Task<BoilerType> CreateAsync(BoilerType boilerType)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -50,12 +44,19 @@ public class BoilerTypeService(
         }
     }
 
-    public async Task<BoilerType> UpdateAsync(BoilerType boilerType)
+    public async Task UpdateAsync(BoilerType boilerType)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
         try
         {
+            var existing = await dbContext.BoilerTypes.FirstOrDefaultAsync(x => x.Id == boilerType.Id);
+            if (existing == null)
+            {
+                throw new InvalidOperationException("Тип котла не найден");
+            }
+            existing.Article = boilerType.Article;
+            existing.Type = boilerType.Type;
             var existingCycle = await dbContext.BoilerTypeCycles
                 .FirstOrDefaultAsync(x => x.BoilerTypeId == boilerType.Id && x.IsActive);
             existingCycle?.IsActive = false;
@@ -67,11 +68,13 @@ public class BoilerTypeService(
                 IsActive = true
             };
             dbContext.BoilerTypeCycles.Add(newCycle);
-            dbContext.BoilerTypes.Update(boilerType);
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
             logger.LogInformation("Updated BoilerType {Id} with new active cycle", boilerType.Id);
-            return boilerType;
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -87,21 +90,21 @@ public class BoilerTypeService(
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
         try
         {
+            var boilerType = await dbContext.BoilerTypes.FirstOrDefaultAsync(x => x.Id == id);
+            if (boilerType == null)
+            {
+                return;
+            }
             var activeCycle = await dbContext.BoilerTypeCycles
                 .FirstOrDefaultAsync(x => x.BoilerTypeId == id && x.IsActive);
             activeCycle?.IsActive = false;
-            var boilerType = await dbContext.BoilerTypes.FirstOrDefaultAsync(x => x.Id == id);
-            if (boilerType != null)
-            {
-                dbContext.BoilerTypes.Remove(boilerType);
-            }
+            dbContext.BoilerTypes.Remove(boilerType);
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
             logger.LogInformation("Deleted BoilerType {Id}", id);
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
             logger.LogError(ex, "Failed to delete BoilerType {Id}", id);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }

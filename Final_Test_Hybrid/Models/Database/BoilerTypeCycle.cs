@@ -15,6 +15,4 @@ public class BoilerTypeCycle
     [Required]
     [StringLength(10)]
     public string Article { get; set; } = string.Empty;
-    [ConcurrencyCheck]
-    public int Version { get; set; }
 }

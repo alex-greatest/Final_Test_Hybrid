@@ -26,7 +26,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(e => e.Id).HasColumnName("ID").ValueGeneratedOnAdd();
             entity.Property(e => e.Article).HasColumnName("ARTICLE").IsRequired().HasMaxLength(10);
             entity.Property(e => e.Type).HasColumnName("TYPE").IsRequired().HasMaxLength(100);
-            entity.Property(e => e.Version).HasColumnName("VERSION").IsConcurrencyToken();
             entity.HasIndex(e => e.Article).IsUnique().HasDatabaseName("IDX_TB_BOILER_TYPE_UNQ_ARTICLE");
         });
     }
@@ -42,7 +41,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(e => e.Type).HasColumnName("TYPE").IsRequired().HasMaxLength(100);
             entity.Property(e => e.IsActive).HasColumnName("IS_ACTIVE").IsRequired().HasDefaultValue(false);
             entity.Property(e => e.Article).HasColumnName("ARTICLE").IsRequired().HasMaxLength(10);
-            entity.Property(e => e.Version).HasColumnName("VERSION").IsConcurrencyToken();
             entity.HasIndex(e => e.BoilerTypeId)
                 .IsUnique()
                 .HasFilter("\"IS_ACTIVE\" = true")
