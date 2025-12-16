@@ -203,6 +203,7 @@ namespace Final_Test_Hybrid
             services.AddSingleton<DatabaseConnectionService>();
             services.AddScoped<BoilerTypeService>();
             services.AddScoped<RecipeService>();
+            services.AddScoped<ResultSettingsService>();
         }
 
         private void StartDatabaseService(ServiceProvider serviceProvider)

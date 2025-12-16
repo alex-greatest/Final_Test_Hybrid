@@ -27,4 +27,7 @@ public class ResultSettings
     public string? Description { get; set; }
     [Required]
     public AuditType AuditType { get; set; }
+    [Required]
+    public long BoilerTypeId { get; set; }
+    public BoilerType? BoilerType { get; set; }
 }
