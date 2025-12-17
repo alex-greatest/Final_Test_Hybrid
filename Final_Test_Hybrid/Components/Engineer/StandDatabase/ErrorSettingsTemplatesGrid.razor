@@ -1,0 +1,71 @@
+@using Final_Test_Hybrid.Models.Database.Edit
+
+<div class="tab-content">
+    @if (_loadError)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Danger" Shade="Shade.Lighter"
+                     AllowClose="false">
+            Не удалось загрузить данные из базы данных
+        </RadzenAlert>
+    }
+    else
+    {
+        <div class="grid-toolbar">
+            <RadzenButton Icon="refresh" Text="Обновить"
+                          Click="@LoadDataAsync" />
+            <RadzenButton Icon="add" Text="Добавить"
+                          Click="@AddNewRow" />
+        </div>
+        <RadzenDataGrid @ref="_grid" Data="@_templates" TItem="ErrorSettingsTemplateEditModel"
+                        EditMode="DataGridEditMode.Single"
+                        AllowFiltering="true" AllowSorting="true"
+                        AllowColumnResize="true">
+            <Columns>
+                <RadzenDataGridColumn TItem="ErrorSettingsTemplateEditModel" Property="AddressError"
+                                      Title="Адрес ошибки" MinWidth="200px">
+                    <EditTemplate Context="item">
+                        <RadzenTextBox @bind-Value="item.AddressError"
+                                       MaxLength="500" class="w-full" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ErrorSettingsTemplateEditModel" Property="Description"
+                                      Title="Описание" MinWidth="200px">
+                    <EditTemplate Context="item">
+                        <RadzenTextBox @bind-Value="item.Description"
+                                       MaxLength="500" class="w-full" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ErrorSettingsTemplateEditModel" Property="StepName"
+                                      Title="Шаг теста" MinWidth="200px">
+                    <Template Context="item">
+                        @(item.StepName ?? "—")
+                    </Template>
+                    <EditTemplate Context="item">
+                        <div class="step-select-cell">
+                            <span class="step-name">@(item.StepName ?? "—")</span>
+                            <RadzenButton Icon="more_horiz" Size="ButtonSize.Small"
+                                          Click="@(() => OpenStepSelectDialog(item))" />
+                        </div>
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ErrorSettingsTemplateEditModel"
+                                      TextAlign="TextAlign.Center" Sortable="false"
+                                      Filterable="false" MinWidth="100px">
+                    <Template Context="item">
+                        <RadzenButton Icon="edit" Size="ButtonSize.Small"
+                                      Click="@(() => EditRow(item))"/>
+                        <RadzenButton Icon="delete" Size="ButtonSize.Small"
+                                      ButtonStyle="ButtonStyle.Danger"
+                                      Click="@(() => DeleteRow(item))"/>
+                    </Template>
+                    <EditTemplate Context="item">
+                        <RadzenButton Icon="check" Size="ButtonSize.Small"
+                                      Click="@(() => SaveRow(item))"/>
+                        <RadzenButton Icon="close" Size="ButtonSize.Small"
+                                      Click="@(() => CancelEdit(item))"/>
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    }
+</div>

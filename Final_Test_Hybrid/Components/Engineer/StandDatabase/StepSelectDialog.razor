@@ -1,0 +1,37 @@
+@using Final_Test_Hybrid.Models.Database
+
+<div class="step-select-dialog">
+    @if (_loadError)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Danger" Shade="Shade.Lighter"
+                     AllowClose="false">
+            Не удалось загрузить список шагов
+        </RadzenAlert>
+    }
+    else
+    {
+        <div class="dialog-toolbar">
+            <RadzenButton Text="Очистить" Icon="clear"
+                          Click="@OnClearClick"
+                          ButtonStyle="ButtonStyle.Light" />
+        </div>
+        <RadzenDataGrid @ref="_grid" Data="@_steps" TItem="StepFinalTest"
+                        AllowFiltering="true" AllowSorting="true"
+                        SelectionMode="DataGridSelectionMode.Single"
+                        @bind-Value="_selectedItems"
+                        RowDoubleClick="@OnRowDoubleClick">
+            <Columns>
+                <RadzenDataGridColumn TItem="StepFinalTest" Property="Name"
+                                      Title="Название шага" />
+            </Columns>
+        </RadzenDataGrid>
+    }
+    <div class="dialog-buttons">
+        <RadzenButton Text="Выбрать" Icon="check"
+                      Click="@OnSelectClick"
+                      Disabled="@(_selectedItems.Count == 0 || _loadError)" />
+        <RadzenButton Text="Отмена" Icon="close"
+                      Click="@OnCancelClick"
+                      ButtonStyle="ButtonStyle.Light" />
+    </div>
+</div>

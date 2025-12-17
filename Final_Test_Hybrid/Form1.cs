@@ -205,6 +205,7 @@ namespace Final_Test_Hybrid
             services.AddScoped<RecipeService>();
             services.AddScoped<ResultSettingsService>();
             services.AddScoped<StepFinalTestService>();
+            services.AddScoped<ErrorSettingsTemplateService>();
         }
 
         private void StartDatabaseService(ServiceProvider serviceProvider)
