@@ -54,7 +54,8 @@
 }
 
 /* Сетка таблицы */
-::deep .rz-data-grid .rz-grid-table {
+::deep .rz-grid-table {
+    width: unset !important;
     border-collapse: collapse;
 }
 
@@ -77,7 +78,7 @@
 ::deep .rz-data-grid .rz-column-title {
     overflow: visible !important;
     text-overflow: clip !important;
-    white-space: normal !important;
+    white-space: nowrap !important;
     height: auto !important;
 }
 

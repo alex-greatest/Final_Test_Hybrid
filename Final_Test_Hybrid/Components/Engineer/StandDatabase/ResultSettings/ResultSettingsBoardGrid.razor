@@ -22,13 +22,13 @@
             </EditTemplate>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="ParameterName"
-                              Title="Название параметра" MinWidth="140px">
+                              Title="Название параметра" MinWidth="120px">
             <EditTemplate Context="item">
                 <RadzenTextBox @bind-Value="item.ParameterName" MaxLength="100" class="w-full" />
             </EditTemplate>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="PlcType"
-                              Title="Тип PLC" MinWidth="120px">
+                              Title="Тип PLC" MinWidth="100px">
             <Template Context="item">
                 @item.PlcType
             </Template>
@@ -39,7 +39,7 @@
             </EditTemplate>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="AuditType"
-                              Title="Тип" MinWidth="140px">
+                              Title="Тип" MinWidth="100px">
             <Template Context="item">
                 @GetAuditTypeDisplayName(item.AuditType)
             </Template>
@@ -64,7 +64,7 @@
             </EditTemplate>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="Description"
-                              Title="Описание" MinWidth="200px">
+                              Title="Описание" MinWidth="120px">
             <EditTemplate Context="item">
                 <RadzenTextArea @bind-Value="item.Description" MaxLength="500" Rows="2" class="w-full" />
             </EditTemplate>
