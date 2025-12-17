@@ -97,10 +97,31 @@ public partial class RecipesGrid
             ShowError(error);
             return;
         }
-        var boilerType = FindBoilerType(item.BoilerTypeId);
-        item.BoilerTypeName = boilerType?.Type;
-        _originalItem = null;
-        await _grid!.UpdateRow(item);
+        try
+        {
+            var boilerType = FindBoilerType(item.BoilerTypeId);
+            item.BoilerTypeName = boilerType?.Type;
+            var entity = item.ToEntity();
+            if (item == _itemToInsert)
+            {
+                await RecipeService.CreateAsync(entity);
+                _itemToInsert = null;
+                ShowSuccess("Рецепт создан");
+            }
+            else
+            {
+                await RecipeService.UpdateAsync(entity);
+                ShowSuccess("Рецепт обновлён");
+            }
+            _originalItem = null;
+            _grid!.CancelEditRow(item);
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to save Recipe");
+            ShowError(ex.Message);
+        }
     }
 
     private void CancelEdit(RecipeEditModel item)
@@ -138,44 +159,6 @@ public partial class RecipesGrid
         {
             Logger.LogError(ex, "Failed to delete Recipe");
             ShowError(ex.Message);
-        }
-    }
-
-    #endregion
-
-    #region Grid Events
-
-    private async Task OnRowCreate(RecipeEditModel item)
-    {
-        try
-        {
-            var entity = item.ToEntity();
-            await RecipeService.CreateAsync(entity);
-            _itemToInsert = null;
-            ShowSuccess("Рецепт создан");
-            await LoadDataAsync();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to create Recipe");
-            ShowError(ex.Message);
-            await LoadDataAsync();
-        }
-    }
-
-    private async Task OnRowUpdate(RecipeEditModel item)
-    {
-        try
-        {
-            var entity = item.ToEntity();
-            await RecipeService.UpdateAsync(entity);
-            ShowSuccess("Рецепт обновлён");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to update Recipe");
-            ShowError(ex.Message);
-            await LoadDataAsync();
         }
     }
 

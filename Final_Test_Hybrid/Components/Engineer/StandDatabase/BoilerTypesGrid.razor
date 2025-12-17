@@ -19,8 +19,7 @@
         <RadzenDataGrid @ref="_grid" Data="@_boilerTypes" TItem="BoilerTypeEditModel"
                         EditMode="DataGridEditMode.Single"
                         AllowFiltering="true" AllowSorting="true"
-                        AllowColumnResize="true"
-                        RowUpdate="@OnRowUpdate" RowCreate="@OnRowCreate">
+                        AllowColumnResize="true">
             <Columns>
                 <RadzenDataGridColumn TItem="BoilerTypeEditModel" Property="Type"
                                       Title="Тип">

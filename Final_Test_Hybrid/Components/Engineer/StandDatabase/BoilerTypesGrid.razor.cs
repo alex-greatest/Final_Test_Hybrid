@@ -69,11 +69,33 @@ public partial class BoilerTypesGrid
         var error = GetValidationError(item);
         if (error != null)
         {
-            NotificationService.Notify(NotificationSeverity.Error, "Ошибка", error);
+            ShowError(error);
             return;
         }
-        _originalItem = null;
-        await _grid!.UpdateRow(item);
+        try
+        {
+            var entity = item.ToEntity();
+            if (item == _itemToInsert)
+            {
+                await BoilerTypeService.CreateAsync(entity);
+                _itemToInsert = null;
+                ShowSuccess("Тип котла создан");
+            }
+            else
+            {
+                await BoilerTypeService.UpdateAsync(entity);
+                ShowSuccess("Тип котла обновлён");
+            }
+            _originalItem = null;
+            _grid!.CancelEditRow(item);
+            await LoadDataAsync();
+            await OnDataChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to save BoilerType");
+            ShowError(ex.Message);
+        }
     }
 
     private static string? GetValidationError(BoilerTypeEditModel item)
@@ -104,42 +126,6 @@ public partial class BoilerTypesGrid
         _grid!.CancelEditRow(item);
     }
 
-    private async Task OnRowCreate(BoilerTypeEditModel item)
-    {
-        try
-        {
-            var entity = item.ToEntity();
-            await BoilerTypeService.CreateAsync(entity);
-            _itemToInsert = null;
-            NotificationService.Notify(NotificationSeverity.Success, "Успех", "Тип котла создан");
-            await LoadDataAsync();
-            await OnDataChanged.InvokeAsync();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to create BoilerType");
-            NotificationService.Notify(NotificationSeverity.Error, "Ошибка", ex.Message);
-            await LoadDataAsync();
-        }
-    }
-
-    private async Task OnRowUpdate(BoilerTypeEditModel item)
-    {
-        try
-        {
-            var entity = item.ToEntity();
-            await BoilerTypeService.UpdateAsync(entity);
-            NotificationService.Notify(NotificationSeverity.Success, "Успех", "Тип котла обновлён");
-            await OnDataChanged.InvokeAsync();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to update BoilerType");
-            NotificationService.Notify(NotificationSeverity.Error, "Ошибка", ex.Message);
-            await LoadDataAsync();
-        }
-    }
-
     private async Task DeleteRow(BoilerTypeEditModel item)
     {
         var confirmed = await DialogService.Confirm(
@@ -155,14 +141,19 @@ public partial class BoilerTypesGrid
             await BoilerTypeService.DeleteAsync(item.Id);
             _boilerTypes.Remove(item);
             await _grid!.Reload();
-            NotificationService.Notify(NotificationSeverity.Success, "Успех", "Тип котла удалён");
+            ShowSuccess("Тип котла удалён");
             await OnDataChanged.InvokeAsync();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to delete BoilerType");
-            NotificationService.Notify(NotificationSeverity.Error, "Ошибка", ex.Message);
+            ShowError(ex.Message);
         }
     }
 
+    private void ShowSuccess(string message) =>
+        NotificationService.Notify(NotificationSeverity.Success, "Успех", message);
+
+    private void ShowError(string message) =>
+        NotificationService.Notify(NotificationSeverity.Error, "Ошибка", message);
 }
