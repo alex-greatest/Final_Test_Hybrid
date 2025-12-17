@@ -73,6 +73,18 @@ TestSequenceEditor.Save.cs         # Save operations
 TestSequenceEditor.Actions.cs      # Context menu and row actions
 ```
 
+**StandDatabase Components (`Components/Engineer/StandDatabase/`):**
+```
+StandDatabaseDialog.razor          # Главный диалог с табами
+BoilerTypesGrid.razor              # Типы котлов (CRUD)
+Recipe/RecipesGrid.razor           # Рецепты (CRUD + Copy)
+Recipe/RecipesGrid.Copy.cs         # Логика копирования рецептов
+ResultSettings/ResultSettingsTab   # Настройки результатов (3 вкладки + Copy)
+StepFinalTestsGrid.razor           # Шаги финального теста
+ErrorSettingsTemplatesGrid.razor   # Шаблоны ошибок
+Modals/                            # Диалоги копирования и ошибок
+```
+
 ### Service Layer
 
 **Core Services:**
@@ -81,6 +93,14 @@ TestSequenceEditor.Actions.cs      # Context menu and row actions
 - `WinFormsFilePickerService` - Provides Windows file dialogs with security constraints (enforces selection within authorized root path)
 - `NotificationServiceWrapper` - Thread-safe Radzen notification wrapper with message deduplication
 - `IndicatorHelper` - Utility for status indicator image paths
+
+**Database Services (`Services/Database/`):**
+- `BoilerTypeService` - CRUD для типов котлов
+- `RecipeService` - CRUD + копирование рецептов между типами котлов
+- `ResultSettingsService` - CRUD + копирование настроек результатов
+- `StepFinalTestService` - CRUD для шагов финального теста
+- `ErrorSettingsTemplateService` - CRUD для шаблонов ошибок
+- `DatabaseConnectionService` - Управление подключением к SQLite
 
 ### Configuration (appsettings.json)
 
@@ -213,6 +233,25 @@ await Task.Delay(500);
 row.CssClass = "";
 ```
 
+### Tab Refresh Pattern (HashSet)
+
+Независимое обновление табов при изменении данных в другом табе:
+```csharp
+private readonly HashSet<int> _tabsNeedingRefresh = [];
+
+private void MarkDependentTabsForRefresh()
+{
+    _tabsNeedingRefresh.Add(RecipesTabIndex);
+    _tabsNeedingRefresh.Add(ResultSettingsTabIndex);
+}
+
+private async Task OnTabChanged(int tabIndex)
+{
+    if (!_tabsNeedingRefresh.Remove(tabIndex)) return;
+    await RefreshTabContent(tabIndex);
+}
+```
+
 ## Important Implementation Notes
 
 ### Current State
@@ -233,9 +272,12 @@ row.CssClass = "";
 
 ### Recent Changes
 
+- Добавлены Database сервисы для работы с SQLite (BoilerType, Recipe, ResultSettings, StepFinalTest, ErrorSettingsTemplate)
+- Добавлены StandDatabase компоненты для управления данными стенда
+- Реализована функция копирования рецептов и настроек между типами котлов
+- Исправлено обновление dropdown при изменении типов котлов (HashSet паттерн)
 - OPC UA folder added to project structure
-- Services refactored to `Services/Settings/IO` namespace
-- PlcIndicator component removed from MyComponent.razor
+- Services refactored to `Services/Common/` namespace
 
 ### Known Issues
 
@@ -247,7 +289,9 @@ row.CssClass = "";
 **Entry points:** `Program.cs`, `Form1.cs`
 **Root component:** `MyComponent.razor`
 **Main features:** `Components/Engineer/MainEngineering.razor`, `Components/Engineer/Sequence/TestSequenceEditor.*`
-**Core services:** `Services/Sequence/`, `Services/Settings/`
+**Stand database:** `Components/Engineer/StandDatabase/`
+**Core services:** `Services/Sequence/`, `Services/Common/`
+**Database services:** `Services/Database/`
 **Configuration:** `appsettings.json`
 **Static assets:** `wwwroot/css/`, `wwwroot/images/`
 **Coding standards:** `.cursorrules`

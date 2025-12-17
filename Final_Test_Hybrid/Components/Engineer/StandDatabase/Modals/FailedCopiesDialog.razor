@@ -1,6 +1,6 @@
 <div class="failed-dialog">
     <div class="info-message">
-        Не удалось скопировать @FailedItems.Count @ItemWord:
+        @ErrorMessage
     </div>
     <RadzenDataGrid Data="@FailedItems" TItem="string"
                     AllowPaging="false"
@@ -24,7 +24,7 @@
     [Parameter]
     public List<string> FailedItems { get; set; } = [];
     [Parameter]
-    public string ItemWord { get; set; } = "элементов";
+    public string ErrorMessage { get; set; } = "Не удалось скопировать:";
     [Parameter]
     public string ColumnTitle { get; set; } = "Название";
     [Inject]

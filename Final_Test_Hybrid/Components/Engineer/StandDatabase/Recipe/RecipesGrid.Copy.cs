@@ -68,7 +68,7 @@ public partial class RecipesGrid
     {
         if (copiedCount > 0)
         {
-            ShowSuccess($"Скопировано {copiedCount} {RussianPluralization.GetRecipeWord(copiedCount)}");
+            ShowSuccess($"Скопировано рецептов: {copiedCount}");
         }
     }
 
@@ -83,7 +83,7 @@ public partial class RecipesGrid
             new Dictionary<string, object>
             {
                 { "FailedItems", failedRecipes },
-                { "ItemWord", RussianPluralization.GetRecipeWord(failedRecipes.Count) },
+                { "ErrorMessage", $"Не удалось скопировать рецептов: {failedRecipes.Count}" },
                 { "ColumnTitle", "Имя тега" }
             },
             new DialogOptions { Width = "500px", Height = "400px", CloseDialogOnOverlayClick = false });

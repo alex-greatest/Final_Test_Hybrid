@@ -84,7 +84,7 @@ public partial class ResultSettingsTab
             NotificationService.Notify(
                 NotificationSeverity.Success,
                 "Успех",
-                $"Скопировано {copiedCount} {RussianPluralization.GetResultSettingWord(copiedCount)}");
+                $"Скопировано настроек: {copiedCount}");
         }
     }
 
@@ -99,7 +99,7 @@ public partial class ResultSettingsTab
             new Dictionary<string, object>
             {
                 { "FailedItems", failedItems },
-                { "ItemWord", RussianPluralization.GetResultSettingWord(failedItems.Count) },
+                { "ErrorMessage", $"Не удалось скопировать настроек: {failedItems.Count}" },
                 { "ColumnTitle", "Название параметра" }
             },
             new DialogOptions { Width = "500px", Height = "400px", CloseDialogOnOverlayClick = false });
