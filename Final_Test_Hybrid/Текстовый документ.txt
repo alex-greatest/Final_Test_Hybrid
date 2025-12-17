@@ -3,134 +3,51 @@ package com.company.traceability_boiler.entity;
 import io.jmix.core.DeletePolicy;
 import io.jmix.core.entity.annotation.JmixGeneratedValue;
 import io.jmix.core.entity.annotation.OnDeleteInverse;
-import io.jmix.core.metamodel.annotation.InstanceName;
 import io.jmix.core.metamodel.annotation.JmixEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
 @JmixEntity
-@Table(name = "TB_RESULT_SETTINGS", indexes = {
-        @Index(name = "IDX_TB_RESULT_SETTINGS_BOILER_TYPE", columnList = "BOILER_TYPE_ID"),
-        @Index(name = "IDX_TB_RESULT_SETTINGS_ADDREES_MIN", columnList = "ADDREES_MIN")
+@Table(name = "TB_ERROR_SETTINGS_TEMPLATE", indexes = {
+        @Index(name = "IDX_TB_ERROR_SETTINGS_TEMPLATE_STATION_TYPE", columnList = "STATION_TYPE_ID"),
+        @Index(name = "IDX_TB_ERROR_SETTINGS_TEMPLATE_STEP", columnList = "STEP_ID"),
+        @Index(name = "IDX_TB_ERROR_SETTINGS_TEMPLATE_ADDRESS_ERROR", columnList = "ADDRESS_ERROR")
 }, uniqueConstraints = {
-        @UniqueConstraint(name = "IDX_TB_RESULT_SETTINGS_UNQ_PARAMETER_NAME_BOILER_STATION", columnNames = {"PARAMETER_NAME", "BOILER_TYPE_ID", "STATION_ID"}),
-        @UniqueConstraint(name = "IDX_TB_RESULT_SETTINGS_VALUE_BOILER_STATION", columnNames = {"BOILER_TYPE_ID", "STATION_ID", "ADDRESS_VALUE"})
+        @UniqueConstraint(name = "IDX_TB_ERROR_SETTINGS_TEMPLATE_UNQ_ERROR_STEP_STATION_TYPE", columnNames = {"STATION_TYPE_ID", "ADDRESS_ERROR", "STEP_ID"})
 })
-@Entity(name = "tb_ResultSettings")
-public class ResultSettings {
+@Entity(name = "tb_ErrorSettingsTemplate")
+public class ErrorSettingsTemplate {
     @JmixGeneratedValue
     @Column(name = "ID", nullable = false)
     @Id
     private Long id;
 
-    @Column(name = "PARAMETER_NAME", nullable = false)
+    @JoinColumn(name = "STEP_ID")
+    @ManyToOne(fetch = FetchType.LAZY)
+    private StepFinalTest step;
+
+    @Column(name = "ADDRESS_ERROR", nullable = false, length = 500)
     @NotNull
-    private String parameterName;
+    private String addressError;
 
-    @Column(name = "ADDRESS_VALUE", nullable = false)
-    @NotNull
-    private String addressValue;
-
-    @Column(name = "ADDREES_MIN")
-    private String addreesMin;
-
-    @Column(name = "ADDRESS_MAX")
-    private String addressMax;
-
-    @Column(name = "ADDRESS_STATUS")
-    private String addressStatus;
-
-    @Column(name = "PLC_TYPE", nullable = false)
-    @NotNull
-    private String plcType;
-
-    @OnDeleteInverse(DeletePolicy.CASCADE)
-    @JoinColumn(name = "BOILER_TYPE_ID", nullable = false)
-    @NotNull
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    private BoilerType boilerType;
-
-    @Column(name = "NOMINAL", length = 30)
-    private String nominal;
-
-    @Column(name = "UNIT", length = 20)
-    private String unit;
-
-    @InstanceName
     @Column(name = "DESCRIPTION")
     @Lob
     private String description;
 
-    @Column(name = "AUDIT_TYPE", nullable = false)
-    @NotNull
-    private String auditType;
-
-    @Column(name = "VERSION", nullable = false)
-    @Version
-    private Integer version;
-
-    public String getNominal() {
-        return nominal;
+    public StepFinalTest getStep() {
+        return step;
     }
 
-    public void setNominal(String nominal) {
-        this.nominal = nominal;
+    public void setStep(StepFinalTest step) {
+        this.step = step;
     }
 
-    public PlcType getPlcType() {
-        return plcType == null ? null : PlcType.fromId(plcType);
+    public StationType getStationType() {
+        return stationType;
     }
 
-    public void setPlcType(PlcType plcType) {
-        this.plcType = plcType == null ? null : plcType.getId();
-    }
-
-    public void setAddressStatus(String addressStatus) {
-        this.addressStatus = addressStatus;
-    }
-
-    public String getAddressStatus() {
-        return addressStatus;
-    }
-
-    public void setStation(Station station) {
-        this.station = station;
-    }
-
-    public Station getStation() {
-        return station;
-    }
-
-    public String getAddressMax() {
-        return addressMax;
-    }
-
-    public void setAddressMax(String addressMax) {
-        this.addressMax = addressMax;
-    }
-
-    public String getAddreesMin() {
-        return addreesMin;
-    }
-
-    public void setAddreesMin(String addreesMin) {
-        this.addreesMin = addreesMin;
-    }
-
-    public String getAddressValue() {
-        return addressValue;
-    }
-
-    public void setAddressValue(String addressValue) {
-        this.addressValue = addressValue;
-    }
-
-    public AuditType getAuditType() {
-        return auditType == null ? null : AuditType.fromId(auditType);
-    }
-
-    public void setAuditType(AuditType auditType) {
-        this.auditType = auditType == null ? null : auditType.getId();
+    public void setStationType(StationType stationType) {
+        this.stationType = stationType;
     }
 
     public String getDescription() {
@@ -141,222 +58,16 @@ public class ResultSettings {
         this.description = description;
     }
 
-    public String getUnit() {
-        return unit;
+    public String getAddressError() {
+        return addressError;
     }
 
-    public void setUnit(String unit) {
-        this.unit = unit;
-    }
-
-    public BoilerType getBoilerType() {
-        return boilerType;
-    }
-
-    public void setBoilerType(BoilerType boilerType) {
-        this.boilerType = boilerType;
-    }
-
-    public String getParameterName() {
-        return parameterName;
-    }
-
-    public void setParameterName(String parameterName) {
-        this.parameterName = parameterName;
+    public void setAddressError(String addressError) {
+        this.addressError = addressError;
     }
 
     public Integer getVersion() {
         return version;
-    }
-
-  
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-}
-
-
-
-
-
-package com.company.traceability_boiler.entity;
-
-import io.jmix.core.entity.annotation.JmixGeneratedValue;
-import io.jmix.core.metamodel.annotation.InstanceName;
-import io.jmix.core.metamodel.annotation.JmixEntity;
-import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
-
-@JmixEntity
-@Table(name = "TB_RESULT_SETTING_HISTORY", indexes = {
-        @Index(name = "IDX_TB_RESULT_SETTING_HISTORY_RESULTS_SETTINGS_ID", columnList = "RESULTS_SETTINGS_ID"),
-        @Index(name = "IDX_TB_RESULT_SETTING_HISTORY_BOILER_TYPE", columnList = "BOILER_TYPE"),
-        @Index(name = "IDX_TB_RESULT_SETTING_HISTORY_STATION_HISTORY", columnList = "STATION_HISTORY")
-})
-@Entity(name = "tb_ResultSettingHistory")
-public class ResultSettingHistory {
-    @JmixGeneratedValue
-    @Column(name = "ID", nullable = false)
-    @Id
-    private Long id;
-
-    @Column(name = "RESULTS_SETTINGS_ID", nullable = false)
-    @NotNull
-    private Long resultsSettingsId;
-
-    @Column(name = "BOILER_TYPE", nullable = false)
-    @NotNull
-    private Long boilerTypeId;
-
-    @Column(name = "PARAMETER_NAME", nullable = false)
-    @NotNull
-    private String parameterName;
-
-    @Column(name = "ADDRESS_VALUE", nullable = false)
-    @NotNull
-    private String addressValue;
-
-    @Column(name = "ADDREES_MIN")
-    private String addreesMin;
-
-    @Column(name = "ADDRESS_MAX")
-    private String addressMax;
-
-    @Column(name = "ADDRESS_STATUS")
-    private String addressStatus;
-
-    @Column(name = "NOMINAL", length = 30)
-    private String nominal;
-
-    @Column(name = "PLC_TYPE", nullable = false)
-    @NotNull
-    private String plcType;
-
-    @Column(name = "UNIT", length = 20)
-    private String unit;
-
-    @InstanceName
-    @Column(name = "DESCRIPTION")
-    @Lob
-    private String description;
-
-    @Column(name = "AUDI_TYPE", nullable = false)
-    @NotNull
-    private String audiType;
-
-    @Column(name = "IS_ACTIVE", nullable = false)
-    @NotNull
-    private Boolean isActive = false;
-
-
-    public String getNominal() {
-        return nominal;
-    }
-
-    public void setNominal(String nominal) {
-        this.nominal = nominal;
-    }
-
-    public void setBoilerTypeId(Long boilerType) {
-        this.boilerTypeId = boilerType;
-    }
-
-    public Long getBoilerTypeId() {
-        return boilerTypeId;
-    }
-
-    public PlcType getPlcType() {
-        return plcType == null ? null : PlcType.fromId(plcType);
-    }
-
-    public void setPlcType(PlcType plcType) {
-        this.plcType = plcType == null ? null : plcType.getId();
-    }
-
-    public void setAddressStatus(String addressStatus) {
-        this.addressStatus = addressStatus;
-    }
-
-    public String getAddressStatus() {
-        return addressStatus;
-    }
-
-    public Long getResultsSettingsId() {
-        return resultsSettingsId;
-    }
-
-    public void setResultsSettingsId(Long resultsSettingsId) {
-        this.resultsSettingsId = resultsSettingsId;
-    }
-
-    public Boolean getIsActive() {
-        return isActive;
-    }
-
-    public void setIsActive(Boolean isActive) {
-        this.isActive = isActive;
-    }
-
-    public AuditType getAudiType() {
-        return audiType == null ? null : AuditType.fromId(audiType);
-    }
-
-    public void setAudiType(AuditType audiType) {
-        this.audiType = audiType == null ? null : audiType.getId();
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getUnit() {
-        return unit;
-    }
-
-    public void setUnit(String unit) {
-        this.unit = unit;
-    }
-
-    public String getAddressMax() {
-        return addressMax;
-    }
-
-    public void setAddressMax(String addressMax) {
-        this.addressMax = addressMax;
-    }
-
-    public String getAddreesMin() {
-        return addreesMin;
-    }
-
-    public void setAddreesMin(String addreesMin) {
-        this.addreesMin = addreesMin;
-    }
-
-    public String getAddressValue() {
-        return addressValue;
-    }
-
-    public void setAddressValue(String addressValue) {
-        this.addressValue = addressValue;
-    }
-
-    public String getParameterName() {
-        return parameterName;
-    }
-
-    public void setParameterName(String parameterName) {
-        this.parameterName = parameterName;
     }
 
     public void setVersion(Integer version) {
@@ -374,31 +85,162 @@ public class ResultSettingHistory {
 }
 
 
-public enum AuditType implements EnumClass<String> {
+package com.company.traceability_boiler.entity;
 
-    NUMERIC_WITH_RANGE("Диапазон"),
-    STATUS("Статус"),
-    SIMPLE("Простое"),
-    SIMPLE_STATUS("Простое_Статус"),
-    BOARD_PARAMETERS("Параметры платы");
+import io.jmix.core.DeletePolicy;
+import io.jmix.core.entity.annotation.JmixGeneratedValue;
+import io.jmix.core.entity.annotation.OnDeleteInverse;
+import io.jmix.core.metamodel.annotation.JmixEntity;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 
-    private final String id;
+@JmixEntity
+@Table(name = "TB_ERROR_SETTINGS_HISTORY", indexes = {
+        @Index(name = "IDX_TB_ERROR_SETTINGS_HISTORY_STEP_FINAL_TEST", columnList = "STEP_FINAL_TEST_ID"),
+        @Index(name = "IDX_TB_ERROR_SETTINGS_HISTORY_ERROR_SETTINGS_ID", columnList = "ERROR_SETTINGS_ID"),
+        @Index(name = "IDX_TB_ERROR_SETTINGS_HISTORY_STATION_TYPE", columnList = "STATION_TYPE_ID"),
+        @Index(name = "IDX_TB_ERROR_SETTINGS_HISTORY_ADDRESS_ERROR", columnList = "ADDRESS_ERROR")
+})
+@Entity(name = "tb_ErrorSettingsHistory")
+public class ErrorSettingsHistory {
+    @JmixGeneratedValue
+    @Column(name = "ID", nullable = false)
+    @Id
+    private Long id;
 
-    AuditType(String id) {
-        this.id = id;
+    @Column(name = "ERROR_SETTINGS_ID", nullable = false)
+    @NotNull
+    private Long errorSettingsId;
+
+    @JoinColumn(name = "STEP_FINAL_TEST_ID")
+    @ManyToOne(fetch = FetchType.LAZY)
+    private StepFinalTest step;
+
+    @Column(name = "ADDRESS_ERROR", nullable = false, length = 500)
+    @NotNull
+    private String addressError;
+
+    @Column(name = "DESCRIPTION")
+    @Lob
+    private String description;
+
+    @NotNull
+    @Column(name = "IS_ACTIVE", nullable = false)
+    private Boolean isActive = false;
+
+    public StationType getStationType() {
+        return stationType;
     }
 
-    public String getId() {
+    public void setStationType(StationType stationType) {
+        this.stationType = stationType;
+    }
+
+    public StepFinalTest getStep() {
+        return step;
+    }
+
+    public void setStep(StepFinalTest stepFinalTest) {
+        this.step = stepFinalTest;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getAddressError() {
+        return addressError;
+    }
+
+    public void setAddressError(String addressError) {
+        this.addressError = addressError;
+    }
+
+    public Long getErrorSettingsId() {
+        return errorSettingsId;
+    }
+
+    public void setErrorSettingsId(Long errorSettingsId) {
+        this.errorSettingsId = errorSettingsId;
+    }
+
+    public Integer getVersion() {
+        return version;
+    }
+
+    public void setVersion(Integer version) {
+        this.version = version;
+    }
+
+    public Long getId() {
         return id;
     }
 
-    @Nullable
-    public static AuditType fromId(String id) {
-        for (AuditType at : AuditType.values()) {
-            if (at.getId().equals(id)) {
-                return at;
-            }
-        }
-        return null;
+    public void setId(Long id) {
+        this.id = id;
     }
+
+}
+
+package com.company.traceability_boiler.entity;
+
+import io.jmix.core.entity.annotation.JmixGeneratedValue;
+import io.jmix.core.metamodel.annotation.InstanceName;
+import io.jmix.core.metamodel.annotation.JmixEntity;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+
+@JmixEntity
+@Table(name = "TB_STEP_FINAL_TEST", uniqueConstraints = {
+        @UniqueConstraint(name = "IDX_TB_STEP_FINAL_TEST_UNQ_NAME", columnNames = {"NAME"})
+})
+@Entity(name = "tb_StepFinalTest")
+public class StepFinalTest {
+    @JmixGeneratedValue
+    @Column(name = "ID", nullable = false)
+    @Id
+    private Long id;
+
+    @InstanceName
+    @Column(name = "NAME", nullable = false, length = 500)
+    @NotNull
+    private String name;
+
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Integer getVersion() {
+        return version;
+    }
+
+    public void setVersion(Integer version) {
+        this.version = version;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
 }

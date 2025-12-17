@@ -8,7 +8,8 @@
       "WebFetch(domain:blazor.radzen.com)",
       "WebSearch",
       "WebFetch(domain:github.com)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(dotnet ef migrations add:*)"
     ]
   }
 }

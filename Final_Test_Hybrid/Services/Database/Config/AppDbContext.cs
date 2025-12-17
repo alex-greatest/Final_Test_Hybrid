@@ -10,6 +10,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Recipe> Recipes => Set<Recipe>();
     public DbSet<ResultSettings> ResultSettings => Set<ResultSettings>();
     public DbSet<ResultSettingHistory> ResultSettingHistories => Set<ResultSettingHistory>();
+    public DbSet<StepFinalTest> StepFinalTests => Set<StepFinalTest>();
+    public DbSet<StepFinalTestHistory> StepFinalTestHistories => Set<StepFinalTestHistory>();
+    public DbSet<ErrorSettingsTemplate> ErrorSettingsTemplates => Set<ErrorSettingsTemplate>();
+    public DbSet<ErrorSettingsHistory> ErrorSettingsHistories => Set<ErrorSettingsHistory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -19,6 +23,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         ConfigureRecipe(modelBuilder);
         ConfigureResultSettings(modelBuilder);
         ConfigureResultSettingHistory(modelBuilder);
+        ConfigureStepFinalTest(modelBuilder);
+        ConfigureStepFinalTestHistory(modelBuilder);
+        ConfigureErrorSettingsTemplate(modelBuilder);
+        ConfigureErrorSettingsHistory(modelBuilder);
     }
 
     private static void ConfigureBoilerType(ModelBuilder modelBuilder)
@@ -140,6 +148,79 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .IsUnique()
                 .HasFilter("\"IS_ACTIVE\" = true")
                 .HasDatabaseName("IDX_TB_RESULT_SETTING_HISTORY_UNQ_ACTIVE");
+        });
+    }
+
+    private static void ConfigureStepFinalTest(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<StepFinalTest>(entity =>
+        {
+            entity.ToTable("TB_STEP_FINAL_TEST");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("ID").ValueGeneratedOnAdd();
+            entity.Property(e => e.Name).HasColumnName("NAME").IsRequired().HasMaxLength(500);
+            entity.HasIndex(e => e.Name).IsUnique().HasDatabaseName("IDX_TB_STEP_FINAL_TEST_UNQ_NAME");
+        });
+    }
+
+    private static void ConfigureStepFinalTestHistory(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<StepFinalTestHistory>(entity =>
+        {
+            entity.ToTable("TB_STEP_FINAL_TEST_HISTORY");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("ID").ValueGeneratedOnAdd();
+            entity.Property(e => e.StepFinalTestId).HasColumnName("STEP_FINAL_TEST_ID").IsRequired();
+            entity.Property(e => e.Name).HasColumnName("NAME").IsRequired().HasMaxLength(500);
+            entity.Property(e => e.IsActive).HasColumnName("IS_ACTIVE").IsRequired().HasDefaultValue(false);
+            entity.HasIndex(e => e.StepFinalTestId).HasDatabaseName("IDX_TB_STEP_FINAL_TEST_HISTORY_STEP_FINAL_TEST");
+            entity.HasIndex(e => e.StepFinalTestId)
+                .IsUnique()
+                .HasFilter("\"IS_ACTIVE\" = true")
+                .HasDatabaseName("IDX_TB_STEP_FINAL_TEST_HISTORY_UNQ_ACTIVE");
+        });
+    }
+
+    private static void ConfigureErrorSettingsTemplate(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<ErrorSettingsTemplate>(entity =>
+        {
+            entity.ToTable("TB_ERROR_SETTINGS_TEMPLATE");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("ID").ValueGeneratedOnAdd();
+            entity.Property(e => e.StepId).HasColumnName("STEP_ID");
+            entity.Property(e => e.AddressError).HasColumnName("ADDRESS_ERROR").IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Description).HasColumnName("DESCRIPTION");
+            entity.HasOne(e => e.Step).WithMany().HasForeignKey(e => e.StepId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasIndex(e => e.StepId).HasDatabaseName("IDX_TB_ERROR_SETTINGS_TEMPLATE_STEP");
+            entity.HasIndex(e => e.AddressError).HasDatabaseName("IDX_TB_ERROR_SETTINGS_TEMPLATE_ADDRESS_ERROR");
+            entity.HasIndex(e => new { e.AddressError, e.StepId })
+                .IsUnique()
+                .HasDatabaseName("IDX_TB_ERROR_SETTINGS_TEMPLATE_UNQ_ADDRESS_ERROR_STEP");
+        });
+    }
+
+    private static void ConfigureErrorSettingsHistory(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<ErrorSettingsHistory>(entity =>
+        {
+            entity.ToTable("TB_ERROR_SETTINGS_HISTORY");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("ID").ValueGeneratedOnAdd();
+            entity.Property(e => e.ErrorSettingsTemplateId).HasColumnName("ERROR_SETTINGS_TEMPLATE_ID").IsRequired();
+            entity.Property(e => e.StepHistoryId).HasColumnName("STEP_HISTORY_ID");
+            entity.Property(e => e.AddressError).HasColumnName("ADDRESS_ERROR").IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Description).HasColumnName("DESCRIPTION");
+            entity.Property(e => e.IsActive).HasColumnName("IS_ACTIVE").IsRequired().HasDefaultValue(false);
+            entity.HasOne(e => e.ErrorSettingsTemplate).WithMany().HasForeignKey(e => e.ErrorSettingsTemplateId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.StepHistory).WithMany().HasForeignKey(e => e.StepHistoryId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasIndex(e => e.ErrorSettingsTemplateId).HasDatabaseName("IDX_TB_ERROR_SETTINGS_HISTORY_ERROR_SETTINGS_TEMPLATE");
+            entity.HasIndex(e => e.StepHistoryId).HasDatabaseName("IDX_TB_ERROR_SETTINGS_HISTORY_STEP_HISTORY");
+            entity.HasIndex(e => e.AddressError).HasDatabaseName("IDX_TB_ERROR_SETTINGS_HISTORY_ADDRESS_ERROR");
+            entity.HasIndex(e => e.ErrorSettingsTemplateId)
+                .IsUnique()
+                .HasFilter("\"IS_ACTIVE\" = true")
+                .HasDatabaseName("IDX_TB_ERROR_SETTINGS_HISTORY_UNQ_ACTIVE");
         });
     }
 }
