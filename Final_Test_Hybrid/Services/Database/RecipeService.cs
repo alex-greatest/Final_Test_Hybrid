@@ -85,6 +85,41 @@ public class RecipeService(
         }
     }
 
+    public async Task ReplaceRecipesForBoilerTypeAsync(
+        long boilerTypeId,
+        List<Recipe> recipes,
+        CancellationToken ct = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+        try
+        {
+            var deleted = await dbContext.Recipes
+                .Where(r => r.BoilerTypeId == boilerTypeId)
+                .ExecuteDeleteAsync(ct);
+            logger.LogInformation("Deleted {Count} recipes for BoilerType {BoilerTypeId}", deleted, boilerTypeId);
+            foreach (var recipe in recipes)
+            {
+                recipe.BoilerTypeId = boilerTypeId;
+                dbContext.Recipes.Add(recipe);
+            }
+            await dbContext.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            logger.LogInformation("Added {Count} recipes for BoilerType {BoilerTypeId}", recipes.Count, boilerTypeId);
+        }
+        catch (OperationCanceledException)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            logger.LogError(ex, "Failed to replace recipes for BoilerType {BoilerTypeId}", boilerTypeId);
+            throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
+        }
+    }
+
     public async Task<List<string>> CopyRecipesToBoilerTypeAsync(
         IEnumerable<Recipe> recipes,
         long targetBoilerTypeId)

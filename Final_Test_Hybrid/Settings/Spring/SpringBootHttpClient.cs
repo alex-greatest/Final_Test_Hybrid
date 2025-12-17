@@ -24,7 +24,7 @@ public class SpringBootHttpClient
     {
         try
         {
-            var response = await _httpClient.GetAsync(endpoint, ct).ConfigureAwait(false);
+            using var response = await _httpClient.GetAsync(endpoint, ct).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<T>(ct).ConfigureAwait(false);
         }
@@ -52,7 +52,7 @@ public class SpringBootHttpClient
     {
         try
         {
-            var response = await _httpClient.GetAsync(endpoint, ct).ConfigureAwait(false);
+            using var response = await _httpClient.GetAsync(endpoint, ct).ConfigureAwait(false);
             return response.IsSuccessStatusCode;
         }
         catch
@@ -65,7 +65,7 @@ public class SpringBootHttpClient
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync(endpoint, data, ct).ConfigureAwait(false);
+            using var response = await _httpClient.PostAsJsonAsync(endpoint, data, ct).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<TResponse>(ct).ConfigureAwait(false);
         }
@@ -80,7 +80,7 @@ public class SpringBootHttpClient
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync(endpoint, data, ct).ConfigureAwait(false);
+            using var response = await _httpClient.PostAsJsonAsync(endpoint, data, ct).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
         }
         catch (Exception ex)
@@ -93,5 +93,10 @@ public class SpringBootHttpClient
     public async Task<HttpResponseMessage> PostWithResponseAsync<TRequest>(string endpoint, TRequest data, CancellationToken ct = default)
     {
         return await _httpClient.PostAsJsonAsync(endpoint, data, ct).ConfigureAwait(false);
+    }
+
+    public async Task<HttpResponseMessage> GetWithResponseAsync(string endpoint, CancellationToken ct = default)
+    {
+        return await _httpClient.GetAsync(endpoint, ct).ConfigureAwait(false);
     }
 }

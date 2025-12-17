@@ -10,6 +10,7 @@ using Final_Test_Hybrid.Services.Common.IO;
 using Final_Test_Hybrid.Services.Common.UI;
 using Final_Test_Hybrid.Services.Steps;
 using Final_Test_Hybrid.Services.SpringBoot.Health;
+using Final_Test_Hybrid.Services.SpringBoot.Recipe;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.SpringBoot.Shift;
@@ -173,6 +174,7 @@ namespace Final_Test_Hybrid
             services.AddSingleton<SpringBootHealthService>();
             services.AddSingleton<OperatorState>();
             services.AddSingleton<OperatorAuthService>();
+            services.AddScoped<RecipeDownloadService>();
         }
 
         private void RegisterShiftServices(ServiceCollection services)

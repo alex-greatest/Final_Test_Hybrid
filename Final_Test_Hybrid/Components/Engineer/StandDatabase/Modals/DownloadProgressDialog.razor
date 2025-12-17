@@ -1,0 +1,24 @@
+<div class="progress-dialog">
+    <RadzenProgressBarCircular Value="100"
+                               ShowValue="false"
+                               Mode="ProgressBarMode.Indeterminate"
+                               Size="ProgressBarCircularSize.Large" />
+    <div class="progress-text">
+        Загрузка рецептов...
+    </div>
+    <div class="dialog-buttons">
+        <RadzenButton Text="Отмена" Icon="close"
+                      Click="@OnCancel"
+                      ButtonStyle="ButtonStyle.Light" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback OnCancelRequested { get; set; }
+
+    private async Task OnCancel()
+    {
+        await OnCancelRequested.InvokeAsync();
+    }
+}

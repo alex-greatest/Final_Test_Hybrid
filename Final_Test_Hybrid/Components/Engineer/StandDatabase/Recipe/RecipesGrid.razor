@@ -26,6 +26,9 @@
                 <RadzenButton Icon="add" Text="Добавить"
                               Click="@AddNewRow"
                               Disabled="@(_selectedBoilerTypeId == null)" />
+                <RadzenButton Icon="cloud_download" Text="Загрузить"
+                              Click="@DownloadRecipesFromServer"
+                              Disabled="@(_selectedBoilerTypeId == null)" />
                 <RadzenButton Icon="content_copy" Text="Копировать"
                               Click="@CopySelectedRecipes"
                               Disabled="@(_selectedRecipes.Count == 0)" />
