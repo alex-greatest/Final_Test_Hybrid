@@ -204,6 +204,7 @@ namespace Final_Test_Hybrid
             services.AddScoped<BoilerTypeService>();
             services.AddScoped<RecipeService>();
             services.AddScoped<ResultSettingsService>();
+            services.AddScoped<StepFinalTestService>();
         }
 
         private void StartDatabaseService(ServiceProvider serviceProvider)
