@@ -8,7 +8,7 @@
                     class="database-tabs">
             <Tabs>
                 <RadzenTabsItem Text="Типы котлов">
-                    <BoilerTypesGrid OnDataChanged="@OnBoilerTypesChanged" />
+                    <BoilerTypesGrid OnDataChanged="@MarkDependentTabsForRefresh" />
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Рецепты">
                     <RecipesGrid @ref="_recipesGrid" />
