@@ -18,6 +18,8 @@ public partial class ResultSettingsBoardGrid
     [Parameter] public List<BoilerType> BoilerTypes { get; set; } = [];
     [Parameter] public long? SelectedBoilerTypeId { get; set; }
     [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public IList<ResultSettingsEditModel> SelectedItems { get; set; } = [];
+    [Parameter] public EventCallback<IList<ResultSettingsEditModel>> SelectedItemsChanged { get; set; }
     private RadzenDataGrid<ResultSettingsEditModel>? _grid;
     private ResultSettingsEditModel? _itemToInsert;
     private ResultSettingsEditModel? _originalItem;
@@ -177,4 +179,20 @@ public partial class ResultSettingsBoardGrid
 
     private void ShowError(string message) =>
         NotificationService.Notify(NotificationSeverity.Error, "Ошибка", message);
+
+    private bool IsAllSelected => Items.Count > 0 && SelectedItems.Count == Items.Count;
+
+    private async Task OnSelectAllChanged(bool value)
+    {
+        var newSelection = value ? Items.ToList() : new List<ResultSettingsEditModel>();
+        await SelectedItemsChanged.InvokeAsync(newSelection);
+    }
+
+    private async Task OnRowSelectChanged(ResultSettingsEditModel item, bool selected)
+    {
+        var newSelection = selected
+            ? [..SelectedItems.Where(r => r != item), item]
+            : SelectedItems.Where(r => r != item).ToList();
+        await SelectedItemsChanged.InvokeAsync(newSelection);
+    }
 }

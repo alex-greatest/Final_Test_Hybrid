@@ -80,7 +80,12 @@ public partial class RecipesGrid
         }
         await DialogService.OpenAsync<Modals.FailedCopiesDialog>(
             "Ошибки копирования",
-            new Dictionary<string, object> { { "FailedRecipes", failedRecipes } },
+            new Dictionary<string, object>
+            {
+                { "FailedItems", failedRecipes },
+                { "ItemWord", RussianPluralization.GetRecipeWord(failedRecipes.Count) },
+                { "ColumnTitle", "Имя тега" }
+            },
             new DialogOptions { Width = "500px", Height = "400px", CloseDialogOnOverlayClick = false });
     }
 }

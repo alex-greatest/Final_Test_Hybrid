@@ -15,6 +15,16 @@
                 AllowColumnResize="true" AllowColumnReorder="true"
                 AllowPaging="false">
         <Columns>
+            <RadzenDataGridColumn TItem="ResultSettingsEditModel" Width="50px"
+                                  Sortable="false" Filterable="false" TextAlign="TextAlign.Center">
+                <HeaderTemplate>
+                    <RadzenCheckBox TValue="bool" Value="@IsAllSelected" Change="@OnSelectAllChanged" />
+                </HeaderTemplate>
+                <Template Context="item">
+                    <RadzenCheckBox TValue="bool" Value="@SelectedItems.Contains(item)"
+                                    Change="@(v => OnRowSelectChanged(item, v))" />
+                </Template>
+            </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="AddressValue"
                                   Title="Адрес значения" MinWidth="120px">
                 <EditTemplate Context="item">

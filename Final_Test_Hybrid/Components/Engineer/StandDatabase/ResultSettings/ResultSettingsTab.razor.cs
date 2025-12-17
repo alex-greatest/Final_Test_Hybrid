@@ -16,6 +16,10 @@ public partial class ResultSettingsTab
     private List<ResultSettingsEditModel> _itemsSimple = [];
     private List<ResultSettingsEditModel> _itemsBoard = [];
     private List<BoilerType> _boilerTypes = [];
+    private IList<ResultSettingsEditModel> _selectedRange = [];
+    private IList<ResultSettingsEditModel> _selectedSimple = [];
+    private IList<ResultSettingsEditModel> _selectedBoard = [];
+    private int TotalSelectedCount => _selectedRange.Count + _selectedSimple.Count + _selectedBoard.Count;
     private ResultSettingsRangeGrid? _gridRange;
     private ResultSettingsSimpleGrid? _gridSimple;
     private ResultSettingsBoardGrid? _gridBoard;

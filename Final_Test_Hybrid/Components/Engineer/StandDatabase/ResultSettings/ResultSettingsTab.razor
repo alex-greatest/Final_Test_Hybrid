@@ -20,6 +20,9 @@
             <div class="toolbar-buttons">
                 <RadzenButton Icon="refresh" Text="Обновить"
                               Click="@LoadDataAsync" />
+                <RadzenButton Icon="content_copy" Text="Копировать"
+                              Click="@CopySelectedItems"
+                              Disabled="@(TotalSelectedCount == 0)" />
             </div>
         </div>
         <RadzenTabs RenderMode="TabRenderMode.Client" @bind-SelectedIndex="@_selectedTabIndex"
@@ -30,6 +33,8 @@
                                              Items="@_itemsRange"
                                              BoilerTypes="@_boilerTypes"
                                              SelectedBoilerTypeId="@_selectedBoilerTypeId"
+                                             SelectedItems="@_selectedRange"
+                                             SelectedItemsChanged="@(items => _selectedRange = items)"
                                              OnSaved="@OnItemSaved" />
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Без диапазона">
@@ -37,6 +42,8 @@
                                               Items="@_itemsSimple"
                                               BoilerTypes="@_boilerTypes"
                                               SelectedBoilerTypeId="@_selectedBoilerTypeId"
+                                              SelectedItems="@_selectedSimple"
+                                              SelectedItemsChanged="@(items => _selectedSimple = items)"
                                               OnSaved="@OnItemSaved" />
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Параметры платы">
@@ -44,6 +51,8 @@
                                              Items="@_itemsBoard"
                                              BoilerTypes="@_boilerTypes"
                                              SelectedBoilerTypeId="@_selectedBoilerTypeId"
+                                             SelectedItems="@_selectedBoard"
+                                             SelectedItemsChanged="@(items => _selectedBoard = items)"
                                              OnSaved="@OnItemSaved" />
                 </RadzenTabsItem>
             </Tabs>

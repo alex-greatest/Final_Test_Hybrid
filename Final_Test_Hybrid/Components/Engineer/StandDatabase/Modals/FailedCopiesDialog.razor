@@ -1,15 +1,14 @@
-@using Final_Test_Hybrid.Components.Engineer.StandDatabase.Recipe
 <div class="failed-dialog">
     <div class="info-message">
-        Не удалось скопировать @FailedRecipes.Count @RussianPluralization.GetRecipeWord(FailedRecipes.Count):
+        Не удалось скопировать @FailedItems.Count @ItemWord:
     </div>
-    <RadzenDataGrid Data="@FailedRecipes" TItem="string"
+    <RadzenDataGrid Data="@FailedItems" TItem="string"
                     AllowPaging="false"
                     AllowSorting="false">
         <Columns>
-            <RadzenDataGridColumn TItem="string" Title="Имя тега" MinWidth="300px">
-                <Template Context="tagName">
-                    @tagName
+            <RadzenDataGridColumn TItem="string" Title="@ColumnTitle" MinWidth="300px">
+                <Template Context="itemName">
+                    @itemName
                 </Template>
             </RadzenDataGridColumn>
         </Columns>
@@ -23,7 +22,11 @@
 
 @code {
     [Parameter]
-    public List<string> FailedRecipes { get; set; } = [];
+    public List<string> FailedItems { get; set; } = [];
+    [Parameter]
+    public string ItemWord { get; set; } = "элементов";
+    [Parameter]
+    public string ColumnTitle { get; set; } = "Название";
     [Inject]
     public required DialogService DialogService { get; set; }
 

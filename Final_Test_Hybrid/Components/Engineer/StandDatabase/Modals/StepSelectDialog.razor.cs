@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using Radzen;
 using Radzen.Blazor;
 
-namespace Final_Test_Hybrid.Components.Engineer.StandDatabase;
+namespace Final_Test_Hybrid.Components.Engineer.StandDatabase.Modals;
 
 public partial class StepSelectDialog
 {
