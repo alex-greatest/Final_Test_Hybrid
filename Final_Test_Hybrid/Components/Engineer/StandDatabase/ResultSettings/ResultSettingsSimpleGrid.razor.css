@@ -7,11 +7,18 @@
 
 .grid-toolbar {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
     gap: 10px;
     padding-top: 8px;
     padding-bottom: 8px;
+}
+
+.record-count {
+    font-size: 18px;
+    font-weight: 500;
+    color: black;
 }
 
 .toolbar-buttons {

@@ -11,18 +11,18 @@
     else
     {
         <div class="grid-toolbar">
-            <RadzenButton Icon="refresh" Text="Обновить"
-                          Click="@LoadDataAsync" />
-            <RadzenButton Icon="add" Text="Добавить"
-                          Click="@AddNewRow" />
+            <div class="toolbar-buttons">
+                <RadzenButton Icon="refresh" Text="Обновить"
+                              Click="@LoadDataAsync" />
+                <RadzenButton Icon="add" Text="Добавить"
+                              Click="@AddNewRow" />
+            </div>
+            <span class="record-count">Записей: @_templates.Count</span>
         </div>
         <RadzenDataGrid @ref="_grid" Data="@_templates" TItem="ErrorSettingsTemplateEditModel"
                         EditMode="DataGridEditMode.Single"
                         AllowFiltering="true" AllowSorting="true"
-                        AllowColumnResize="true"
-                        AllowPaging="true" PageSize="1000"
-                        ShowPagingSummary="true"
-                        PagingSummaryFormat="Показано {0}-{1} из {2} записей">
+                        AllowColumnResize="true">
             <Columns>
                 <RadzenDataGridColumn TItem="ErrorSettingsTemplateEditModel" Property="AddressError"
                                       Title="Адрес ошибки" Width="200px">

@@ -8,15 +8,23 @@
 
 .grid-toolbar {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
     gap: 10px;
+    padding-top: 8px;
     padding-bottom: 8px;
 }
 
 .toolbar-buttons {
     display: flex;
     gap: 8px;
+}
+
+.record-count {
+    font-size: 18px;
+    font-weight: 500;
+    color: black;
 }
 
 /* Кнопки в toolbar */
@@ -93,3 +101,4 @@
 ::deep .rz-data-grid td .rz-button .rzi {
     font-size: 21px;
 }
+

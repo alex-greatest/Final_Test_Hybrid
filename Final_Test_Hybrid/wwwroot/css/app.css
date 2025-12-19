@@ -361,3 +361,41 @@ svg {
     padding: 8px 10px !important;
     resize: vertical !important;
 }
+
+/* ===== DATAGRID CHECKBOXES ===== */
+.rz-data-grid .rz-chkbox-box {
+    border: 3px solid #000 !important;
+    width: 24px !important;
+    height: 24px !important;
+    background-color: #fff !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.rz-data-grid .rzi-check {
+    color: #1a73e8 !important;
+    font-size: 18px !important;
+}
+
+.rz-data-grid .rz-state-disabled .rz-chkbox-box {
+    border: 3px solid #555 !important;
+    background-color: #f0f0f0 !important;
+    opacity: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.rz-data-grid .rz-state-disabled .rzi-check {
+    color: #000 !important;
+    opacity: 1 !important;
+}
+
+/* Позиционирование чекбокса в заголовке */
+.rz-data-grid th .rz-chkbox {
+    margin-left: 0 !important;
+    margin-right: 25px !important;
+    margin-bottom: 10px !important;
+    margin-top: 2px !important;
+}

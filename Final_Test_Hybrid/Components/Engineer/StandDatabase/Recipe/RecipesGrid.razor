@@ -33,14 +33,12 @@
                               Click="@DownloadRecipesFromServer"
                               Disabled="@(_selectedBoilerTypeId == null)" />
             </div>
+            <span class="record-count">Записей: @_filteredRecipes.Count</span>
         </div>
         <RadzenDataGrid @ref="_grid" Data="@_filteredRecipes" TItem="RecipeEditModel"
                         EditMode="DataGridEditMode.Single"
                         AllowFiltering="true" AllowSorting="true"
-                        AllowColumnResize="true" AllowColumnReorder="true"
-                        AllowPaging="true" PageSize="1000"
-                        ShowPagingSummary="true"
-                        PagingSummaryFormat="Показано {0}-{1} из {2} записей">
+                        AllowColumnResize="true" AllowColumnReorder="true">
             <Columns>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Width="50px"
                                       Sortable="false" Filterable="false"

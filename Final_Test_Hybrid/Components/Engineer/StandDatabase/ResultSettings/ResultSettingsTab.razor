@@ -23,6 +23,9 @@
                 <RadzenButton Icon="content_copy" Text="Копировать"
                               Click="@CopySelectedItems"
                               Disabled="@(TotalSelectedCount == 0)" />
+                <RadzenButton Icon="cloud_download" Text="Загрузить с сервера"
+                              Click="@DownloadFromServer"
+                              Disabled="@(_selectedBoilerTypeId == null)" />
             </div>
         </div>
         <RadzenTabs RenderMode="TabRenderMode.Client" @bind-SelectedIndex="@_selectedTabIndex"

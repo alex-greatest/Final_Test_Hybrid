@@ -110,6 +110,65 @@ public class ResultSettingsService(
         return failedItems;
     }
 
+    public async Task ReplaceForBoilerTypeAsync(
+        long boilerTypeId,
+        List<ResultSettings> items,
+        CancellationToken ct = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+        try
+        {
+            await DeleteExistingWithHistoryAsync(dbContext, boilerTypeId, ct);
+            await AddNewWithHistoryAsync(dbContext, items, boilerTypeId, ct);
+            await transaction.CommitAsync(ct);
+            logger.LogInformation("Replaced {Count} result settings for BoilerType {BoilerTypeId}",
+                items.Count, boilerTypeId);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(ct);
+            logger.LogError(ex, "Failed to replace result settings for BoilerType {BoilerTypeId}", boilerTypeId);
+            throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
+        }
+    }
+
+    private async Task DeleteExistingWithHistoryAsync(AppDbContext dbContext, long boilerTypeId, CancellationToken ct)
+    {
+        var existingIds = await dbContext.ResultSettings
+            .Where(r => r.BoilerTypeId == boilerTypeId)
+            .Select(r => r.Id)
+            .ToListAsync(ct);
+        foreach (var id in existingIds)
+        {
+            await DeactivateCurrentHistory(dbContext, id);
+        }
+        await dbContext.SaveChangesAsync(ct);
+        var deleted = await dbContext.ResultSettings
+            .Where(r => r.BoilerTypeId == boilerTypeId)
+            .ExecuteDeleteAsync(ct);
+        logger.LogInformation("Deleted {Count} result settings for BoilerType {BoilerTypeId}", deleted, boilerTypeId);
+    }
+
+    private async Task AddNewWithHistoryAsync(
+        AppDbContext dbContext,
+        List<ResultSettings> items,
+        long boilerTypeId,
+        CancellationToken ct)
+    {
+        foreach (var item in items)
+        {
+            item.BoilerTypeId = boilerTypeId;
+            dbContext.ResultSettings.Add(item);
+        }
+        await dbContext.SaveChangesAsync(ct);
+        foreach (var item in items)
+        {
+            AddActiveHistory(dbContext, item);
+        }
+        await dbContext.SaveChangesAsync(ct);
+    }
+
     private async Task<bool> TryCopySingleItemAsync(ResultSettings source, long targetBoilerTypeId)
     {
         try
