@@ -19,7 +19,10 @@
         <RadzenDataGrid @ref="_grid" Data="@_stepFinalTests" TItem="StepFinalTestEditModel"
                         EditMode="DataGridEditMode.Single"
                         AllowFiltering="true" AllowSorting="true"
-                        AllowColumnResize="true">
+                        AllowColumnResize="true"
+                        AllowPaging="true" PageSize="1000"
+                        ShowPagingSummary="true"
+                        PagingSummaryFormat="Показано {0}-{1} из {2} записей">
             <Columns>
                 <RadzenDataGridColumn TItem="StepFinalTestEditModel" Property="Name"
                                       Title="Название">
@@ -30,7 +33,7 @@
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="StepFinalTestEditModel"
                                       TextAlign="TextAlign.Center" Sortable="false"
-                                      Filterable="false">
+                                      Filterable="false" Width="100px">
                     <Template Context="item">
                         <RadzenButton Icon="edit" Size="ButtonSize.Small"
                                       Click="@(() => EditRow(item))"/>

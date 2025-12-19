@@ -15,16 +15,29 @@ public partial class RecipesGrid
 
     private async Task DownloadRecipesFromServer()
     {
+        if (!CanStartDownload())
+        {
+            return;
+        }
+        _isDownloading = true;
+        try
+        {
+            await ExecuteDownloadAsync(GetSelectedBoilerTypeArticle()!);
+        }
+        finally
+        {
+            _isDownloading = false;
+        }
+    }
+
+    private bool CanStartDownload()
+    {
         if (!CanDownload())
         {
-            return;
+            return false;
         }
-        var article = GetSelectedBoilerTypeArticle();
-        if (!ValidateArticle(article))
-        {
-            return;
-        }
-        await ExecuteDownloadAsync(article!);
+
+        return ValidateArticle(GetSelectedBoilerTypeArticle());
     }
 
     private bool CanDownload() => _selectedBoilerTypeId.HasValue && !_isDownloading;
@@ -37,6 +50,7 @@ public partial class RecipesGrid
         }
         ShowError("Не удалось определить артикул типа котла");
         return false;
+
     }
 
     private string? GetSelectedBoilerTypeArticle()
@@ -47,7 +61,6 @@ public partial class RecipesGrid
 
     private async Task ExecuteDownloadAsync(string article)
     {
-        _isDownloading = true;
         _downloadCts = new CancellationTokenSource();
         try
         {
@@ -55,15 +68,9 @@ public partial class RecipesGrid
         }
         finally
         {
-            CleanupDownloadState();
+            _downloadCts?.Dispose();
+            _downloadCts = null;
         }
-    }
-
-    private void CleanupDownloadState()
-    {
-        _isDownloading = false;
-        _downloadCts?.Dispose();
-        _downloadCts = null;
     }
 
     private async Task PerformDownloadWithProgressAsync(string article)
@@ -94,8 +101,8 @@ public partial class RecipesGrid
     {
         return new DialogOptions
         {
-            Width = "350px",
-            Height = "250px",
+            Width = "600px",
+            Height = "300px",
             CloseDialogOnOverlayClick = false,
             ShowClose = false
         };
@@ -108,10 +115,16 @@ public partial class RecipesGrid
     private async Task<DownloadResult> DownloadAndProcessRecipesAsync(string article, CancellationToken ct)
     {
         var downloadResult = await RecipeDownloadService.DownloadRecipesAsync(article, ct);
+        return await ConvertToDownloadResultAsync(downloadResult, ct);
+    }
+
+    private async Task<DownloadResult> ConvertToDownloadResultAsync(RecipeDownloadResult downloadResult, CancellationToken ct)
+    {
         if (!downloadResult.IsSuccess)
         {
             return CreateFailResult(downloadResult.ErrorMessage);
         }
+
         return await ProcessDownloadedRecipesAsync(downloadResult.Recipes, ct);
     }
 
@@ -121,6 +134,7 @@ public partial class RecipesGrid
         {
             return CreateFailResult("Рецепты не найдены на сервере");
         }
+
         return await SaveRecipesToDatabaseAsync(recipes, ct);
     }
 
@@ -176,14 +190,17 @@ public partial class RecipesGrid
         };
     }
 
-    private async Task HandleDownloadResultAsync(DownloadResult result)
+    private Task HandleDownloadResultAsync(DownloadResult result)
     {
-        if (result.IsSuccess)
-        {
-            await OnDownloadSuccessAsync(result.RecipeCount);
-            return;
-        }
-        ShowDownloadError(result.ErrorMessage);
+        return result.IsSuccess
+            ? OnDownloadSuccessAsync(result.RecipeCount)
+            : ShowDownloadErrorAsync(result.ErrorMessage);
+    }
+
+    private Task ShowDownloadErrorAsync(string? errorMessage)
+    {
+        ShowDownloadError(errorMessage);
+        return Task.CompletedTask;
     }
 
     private async Task OnDownloadSuccessAsync(int recipeCount)

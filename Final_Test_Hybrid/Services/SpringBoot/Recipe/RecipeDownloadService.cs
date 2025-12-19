@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Settings.Spring;
 using Microsoft.Extensions.Logging;
@@ -25,6 +27,12 @@ public class RecipeDownloadService(
     ILogger<RecipeDownloadService> logger)
 {
     private const string Endpoint = "/api/recipes";
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
 
     public async Task<RecipeDownloadResult> DownloadRecipesAsync(string article, CancellationToken ct = default)
     {
@@ -55,7 +63,7 @@ public class RecipeDownloadService(
     {
         return ex switch
         {
-            OperationCanceledException when ct.IsCancellationRequested => HandleCancellation(),
+            _ when ct.IsCancellationRequested => HandleCancellation(),
             TaskCanceledException => HandleTimeout(article),
             HttpRequestException httpEx => HandleConnectionError(httpEx, article),
             _ => HandleUnexpectedError(ex, article)
@@ -104,7 +112,7 @@ public class RecipeDownloadService(
 
     private async Task<RecipeDownloadResult> HandleSuccessAsync(HttpResponseMessage response, CancellationToken ct)
     {
-        var recipes = await response.Content.ReadFromJsonAsync<List<RecipeResponseDto>>(ct) ?? [];
+        var recipes = await response.Content.ReadFromJsonAsync<List<RecipeResponseDto>>(JsonOptions, ct) ?? [];
         logger.LogInformation("Downloaded {Count} recipes", recipes.Count);
         return RecipeDownloadResult.Success(recipes);
     }

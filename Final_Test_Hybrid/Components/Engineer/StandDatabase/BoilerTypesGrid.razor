@@ -19,7 +19,10 @@
         <RadzenDataGrid @ref="_grid" Data="@_boilerTypes" TItem="BoilerTypeEditModel"
                         EditMode="DataGridEditMode.Single"
                         AllowFiltering="true" AllowSorting="true"
-                        AllowColumnResize="true">
+                        AllowColumnResize="true"
+                        AllowPaging="true" PageSize="1000"
+                        ShowPagingSummary="true"
+                        PagingSummaryFormat="Показано {0}-{1} из {2} записей">
             <Columns>
                 <RadzenDataGridColumn TItem="BoilerTypeEditModel" Property="Type"
                                       Title="Тип">

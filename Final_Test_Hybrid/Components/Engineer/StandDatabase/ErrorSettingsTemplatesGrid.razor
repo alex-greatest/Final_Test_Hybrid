@@ -19,24 +19,27 @@
         <RadzenDataGrid @ref="_grid" Data="@_templates" TItem="ErrorSettingsTemplateEditModel"
                         EditMode="DataGridEditMode.Single"
                         AllowFiltering="true" AllowSorting="true"
-                        AllowColumnResize="true">
+                        AllowColumnResize="true"
+                        AllowPaging="true" PageSize="1000"
+                        ShowPagingSummary="true"
+                        PagingSummaryFormat="Показано {0}-{1} из {2} записей">
             <Columns>
                 <RadzenDataGridColumn TItem="ErrorSettingsTemplateEditModel" Property="AddressError"
-                                      Title="Адрес ошибки" MinWidth="200px">
+                                      Title="Адрес ошибки" Width="200px">
                     <EditTemplate Context="item">
                         <RadzenTextBox @bind-Value="item.AddressError"
                                        MaxLength="500" class="w-full" />
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="ErrorSettingsTemplateEditModel" Property="Description"
-                                      Title="Описание" MinWidth="200px">
+                                      Title="Описание">
                     <EditTemplate Context="item">
                         <RadzenTextBox @bind-Value="item.Description"
                                        MaxLength="500" class="w-full" />
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="ErrorSettingsTemplateEditModel" Property="StepName"
-                                      Title="Шаг теста" MinWidth="200px">
+                                      Title="Шаг теста" Width="200px">
                     <Template Context="item">
                         @(item.StepName ?? "—")
                     </Template>
@@ -50,7 +53,7 @@
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="ErrorSettingsTemplateEditModel"
                                       TextAlign="TextAlign.Center" Sortable="false"
-                                      Filterable="false" MinWidth="100px">
+                                      Filterable="false" Width="100px">
                     <Template Context="item">
                         <RadzenButton Icon="edit" Size="ButtonSize.Small"
                                       Click="@(() => EditRow(item))"/>

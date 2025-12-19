@@ -56,7 +56,6 @@
 
 /* Сетка таблицы */
 ::deep .rz-grid-table {
-    width: unset !important;
     border-collapse: collapse;
 }
 

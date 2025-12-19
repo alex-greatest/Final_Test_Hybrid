@@ -13,7 +13,9 @@
                 EditMode="DataGridEditMode.Single"
                 AllowFiltering="true" AllowSorting="true"
                 AllowColumnResize="true" AllowColumnReorder="true"
-                AllowPaging="false">
+                AllowPaging="true" PageSize="1000"
+                ShowPagingSummary="true"
+                PagingSummaryFormat="Показано {0}-{1} из {2} записей">
     <Columns>
         <RadzenDataGridColumn TItem="ResultSettingsEditModel" Width="50px"
                               Sortable="false" Filterable="false" TextAlign="TextAlign.Center">
@@ -26,19 +28,19 @@
             </Template>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="AddressValue"
-                              Title="Адрес значения" MinWidth="120px">
+                              Title="Адрес значения" Width="150px">
             <EditTemplate Context="item">
                 <RadzenTextBox @bind-Value="item.AddressValue" MaxLength="100" class="w-full" />
             </EditTemplate>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="ParameterName"
-                              Title="Название параметра" MinWidth="120px">
+                              Title="Название параметра" Width="200px">
             <EditTemplate Context="item">
                 <RadzenTextBox @bind-Value="item.ParameterName" MaxLength="100" class="w-full" />
             </EditTemplate>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="PlcType"
-                              Title="Тип PLC" MinWidth="100px">
+                              Title="Тип PLC" Width="100px">
             <Template Context="item">
                 @item.PlcType
             </Template>
@@ -49,7 +51,7 @@
             </EditTemplate>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="AuditType"
-                              Title="Тип" MinWidth="100px">
+                              Title="Тип" Width="100px">
             <Template Context="item">
                 @GetAuditTypeDisplayName(item.AuditType)
             </Template>
@@ -62,26 +64,26 @@
             </EditTemplate>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="Nominal"
-                              Title="Номинал" MinWidth="100px">
+                              Title="Номинал" Width="100px">
             <EditTemplate Context="item">
                 <RadzenTextBox @bind-Value="item.Nominal" MaxLength="30" class="w-full" />
             </EditTemplate>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="Unit"
-                              Title="Ед.изм." MinWidth="80px">
+                              Title="Ед.изм." Width="80px">
             <EditTemplate Context="item">
                 <RadzenTextBox @bind-Value="item.Unit" MaxLength="20" class="w-full" />
             </EditTemplate>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="Description"
-                              Title="Описание" MinWidth="120px">
+                              Title="Описание">
             <EditTemplate Context="item">
                 <RadzenTextArea @bind-Value="item.Description" MaxLength="500" Rows="2" class="w-full" />
             </EditTemplate>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ResultSettingsEditModel"
                               TextAlign="TextAlign.Center" Sortable="false"
-                              Filterable="false" MinWidth="100px">
+                              Filterable="false" Width="100px">
             <Template Context="item">
                 <RadzenButton Icon="edit" Size="ButtonSize.Small"
                               Click="@(() => EditRow(item))"/>
