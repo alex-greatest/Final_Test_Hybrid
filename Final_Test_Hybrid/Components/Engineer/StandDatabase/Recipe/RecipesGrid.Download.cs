@@ -93,6 +93,7 @@ public partial class RecipesGrid
     {
         return new Dictionary<string, object>
         {
+            { "Message", "Загрузка рецептов..." },
             { "OnCancelRequested", EventCallback.Factory.Create(this, OnCancelDownload) }
         };
     }
@@ -102,7 +103,7 @@ public partial class RecipesGrid
         return new DialogOptions
         {
             Width = "600px",
-            Height = "300px",
+            Height = "350px",
             CloseDialogOnOverlayClick = false,
             ShowClose = false
         };

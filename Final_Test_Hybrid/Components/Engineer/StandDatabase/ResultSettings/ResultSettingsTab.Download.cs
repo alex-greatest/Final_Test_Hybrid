@@ -103,6 +103,7 @@ public partial class ResultSettingsTab
     {
         return new Dictionary<string, object>
         {
+            { "Message", "Загрузка результатов..." },
             { "OnCancelRequested", EventCallback.Factory.Create(this, OnCancelDownload) }
         };
     }
@@ -112,7 +113,7 @@ public partial class ResultSettingsTab
         return new DialogOptions
         {
             Width = "600px",
-            Height = "300px",
+            Height = "350px",
             CloseDialogOnOverlayClick = false,
             ShowClose = false
         };
