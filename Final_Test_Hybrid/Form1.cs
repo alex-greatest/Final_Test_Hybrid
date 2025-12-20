@@ -11,6 +11,7 @@ using Final_Test_Hybrid.Services.Common.UI;
 using Final_Test_Hybrid.Services.Steps;
 using Final_Test_Hybrid.Services.SpringBoot.Health;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
+using Final_Test_Hybrid.Services.SpringBoot.ErrorSettings;
 using Final_Test_Hybrid.Services.SpringBoot.ResultSettings;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
@@ -177,6 +178,7 @@ namespace Final_Test_Hybrid
             services.AddSingleton<OperatorAuthService>();
             services.AddScoped<RecipeDownloadService>();
             services.AddScoped<ResultSettingsDownloadService>();
+            services.AddScoped<ErrorSettingsDownloadService>();
         }
 
         private void RegisterShiftServices(ServiceCollection services)

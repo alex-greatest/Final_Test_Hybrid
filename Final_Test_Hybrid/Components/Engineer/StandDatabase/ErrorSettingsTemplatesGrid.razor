@@ -16,6 +16,8 @@
                               Click="@LoadDataAsync" />
                 <RadzenButton Icon="add" Text="Добавить"
                               Click="@AddNewRow" />
+                <RadzenButton Icon="cloud_download" Text="Загрузить с сервера"
+                              Click="@DownloadFromServer" />
             </div>
             <span class="record-count">Записей: @_templates.Count</span>
         </div>

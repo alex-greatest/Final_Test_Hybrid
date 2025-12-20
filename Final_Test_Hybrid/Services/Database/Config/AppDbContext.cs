@@ -207,12 +207,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.ToTable("TB_ERROR_SETTINGS_HISTORY");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasColumnName("ID").ValueGeneratedOnAdd();
-            entity.Property(e => e.ErrorSettingsTemplateId).HasColumnName("ERROR_SETTINGS_TEMPLATE_ID").IsRequired();
+            entity.Property(e => e.ErrorSettingsTemplateId).HasColumnName("ERROR_SETTINGS_TEMPLATE_ID");
             entity.Property(e => e.StepHistoryId).HasColumnName("STEP_HISTORY_ID");
             entity.Property(e => e.AddressError).HasColumnName("ADDRESS_ERROR").IsRequired().HasMaxLength(500);
             entity.Property(e => e.Description).HasColumnName("DESCRIPTION");
             entity.Property(e => e.IsActive).HasColumnName("IS_ACTIVE").IsRequired().HasDefaultValue(false);
-            entity.HasOne(e => e.ErrorSettingsTemplate).WithMany().HasForeignKey(e => e.ErrorSettingsTemplateId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.StepHistory).WithMany().HasForeignKey(e => e.StepHistoryId).OnDelete(DeleteBehavior.SetNull);
             entity.HasIndex(e => e.ErrorSettingsTemplateId).HasDatabaseName("IDX_TB_ERROR_SETTINGS_HISTORY_ERROR_SETTINGS_TEMPLATE");
             entity.HasIndex(e => e.StepHistoryId).HasDatabaseName("IDX_TB_ERROR_SETTINGS_HISTORY_STEP_HISTORY");

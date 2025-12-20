@@ -92,14 +92,53 @@ public class ErrorSettingsTemplateService(
         }
     }
 
-    private static void AddTemplate(AppDbContext dbContext, ErrorSettingsTemplate template)
+    public async Task ReplaceAllAsync(List<ErrorSettingsTemplate> items, CancellationToken ct = default)
     {
-        dbContext.ErrorSettingsTemplates.Add(template);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+        try
+        {
+            await DeleteAllWithHistoryAsync(dbContext, ct);
+            await AddAllWithHistoryAsync(dbContext, items, ct);
+            await transaction.CommitAsync(ct);
+            logger.LogInformation("Replaced all ErrorSettingsTemplates with {Count} new items", items.Count);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(ct);
+            logger.LogError(ex, "Failed to replace ErrorSettingsTemplates");
+            throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
+        }
     }
 
-    private static void AddActiveHistory(AppDbContext dbContext, ErrorSettingsTemplate template)
+    private static async Task DeleteAllWithHistoryAsync(AppDbContext dbContext, CancellationToken ct)
     {
-        var history = new ErrorSettingsHistory
+        await dbContext.ErrorSettingsHistories
+            .Where(h => h.IsActive)
+            .ExecuteUpdateAsync(s => s.SetProperty(h => h.IsActive, false), ct);
+        await dbContext.ErrorSettingsTemplates.ExecuteDeleteAsync(ct);
+    }
+
+    private async Task AddAllWithHistoryAsync(
+        AppDbContext dbContext,
+        List<ErrorSettingsTemplate> items,
+        CancellationToken ct)
+    {
+        dbContext.ErrorSettingsTemplates.AddRange(items);
+        await dbContext.SaveChangesAsync(ct);
+        AddActiveHistoryForAll(dbContext, items);
+        await dbContext.SaveChangesAsync(ct);
+    }
+
+    private static void AddActiveHistoryForAll(AppDbContext dbContext, List<ErrorSettingsTemplate> items)
+    {
+        var histories = items.Select(CreateHistoryRecord);
+        dbContext.ErrorSettingsHistories.AddRange(histories);
+    }
+
+    private static ErrorSettingsHistory CreateHistoryRecord(ErrorSettingsTemplate template)
+    {
+        return new ErrorSettingsHistory
         {
             ErrorSettingsTemplateId = template.Id,
             StepHistoryId = null,
@@ -107,6 +146,16 @@ public class ErrorSettingsTemplateService(
             Description = template.Description,
             IsActive = true
         };
+    }
+
+    private static void AddTemplate(AppDbContext dbContext, ErrorSettingsTemplate template)
+    {
+        dbContext.ErrorSettingsTemplates.Add(template);
+    }
+
+    private static void AddActiveHistory(AppDbContext dbContext, ErrorSettingsTemplate template)
+    {
+        var history = CreateHistoryRecord(template);
         dbContext.ErrorSettingsHistories.Add(history);
     }
 

@@ -5,9 +5,7 @@ namespace Final_Test_Hybrid.Models.Database;
 public class ErrorSettingsHistory
 {
     public long Id { get; init; }
-    [Required]
-    public long ErrorSettingsTemplateId { get; set; }
-    public ErrorSettingsTemplate? ErrorSettingsTemplate { get; set; }
+    public long? ErrorSettingsTemplateId { get; set; }
     public long? StepHistoryId { get; set; }
     public StepFinalTestHistory? StepHistory { get; set; }
     [Required]

@@ -15,6 +15,44 @@ public class StepFinalTestService(
         return await dbContext.StepFinalTests.AsNoTracking().ToListAsync();
     }
 
+    public async Task<StepFinalTest> GetOrCreateByNameAsync(string name, CancellationToken ct = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        var existing = await dbContext.StepFinalTests
+            .FirstOrDefaultAsync(x => x.Name == name, ct);
+        if (existing != null)
+        {
+            return existing;
+        }
+        return await CreateStepWithHistoryAsync(dbContext, name, ct);
+    }
+
+    private async Task<StepFinalTest> CreateStepWithHistoryAsync(
+        AppDbContext dbContext,
+        string name,
+        CancellationToken ct)
+    {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+        try
+        {
+            var step = new StepFinalTest { Name = name };
+            dbContext.StepFinalTests.Add(step);
+            await dbContext.SaveChangesAsync(ct);
+            var history = CreateHistoryRecord(step);
+            dbContext.StepFinalTestHistories.Add(history);
+            await dbContext.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            logger.LogInformation("Created StepFinalTest '{Name}' with Id {Id}", name, step.Id);
+            return step;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(ct);
+            logger.LogError(ex, "Failed to create StepFinalTest '{Name}'", name);
+            throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
+        }
+    }
+
     public async Task<StepFinalTest> CreateAsync(StepFinalTest stepFinalTest)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -84,6 +122,7 @@ public class StepFinalTestService(
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             logger.LogError(ex, "Failed to delete StepFinalTest {Id}", id);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
