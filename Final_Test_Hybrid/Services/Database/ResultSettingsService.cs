@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Database;
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Database.Config;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -7,7 +8,8 @@ namespace Final_Test_Hybrid.Services.Database;
 
 public class ResultSettingsService(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    ILogger<ResultSettingsService> logger)
+    ILogger<ResultSettingsService> logger,
+    IDatabaseLogger dbLogger)
 {
     public async Task<List<ResultSettings>> GetAllAsync()
     {
@@ -30,12 +32,14 @@ public class ResultSettingsService(
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
             logger.LogInformation("Created ResultSettings {Id} with active history", settings.Id);
+            dbLogger.LogInformation("Созданы настройки результата {Id} с активной историей", settings.Id);
             return settings;
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
             logger.LogError(ex, "Failed to create ResultSettings");
+            dbLogger.LogError(ex, "Ошибка создания настроек результата");
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -57,6 +61,7 @@ public class ResultSettingsService(
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
             logger.LogInformation("Updated ResultSettings {Id} with new active history", settings.Id);
+            dbLogger.LogInformation("Обновлены настройки результата {Id} с новой активной историей", settings.Id);
         }
         catch (InvalidOperationException)
         {
@@ -66,6 +71,7 @@ public class ResultSettingsService(
         {
             await transaction.RollbackAsync();
             logger.LogError(ex, "Failed to update ResultSettings {Id}", settings.Id);
+            dbLogger.LogError(ex, "Ошибка обновления настроек результата {Id}", settings.Id);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -86,10 +92,12 @@ public class ResultSettingsService(
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
             logger.LogInformation("Deleted ResultSettings {Id}", id);
+            dbLogger.LogInformation("Удалены настройки результата {Id}", id);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to delete ResultSettings {Id}", id);
+            dbLogger.LogError(ex, "Ошибка удаления настроек результата {Id}", id);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -124,11 +132,14 @@ public class ResultSettingsService(
             await transaction.CommitAsync(ct);
             logger.LogInformation("Replaced {Count} result settings for BoilerType {BoilerTypeId}",
                 items.Count, boilerTypeId);
+            dbLogger.LogInformation("Заменено {Count} настроек результата для типа котла {BoilerTypeId}",
+                items.Count, boilerTypeId);
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(ct);
             logger.LogError(ex, "Failed to replace result settings for BoilerType {BoilerTypeId}", boilerTypeId);
+            dbLogger.LogError(ex, "Ошибка замены настроек результата для типа котла {BoilerTypeId}", boilerTypeId);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -142,11 +153,13 @@ public class ResultSettingsService(
             await DeleteExistingWithHistoryAsync(dbContext, boilerTypeId, ct);
             await transaction.CommitAsync(ct);
             logger.LogInformation("Deleted all ResultSettings for BoilerType {Id}", boilerTypeId);
+            dbLogger.LogInformation("Удалены все настройки результата для типа котла {Id}", boilerTypeId);
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(ct);
             logger.LogError(ex, "Failed to delete all ResultSettings for BoilerType {Id}", boilerTypeId);
+            dbLogger.LogError(ex, "Ошибка удаления всех настроек результата для типа котла {Id}", boilerTypeId);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -166,6 +179,7 @@ public class ResultSettingsService(
             .Where(r => r.BoilerTypeId == boilerTypeId)
             .ExecuteDeleteAsync(ct);
         logger.LogInformation("Deleted {Count} result settings for BoilerType {BoilerTypeId}", deleted, boilerTypeId);
+        dbLogger.LogInformation("Удалено {Count} настроек результата для типа котла {BoilerTypeId}", deleted, boilerTypeId);
     }
 
     private async Task AddNewWithHistoryAsync(
@@ -197,6 +211,7 @@ public class ResultSettingsService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to copy ResultSettings {ParameterName}", source.ParameterName);
+            dbLogger.LogError(ex, "Ошибка копирования настроек результата {ParameterName}", source.ParameterName);
             return false;
         }
     }
@@ -212,6 +227,8 @@ public class ResultSettingsService(
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
         logger.LogInformation("Copied ResultSettings {ParameterName} to BoilerType {BoilerTypeId}",
+            source.ParameterName, targetBoilerTypeId);
+        dbLogger.LogInformation("Скопированы настройки результата {ParameterName} в тип котла {BoilerTypeId}",
             source.ParameterName, targetBoilerTypeId);
     }
 

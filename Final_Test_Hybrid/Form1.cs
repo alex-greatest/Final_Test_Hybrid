@@ -136,6 +136,8 @@ namespace Final_Test_Hybrid
             #endif
             ConfigureSerilog();
             services.AddSingleton<ISubscriptionLogger, SubscriptionLogger>();
+            services.AddSingleton<IDatabaseLogger, DatabaseLogger>();
+            services.AddSingleton<ISpringBootLogger, SpringBootLogger>();
             var logLevel = Enum.Parse<LogLevel>(_config?["Logging:General:LogLevel"] ?? "Warning");
             services.AddLogging(logging =>
             {

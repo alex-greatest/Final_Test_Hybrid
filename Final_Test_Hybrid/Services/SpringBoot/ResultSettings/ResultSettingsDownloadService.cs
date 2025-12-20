@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Settings.Spring;
 using Microsoft.Extensions.Logging;
@@ -24,7 +25,8 @@ public class ResultSettingsDownloadResult
 public class ResultSettingsDownloadService(
     SpringBootHttpClient httpClient,
     AppSettingsService appSettingsService,
-    ILogger<ResultSettingsDownloadService> logger)
+    ILogger<ResultSettingsDownloadService> logger,
+    ISpringBootLogger sbLogger)
 {
     private const string Endpoint = "/api/result-settings";
 
@@ -38,6 +40,7 @@ public class ResultSettingsDownloadService(
     {
         var url = BuildRequestUrl(article);
         logger.LogInformation("Downloading result settings from {Url}", url);
+        sbLogger.LogInformation("Загрузка настроек результата из {Url}", url);
         return await ExecuteDownloadAsync(url, article, ct);
     }
 
@@ -73,24 +76,28 @@ public class ResultSettingsDownloadService(
     private ResultSettingsDownloadResult HandleCancellation()
     {
         logger.LogInformation("Result settings download cancelled");
+        sbLogger.LogInformation("Загрузка настроек результата отменена");
         return ResultSettingsDownloadResult.Fail("Операция отменена");
     }
 
     private ResultSettingsDownloadResult HandleTimeout(string article)
     {
         logger.LogWarning("Result settings download timed out for article {Article}", article);
+        sbLogger.LogWarning("Таймаут загрузки настроек результата для артикула {Article}", article);
         return ResultSettingsDownloadResult.Fail("Таймаут соединения с сервером");
     }
 
     private ResultSettingsDownloadResult HandleConnectionError(HttpRequestException ex, string article)
     {
         logger.LogError(ex, "No connection to server for article {Article}", article);
+        sbLogger.LogError(ex, "Нет соединения с сервером для артикула {Article}", article);
         return ResultSettingsDownloadResult.Fail("Нет соединения с сервером");
     }
 
     private ResultSettingsDownloadResult HandleUnexpectedError(Exception ex, string article)
     {
         logger.LogError(ex, "Result settings download failed for article {Article}", article);
+        sbLogger.LogError(ex, "Ошибка загрузки настроек результата для артикула {Article}", article);
         return ResultSettingsDownloadResult.Fail("Ошибка на стороне сервера");
     }
 
@@ -114,6 +121,7 @@ public class ResultSettingsDownloadService(
     {
         var items = await response.Content.ReadFromJsonAsync<List<ResultSettingsResponseDto>>(JsonOptions, ct) ?? [];
         logger.LogInformation("Downloaded {Count} result settings", items.Count);
+        sbLogger.LogInformation("Загружено {Count} настроек результата", items.Count);
         return ResultSettingsDownloadResult.Success(items);
     }
 
@@ -121,6 +129,7 @@ public class ResultSettingsDownloadService(
     {
         var errorMessage = await TryParseErrorMessageAsync(response, ct);
         logger.LogWarning("Result settings download 404: {Message}", errorMessage);
+        sbLogger.LogWarning("Настройки результата не найдены: {Message}", errorMessage);
         return ResultSettingsDownloadResult.Fail(errorMessage);
     }
 

@@ -4,7 +4,7 @@ using Serilog;
 
 namespace Final_Test_Hybrid.Services.Common.Logging;
 
-public class SubscriptionLogger : ISubscriptionLogger, IDisposable
+public class SpringBootLogger : ISpringBootLogger, IDisposable
 {
     private readonly ILogger _logger;
     private bool _disposed;
@@ -13,10 +13,10 @@ public class SubscriptionLogger : ISubscriptionLogger, IDisposable
     public void LogWarning(string message, params object?[] args) => _logger.Warning(message, args);
     public void LogError(Exception? ex, string message, params object?[] args) => _logger.Error(ex, message, args);
 
-    public SubscriptionLogger(IConfiguration config)
+    public SpringBootLogger(IConfiguration config)
     {
-        var logConfig = config.GetSection("Logging:Subscription");
-        var basePath = logConfig["Path"] ?? "D:/Logs/Subscriptions/subscription-.txt";
+        var logConfig = config.GetSection("Logging:SpringBoot");
+        var basePath = logConfig["Path"] ?? "D:/Logs/SpringBoot/springboot-.txt";
         var retain = int.Parse(logConfig["RetainedFileCountLimit"] ?? "10", CultureInfo.InvariantCulture);
         var level = Enum.Parse<Serilog.Events.LogEventLevel>(logConfig["LogLevel"] ?? "Debug");
         var path = BuildPathWithTimestamp(basePath);
@@ -54,7 +54,7 @@ public class SubscriptionLogger : ISubscriptionLogger, IDisposable
             File.Delete(file);
         }
     }
-    
+
     public void Dispose()
     {
         if (_disposed)

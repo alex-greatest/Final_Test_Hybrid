@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.SpringBoot.Shift;
 using Final_Test_Hybrid.Settings.Spring;
@@ -12,7 +13,8 @@ public class OperatorAuthService(
     AppSettingsService appSettingsService,
     OperatorState operatorState,
     ShiftState shiftState,
-    ILogger<OperatorAuthService> logger)
+    ILogger<OperatorAuthService> logger,
+    ISpringBootLogger sbLogger)
 {
     private const string AuthEndpoint = "/api/operator/auth";
     private const string QrAuthEndpoint = "/api/operator/auth/Qr";
@@ -36,6 +38,7 @@ public class OperatorAuthService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Authentication request failed for {Login}", login);
+            sbLogger.LogError(ex, "Ошибка запроса аутентификации для {Login}", login);
             return OperatorAuthResult.Fail("Неизвестная ошибка", isKnownError: false);
         }
     }
@@ -58,6 +61,7 @@ public class OperatorAuthService(
         catch (Exception ex)
         {
             logger.LogError(ex, "QR authentication request failed");
+            sbLogger.LogError(ex, "Ошибка QR аутентификации");
             return OperatorAuthResult.Fail("Неизвестная ошибка", isKnownError: false);
         }
     }
@@ -91,6 +95,7 @@ public class OperatorAuthService(
         var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>(ct);
         var message = errorResponse?.Message ?? "Неизвестная ошибка";
         logger.LogWarning("QR authentication failed: {Message}", message);
+        sbLogger.LogWarning("QR аутентификация не удалась: {Message}", message);
         return OperatorAuthResult.Fail(message, isKnownError: true);
     }
 
@@ -121,12 +126,14 @@ public class OperatorAuthService(
         var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>(ct);
         var message = errorResponse?.Message ?? "Неизвестная ошибка";
         logger.LogWarning("Authentication failed for {Login}: {Message}", login, message);
+        sbLogger.LogWarning("Аутентификация не удалась для {Login}: {Message}", login, message);
         return OperatorAuthResult.Fail(message, isKnownError: true);
     }
 
     private OperatorAuthResult HandleUnexpectedStatus(HttpStatusCode statusCode)
     {
         logger.LogError("Unexpected status code {StatusCode} for authentication", statusCode);
+        sbLogger.LogError(null, "Неожиданный код статуса {StatusCode} при аутентификации", statusCode);
         return OperatorAuthResult.Fail("Неизвестная ошибка", isKnownError: false);
     }
 
@@ -148,6 +155,7 @@ public class OperatorAuthService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Logout request failed for {Username}", request.Username);
+            sbLogger.LogError(ex, "Ошибка запроса выхода для {Username}", request.Username);
             return OperatorAuthResult.Fail("Неизвестная ошибка", isKnownError: false);
         }
     }
@@ -180,12 +188,14 @@ public class OperatorAuthService(
         var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>(ct);
         var message = errorResponse?.Message ?? "Неизвестная ошибка";
         logger.LogWarning("Logout failed for {Username}: {Message}", username, message);
+        sbLogger.LogWarning("Выход не удался для {Username}: {Message}", username, message);
         return OperatorAuthResult.Fail(message, isKnownError: true);
     }
 
     private OperatorAuthResult HandleLogoutUnexpectedStatus(HttpStatusCode statusCode)
     {
         logger.LogError("Unexpected status code {StatusCode} for logout", statusCode);
+        sbLogger.LogError(null, "Неожиданный код статуса {StatusCode} при выходе", statusCode);
         return OperatorAuthResult.Fail("Неизвестная ошибка", isKnownError: false);
     }
 

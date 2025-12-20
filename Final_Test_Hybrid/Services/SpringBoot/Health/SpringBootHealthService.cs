@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Settings.Spring;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -8,7 +9,8 @@ public class SpringBootHealthService(
     SpringBootHttpClient httpClient,
     SpringBootConnectionState connectionState,
     IOptions<SpringBootSettings> options,
-    ILogger<SpringBootHealthService> logger)
+    ILogger<SpringBootHealthService> logger,
+    ISpringBootLogger sbLogger)
 {
     private readonly int _intervalMs = options.Value.HealthCheckIntervalMs;
     private PeriodicTimer? _timer;
@@ -20,6 +22,7 @@ public class SpringBootHealthService(
         _timer = new PeriodicTimer(TimeSpan.FromMilliseconds(_intervalMs));
         _ = RunHealthCheckLoopAsync(_cts.Token);
         logger.LogInformation("Health check started with interval {IntervalMs}ms", _intervalMs);
+        sbLogger.LogInformation("Проверка состояния запущена с интервалом {IntervalMs}мс", _intervalMs);
     }
 
     private async Task RunHealthCheckLoopAsync(CancellationToken ct)
@@ -39,6 +42,7 @@ public class SpringBootHealthService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Health check loop failed unexpectedly");
+            sbLogger.LogError(ex, "Цикл проверки состояния неожиданно завершился с ошибкой");
         }
     }
 
@@ -51,12 +55,14 @@ public class SpringBootHealthService(
             if (!isHealthy)
             {
                 logger.LogWarning("Spring Boot server is not responding");
+                sbLogger.LogWarning("Сервер Spring Boot не отвечает");
             }
         }
         catch (Exception ex)
         {
             connectionState.SetConnected(false);
             logger.LogWarning(ex, "Health check failed");
+            sbLogger.LogWarning("Проверка состояния не удалась: {Message}", ex.Message);
         }
     }
 
@@ -68,5 +74,6 @@ public class SpringBootHealthService(
         _timer = null;
         _cts = null;
         logger.LogInformation("Health check stopped");
+        sbLogger.LogInformation("Проверка состояния остановлена");
     }
 }

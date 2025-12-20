@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Settings.Spring;
 using Microsoft.Extensions.Logging;
 
@@ -21,7 +22,8 @@ public class StepFinalTestDownloadResult
 
 public class StepFinalTestDownloadService(
     SpringBootHttpClient httpClient,
-    ILogger<StepFinalTestDownloadService> logger)
+    ILogger<StepFinalTestDownloadService> logger,
+    ISpringBootLogger sbLogger)
 {
     private const string Endpoint = "/api/steps";
 
@@ -33,6 +35,7 @@ public class StepFinalTestDownloadService(
     public async Task<StepFinalTestDownloadResult> DownloadAsync(CancellationToken ct = default)
     {
         logger.LogInformation("Downloading step final tests from {Endpoint}", Endpoint);
+        sbLogger.LogInformation("Загрузка шагов финального теста из {Endpoint}", Endpoint);
         return await ExecuteDownloadAsync(ct);
     }
 
@@ -62,24 +65,28 @@ public class StepFinalTestDownloadService(
     private StepFinalTestDownloadResult HandleCancellation()
     {
         logger.LogInformation("Step final tests download cancelled");
+        sbLogger.LogInformation("Загрузка шагов финального теста отменена");
         return StepFinalTestDownloadResult.Fail("Операция отменена");
     }
 
     private StepFinalTestDownloadResult HandleTimeout()
     {
         logger.LogWarning("Step final tests download timed out");
+        sbLogger.LogWarning("Таймаут загрузки шагов финального теста");
         return StepFinalTestDownloadResult.Fail("Таймаут соединения с сервером");
     }
 
     private StepFinalTestDownloadResult HandleConnectionError(HttpRequestException ex)
     {
         logger.LogError(ex, "No connection to server for step final tests");
+        sbLogger.LogError(ex, "Нет соединения с сервером для шагов финального теста");
         return StepFinalTestDownloadResult.Fail("Нет соединения с сервером");
     }
 
     private StepFinalTestDownloadResult HandleUnexpectedError(Exception ex)
     {
         logger.LogError(ex, "Step final tests download failed");
+        sbLogger.LogError(ex, "Ошибка загрузки шагов финального теста");
         return StepFinalTestDownloadResult.Fail("Ошибка на стороне сервера");
     }
 
@@ -103,18 +110,21 @@ public class StepFinalTestDownloadService(
     {
         var items = await response.Content.ReadFromJsonAsync<List<StepFinalTestResponseDto>>(JsonOptions, ct) ?? [];
         logger.LogInformation("Downloaded {Count} step final tests", items.Count);
+        sbLogger.LogInformation("Загружено {Count} шагов финального теста", items.Count);
         return StepFinalTestDownloadResult.Success(items);
     }
 
     private StepFinalTestDownloadResult HandleNotFound()
     {
         logger.LogWarning("Step final tests not found on server");
+        sbLogger.LogWarning("Шаги финального теста не найдены на сервере");
         return StepFinalTestDownloadResult.Fail("Шаги финального теста не найдены");
     }
 
     private StepFinalTestDownloadResult HandleUnexpectedStatus(HttpStatusCode statusCode)
     {
         logger.LogError("Unexpected status code {StatusCode} for step final tests download", statusCode);
+        sbLogger.LogError(null, "Неожиданный код статуса {StatusCode} при загрузке шагов финального теста", statusCode);
         return StepFinalTestDownloadResult.Fail("Ошибка на стороне сервера");
     }
 }
