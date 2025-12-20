@@ -109,4 +109,25 @@ public class BoilerTypeService(
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
+
+    public async Task DeleteAllAsync(CancellationToken ct = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+        try
+        {
+            await dbContext.BoilerTypeCycles
+                .Where(c => c.IsActive)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.IsActive, false), ct);
+            await dbContext.BoilerTypes.ExecuteDeleteAsync(ct);
+            await transaction.CommitAsync(ct);
+            logger.LogInformation("Deleted all BoilerTypes");
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(ct);
+            logger.LogError(ex, "Failed to delete all BoilerTypes");
+            throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
+        }
+    }
 }

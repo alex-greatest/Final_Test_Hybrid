@@ -32,6 +32,10 @@
                 <RadzenButton Icon="cloud_download" Text="Загрузить с сервера"
                               Click="@DownloadRecipesFromServer"
                               Disabled="@(_selectedBoilerTypeId == null)" />
+                <RadzenButton Icon="delete_sweep" Text="Очистить всё"
+                              ButtonStyle="ButtonStyle.Danger"
+                              Click="@ClearAllAsync"
+                              Disabled="@(_selectedBoilerTypeId == null || _filteredRecipes.Count == 0)" />
             </div>
             <span class="record-count">Записей: @_filteredRecipes.Count</span>
         </div>

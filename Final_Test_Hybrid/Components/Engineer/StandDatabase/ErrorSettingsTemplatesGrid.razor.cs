@@ -282,4 +282,32 @@ public partial class ErrorSettingsTemplatesGrid
     {
         NotificationService.Notify(NotificationSeverity.Error, "Ошибка", message);
     }
+
+    private async Task ClearAllAsync()
+    {
+        var confirmed = await DialogService.Confirm(
+            "Удалить все настройки ошибок?",
+            "Подтверждение",
+            new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Нет" });
+        if (confirmed != true)
+        {
+            return;
+        }
+        await ExecuteClearAllAsync();
+    }
+
+    private async Task ExecuteClearAllAsync()
+    {
+        try
+        {
+            await ErrorSettingsTemplateService.DeleteAllAsync();
+            ShowSuccess("Все настройки ошибок удалены");
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to clear all ErrorSettingsTemplates");
+            ShowError(ex.Message);
+        }
+    }
 }

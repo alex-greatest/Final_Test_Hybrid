@@ -26,6 +26,10 @@
                 <RadzenButton Icon="cloud_download" Text="Загрузить с сервера"
                               Click="@DownloadFromServer"
                               Disabled="@(_selectedBoilerTypeId == null)" />
+                <RadzenButton Icon="delete_sweep" Text="Очистить всё"
+                              ButtonStyle="ButtonStyle.Danger"
+                              Click="@ClearAllAsync"
+                              Disabled="@(_selectedBoilerTypeId == null || TotalItemsCount == 0)" />
             </div>
         </div>
         <RadzenTabs RenderMode="TabRenderMode.Client" @bind-SelectedIndex="@_selectedTabIndex"

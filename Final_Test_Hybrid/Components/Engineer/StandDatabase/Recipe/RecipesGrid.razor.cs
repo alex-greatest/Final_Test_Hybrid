@@ -240,5 +240,37 @@ public partial class RecipesGrid
     private void ShowError(string message) =>
         NotificationService.Notify(NotificationSeverity.Error, "Ошибка", message);
 
+    private async Task ClearAllAsync()
+    {
+        if (_selectedBoilerTypeId == null)
+        {
+            return;
+        }
+        var confirmed = await DialogService.Confirm(
+            "Удалить все рецепты для выбранного типа котла?",
+            "Подтверждение",
+            new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Нет" });
+        if (confirmed != true)
+        {
+            return;
+        }
+        await ExecuteClearAllAsync();
+    }
+
+    private async Task ExecuteClearAllAsync()
+    {
+        try
+        {
+            await RecipeService.DeleteAllByBoilerTypeAsync(_selectedBoilerTypeId!.Value);
+            ShowSuccess("Все рецепты удалены");
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to clear all Recipes");
+            ShowError(ex.Message);
+        }
+    }
+
     #endregion
 }

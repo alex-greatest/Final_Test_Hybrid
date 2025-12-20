@@ -16,6 +16,10 @@
                               Click="@LoadDataAsync" />
                 <RadzenButton Icon="add" Text="Добавить"
                               Click="@AddNewRow" />
+                <RadzenButton Icon="delete_sweep" Text="Очистить всё"
+                              ButtonStyle="ButtonStyle.Danger"
+                              Click="@ClearAllAsync"
+                              Disabled="@(_stepFinalTests.Count == 0)" />
             </div>
             <span class="record-count">Записей: @_stepFinalTests.Count</span>
         </div>

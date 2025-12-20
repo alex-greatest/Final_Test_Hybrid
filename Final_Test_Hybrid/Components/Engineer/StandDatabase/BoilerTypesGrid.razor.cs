@@ -156,4 +156,33 @@ public partial class BoilerTypesGrid
 
     private void ShowError(string message) =>
         NotificationService.Notify(NotificationSeverity.Error, "Ошибка", message);
+
+    private async Task ClearAllAsync()
+    {
+        var confirmed = await DialogService.Confirm(
+            "Удалить все типы котлов? Это также удалит все связанные рецепты и настройки результатов!",
+            "Подтверждение",
+            new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Нет" });
+        if (confirmed != true)
+        {
+            return;
+        }
+        await ExecuteClearAllAsync();
+    }
+
+    private async Task ExecuteClearAllAsync()
+    {
+        try
+        {
+            await BoilerTypeService.DeleteAllAsync();
+            ShowSuccess("Все типы котлов удалены");
+            await LoadDataAsync();
+            await OnDataChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to clear all BoilerTypes");
+            ShowError(ex.Message);
+        }
+    }
 }

@@ -85,6 +85,23 @@ public class RecipeService(
         }
     }
 
+    public async Task DeleteAllByBoilerTypeAsync(long boilerTypeId, CancellationToken ct = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        try
+        {
+            await dbContext.Recipes
+                .Where(r => r.BoilerTypeId == boilerTypeId)
+                .ExecuteDeleteAsync(ct);
+            logger.LogInformation("Deleted all Recipes for BoilerType {Id}", boilerTypeId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to delete all Recipes for BoilerType {Id}", boilerTypeId);
+            throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
+        }
+    }
+
     public async Task ReplaceRecipesForBoilerTypeAsync(
         long boilerTypeId,
         List<Recipe> recipes,

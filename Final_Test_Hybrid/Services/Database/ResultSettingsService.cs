@@ -133,6 +133,24 @@ public class ResultSettingsService(
         }
     }
 
+    public async Task DeleteAllByBoilerTypeAsync(long boilerTypeId, CancellationToken ct = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+        try
+        {
+            await DeleteExistingWithHistoryAsync(dbContext, boilerTypeId, ct);
+            await transaction.CommitAsync(ct);
+            logger.LogInformation("Deleted all ResultSettings for BoilerType {Id}", boilerTypeId);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(ct);
+            logger.LogError(ex, "Failed to delete all ResultSettings for BoilerType {Id}", boilerTypeId);
+            throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
+        }
+    }
+
     private async Task DeleteExistingWithHistoryAsync(AppDbContext dbContext, long boilerTypeId, CancellationToken ct)
     {
         var existingIds = await dbContext.ResultSettings

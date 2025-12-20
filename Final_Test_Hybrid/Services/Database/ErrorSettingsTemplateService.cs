@@ -111,6 +111,24 @@ public class ErrorSettingsTemplateService(
         }
     }
 
+    public async Task DeleteAllAsync(CancellationToken ct = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+        try
+        {
+            await DeleteAllWithHistoryAsync(dbContext, ct);
+            await transaction.CommitAsync(ct);
+            logger.LogInformation("Deleted all ErrorSettingsTemplates");
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(ct);
+            logger.LogError(ex, "Failed to delete all ErrorSettingsTemplates");
+            throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
+        }
+    }
+
     private static async Task DeleteAllWithHistoryAsync(AppDbContext dbContext, CancellationToken ct)
     {
         await dbContext.ErrorSettingsHistories

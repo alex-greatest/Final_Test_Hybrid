@@ -128,6 +128,27 @@ public class StepFinalTestService(
         }
     }
 
+    public async Task DeleteAllAsync(CancellationToken ct = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+        try
+        {
+            await dbContext.StepFinalTestHistories
+                .Where(h => h.IsActive)
+                .ExecuteUpdateAsync(s => s.SetProperty(h => h.IsActive, false), ct);
+            await dbContext.StepFinalTests.ExecuteDeleteAsync(ct);
+            await transaction.CommitAsync(ct);
+            logger.LogInformation("Deleted all StepFinalTests");
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(ct);
+            logger.LogError(ex, "Failed to delete all StepFinalTests");
+            throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
+        }
+    }
+
     private static StepFinalTestHistory CreateHistoryRecord(StepFinalTest stepFinalTest)
     {
         return new StepFinalTestHistory

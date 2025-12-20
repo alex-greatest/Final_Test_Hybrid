@@ -18,6 +18,10 @@
                               Click="@AddNewRow" />
                 <RadzenButton Icon="cloud_download" Text="Загрузить с сервера"
                               Click="@DownloadFromServer" />
+                <RadzenButton Icon="delete_sweep" Text="Очистить всё"
+                              ButtonStyle="ButtonStyle.Danger"
+                              Click="@ClearAllAsync"
+                              Disabled="@(_templates.Count == 0)" />
             </div>
             <span class="record-count">Записей: @_templates.Count</span>
         </div>

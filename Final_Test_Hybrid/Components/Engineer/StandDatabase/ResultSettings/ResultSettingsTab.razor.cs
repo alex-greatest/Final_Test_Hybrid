@@ -3,6 +3,7 @@ using Final_Test_Hybrid.Models.Database.Edit;
 using Final_Test_Hybrid.Services.Database;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using Radzen;
 
 namespace Final_Test_Hybrid.Components.Engineer.StandDatabase.ResultSettings;
 
@@ -20,6 +21,7 @@ public partial class ResultSettingsTab
     private IList<ResultSettingsEditModel> _selectedSimple = [];
     private IList<ResultSettingsEditModel> _selectedBoard = [];
     private int TotalSelectedCount => _selectedRange.Count + _selectedSimple.Count + _selectedBoard.Count;
+    private int TotalItemsCount => _itemsRange.Count + _itemsSimple.Count + _itemsBoard.Count;
     private ResultSettingsRangeGrid? _gridRange;
     private ResultSettingsSimpleGrid? _gridSimple;
     private ResultSettingsBoardGrid? _gridBoard;
@@ -77,5 +79,37 @@ public partial class ResultSettingsTab
     private void SelectTabByAuditType()
     {
         // Tab selection will be handled by data refresh
+    }
+
+    private async Task ClearAllAsync()
+    {
+        if (_selectedBoilerTypeId == null)
+        {
+            return;
+        }
+        var confirmed = await DialogService.Confirm(
+            "Удалить все настройки результатов для выбранного типа котла?",
+            "Подтверждение",
+            new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Нет" });
+        if (confirmed != true)
+        {
+            return;
+        }
+        await ExecuteClearAllAsync();
+    }
+
+    private async Task ExecuteClearAllAsync()
+    {
+        try
+        {
+            await ResultSettingsService.DeleteAllByBoilerTypeAsync(_selectedBoilerTypeId!.Value);
+            NotificationService.Notify(NotificationSeverity.Success, "Успех", "Все настройки результатов удалены");
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to clear all ResultSettings");
+            NotificationService.Notify(NotificationSeverity.Error, "Ошибка", ex.Message);
+        }
     }
 }

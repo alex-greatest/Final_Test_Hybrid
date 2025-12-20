@@ -235,4 +235,33 @@ public partial class StepFinalTestsGrid
     {
         NotificationService.Notify(NotificationSeverity.Error, "Ошибка", message);
     }
+
+    private async Task ClearAllAsync()
+    {
+        var confirmed = await DialogService.Confirm(
+            "Удалить все шаги теста?",
+            "Подтверждение",
+            new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Нет" });
+        if (confirmed != true)
+        {
+            return;
+        }
+        await ExecuteClearAllAsync();
+    }
+
+    private async Task ExecuteClearAllAsync()
+    {
+        try
+        {
+            await StepFinalTestService.DeleteAllAsync();
+            ShowSuccess("Все шаги теста удалены");
+            await LoadDataAsync();
+            await OnDataChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to clear all StepFinalTests");
+            ShowError(ex.Message);
+        }
+    }
 }
