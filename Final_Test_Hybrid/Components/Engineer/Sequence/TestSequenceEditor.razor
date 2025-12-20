@@ -35,7 +35,7 @@
 
     <!-- Main Grid Area -->
     <div class="area-grid">
-        <RadzenDataGrid @ref="_grid" Data="@_rows" TItem="SequenceRow" 
+        <RadzenDataGrid @ref="_grid" Data="@_rows" TItem="SequenceRow"
                         KeyProperty="Id"
                         Style="height: 100%; width: 100%; border: none;"
                         GridLines="DataGridGridLines.Both"
@@ -43,7 +43,8 @@
                         AllowColumnResize="true"
                         AllowAlternatingRows="false"
                         RowRender="@OnRowRender"
-                        CellContextMenu="@OnCellContextMenu">
+                        CellContextMenu="@OnCellContextMenu"
+                        EmptyText="@DataGridRu.Empty">
             <Columns>
                 @for (var i = 0; i < _columnCount; i++)
                 {

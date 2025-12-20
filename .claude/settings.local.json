@@ -10,7 +10,8 @@
       "WebFetch(domain:github.com)",
       "Bash(wc:*)",
       "Bash(dotnet ef migrations add:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "WebFetch(domain:www.radzen.com)"
     ]
   }
 }
