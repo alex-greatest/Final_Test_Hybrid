@@ -221,6 +221,7 @@ public partial class ErrorSettingsTemplatesGrid : IAsyncDisposable
     {
         ShowSuccess($"Загружено настроек: {itemCount}");
         await LoadDataAsync();
+        await OnDataChanged.InvokeAsync();
     }
 
     private record DownloadResultInfo(bool IsSuccess, string? ErrorMessage, int ItemCount = 0);

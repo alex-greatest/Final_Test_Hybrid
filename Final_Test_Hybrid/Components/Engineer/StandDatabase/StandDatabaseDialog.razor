@@ -17,10 +17,10 @@
                     <ResultSettingsTab @ref="_resultSettingsTab" />
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Шаги теста">
-                    <StepFinalTestsGrid />
+                    <StepFinalTestsGrid @ref="_stepsGrid" />
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Настройки ошибок">
-                    <ErrorSettingsTemplatesGrid />
+                    <ErrorSettingsTemplatesGrid OnDataChanged="@MarkStepsTabForRefresh" />
                 </RadzenTabsItem>
             </Tabs>
         </RadzenTabs>

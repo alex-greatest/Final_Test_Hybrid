@@ -32,6 +32,8 @@ public partial class StepFinalTestsGrid
         await LoadDataAsync();
     }
 
+    public async Task RefreshAsync() => await LoadDataAsync();
+
     private async Task LoadDataAsync()
     {
         try

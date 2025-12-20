@@ -19,6 +19,8 @@ public partial class ErrorSettingsTemplatesGrid
     public required NotificationService NotificationService { get; set; }
     [Inject]
     public required DialogService DialogService { get; set; }
+    [Parameter]
+    public EventCallback OnDataChanged { get; set; }
     private List<ErrorSettingsTemplateEditModel> _templates = [];
     private RadzenDataGrid<ErrorSettingsTemplateEditModel>? _grid;
     private bool _loadError;
