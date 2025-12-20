@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Plc.Subcription;
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Microsoft.Extensions.Logging;
@@ -9,7 +10,8 @@ namespace Final_Test_Hybrid.Services.OpcUa;
 
 public class OpcUaTagService(
     OpcUaConnectionService connectionService,
-    ILogger<OpcUaTagService> logger)
+    ILogger<OpcUaTagService> logger,
+    ISubscriptionLogger subscriptionLogger)
 {
     private ISession Session => connectionService.Session
         ?? throw new InvalidOperationException("Not connected to OPC UA server");
@@ -34,11 +36,13 @@ public class OpcUaTagService(
         catch (ServiceResultException ex)
         {
             logger.LogError(ex, "Ошибка чтения тега {NodeId}", nodeId);
+            subscriptionLogger.LogError(ex, "Ошибка чтения тега {NodeId}", nodeId);
             return new ReadResult<T>(nodeId, default, OpcUaErrorMapper.ToHumanReadable(ex.StatusCode));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка чтения тега {NodeId}", nodeId);
+            subscriptionLogger.LogError(ex, "Ошибка чтения тега {NodeId}", nodeId);
             return new ReadResult<T>(nodeId, default, $"Ошибка чтения: {ex.Message}");
         }
     }
@@ -64,11 +68,13 @@ public class OpcUaTagService(
         catch (ServiceResultException ex)
         {
             logger.LogError(ex, "Ошибка записи тега {NodeId}", nodeId);
+            subscriptionLogger.LogError(ex, "Ошибка записи тега {NodeId}", nodeId);
             return new WriteResult(nodeId, OpcUaErrorMapper.ToHumanReadable(ex.StatusCode));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка записи тега {NodeId}", nodeId);
+            subscriptionLogger.LogError(ex, "Ошибка записи тега {NodeId}", nodeId);
             return new WriteResult(nodeId, $"Ошибка записи: {ex.Message}");
         }
     }
