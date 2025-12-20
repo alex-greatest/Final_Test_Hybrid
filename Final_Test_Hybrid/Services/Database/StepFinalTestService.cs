@@ -149,6 +149,47 @@ public class StepFinalTestService(
         }
     }
 
+    public async Task ReplaceAllAsync(List<StepFinalTest> items, CancellationToken ct = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(ct);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+        try
+        {
+            await DeleteAllWithHistoryAsync(dbContext, ct);
+            await AddAllWithHistoryAsync(dbContext, items, ct);
+            await transaction.CommitAsync(ct);
+            logger.LogInformation("Replaced all StepFinalTests with {Count} new items", items.Count);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(ct);
+            logger.LogError(ex, "Failed to replace all StepFinalTests");
+            throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
+        }
+    }
+
+    private static async Task DeleteAllWithHistoryAsync(AppDbContext dbContext, CancellationToken ct)
+    {
+        await dbContext.StepFinalTestHistories
+            .Where(h => h.IsActive)
+            .ExecuteUpdateAsync(s => s.SetProperty(h => h.IsActive, false), ct);
+        await dbContext.StepFinalTests.ExecuteDeleteAsync(ct);
+    }
+
+    private async Task AddAllWithHistoryAsync(AppDbContext dbContext, List<StepFinalTest> items, CancellationToken ct)
+    {
+        foreach (var item in items)
+        {
+            dbContext.StepFinalTests.Add(item);
+        }
+        await dbContext.SaveChangesAsync(ct);
+        foreach (var history in items.Select(CreateHistoryRecord))
+        {
+            dbContext.StepFinalTestHistories.Add(history);
+        }
+        await dbContext.SaveChangesAsync(ct);
+    }
+
     private static StepFinalTestHistory CreateHistoryRecord(StepFinalTest stepFinalTest)
     {
         return new StepFinalTestHistory

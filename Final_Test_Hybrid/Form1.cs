@@ -13,6 +13,7 @@ using Final_Test_Hybrid.Services.SpringBoot.Health;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
 using Final_Test_Hybrid.Services.SpringBoot.ErrorSettings;
 using Final_Test_Hybrid.Services.SpringBoot.ResultSettings;
+using Final_Test_Hybrid.Services.SpringBoot.StepFinalTest;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.SpringBoot.Shift;
@@ -179,6 +180,7 @@ namespace Final_Test_Hybrid
             services.AddScoped<RecipeDownloadService>();
             services.AddScoped<ResultSettingsDownloadService>();
             services.AddScoped<ErrorSettingsDownloadService>();
+            services.AddScoped<StepFinalTestDownloadService>();
         }
 
         private void RegisterShiftServices(ServiceCollection services)
