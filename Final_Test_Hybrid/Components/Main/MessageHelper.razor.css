@@ -1,0 +1,14 @@
+.message-helper-container {
+    width: 100%;
+}
+
+.message-helper-container ::deep textarea {
+    width: 100%;
+    resize: none;
+    border: 2px solid #000;
+    border-radius: 4px;
+    background-color: rgb(180, 180, 180);
+    color: black;
+    font-size: 4rem;
+    font-weight: 700;
+}
