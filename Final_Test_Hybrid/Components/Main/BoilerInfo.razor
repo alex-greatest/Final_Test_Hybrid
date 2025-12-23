@@ -47,13 +47,13 @@
 
     private void OnInput(ChangeEventArgs e) => _manualInput = e.Value?.ToString() ?? "";
 
-    private void OnKeyDown(KeyboardEventArgs e)
+    private async Task OnKeyDown(KeyboardEventArgs e)
     {
         if (e.Key != "Enter" || string.IsNullOrEmpty(_manualInput))
         {
             return;
         }
-        BarcodeScanService.ProcessBarcode(_manualInput);
+        await BarcodeScanService.ProcessBarcodeAsync(_manualInput);
         _manualInput = "";
     }
 

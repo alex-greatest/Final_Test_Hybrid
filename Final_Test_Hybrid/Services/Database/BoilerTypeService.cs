@@ -17,6 +17,23 @@ public class BoilerTypeService(
         return await dbContext.BoilerTypes.AsNoTracking().ToListAsync();
     }
 
+    public async Task<BoilerTypeCycle?> FindActiveByArticleAsync(string article)
+    {
+        try
+        {
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+            return await dbContext.BoilerTypeCycles
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Article == article && x.IsActive);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to find active BoilerTypeCycle by article {Article}", article);
+            dbLogger.LogError(ex, "Ошибка поиска активного типа котла по артикулу {Article}", article);
+            throw new InvalidOperationException("Ошибка БД", ex);
+        }
+    }
+
     public async Task<BoilerType> CreateAsync(BoilerType boilerType)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -112,6 +129,7 @@ public class BoilerTypeService(
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             logger.LogError(ex, "Failed to delete BoilerType {Id}", id);
             dbLogger.LogError(ex, "Ошибка удаления типа котла {Id}", id);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);

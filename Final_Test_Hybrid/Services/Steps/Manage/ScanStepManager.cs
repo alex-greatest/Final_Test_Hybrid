@@ -3,7 +3,9 @@ using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
+using Final_Test_Hybrid.Services.Steps.Execution;
 using Final_Test_Hybrid.Services.Steps.Interaces;
+using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Manage;
 
@@ -17,6 +19,8 @@ public class ScanStepManager : IDisposable
     private readonly MessageService _messageService;
     private readonly RawInputService _rawInputService;
     private readonly BarcodeScanService _barcodeScanService;
+    private readonly SequenceValidationState _validationState;
+    private readonly ILogger<ScanStepManager> _logger;
     private readonly Lock _sessionLock = new();
     private IDisposable? _scanSession;
     private const string ScanBarcodeId = "scan-barcode";
@@ -31,7 +35,9 @@ public class ScanStepManager : IDisposable
         TestSequenseService sequenseService,
         MessageService messageService,
         RawInputService rawInputService,
-        BarcodeScanService barcodeScanService)
+        BarcodeScanService barcodeScanService,
+        SequenceValidationState validationState,
+        ILogger<ScanStepManager> logger)
     {
         _operatorState = operatorState;
         _autoReady = autoReady;
@@ -41,6 +47,8 @@ public class ScanStepManager : IDisposable
         _messageService = messageService;
         _rawInputService = rawInputService;
         _barcodeScanService = barcodeScanService;
+        _validationState = validationState;
+        _logger = logger;
         _operatorState.OnChange += UpdateState;
         _autoReady.OnChange += UpdateState;
         _appSettings.UseMesChanged += OnUseMesChanged;
@@ -58,19 +66,32 @@ public class ScanStepManager : IDisposable
 
     private void UpdateState()
     {
-        if (!ShouldShowScanStep)
+        if (ShouldShowScanStep)
         {
-            ReleaseScanSession();
-            _sequenseService.ClearCurrentStep();
-            _messageService.NotifyChanged();
-            return;
+            ActivateScanMode();
         }
-        AcquireScanSession();
-        var stepId = _appSettings.UseMes ? ScanBarcodeMesId : ScanBarcodeId;
-        var step = _stepRegistry.GetById(stepId);
-        _sequenseService.SetCurrentStep(step);
+        else
+        {
+            DeactivateScanMode();
+        }
         _messageService.NotifyChanged();
     }
+
+    private void ActivateScanMode()
+    {
+        AcquireScanSession();
+        var step = _stepRegistry.GetById(GetCurrentStepId());
+        _sequenseService.SetCurrentStep(step);
+    }
+
+    private void DeactivateScanMode()
+    {
+        ReleaseScanSession();
+        _sequenseService.ClearCurrentStep();
+    }
+
+    private string GetCurrentStepId() =>
+        _appSettings.UseMes ? ScanBarcodeMesId : ScanBarcodeId;
 
     private void AcquireScanSession()
     {
@@ -80,9 +101,18 @@ public class ScanStepManager : IDisposable
         }
     }
     
-    private void OnBarcodeScanned(string barcode)
+    private async void OnBarcodeScanned(string barcode)
     {
-        _barcodeScanService.ProcessBarcode(barcode);
+        try
+        {
+            await _barcodeScanService.ProcessBarcodeAsync(barcode);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка сканера: {Barcode}", barcode);
+            _validationState.SetError("Ошибка сканера");
+            _sequenseService.SetErrorOnCurrent("Ошибка сканера");
+        }
     }
 
     private void ReleaseScanSession()

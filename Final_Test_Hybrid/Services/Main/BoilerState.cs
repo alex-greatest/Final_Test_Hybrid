@@ -1,3 +1,5 @@
+using Final_Test_Hybrid.Models.Database;
+
 namespace Final_Test_Hybrid.Services.Main;
 
 public class BoilerState
@@ -6,6 +8,7 @@ public class BoilerState
     private string? _serialNumber;
     private string? _article;
     private bool _isValid;
+    private BoilerTypeCycle? _boilerTypeCycle;
 
     public event Action? OnChanged;
 
@@ -42,25 +45,37 @@ public class BoilerState
         }
     }
 
-    public void SetData(string serialNumber, string article, bool isValid = true)
+    public BoilerTypeCycle? BoilerTypeCycle
     {
-        UpdateState(serialNumber, article, isValid);
+        get
+        {
+            lock (_lock)
+            {
+                return _boilerTypeCycle;
+            }
+        }
+    }
+
+    public void SetData(string serialNumber, string article, bool isValid, BoilerTypeCycle? boilerTypeCycle = null)
+    {
+        UpdateState(serialNumber, article, isValid, boilerTypeCycle);
         NotifyChanged();
     }
 
     public void Clear()
     {
-        UpdateState(serialNumber: null, article: null, isValid: false);
+        UpdateState(serialNumber: null, article: null, isValid: false, boilerTypeCycle: null);
         NotifyChanged();
     }
 
-    private void UpdateState(string? serialNumber, string? article, bool isValid)
+    private void UpdateState(string? serialNumber, string? article, bool isValid, BoilerTypeCycle? boilerTypeCycle)
     {
         lock (_lock)
         {
             _serialNumber = serialNumber;
             _article = article;
             _isValid = isValid;
+            _boilerTypeCycle = boilerTypeCycle;
         }
     }
 
