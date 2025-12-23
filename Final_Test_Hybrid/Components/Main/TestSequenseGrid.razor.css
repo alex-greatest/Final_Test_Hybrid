@@ -5,6 +5,14 @@
     margin-top: -5px;
 }
 
+.test-sequense-grid ::deep .rz-data-grid {
+    overflow-x: hidden !important;
+}
+
+.test-sequense-grid ::deep .rz-data-grid-data {
+    overflow-x: hidden !important;
+}
+
 .test-sequense-grid ::deep .rz-grid-table td {
     border: 1px solid #dee2e6 !important;
 }
