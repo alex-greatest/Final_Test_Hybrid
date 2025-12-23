@@ -5,6 +5,7 @@ namespace Final_Test_Hybrid.Services.Steps;
 public class TestStepRegistry : ITestStepRegistry
 {
     public IReadOnlyList<ITestStep> Steps { get; } = LoadSteps();
+    public IReadOnlyList<ITestStep> VisibleSteps => Steps.Where(s => s.IsVisibleInEditor).ToList();
 
     public ITestStep? GetById(string id)
     {

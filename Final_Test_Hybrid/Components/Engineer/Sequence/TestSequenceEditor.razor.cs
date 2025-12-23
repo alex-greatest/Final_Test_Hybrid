@@ -27,7 +27,7 @@ public partial class TestSequenceEditor : IAsyncDisposable
     protected override async Task OnInitializedAsync()
     {
         await Task.Yield();
-        _steps = StepRegistry.Steps;
+        _steps = StepRegistry.VisibleSteps;
         _rows = TestSequenceService.InitializeRows(20, _columnCount);
         _isFileActive = !string.IsNullOrEmpty(TestSequenceService.CurrentFilePath);
         _isLoading = false;
