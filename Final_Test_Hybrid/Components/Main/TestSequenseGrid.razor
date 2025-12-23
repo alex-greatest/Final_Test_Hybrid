@@ -1,22 +1,45 @@
 @using Final_Test_Hybrid.Services.Main
+@using Final_Test_Hybrid.Services.Steps.Manage
 @implements IDisposable
 @inject TestSequenseService TestSequenseService
 
-<RadzenDataGrid
-    Style="flex: 1; min-height: 0;"
-    TItem="TestSequenseData"
-    Data="TestSequenseService.Data"
-    ColumnWidth="150px"
-    AllowPaging="false"
-    AllowSorting="false">
-    <Columns>
-        <RadzenDataGridColumn TItem="TestSequenseData" Property="Module" Title="Модуль"/>
-        <RadzenDataGridColumn TItem="TestSequenseData" Property="Description" Title="Описание"/>
-        <RadzenDataGridColumn TItem="TestSequenseData" Property="Status" Title="Статус"/>
-        <RadzenDataGridColumn TItem="TestSequenseData" Property="Result" Title="Результаты"/>
-        <RadzenDataGridColumn TItem="TestSequenseData" Property="Range" Title="Пределы"/>
-    </Columns>
-</RadzenDataGrid>
+<div class="test-sequense-grid">
+    <RadzenDataGrid
+        Style="flex: 1; min-height: 0;"
+        TItem="TestSequenseData"
+        Data="TestSequenseService.Data"
+        ColumnWidth="150px"
+        AllowPaging="false"
+        AllowSorting="false">
+        <Columns>
+            <RadzenDataGridColumn TItem="TestSequenseData" Property="Module" Title="Модуль">
+                <Template Context="data">
+                    <span class="cell-text">@data.Module</span>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="TestSequenseData" Property="Description" Title="Описание">
+                <Template Context="data">
+                    <span class="cell-text">@data.Description</span>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="TestSequenseData" Property="Status" Title="Статус">
+                <Template Context="data">
+                    <span class="cell-text">@data.Status</span>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="TestSequenseData" Property="Result" Title="Результаты">
+                <Template Context="data">
+                    <span class="cell-text">@data.Result</span>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="TestSequenseData" Property="Range" Title="Пределы">
+                <Template Context="data">
+                    <span class="cell-text">@data.Range</span>
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+</div>
 
 @code {
     protected override void OnInitialized()

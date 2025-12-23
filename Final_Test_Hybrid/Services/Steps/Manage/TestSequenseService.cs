@@ -1,13 +1,12 @@
 using System.Collections.Concurrent;
 using Final_Test_Hybrid.Models;
-using Final_Test_Hybrid.Services.Steps;
+using Final_Test_Hybrid.Services.Steps.Interaces;
 
-namespace Final_Test_Hybrid.Services.Main;
+namespace Final_Test_Hybrid.Services.Steps.Manage;
 
 public class TestSequenseService
 {
     private readonly ConcurrentQueue<TestSequenseData> _data = new();
-
     public event Action? OnDataChanged;
 
     public IEnumerable<TestSequenseData> Data => _data;

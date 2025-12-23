@@ -1,0 +1,19 @@
+.test-sequense-grid {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
+.test-sequense-grid ::deep .rz-grid-table td {
+    border: 1px solid #dee2e6 !important;
+}
+
+.test-sequense-grid ::deep .rz-grid-table th {
+    border: 1px solid #dee2e6 !important;
+}
+
+.test-sequense-grid ::deep .cell-text {
+    font-size: 17px;
+    font-weight: bold;
+    color: #000000;
+}

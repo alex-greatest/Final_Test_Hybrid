@@ -134,7 +134,7 @@ public class OpcUaSubscription(
         var error = await EnsureTagExistsAsync(nodeId, ct).ConfigureAwait(false);
         if (error != null)
         {
-            return;
+            throw new InvalidOperationException($"Не удалось подписаться на тег {nodeId}: {error.Message}");
         }
         AddCallback(nodeId, callback);
     }

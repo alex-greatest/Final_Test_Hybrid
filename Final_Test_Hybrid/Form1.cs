@@ -25,6 +25,9 @@ using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Final_Test_Hybrid.Settings.Spring.Shift;
 using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Services.Steps.Infrastructure;
+using Final_Test_Hybrid.Services.Steps.Interaces;
+using Final_Test_Hybrid.Services.Steps.Manage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;
@@ -232,10 +235,12 @@ namespace Final_Test_Hybrid
             _databaseConnectionService.Start();
         }
 
-        private static void StartMessageService(ServiceProvider serviceProvider)
+        // async void намеренно: исключения должны попадать в Application.ThreadException
+        // ReSharper disable once AsyncVoidMethod
+        private static async void StartMessageService(ServiceProvider serviceProvider)
         {
             var initializer = serviceProvider.GetRequiredService<MessageServiceInitializer>();
-            initializer.Initialize();
+            await initializer.InitializeAsync();
         }
 
         private void StartSpringBootHealthCheck(ServiceProvider serviceProvider)

@@ -8,9 +8,9 @@ public class AutoReadySubscription(OpcUaSubscription opcUaSubscription)
     public bool IsReady { get; private set; }
     public event Action? OnChange;
 
-    public void Subscribe()
+    public async Task SubscribeAsync()
     {
-        _ = opcUaSubscription.SubscribeAsync(BaseTags.TestAskAuto, async value =>
+        await opcUaSubscription.SubscribeAsync(BaseTags.TestAskAuto, async value =>
         {
             IsReady = value is true;
             OnChange?.Invoke();

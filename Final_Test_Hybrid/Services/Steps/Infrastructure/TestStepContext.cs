@@ -1,7 +1,7 @@
 using Final_Test_Hybrid.Services.OpcUa;
 using Microsoft.Extensions.Logging;
 
-namespace Final_Test_Hybrid.Services.Steps;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure;
 
 public class TestStepContext(OpcUaTagService opcUa, ILogger logger)
 {

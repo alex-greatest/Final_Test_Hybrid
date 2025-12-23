@@ -1,6 +1,7 @@
 using System.Reflection;
+using Final_Test_Hybrid.Services.Steps.Interaces;
 
-namespace Final_Test_Hybrid.Services.Steps;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure;
 
 public class TestStepRegistry : ITestStepRegistry
 {

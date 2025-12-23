@@ -1,8 +1,9 @@
 using Final_Test_Hybrid.Services.Common.Settings;
+using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
-using Final_Test_Hybrid.Services.Steps;
+using Final_Test_Hybrid.Services.Steps.Interaces;
 
-namespace Final_Test_Hybrid.Services.Main;
+namespace Final_Test_Hybrid.Services.Steps.Manage;
 
 public class ScanStepManager : IDisposable
 {
@@ -53,7 +54,6 @@ public class ScanStepManager : IDisposable
             _messageService.NotifyChanged();
             return;
         }
-
         var stepId = _appSettings.UseMes ? ScanBarcodeMesId : ScanBarcodeId;
         var step = _stepRegistry.GetById(stepId);
         _sequenseService.SetCurrentStep(step);

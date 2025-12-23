@@ -7,11 +7,11 @@ public class MessageServiceInitializer(
     OperatorState operatorState,
     AutoReadySubscription autoReadySubscription)
 {
-    public void Initialize()
+    public async Task InitializeAsync()
     {
         RegisterLoginProvider();
         RegisterAutoReadyProvider();
-        autoReadySubscription.Subscribe();
+        await autoReadySubscription.SubscribeAsync();
         operatorState.OnChange += messageService.NotifyChanged;
         autoReadySubscription.OnChange += messageService.NotifyChanged;
     }

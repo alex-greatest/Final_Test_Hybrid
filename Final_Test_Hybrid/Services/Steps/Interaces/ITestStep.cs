@@ -1,4 +1,6 @@
-namespace Final_Test_Hybrid.Services.Steps;
+using Final_Test_Hybrid.Services.Steps.Infrastructure;
+
+namespace Final_Test_Hybrid.Services.Steps.Interaces;
 
 public interface ITestStep
 {
