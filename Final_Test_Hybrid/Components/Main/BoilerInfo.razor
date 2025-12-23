@@ -5,6 +5,7 @@
 @inject BarcodeScanService BarcodeScanService
 @inject BoilerState BoilerState
 @inject TooltipService TooltipService
+@inject NotificationService NotificationService
 @implements IDisposable
 
 <div class="field-row field-row-middle">
@@ -34,54 +35,81 @@
     private string? _lastError;
     private string _manualInput = "";
     private RadzenIcon? _errorIconRef;
+    private bool _disposed;
 
     protected override void OnInitialized()
     {
         ValidationState.OnErrorChanged += OnValidationChanged;
         BoilerState.OnChanged += OnBoilerStateChanged;
-        _lastError = ValidationState.LastError;
     }
 
-    private string GetDisplayValue()
-    {
-        return BoilerState.SerialNumber ?? _manualInput;
-    }
+    private string GetDisplayValue() => BoilerState.SerialNumber ?? _manualInput;
 
-    private void OnInput(ChangeEventArgs e)
-    {
-        _manualInput = e.Value?.ToString() ?? "";
-    }
+    private void OnInput(ChangeEventArgs e) => _manualInput = e.Value?.ToString() ?? "";
 
     private void OnKeyDown(KeyboardEventArgs e)
     {
-        if (!IsEnterKeyWithInput(e))
+        if (e.Key != "Enter" || string.IsNullOrEmpty(_manualInput))
         {
             return;
         }
-        SubmitManualBarcode();
-    }
-
-    private bool IsEnterKeyWithInput(KeyboardEventArgs e)
-    {
-        return e.Key == "Enter" && !string.IsNullOrEmpty(_manualInput);
-    }
-
-    private void SubmitManualBarcode()
-    {
         BarcodeScanService.ProcessBarcode(_manualInput);
         _manualInput = "";
     }
 
-    private void OnValidationChanged()
+    private void OnValidationChanged(string? error)
     {
-        _lastError = ValidationState.LastError;
-        InvokeAsync(StateHasChanged);
+        InvokeIfNotDisposed(() => ApplyValidationError(error));
+    }
+
+    private void ApplyValidationError(string? error)
+    {
+        _lastError = error;
+        if (!string.IsNullOrEmpty(error))
+        {
+            ShowErrorNotification(error);
+        }
+        StateHasChanged();
     }
 
     private void OnBoilerStateChanged()
     {
+        InvokeIfNotDisposed(ClearManualInput);
+    }
+
+    private void ClearManualInput()
+    {
         _manualInput = "";
-        InvokeAsync(StateHasChanged);
+        StateHasChanged();
+    }
+
+    private void InvokeIfNotDisposed(Action action)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+        InvokeAsync(() => ExecuteIfNotDisposed(action));
+    }
+
+    private void ExecuteIfNotDisposed(Action action)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+        action();
+    }
+
+    private void ShowErrorNotification(string error)
+    {
+        NotificationService.Notify(new NotificationMessage
+        {
+            Severity = NotificationSeverity.Error,
+            Summary = "Ошибка при сканировании",
+            Detail = error,
+            Duration = 10000
+        });
     }
 
     private void ShowErrorTooltip(ElementReference element)
@@ -92,13 +120,14 @@
         }
         TooltipService.Open(element, _lastError, new TooltipOptions
         {
-            Duration = 5000,
+            Duration = 0,
             Position = TooltipPosition.Left
         });
     }
 
     public void Dispose()
     {
+        _disposed = true;
         ValidationState.OnErrorChanged -= OnValidationChanged;
         BoilerState.OnChanged -= OnBoilerStateChanged;
     }

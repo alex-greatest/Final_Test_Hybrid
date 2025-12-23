@@ -6,13 +6,55 @@ public class BoilerState
     private string? _serialNumber;
     private string? _article;
     private bool _isValid;
-    public string? SerialNumber { get { lock (_lock) return _serialNumber; } }
-    public string? Article { get { lock (_lock) return _article; } }
-    public bool IsValid { get { lock (_lock) return _isValid; } }
 
     public event Action? OnChanged;
 
+    public string? SerialNumber
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _serialNumber;
+            }
+        }
+    }
+
+    public string? Article
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _article;
+            }
+        }
+    }
+
+    public bool IsValid
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _isValid;
+            }
+        }
+    }
+
     public void SetData(string serialNumber, string article, bool isValid = true)
+    {
+        UpdateState(serialNumber, article, isValid);
+        NotifyChanged();
+    }
+
+    public void Clear()
+    {
+        UpdateState(serialNumber: null, article: null, isValid: false);
+        NotifyChanged();
+    }
+
+    private void UpdateState(string? serialNumber, string? article, bool isValid)
     {
         lock (_lock)
         {
@@ -20,17 +62,10 @@ public class BoilerState
             _article = article;
             _isValid = isValid;
         }
-        OnChanged?.Invoke();
     }
 
-    public void Clear()
+    private void NotifyChanged()
     {
-        lock (_lock)
-        {
-            _serialNumber = null;
-            _article = null;
-            _isValid = false;
-        }
         OnChanged?.Invoke();
     }
 }

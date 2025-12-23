@@ -1,26 +1,19 @@
-using Final_Test_Hybrid.Services.Common.UI;
 using Final_Test_Hybrid.Services.Steps.Manage;
 
 namespace Final_Test_Hybrid.Services.Steps.Execution;
 
-public class SequenceValidationState(
-    INotificationService notificationService,
-    TestSequenseService testSequenseService)
+public class SequenceValidationState(TestSequenseService testSequenseService)
 {
-    public string? LastError { get; private set; }
-    public event Action? OnErrorChanged;
+    public event Action<string?>? OnErrorChanged;
 
     public void SetError(string error)
     {
-        LastError = error;
-        OnErrorChanged?.Invoke();
-        notificationService.ShowError("Ошибка валидации", error, 10000, id: "validation-error");
+        OnErrorChanged?.Invoke(error);
         testSequenseService.SetErrorOnCurrent(error);
     }
 
     public void ClearError()
     {
-        LastError = null;
-        OnErrorChanged?.Invoke();
+        OnErrorChanged?.Invoke(null);
     }
 }
