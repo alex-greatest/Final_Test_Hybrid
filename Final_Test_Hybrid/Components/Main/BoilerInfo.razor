@@ -1,10 +1,12 @@
 @using Final_Test_Hybrid.Services.Main
 @using Final_Test_Hybrid.Services.Scanner
 @using Final_Test_Hybrid.Services.Steps.Execution
+@using Final_Test_Hybrid.Services.Steps.Manage
 @inject SequenceValidationState ValidationState
 @inject BarcodeScanService BarcodeScanService
 @inject BoilerState BoilerState
 @inject NotificationService NotificationService
+@inject TestSequenseService TestSequenseService
 @implements IDisposable
 
 <div class="field-row field-row-middle">
@@ -18,20 +20,30 @@
         Value="@GetDisplayValue()"
         @oninput="OnInput"
         @onkeydown="OnKeyDown"
-        Placeholder="Отсканируйте или введите"/>
+        Placeholder="@_placeholder"/>
 </div>
 
 @code {
     private string _manualInput = "";
     private bool _disposed;
+    private string _placeholder = "";
 
     protected override void OnInitialized()
     {
         ValidationState.OnErrorChanged += OnValidationChanged;
         BoilerState.OnChanged += OnBoilerStateChanged;
+        TestSequenseService.OnDataChanged += OnStepChanged;
     }
 
     private string GetDisplayValue() => BoilerState.SerialNumber ?? _manualInput;
+
+    private void OnStepChanged()
+    {
+        var currentStep = TestSequenseService.Data.FirstOrDefault();
+        var isScanStep = currentStep?.Module is "Сканирование штрихкода" or "Сканирование штрихкода MES";
+        _placeholder = isScanStep ? "Отсканируйте или введите" : "";
+        InvokeIfNotDisposed(StateHasChanged);
+    }
 
     private void OnInput(ChangeEventArgs e) => _manualInput = e.Value?.ToString() ?? "";
 
@@ -103,5 +115,6 @@
         _disposed = true;
         ValidationState.OnErrorChanged -= OnValidationChanged;
         BoilerState.OnChanged -= OnBoilerStateChanged;
+        TestSequenseService.OnDataChanged -= OnStepChanged;
     }
 }
