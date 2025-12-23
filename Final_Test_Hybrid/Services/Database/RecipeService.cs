@@ -20,6 +20,24 @@ public class RecipeService(
             .ToListAsync();
     }
 
+    public async Task<List<Recipe>> GetByBoilerTypeIdAsync(long boilerTypeId)
+    {
+        try
+        {
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+            return await dbContext.Recipes
+                .Where(r => r.BoilerTypeId == boilerTypeId)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get recipes by BoilerTypeId {BoilerTypeId}", boilerTypeId);
+            dbLogger.LogError(ex, "Ошибка получения рецептов по типу котла {BoilerTypeId}", boilerTypeId);
+            throw new InvalidOperationException("Ошибка БД", ex);
+        }
+    }
+
     public async Task<Recipe> CreateAsync(Recipe recipe)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
