@@ -14,7 +14,7 @@ public class SequenceValidationState(
     {
         LastError = error;
         OnErrorChanged?.Invoke();
-        notificationService.ShowError("Ошибка валидации", error, id: "validation-error");
+        notificationService.ShowError("Ошибка валидации", error, 10000, id: "validation-error");
         testSequenseService.SetErrorOnCurrent(error);
     }
 

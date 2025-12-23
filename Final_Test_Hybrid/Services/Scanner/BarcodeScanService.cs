@@ -32,16 +32,16 @@ public class BarcodeScanService(
 
     private void HandleInvalidBarcode(string barcode)
     {
-        var error = $"Штрихкод слишком короткий: {barcode}";
-        logger.LogWarning(error);
-        validationState.SetError(error);
+        logger.LogWarning("Штрихкод слишком короткий: {Barcode}", barcode);
+        boilerState.SetData(barcode, article: "", isValid: false);
+        validationState.SetError("Штрихкод слишком короткий");
     }
 
     private void HandleValidBarcode(string barcode)
     {
         var article = barcode[^ArticleLength..];
         logger.LogInformation("Успешное сканирование. Серийный номер: {Serial}, Артикул: {Article}", barcode, article);
-        boilerState.SetData(barcode, article);
+        boilerState.SetData(barcode, article, isValid: true);
         OnScanSuccess?.Invoke(article);
     }
 }
