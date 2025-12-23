@@ -14,27 +14,27 @@
         <Columns>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Module" Title="Модуль">
                 <Template Context="data">
-                    <span class="cell-text" style="@GetCellStyle(data)">@data.Module</span>
+                    <span class="cell-text" style="@GetCellStyle(data)" title="@data.Module">@data.Module</span>
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Description" Title="Описание">
                 <Template Context="data">
-                    <span class="cell-text" style="@GetCellStyle(data)">@data.Description</span>
+                    <span class="cell-text" style="@GetCellStyle(data)" title="@data.Description">@data.Description</span>
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="TestSequenseData" Property="Status" Title="Статус">
+            <RadzenDataGridColumn TItem="TestSequenseData" Property="Status" Title="Статус" Width="50px">
                 <Template Context="data">
-                    <span class="cell-text" style="@GetCellStyle(data)">@data.Status</span>
+                    <span class="cell-text" style="@GetCellStyle(data)" title="@data.Status">@data.Status</span>
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Result" Title="Результаты">
                 <Template Context="data">
-                    <span class="cell-text" style="@GetCellStyle(data)">@data.Result</span>
+                    <span class="cell-text" style="@GetCellStyle(data)" title="@data.Result">@data.Result</span>
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Range" Title="Пределы">
                 <Template Context="data">
-                    <span class="cell-text" style="@GetCellStyle(data)">@(string.IsNullOrEmpty(data.Range) ? "\u00A0" : data.Range)</span>
+                    <span class="cell-text" style="@GetCellStyle(data)" title="@data.Range">@(string.IsNullOrEmpty(data.Range) ? "\u00A0" : data.Range)</span>
                 </Template>
             </RadzenDataGridColumn>
         </Columns>
