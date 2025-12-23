@@ -1,8 +1,58 @@
+@using Final_Test_Hybrid.Services.Steps.Execution
+@inject SequenceValidationState ValidationState
+@inject TooltipService TooltipService
+@implements IDisposable
+
 <div class="field-row field-row-middle">
     <RadzenLabel Text="Тип котла"/>
     <RadzenTextBox Style="width:100%" ReadOnly="true"/>
 </div>
 <div class="field-row field-row-middle">
     <RadzenLabel Text="Серийный номер"/>
-    <RadzenTextBox Style="width:100%"/>
+    <div style="display:flex; align-items:center; width:100%">
+        <RadzenTextBox Style="flex:1" ReadOnly="true"/>
+        @if (!string.IsNullOrEmpty(_lastError))
+        {
+            <RadzenIcon Icon="error"
+                        Style="color:var(--rz-danger); margin-left:8px; cursor:help"
+                        @ref="_errorIconRef"
+                        MouseEnter="@ShowErrorTooltip"/>
+        }
+    </div>
 </div>
+
+@code {
+    private string? _lastError;
+    private RadzenIcon? _errorIconRef;
+
+    protected override void OnInitialized()
+    {
+        ValidationState.OnErrorChanged += OnErrorChanged;
+        _lastError = ValidationState.LastError;
+    }
+
+    private void OnErrorChanged()
+    {
+        _lastError = ValidationState.LastError;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ShowErrorTooltip(ElementReference element)
+    {
+        if (string.IsNullOrEmpty(_lastError))
+        {
+            return;
+        }
+
+        TooltipService.Open(element, _lastError, new TooltipOptions
+        {
+            Duration = 5000,
+            Position = TooltipPosition.Left
+        });
+    }
+
+    public void Dispose()
+    {
+        ValidationState.OnErrorChanged -= OnErrorChanged;
+    }
+}

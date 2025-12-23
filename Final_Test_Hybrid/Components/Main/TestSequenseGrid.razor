@@ -1,4 +1,3 @@
-@using Final_Test_Hybrid.Services.Main
 @using Final_Test_Hybrid.Services.Steps.Manage
 @implements IDisposable
 @inject TestSequenseService TestSequenseService
@@ -10,7 +9,8 @@
         Data="TestSequenseService.Data"
         ColumnWidth="150px"
         AllowPaging="false"
-        AllowSorting="false">
+        AllowSorting="false"
+        RowRender="@OnRowRender">
         <Columns>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Module" Title="Модуль">
                 <Template Context="data">
@@ -42,18 +42,30 @@
 </div>
 
 @code {
+    private const string ErrorRowCssClass = "row-error";
+
     protected override void OnInitialized()
     {
-        TestSequenseService.OnDataChanged += OnDataChanged;
+        TestSequenseService.OnDataChanged += HandleDataChanged;
     }
 
-    private void OnDataChanged()
+    private void HandleDataChanged()
     {
         InvokeAsync(StateHasChanged);
     }
 
+    private void OnRowRender(RowRenderEventArgs<TestSequenseData> args)
+    {
+        args.Attributes["class"] = GetRowCssClass(args.Data);
+    }
+
+    private string GetRowCssClass(TestSequenseData data)
+    {
+        return data.IsError ? ErrorRowCssClass : string.Empty;
+    }
+
     public void Dispose()
     {
-        TestSequenseService.OnDataChanged -= OnDataChanged;
+        TestSequenseService.OnDataChanged -= HandleDataChanged;
     }
 }

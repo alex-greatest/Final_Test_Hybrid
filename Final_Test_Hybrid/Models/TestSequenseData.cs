@@ -7,4 +7,5 @@ public class TestSequenseData
     public string Status { get; set; } = string.Empty;
     public string Result { get; set; } = string.Empty;
     public string Range { get; set; } = string.Empty;
+    public bool IsError { get; set; }
 }

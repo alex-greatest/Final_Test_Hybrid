@@ -17,3 +17,11 @@
     font-weight: bold;
     color: #000000;
 }
+
+.test-sequense-grid ::deep .row-error {
+    background-color: var(--rz-danger-lighter) !important;
+}
+
+.test-sequense-grid ::deep .row-error:hover {
+    background-color: var(--rz-danger-light) !important;
+}

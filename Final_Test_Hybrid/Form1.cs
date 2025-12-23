@@ -25,6 +25,7 @@ using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Final_Test_Hybrid.Settings.Spring.Shift;
 using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Services.Steps.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure;
 using Final_Test_Hybrid.Services.Steps.Interaces;
 using Final_Test_Hybrid.Services.Steps.Manage;
@@ -72,6 +73,9 @@ namespace Final_Test_Hybrid
             services.AddSingleton<MessageServiceInitializer>();
             services.AddSingleton<TestSequenseService>();
             services.AddSingleton<ScanStepManager>();
+            services.AddSingleton<SequenceValidationState>();
+            services.AddSingleton<ITestSequenceLoader, TestSequenceLoader>();
+            services.AddSingleton<ITestMapBuilder, TestMapBuilder>();
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();
