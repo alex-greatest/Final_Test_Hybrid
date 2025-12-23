@@ -3,38 +3,38 @@
 @inject TestSequenseService TestSequenseService
 
 <div class="test-sequense-grid">
-    <RadzenDataGrid
+    <RadzenDataGrid @ref="_grid"
         Style="flex: 1; min-height: 0;"
         TItem="TestSequenseData"
-        Data="TestSequenseService.Data"
+        Data="_data"
         ColumnWidth="150px"
         AllowPaging="false"
         AllowSorting="false"
-        RowRender="@OnRowRender">
+        >
         <Columns>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Module" Title="Модуль">
                 <Template Context="data">
-                    <span class="cell-text">@data.Module</span>
+                    <span class="cell-text" style="@GetCellStyle(data)">@data.Module</span>
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Description" Title="Описание">
                 <Template Context="data">
-                    <span class="cell-text">@data.Description</span>
+                    <span class="cell-text" style="@GetCellStyle(data)">@data.Description</span>
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Status" Title="Статус">
                 <Template Context="data">
-                    <span class="cell-text">@data.Status</span>
+                    <span class="cell-text" style="@GetCellStyle(data)">@data.Status</span>
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Result" Title="Результаты">
                 <Template Context="data">
-                    <span class="cell-text">@data.Result</span>
+                    <span class="cell-text" style="@GetCellStyle(data)">@data.Result</span>
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Range" Title="Пределы">
                 <Template Context="data">
-                    <span class="cell-text">@data.Range</span>
+                    <span class="cell-text" style="@GetCellStyle(data)">@(string.IsNullOrEmpty(data.Range) ? "\u00A0" : data.Range)</span>
                 </Template>
             </RadzenDataGridColumn>
         </Columns>
@@ -42,27 +42,39 @@
 </div>
 
 @code {
-    private const string ErrorRowCssClass = "row-error";
+    private RadzenDataGrid<TestSequenseData>? _grid;
+    private IEnumerable<TestSequenseData> _data = [];
 
     protected override void OnInitialized()
     {
+        _data = TestSequenseService.Data;
         TestSequenseService.OnDataChanged += HandleDataChanged;
     }
 
-    private void HandleDataChanged()
+    private async void HandleDataChanged()
     {
-        InvokeAsync(StateHasChanged);
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                _data = TestSequenseService.Data;
+                StateHasChanged();
+                if (_grid != null)
+                {
+                    await _grid.Reload();
+                }
+            });
+        }
+        catch (Exception e)
+        {
+            // ignored
+        }
     }
 
-    private void OnRowRender(RowRenderEventArgs<TestSequenseData> args)
-    {
-        args.Attributes["class"] = GetRowCssClass(args.Data);
-    }
-
-    private string GetRowCssClass(TestSequenseData data)
-    {
-        return data.IsError ? ErrorRowCssClass : string.Empty;
-    }
+    private static string GetCellStyle(TestSequenseData data) =>
+        data.IsError
+            ? "background-color: red; display: flex; align-items: center; margin: -0.25rem -1rem; padding: 0.25rem 1rem;"
+            : "display: flex; align-items: center; margin: -0.25rem -1rem; padding: 0.25rem 1rem;";
 
     public void Dispose()
     {
