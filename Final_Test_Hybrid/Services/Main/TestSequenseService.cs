@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Final_Test_Hybrid.Models;
+using Final_Test_Hybrid.Services.Steps;
 
 namespace Final_Test_Hybrid.Services.Main;
 
@@ -32,6 +33,26 @@ public class TestSequenseService
         while (_data.TryDequeue(out _)) { }
         OnDataChanged?.Invoke();
     }
+
+    public void SetCurrentStep(ITestStep? step)
+    {
+        Clear();
+        if (step == null)
+        {
+            return;
+        }
+        _data.Enqueue(new TestSequenseData
+        {
+            Module = step.Name,
+            Description = step.Description,
+            Status = "Выполняется",
+            Result = "",
+            Range = ""
+        });
+        OnDataChanged?.Invoke();
+    }
+
+    public void ClearCurrentStep() => Clear();
 
     public int Count => _data.Count;
 }

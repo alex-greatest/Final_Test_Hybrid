@@ -68,6 +68,7 @@ namespace Final_Test_Hybrid
             services.AddSingleton<AutoReadySubscription>();
             services.AddSingleton<MessageServiceInitializer>();
             services.AddSingleton<TestSequenseService>();
+            services.AddSingleton<ScanStepManager>();
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();
@@ -82,6 +83,7 @@ namespace Final_Test_Hybrid
             StartRawInputService(_serviceProvider);
             StartDatabaseService(_serviceProvider);
             StartMessageService(_serviceProvider);
+            _ = _serviceProvider.GetRequiredService<ScanStepManager>();
             blazorWebView1.RootComponents.Add<MyComponent>("#app");
         }
 
