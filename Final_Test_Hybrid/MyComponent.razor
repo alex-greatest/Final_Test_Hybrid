@@ -103,19 +103,7 @@
                                     </ChildContent>
                                 </RadzenCard>
                                 <MessageHelper />
-                                <RadzenDataGrid
-                                    Style="flex: 1; min-height: 0;"
-                                    TItem="Order"
-                                    Data="_orders"
-                                    ColumnWidth="150px"
-                                    AllowPaging="false"
-                                    AllowSorting="false">
-                                    <Columns>
-                                        <RadzenDataGridColumn TItem="Order" Property="OrderID" Title="ID"/>
-                                        <RadzenDataGridColumn TItem="Order" Property="Number" Title="Номер"/>
-                                        <RadzenDataGridColumn TItem="Order" Property="Status" Title="Статус"/>
-                                    </Columns>
-                                </RadzenDataGrid>
+                                <TestSequenseGrid />
                             </div>
                         </RadzenStack>
                     </div>
@@ -9432,10 +9420,6 @@
 </RadzenStack>
 
 @code {
-    private List<Order> _orders = Enumerable.Range(1, 30)
-        .Select(_ => new Order())
-        .ToList();
-
     private int selectedIndex = 0;
     private int innerSelectedIndex = 0;
 }

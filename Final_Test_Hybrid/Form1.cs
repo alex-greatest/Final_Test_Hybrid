@@ -67,6 +67,7 @@ namespace Final_Test_Hybrid
             services.AddSingleton<MessageService>();
             services.AddSingleton<AutoReadySubscription>();
             services.AddSingleton<MessageServiceInitializer>();
+            services.AddSingleton<TestSequenseService>();
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();

@@ -1,0 +1,36 @@
+@using Final_Test_Hybrid.Services.Main
+@implements IDisposable
+@inject TestSequenseService TestSequenseService
+
+<RadzenDataGrid
+    Style="flex: 1; min-height: 0;"
+    TItem="TestSequenseData"
+    Data="TestSequenseService.Data"
+    ColumnWidth="150px"
+    AllowPaging="false"
+    AllowSorting="false">
+    <Columns>
+        <RadzenDataGridColumn TItem="TestSequenseData" Property="Module" Title="Модуль"/>
+        <RadzenDataGridColumn TItem="TestSequenseData" Property="Description" Title="Описание"/>
+        <RadzenDataGridColumn TItem="TestSequenseData" Property="Status" Title="Статус"/>
+        <RadzenDataGridColumn TItem="TestSequenseData" Property="Result" Title="Результаты"/>
+        <RadzenDataGridColumn TItem="TestSequenseData" Property="Range" Title="Пределы"/>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    protected override void OnInitialized()
+    {
+        TestSequenseService.OnDataChanged += OnDataChanged;
+    }
+
+    private void OnDataChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        TestSequenseService.OnDataChanged -= OnDataChanged;
+    }
+}
