@@ -1,5 +1,9 @@
+@using Final_Test_Hybrid.Services.Main
+@using Final_Test_Hybrid.Services.Scanner
 @using Final_Test_Hybrid.Services.Steps.Execution
 @inject SequenceValidationState ValidationState
+@inject BarcodeScanService BarcodeScanService
+@inject BoilerState BoilerState
 @inject TooltipService TooltipService
 @implements IDisposable
 
@@ -10,7 +14,12 @@
 <div class="field-row field-row-middle">
     <RadzenLabel Text="Серийный номер"/>
     <div style="display:flex; align-items:center; width:100%">
-        <RadzenTextBox Style="flex:1" ReadOnly="true"/>
+        <RadzenTextBox
+            Style="flex:1"
+            Value="@GetDisplayValue()"
+            @oninput="OnInput"
+            @onkeydown="OnKeyDown"
+            Placeholder="Отсканируйте или введите"/>
         @if (!string.IsNullOrEmpty(_lastError))
         {
             <RadzenIcon Icon="error"
@@ -23,17 +32,55 @@
 
 @code {
     private string? _lastError;
+    private string _manualInput = "";
     private RadzenIcon? _errorIconRef;
 
     protected override void OnInitialized()
     {
-        ValidationState.OnErrorChanged += OnErrorChanged;
+        ValidationState.OnErrorChanged += OnValidationChanged;
+        BoilerState.OnChanged += OnBoilerStateChanged;
         _lastError = ValidationState.LastError;
     }
 
-    private void OnErrorChanged()
+    private string GetDisplayValue()
+    {
+        return BoilerState.SerialNumber ?? _manualInput;
+    }
+
+    private void OnInput(ChangeEventArgs e)
+    {
+        _manualInput = e.Value?.ToString() ?? "";
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (!IsEnterKeyWithInput(e))
+        {
+            return;
+        }
+        SubmitManualBarcode();
+    }
+
+    private bool IsEnterKeyWithInput(KeyboardEventArgs e)
+    {
+        return e.Key == "Enter" && !string.IsNullOrEmpty(_manualInput);
+    }
+
+    private void SubmitManualBarcode()
+    {
+        BarcodeScanService.ProcessBarcode(_manualInput);
+        _manualInput = "";
+    }
+
+    private void OnValidationChanged()
     {
         _lastError = ValidationState.LastError;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnBoilerStateChanged()
+    {
+        _manualInput = "";
         InvokeAsync(StateHasChanged);
     }
 
@@ -43,7 +90,6 @@
         {
             return;
         }
-
         TooltipService.Open(element, _lastError, new TooltipOptions
         {
             Duration = 5000,
@@ -53,6 +99,7 @@
 
     public void Dispose()
     {
-        ValidationState.OnErrorChanged -= OnErrorChanged;
+        ValidationState.OnErrorChanged -= OnValidationChanged;
+        BoilerState.OnChanged -= OnBoilerStateChanged;
     }
 }

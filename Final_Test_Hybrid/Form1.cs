@@ -72,6 +72,8 @@ namespace Final_Test_Hybrid
             services.AddSingleton<AutoReadySubscription>();
             services.AddSingleton<MessageServiceInitializer>();
             services.AddSingleton<TestSequenseService>();
+            services.AddSingleton<BoilerState>();
+            services.AddSingleton<BarcodeScanService>();
             services.AddSingleton<ScanStepManager>();
             services.AddSingleton<SequenceValidationState>();
             services.AddSingleton<ITestSequenceLoader, TestSequenceLoader>();
