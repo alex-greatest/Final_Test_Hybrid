@@ -4,7 +4,6 @@
 @inject SequenceValidationState ValidationState
 @inject BarcodeScanService BarcodeScanService
 @inject BoilerState BoilerState
-@inject TooltipService TooltipService
 @inject NotificationService NotificationService
 @implements IDisposable
 
@@ -14,27 +13,16 @@
 </div>
 <div class="field-row field-row-middle">
     <RadzenLabel Text="Серийный номер"/>
-    <div style="display:flex; align-items:center; width:100%">
-        <RadzenTextBox
-            Style="flex:1"
-            Value="@GetDisplayValue()"
-            @oninput="OnInput"
-            @onkeydown="OnKeyDown"
-            Placeholder="Отсканируйте или введите"/>
-        @if (!string.IsNullOrEmpty(_lastError))
-        {
-            <RadzenIcon Icon="error"
-                        Style="color:var(--rz-danger); margin-left:8px; cursor:help"
-                        @ref="_errorIconRef"
-                        MouseEnter="@ShowErrorTooltip"/>
-        }
-    </div>
+    <RadzenTextBox
+        Style="width:100%"
+        Value="@GetDisplayValue()"
+        @oninput="OnInput"
+        @onkeydown="OnKeyDown"
+        Placeholder="Отсканируйте или введите"/>
 </div>
 
 @code {
-    private string? _lastError;
     private string _manualInput = "";
-    private RadzenIcon? _errorIconRef;
     private bool _disposed;
 
     protected override void OnInitialized()
@@ -64,12 +52,10 @@
 
     private void ApplyValidationError(string? error)
     {
-        _lastError = error;
         if (!string.IsNullOrEmpty(error))
         {
             ShowErrorNotification(error);
         }
-        StateHasChanged();
     }
 
     private void OnBoilerStateChanged()
@@ -109,19 +95,6 @@
             Summary = "Ошибка при сканировании",
             Detail = error,
             Duration = 10000
-        });
-    }
-
-    private void ShowErrorTooltip(ElementReference element)
-    {
-        if (string.IsNullOrEmpty(_lastError))
-        {
-            return;
-        }
-        TooltipService.Open(element, _lastError, new TooltipOptions
-        {
-            Duration = 0,
-            Position = TooltipPosition.Left
         });
     }
 
