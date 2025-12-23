@@ -24,6 +24,7 @@ using Final_Test_Hybrid.Settings.Spring;
 using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Final_Test_Hybrid.Settings.Spring.Shift;
+using Final_Test_Hybrid.Services.Main;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;
@@ -37,7 +38,7 @@ namespace Final_Test_Hybrid
     public partial class Form1 : Form
     {
         private IConfiguration? _config;
-        private ServiceProvider? _serviceProvider;
+        private readonly ServiceProvider? _serviceProvider;
         private OpcUaConnectionService? _opcUaService;
         private SpringBootHealthService? _springBootHealthService;
         private ShiftService? _shiftService;
@@ -63,6 +64,9 @@ namespace Final_Test_Hybrid
             RegisterShiftServices(services);
             RegisterScannerServices(services);
             RegisterDatabaseServices(services);
+            services.AddSingleton<MessageService>();
+            services.AddSingleton<AutoReadySubscription>();
+            services.AddSingleton<MessageServiceInitializer>();
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();
@@ -76,6 +80,7 @@ namespace Final_Test_Hybrid
             StartShiftService(_serviceProvider);
             StartRawInputService(_serviceProvider);
             StartDatabaseService(_serviceProvider);
+            StartMessageService(_serviceProvider);
             blazorWebView1.RootComponents.Add<MyComponent>("#app");
         }
 
@@ -222,6 +227,12 @@ namespace Final_Test_Hybrid
         {
             _databaseConnectionService = serviceProvider.GetRequiredService<DatabaseConnectionService>();
             _databaseConnectionService.Start();
+        }
+
+        private static void StartMessageService(ServiceProvider serviceProvider)
+        {
+            var initializer = serviceProvider.GetRequiredService<MessageServiceInitializer>();
+            initializer.Initialize();
         }
 
         private void StartSpringBootHealthCheck(ServiceProvider serviceProvider)

@@ -1,11 +1,21 @@
+@using Final_Test_Hybrid.Services.Main
+@inject MessageService MessageService
+@implements IDisposable
+
 <div class="message-helper-container">
-    <RadzenTextArea @bind-Value="@Value"
+    <RadzenTextArea Value="@MessageService.CurrentMessage"
                     Rows="1"
-                    ReadOnly="@ReadOnly" />
+                    ReadOnly="true" />
 </div>
 
 @code {
-    [Parameter] public string Value { get; set; } = "";
-    [Parameter] public EventCallback<string> ValueChanged { get; set; }
-    [Parameter] public bool ReadOnly { get; set; } = true;
+    protected override void OnInitialized()
+    {
+        MessageService.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        MessageService.OnChange -= StateHasChanged;
+    }
 }
