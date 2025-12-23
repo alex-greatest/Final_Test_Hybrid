@@ -11,4 +11,13 @@
     color: black;
     font-size: 4rem;
     font-weight: 700;
+    cursor: default;
+}
+
+.message-helper-container ::deep textarea:hover,
+.message-helper-container ::deep textarea:focus {
+    background-color: rgb(180, 180, 180) !important;
+    border: 2px solid #000 !important;
+    outline: none !important;
+    box-shadow: none !important;
 }
