@@ -1,6 +1,5 @@
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Main;
-using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.Steps.Execution;
@@ -18,7 +17,6 @@ public class ScanStepManager : IDisposable
     private readonly TestSequenseService _sequenseService;
     private readonly MessageService _messageService;
     private readonly RawInputService _rawInputService;
-    private readonly BarcodeScanService _barcodeScanService;
     private readonly SequenceValidationState _validationState;
     private readonly ILogger<ScanStepManager> _logger;
     private readonly Lock _sessionLock = new();
@@ -35,7 +33,6 @@ public class ScanStepManager : IDisposable
         TestSequenseService sequenseService,
         MessageService messageService,
         RawInputService rawInputService,
-        BarcodeScanService barcodeScanService,
         SequenceValidationState validationState,
         ILogger<ScanStepManager> logger)
     {
@@ -46,7 +43,6 @@ public class ScanStepManager : IDisposable
         _sequenseService = sequenseService;
         _messageService = messageService;
         _rawInputService = rawInputService;
-        _barcodeScanService = barcodeScanService;
         _validationState = validationState;
         _logger = logger;
         _operatorState.OnChange += UpdateState;
@@ -100,19 +96,35 @@ public class ScanStepManager : IDisposable
             _scanSession ??= _rawInputService.RequestScan(OnBarcodeScanned);
         }
     }
-    
-    private async void OnBarcodeScanned(string barcode)
+
+    public async Task ProcessBarcodeAsync(string barcode)
     {
+        _validationState.ClearError();
         try
         {
-            await _barcodeScanService.ProcessBarcodeAsync(barcode);
+            var step = (IScanBarcodeStep)_stepRegistry.GetById(GetCurrentStepId())!;
+            var result = await step.ProcessBarcodeAsync(barcode);
+            if (!result.IsSuccess)
+            {
+                HandleStepError(result.ErrorMessage!);
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка сканера: {Barcode}", barcode);
-            _validationState.SetError("Ошибка сканера");
-            _sequenseService.SetErrorOnCurrent("Ошибка сканера");
+            HandleStepError("Ошибка сканера");
         }
+    }
+
+    private void HandleStepError(string error)
+    {
+        _validationState.SetError(error);
+        _sequenseService.SetErrorOnCurrent(error);
+    }
+
+    private async void OnBarcodeScanned(string barcode)
+    {
+        await ProcessBarcodeAsync(barcode);
     }
 
     private void ReleaseScanSession()
