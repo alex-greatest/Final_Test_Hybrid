@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Database;
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Database;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Scanner;
@@ -14,7 +15,8 @@ public class ScanBarcodeStep(
     BoilerTypeService boilerTypeService,
     RecipeService recipeService,
     BoilerState boilerState,
-    ILogger<ScanBarcodeStep> logger) : ITestStep, IScanBarcodeStep
+    ILogger<ScanBarcodeStep> logger,
+    ITestStepLogger testStepLogger) : ITestStep, IScanBarcodeStep
 {
     public string Id => "scan-barcode";
     public string Name => "Сканирование штрихкода";
@@ -28,6 +30,7 @@ public class ScanBarcodeStep(
 
     public Task<StepResult> ProcessBarcodeAsync(string barcode)
     {
+        testStepLogger.LogStepStart(Name);
         return ValidateBarcode(barcode)
             .ThenAsync(FindBoilerTypeAsync)
             .ThenAsync(LoadRecipesAsync)
@@ -94,6 +97,7 @@ public class ScanBarcodeStep(
             isValid: true,
             context.Cycle,
             context.Recipes);
+        testStepLogger.LogStepEnd(Name);
         return StepResult.Pass();
     }
 

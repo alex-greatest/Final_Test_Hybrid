@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Scanner.RawInput;
@@ -20,6 +21,7 @@ public class ScanStepManager : IDisposable
     private readonly RawInputService _rawInputService;
     private readonly SequenceValidationState _validationState;
     private readonly ILogger<ScanStepManager> _logger;
+    private readonly ITestStepLogger _testStepLogger;
     private readonly Lock _sessionLock = new();
     private readonly SemaphoreSlim _processLock = new(1, 1);
     private IDisposable? _scanSession;
@@ -38,7 +40,8 @@ public class ScanStepManager : IDisposable
         MessageService messageService,
         RawInputService rawInputService,
         SequenceValidationState validationState,
-        ILogger<ScanStepManager> logger)
+        ILogger<ScanStepManager> logger,
+        ITestStepLogger testStepLogger)
     {
         _operatorState = operatorState;
         _autoReady = autoReady;
@@ -49,6 +52,7 @@ public class ScanStepManager : IDisposable
         _rawInputService = rawInputService;
         _validationState = validationState;
         _logger = logger;
+        _testStepLogger = testStepLogger;
         _operatorState.OnChange += UpdateState;
         _autoReady.OnChange += UpdateState;
         _appSettings.UseMesChanged += OnUseMesChanged;
@@ -81,6 +85,7 @@ public class ScanStepManager : IDisposable
     {
         AcquireScanSession();
         var step = _stepRegistry.GetById(GetCurrentStepId());
+        _testStepLogger.StartNewSession();
         _sequenseService.SetCurrentStep(step);
     }
 

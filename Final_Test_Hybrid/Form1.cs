@@ -155,6 +155,7 @@ namespace Final_Test_Hybrid
             services.AddSingleton<ISubscriptionLogger, SubscriptionLogger>();
             services.AddSingleton<IDatabaseLogger, DatabaseLogger>();
             services.AddSingleton<ISpringBootLogger, SpringBootLogger>();
+            services.AddSingleton<ITestStepLogger, TestStepLogger>();
             var logLevel = Enum.Parse<LogLevel>(_config?["Logging:General:LogLevel"] ?? "Warning");
             services.AddLogging(logging =>
             {
