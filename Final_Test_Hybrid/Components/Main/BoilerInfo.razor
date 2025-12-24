@@ -1,9 +1,8 @@
 @using Final_Test_Hybrid.Services.Main
-@using Final_Test_Hybrid.Services.Scanner
 @using Final_Test_Hybrid.Services.Steps.Execution
 @using Final_Test_Hybrid.Services.Steps.Manage
 @inject SequenceValidationState ValidationState
-@inject BarcodeScanService BarcodeScanService
+@inject ScanStepManager ScanStepManager
 @inject BoilerState BoilerState
 @inject NotificationService NotificationService
 @inject TestSequenseService TestSequenseService
@@ -18,6 +17,7 @@
     <RadzenTextBox
         Style="width:100%"
         Value="@GetDisplayValue()"
+        ReadOnly="@ScanStepManager.IsProcessing"
         @oninput="OnInput"
         @onkeydown="OnKeyDown"
         Placeholder="@_placeholder"/>
@@ -33,6 +33,7 @@
         ValidationState.OnErrorChanged += OnValidationChanged;
         BoilerState.OnChanged += OnBoilerStateChanged;
         TestSequenseService.OnDataChanged += OnStepChanged;
+        ScanStepManager.OnChange += OnScanStateChanged;
     }
 
     private string GetDisplayValue() => BoilerState.SerialNumber ?? _manualInput;
@@ -45,6 +46,8 @@
         InvokeIfNotDisposed(StateHasChanged);
     }
 
+    private void OnScanStateChanged() => InvokeIfNotDisposed(StateHasChanged);
+
     private void OnInput(ChangeEventArgs e) => _manualInput = e.Value?.ToString() ?? "";
 
     private async Task OnKeyDown(KeyboardEventArgs e)
@@ -53,7 +56,7 @@
         {
             return;
         }
-        await BarcodeScanService.ProcessBarcodeAsync(_manualInput);
+        await ScanStepManager.ProcessBarcodeAsync(_manualInput);
         _manualInput = "";
     }
 
@@ -116,5 +119,6 @@
         ValidationState.OnErrorChanged -= OnValidationChanged;
         BoilerState.OnChanged -= OnBoilerStateChanged;
         TestSequenseService.OnDataChanged -= OnStepChanged;
+        ScanStepManager.OnChange -= OnScanStateChanged;
     }
 }
