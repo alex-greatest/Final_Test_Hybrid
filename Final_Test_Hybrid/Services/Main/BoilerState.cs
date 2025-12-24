@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Database;
+using Final_Test_Hybrid.Services.SpringBoot.Recipe;
 
 namespace Final_Test_Hybrid.Services.Main;
 
@@ -9,6 +10,7 @@ public class BoilerState
     private string? _article;
     private bool _isValid;
     private BoilerTypeCycle? _boilerTypeCycle;
+    private IReadOnlyList<RecipeResponseDto>? _recipes;
 
     public event Action? OnChanged;
 
@@ -56,19 +58,40 @@ public class BoilerState
         }
     }
 
-    public void SetData(string serialNumber, string article, bool isValid, BoilerTypeCycle? boilerTypeCycle = null)
+    public IReadOnlyList<RecipeResponseDto>? Recipes
     {
-        UpdateState(serialNumber, article, isValid, boilerTypeCycle);
+        get
+        {
+            lock (_lock)
+            {
+                return _recipes;
+            }
+        }
+    }
+
+    public void SetData(
+        string serialNumber,
+        string article,
+        bool isValid,
+        BoilerTypeCycle? boilerTypeCycle = null,
+        IReadOnlyList<RecipeResponseDto>? recipes = null)
+    {
+        UpdateState(serialNumber, article, isValid, boilerTypeCycle, recipes);
         NotifyChanged();
     }
 
     public void Clear()
     {
-        UpdateState(serialNumber: null, article: null, isValid: false, boilerTypeCycle: null);
+        UpdateState(serialNumber: null, article: null, isValid: false, boilerTypeCycle: null, recipes: null);
         NotifyChanged();
     }
 
-    private void UpdateState(string? serialNumber, string? article, bool isValid, BoilerTypeCycle? boilerTypeCycle)
+    private void UpdateState(
+        string? serialNumber,
+        string? article,
+        bool isValid,
+        BoilerTypeCycle? boilerTypeCycle,
+        IReadOnlyList<RecipeResponseDto>? recipes)
     {
         lock (_lock)
         {
@@ -76,6 +99,7 @@ public class BoilerState
             _article = article;
             _isValid = isValid;
             _boilerTypeCycle = boilerTypeCycle;
+            _recipes = recipes;
         }
     }
 
