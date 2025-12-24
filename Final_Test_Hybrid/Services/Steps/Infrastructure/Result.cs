@@ -22,21 +22,19 @@ public static class ResultExtensions
         return await next(result.Value!);
     }
 
-    public static async Task<Result<TOut>> ThenAsync<TIn, TOut>(
-        this Task<Result<TIn>> resultTask,
-        Func<TIn, Task<Result<TOut>>> next)
+    extension<TIn>(Task<Result<TIn>> resultTask)
     {
-        var result = await resultTask;
-        if (!result.IsSuccess) return Result<TOut>.Fail(result.Error!);
-        return await next(result.Value!);
-    }
+        public async Task<Result<TOut>> ThenAsync<TOut>(Func<TIn, Task<Result<TOut>>> next)
+        {
+            var result = await resultTask;
+            if (!result.IsSuccess) return Result<TOut>.Fail(result.Error!);
+            return await next(result.Value!);
+        }
 
-    public static async Task<StepResult> Map<T>(
-        this Task<Result<T>> resultTask,
-        Func<T, StepResult> map)
-    {
-        var result = await resultTask;
-        if (!result.IsSuccess) return result.Error!;
-        return map(result.Value!);
+        public async Task<StepResult> Map(Func<TIn, StepResult> map)
+        {
+            var result = await resultTask;
+            return !result.IsSuccess ? result.Error! : map(result.Value!);
+        }
     }
 }

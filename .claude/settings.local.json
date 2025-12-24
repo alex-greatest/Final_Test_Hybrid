@@ -11,7 +11,8 @@
       "Bash(wc:*)",
       "Bash(dotnet ef migrations add:*)",
       "Bash(mkdir:*)",
-      "WebFetch(domain:www.radzen.com)"
+      "WebFetch(domain:www.radzen.com)",
+      "Bash(git checkout:*)"
     ]
   }
 }
