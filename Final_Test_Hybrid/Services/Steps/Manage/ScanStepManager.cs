@@ -1,9 +1,9 @@
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.Steps.Execution;
-using Final_Test_Hybrid.Services.Steps.Infrastructure;
 using Final_Test_Hybrid.Services.Steps.Interaces;
 using Microsoft.Extensions.Logging;
 
@@ -18,13 +18,11 @@ public class ScanStepManager : IDisposable
     private readonly TestSequenseService _sequenseService;
     private readonly MessageService _messageService;
     private readonly RawInputService _rawInputService;
+    private readonly BarcodeScanService _barcodeScanService;
     private readonly SequenceValidationState _validationState;
     private readonly ILogger<ScanStepManager> _logger;
     private readonly Lock _sessionLock = new();
-    private readonly SemaphoreSlim _processLock = new(1, 1);
     private IDisposable? _scanSession;
-    public bool IsProcessing { get; private set; }
-    public event Action? OnChange;
     private const string ScanBarcodeId = "scan-barcode";
     private const string ScanBarcodeMesId = "scan-barcode-mes";
     private const int MessagePriority = 100;
@@ -37,6 +35,7 @@ public class ScanStepManager : IDisposable
         TestSequenseService sequenseService,
         MessageService messageService,
         RawInputService rawInputService,
+        BarcodeScanService barcodeScanService,
         SequenceValidationState validationState,
         ILogger<ScanStepManager> logger)
     {
@@ -47,6 +46,7 @@ public class ScanStepManager : IDisposable
         _sequenseService = sequenseService;
         _messageService = messageService;
         _rawInputService = rawInputService;
+        _barcodeScanService = barcodeScanService;
         _validationState = validationState;
         _logger = logger;
         _operatorState.OnChange += UpdateState;
@@ -100,72 +100,19 @@ public class ScanStepManager : IDisposable
             _scanSession ??= _rawInputService.RequestScan(OnBarcodeScanned);
         }
     }
-
-    public async Task ProcessBarcodeAsync(string barcode)
+    
+    private async void OnBarcodeScanned(string barcode)
     {
-        if (!await _processLock.WaitAsync(0))
-        {
-            return;
-        }
         try
         {
-            BlockInput();
-            var result = await ProcessBarcodeInternalAsync(barcode);
-            if (!result.IsSuccess)
-            {
-                UnblockInput();
-            }
-        }
-        finally
-        {
-            _processLock.Release();
-        }
-    }
-
-    private void BlockInput()
-    {
-        ReleaseScanSession();
-        IsProcessing = true;
-        OnChange?.Invoke();
-    }
-
-    private void UnblockInput()
-    {
-        IsProcessing = false;
-        AcquireScanSession();
-        OnChange?.Invoke();
-    }
-
-    private async Task<StepResult> ProcessBarcodeInternalAsync(string barcode)
-    {
-        _validationState.ClearError();
-        try
-        {
-            var step = (IScanBarcodeStep)_stepRegistry.GetById(GetCurrentStepId())!;
-            var result = await step.ProcessBarcodeAsync(barcode);
-            if (!result.IsSuccess)
-            {
-                HandleStepError(result.ErrorMessage!);
-            }
-            return result;
+            await _barcodeScanService.ProcessBarcodeAsync(barcode);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка сканера: {Barcode}", barcode);
-            HandleStepError("Ошибка сканера");
-            return StepResult.WithError("Ошибка сканера");
+            _validationState.SetError("Ошибка сканера");
+            _sequenseService.SetErrorOnCurrent("Ошибка сканера");
         }
-    }
-
-    private void HandleStepError(string error)
-    {
-        _validationState.SetError(error);
-        _sequenseService.SetErrorOnCurrent(error);
-    }
-
-    private async void OnBarcodeScanned(string barcode)
-    {
-        await ProcessBarcodeAsync(barcode);
     }
 
     private void ReleaseScanSession()
