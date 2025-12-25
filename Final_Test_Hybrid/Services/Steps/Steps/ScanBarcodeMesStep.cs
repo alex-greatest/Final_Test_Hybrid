@@ -15,32 +15,31 @@ public class ScanBarcodeMesStep(
     public string Name => "Сканирование штрихкода MES";
     public string Description => "Сканирует штрихкод и отправляет в MES";
     public bool IsVisibleInEditor => false;
-    public IReadOnlyList<string> LastMissingTags => [];
 
     public Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
     {
         return Task.FromResult(TestStepResult.Pass());
     }
 
-    public Task<StepResult> ProcessBarcodeAsync(string barcode)
+    public Task<BarcodeStepResult> ProcessBarcodeAsync(string barcode)
     {
         logger.LogInformation("Обработка штрихкода MES: {Barcode}", barcode);
         var validation = barcodeScanService.Validate(barcode);
         return Task.FromResult(!validation.IsValid ? HandleInvalidBarcode(barcode, validation.Error!) : HandleSuccess(validation));
     }
 
-    private StepResult HandleInvalidBarcode(string barcode, string error)
+    private BarcodeStepResult HandleInvalidBarcode(string barcode, string error)
     {
         boilerState.SetData(barcode, "", isValid: false);
-        return StepResult.Fail(error);
+        return BarcodeStepResult.Fail(error);
     }
 
-    private StepResult HandleSuccess(BarcodeValidationResult validation)
+    private BarcodeStepResult HandleSuccess(BarcodeValidationResult validation)
     {
         // TODO: Добавить MES-логику
         logger.LogInformation("MES: Серийный номер: {Serial}, Артикул: {Article}",
             validation.Barcode, validation.Article);
         boilerState.SetData(validation.Barcode, validation.Article!, isValid: true);
-        return StepResult.Pass();
+        return BarcodeStepResult.Pass();
     }
 }

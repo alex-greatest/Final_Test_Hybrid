@@ -165,11 +165,11 @@ public class ScanStepManager : IDisposable
             var result = await step.ProcessBarcodeAsync(barcode);
             if (result.IsSuccess)
             {
-                return result;
+                return StepResult.Pass();
             }
-            await ShowMissingTagsDialogIfNeeded(step.LastMissingTags);
+            await ShowMissingTagsDialogIfNeeded(result.MissingTags);
             HandleStepError(result.ErrorMessage!);
-            return result;
+            return StepResult.Fail(result.ErrorMessage!);
         }
         catch (Exception ex)
         {

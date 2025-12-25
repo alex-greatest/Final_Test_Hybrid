@@ -39,3 +39,16 @@ public record StepResult : StepResult<object>
     public new static StepResult Skip(string? reason = null) => new(StepStatus.Skip, reason);
     public new static StepResult WithError(string error) => new(StepStatus.Error, error);
 }
+
+public record BarcodeStepResult(
+    StepStatus Status,
+    IReadOnlyList<string> MissingTags,
+    string? ErrorMessage = null)
+{
+    public bool IsSuccess => Status == StepStatus.Pass;
+
+    public static BarcodeStepResult Pass() => new(StepStatus.Pass, []);
+    public static BarcodeStepResult Fail(string error, IReadOnlyList<string>? missingTags = null)
+        => new(StepStatus.Fail, missingTags ?? [], error);
+    public static BarcodeStepResult WithError(string error) => new(StepStatus.Error, [], error);
+}
