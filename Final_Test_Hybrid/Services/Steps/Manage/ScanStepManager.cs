@@ -1,12 +1,16 @@
+using Final_Test_Hybrid.Components.Main.Modals;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.Settings;
+using Final_Test_Hybrid.Services.Common.UI;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.Steps.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure;
 using Final_Test_Hybrid.Services.Steps.Interaces;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Radzen;
 
 namespace Final_Test_Hybrid.Services.Steps.Manage;
 
@@ -20,6 +24,8 @@ public class ScanStepManager : IDisposable
     private readonly MessageService _messageService;
     private readonly RawInputService _rawInputService;
     private readonly SequenceValidationState _validationState;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<ScanStepManager> _logger;
     private readonly ITestStepLogger _testStepLogger;
     private readonly Lock _sessionLock = new();
@@ -40,6 +46,8 @@ public class ScanStepManager : IDisposable
         MessageService messageService,
         RawInputService rawInputService,
         SequenceValidationState validationState,
+        IServiceProvider serviceProvider,
+        INotificationService notificationService,
         ILogger<ScanStepManager> logger,
         ITestStepLogger testStepLogger)
     {
@@ -51,6 +59,8 @@ public class ScanStepManager : IDisposable
         _messageService = messageService;
         _rawInputService = rawInputService;
         _validationState = validationState;
+        _serviceProvider = serviceProvider;
+        _notificationService = notificationService;
         _logger = logger;
         _testStepLogger = testStepLogger;
         _operatorState.OnChange += UpdateState;
@@ -148,10 +158,12 @@ public class ScanStepManager : IDisposable
         {
             var step = (IScanBarcodeStep)_stepRegistry.GetById(GetCurrentStepId())!;
             var result = await step.ProcessBarcodeAsync(barcode);
-            if (!result.IsSuccess)
+            if (result.IsSuccess)
             {
-                HandleStepError(result.ErrorMessage!);
+                return result;
             }
+            await ShowMissingTagsDialogIfNeeded(step.LastMissingTags);
+            HandleStepError(result.ErrorMessage!);
             return result;
         }
         catch (Exception ex)
@@ -160,6 +172,29 @@ public class ScanStepManager : IDisposable
             HandleStepError("Ошибка сканера");
             return StepResult.WithError("Ошибка сканера");
         }
+    }
+
+    private async Task ShowMissingTagsDialogIfNeeded(IReadOnlyList<string> missingTags)
+    {
+        if (missingTags.Count == 0)
+        {
+            return;
+        }
+        _notificationService.ShowWarning("Внимание", $"Обнаружено {missingTags.Count} отсутствующих тегов для PLC");
+        var dialogService = _serviceProvider.GetRequiredService<DialogService>();
+        await dialogService.OpenAsync<MissingTagsDialog>(
+            "Отсутствующие теги для PLC",
+            new Dictionary<string, object>
+            {
+                { "MissingTags", missingTags.ToList() },
+                { "InfoMessage", $"В PLC DB_Recipe отсутствует тегов: {missingTags.Count}" }
+            },
+            new DialogOptions
+            {
+                Width = "600px",
+                Height = "500px",
+                CloseDialogOnOverlayClick = false
+            });
     }
 
     private void HandleStepError(string error)

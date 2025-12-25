@@ -29,6 +29,7 @@ using Final_Test_Hybrid.Services.Steps.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure;
 using Final_Test_Hybrid.Services.Steps.Interaces;
 using Final_Test_Hybrid.Services.Steps.Manage;
+using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;
@@ -68,6 +69,7 @@ namespace Final_Test_Hybrid
             RegisterShiftServices(services);
             RegisterScannerServices(services);
             RegisterDatabaseServices(services);
+            services.AddSingleton<RecipeTagValidator>();
             services.AddSingleton<MessageService>();
             services.AddSingleton<AutoReadySubscription>();
             services.AddSingleton<MessageServiceInitializer>();
@@ -187,6 +189,7 @@ namespace Final_Test_Hybrid
             services.AddSingleton<OpcUaSubscription>();
             services.AddSingleton<OpcUaConnectionService>();
             services.AddSingleton<OpcUaTagService>();
+            services.AddSingleton<OpcUaBrowseService>();
         }
 
         private void RegisterSpringBootServices(ServiceCollection services)

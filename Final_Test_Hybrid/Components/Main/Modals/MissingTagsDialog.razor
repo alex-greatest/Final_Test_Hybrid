@@ -1,0 +1,35 @@
+<div class="missing-tags-dialog">
+    <div class="info-message">
+        @InfoMessage
+    </div>
+    <RadzenDataGrid Data="@MissingTags" TItem="string"
+                    AllowPaging="false"
+                    AllowSorting="false">
+        <Columns>
+            <RadzenDataGridColumn TItem="string" Title="Тег (адрес)" MinWidth="300px">
+                <Template Context="tagName">
+                    @tagName
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+    <div class="dialog-buttons">
+        <RadzenButton Text="Продолжить" Icon="check"
+                      Click="@OnClose"
+                      ButtonStyle="ButtonStyle.Primary" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public List<string> MissingTags { get; set; } = [];
+    [Parameter]
+    public string InfoMessage { get; set; } = "В PLC DB_Recipe отсутствуют следующие теги:";
+    [Inject]
+    public required DialogService DialogService { get; set; }
+
+    private void OnClose()
+    {
+        DialogService.Close();
+    }
+}

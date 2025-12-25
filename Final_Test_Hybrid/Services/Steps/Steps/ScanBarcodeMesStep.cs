@@ -15,6 +15,7 @@ public class ScanBarcodeMesStep(
     public string Name => "Сканирование штрихкода MES";
     public string Description => "Сканирует штрихкод и отправляет в MES";
     public bool IsVisibleInEditor => false;
+    public IReadOnlyList<string> LastMissingTags => [];
 
     public Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
     {
