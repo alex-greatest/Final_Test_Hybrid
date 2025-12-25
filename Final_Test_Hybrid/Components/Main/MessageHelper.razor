@@ -9,13 +9,19 @@
 </div>
 
 @code {
+    private Action? _onChangeHandler;
+
     protected override void OnInitialized()
     {
-        MessageService.OnChange += StateHasChanged;
+        _onChangeHandler = () => InvokeAsync(StateHasChanged);
+        MessageService.OnChange += _onChangeHandler;
     }
 
     public void Dispose()
     {
-        MessageService.OnChange -= StateHasChanged;
+        if (_onChangeHandler != null)
+        {
+            MessageService.OnChange -= _onChangeHandler;
+        }
     }
 }
