@@ -28,25 +28,118 @@ public class OpcUaBrowseService(
         try
         {
             var addresses = await BrowseNodeAsync(parentNodeId, ct);
-            logger.LogInformation("Browse завершён: {Count} тегов из {NodeId}", addresses.Count, parentNodeId);
-            subscriptionLogger.LogInformation("Browse завершён: {Count} тегов из {NodeId}", addresses.Count, parentNodeId);
+            LogInfo("Browse завершён: {Count} тегов из {NodeId}", addresses.Count, parentNodeId);
             return new BrowseResult(addresses, null);
-        }
-        catch (ServiceResultException ex)
-        {
-            return HandleServiceResultException(ex, parentNodeId);
         }
         catch (Exception ex)
         {
-            return HandleGenericException(ex, parentNodeId);
+            return HandleException(ex, parentNodeId);
+        }
+    }
+
+    public async Task<BrowseResult> BrowseAllTagsRecursiveAsync(string parentNodeId, CancellationToken ct = default)
+    {
+        if (Session == null)
+        {
+            return CreateNotConnectedError();
+        }
+        try
+        {
+            var addresses = new List<string>();
+            await BrowseNodeRecursiveAsync(parentNodeId, addresses, ct);
+            LogInfo("Browse рекурсивный завершён: {Count} тегов из {NodeId}", addresses.Count, parentNodeId);
+            return new BrowseResult(addresses, null);
+        }
+        catch (Exception ex)
+        {
+            return HandleException(ex, parentNodeId);
+        }
+    }
+
+    private async Task BrowseNodeRecursiveAsync(string parentNodeId, List<string> addresses, CancellationToken ct)
+    {
+        var references = await BrowseAllReferencesAsync(parentNodeId, ct);
+        foreach (var reference in references)
+        {
+            await ProcessReferenceAsync(reference, addresses, ct);
+        }
+    }
+
+    private async Task ProcessReferenceAsync(ReferenceDescription reference, List<string> addresses, CancellationToken ct)
+    {
+        var nodeIdString = reference.NodeId.ToString();
+        var children = await BrowseAllReferencesAsync(nodeIdString, ct);
+        if (children.Count == 0)
+        {
+            if (reference.NodeClass == NodeClass.Variable && IsS7Tag(nodeIdString))
+            {
+                addresses.Add(nodeIdString);
+            }
+            return;
+        }
+        foreach (var child in children)
+        {
+            await ProcessReferenceAsync(child, addresses, ct);
+        }
+    }
+
+    private static bool IsS7Tag(string nodeId)
+    {
+        return nodeId.Contains("DB_Recipe", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task<List<ReferenceDescription>> BrowseAllReferencesAsync(string parentNodeId, CancellationToken ct)
+    {
+        var nodeId = new NodeId(parentNodeId);
+        var browseDescription = CreateBrowseDescriptionAll(nodeId);
+        var response = await Session!.BrowseAsync(null, null, 0, browseDescription, ct);
+        var references = ExtractReferencesFromResults(response.Results);
+        await ProcessContinuationPointsForReferencesAsync(response.Results, references, ct);
+        return references;
+    }
+
+    private static BrowseDescriptionCollection CreateBrowseDescriptionAll(NodeId nodeId)
+    {
+        return
+        [
+            new BrowseDescription
+            {
+                NodeId = nodeId,
+                BrowseDirection = BrowseDirection.Forward,
+                ReferenceTypeId = ReferenceTypeIds.HierarchicalReferences,
+                IncludeSubtypes = true,
+                NodeClassMask = 0,
+                ResultMask = (uint)BrowseResultMask.All
+            }
+        ];
+    }
+
+    private static List<ReferenceDescription> ExtractReferencesFromResults(BrowseResultCollection results)
+    {
+        return results
+            .Where(r => !StatusCode.IsBad(r.StatusCode))
+            .SelectMany(r => r.References)
+            .ToList();
+    }
+
+    private async Task ProcessContinuationPointsForReferencesAsync(
+        BrowseResultCollection results,
+        List<ReferenceDescription> references,
+        CancellationToken ct)
+    {
+        var continuationPoints = GetContinuationPoints(results);
+        while (continuationPoints.Count > 0)
+        {
+            var nextResponse = await Session!.BrowseNextAsync(null, false, new ByteStringCollection(continuationPoints), ct);
+            references.AddRange(ExtractReferencesFromResults(nextResponse.Results));
+            continuationPoints = GetContinuationPoints(nextResponse.Results);
         }
     }
 
     private BrowseResult CreateNotConnectedError()
     {
         const string error = "PLC не подключен";
-        logger.LogError(error);
-        subscriptionLogger.LogError(null, error);
+        LogError(error);
         return new BrowseResult([], error);
     }
 
@@ -102,30 +195,40 @@ public class OpcUaBrowseService(
     private static List<byte[]> GetContinuationPoints(BrowseResultCollection results)
     {
         return results
-            .Where(r => !StatusCode.IsBad(r.StatusCode))
-            .Where(r => r.ContinuationPoint is { Length: > 0 })
+            .Where(r => !StatusCode.IsBad(r.StatusCode) && r.ContinuationPoint is { Length: > 0 })
             .Select(r => r.ContinuationPoint)
             .ToList();
     }
 
-    private BrowseResult HandleServiceResultException(ServiceResultException ex, string parentNodeId)
+    private BrowseResult HandleException(Exception ex, string parentNodeId)
     {
-        var error = OpcUaErrorMapper.ToHumanReadable(ex.StatusCode);
-        logger.LogError(ex, "Ошибка browse {NodeId}: {Error}", parentNodeId, error);
-        subscriptionLogger.LogError(ex, "Ошибка browse {NodeId}: {Error}", parentNodeId, error);
-        return new BrowseResult([], error);
-    }
-
-    private BrowseResult HandleGenericException(Exception ex, string parentNodeId)
-    {
-        var error = $"Ошибка browse: {ex.Message}";
-        logger.LogError(ex, "Ошибка browse {NodeId}", parentNodeId);
-        subscriptionLogger.LogError(ex, "Ошибка browse {NodeId}", parentNodeId);
+        var error = ex is ServiceResultException sre
+            ? OpcUaErrorMapper.ToHumanReadable(sre.StatusCode)
+            : $"Ошибка browse: {ex.Message}";
+        LogError(ex, "Ошибка browse {NodeId}: {Error}", parentNodeId, error);
         return new BrowseResult([], error);
     }
 
     private static string ExtractAddress(ReferenceDescription reference)
     {
         return reference.NodeId.ToString();
+    }
+
+    private void LogInfo(string message, params object?[] args)
+    {
+        logger.LogInformation(message, args);
+        subscriptionLogger.LogInformation(message, args);
+    }
+
+    private void LogError(string message, params object?[] args)
+    {
+        logger.LogError(message, args);
+        subscriptionLogger.LogError(null, message, args);
+    }
+
+    private void LogError(Exception ex, string message, params object?[] args)
+    {
+        logger.LogError(ex, message, args);
+        subscriptionLogger.LogError(ex, message, args);
     }
 }

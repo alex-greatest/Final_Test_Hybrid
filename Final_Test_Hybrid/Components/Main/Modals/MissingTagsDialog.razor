@@ -4,9 +4,10 @@
     </div>
     <RadzenDataGrid Data="@MissingTags" TItem="string"
                     AllowPaging="false"
-                    AllowSorting="false">
+                    AllowSorting="true"
+                    Style="flex: 1; min-height: 0;">
         <Columns>
-            <RadzenDataGridColumn TItem="string" Title="Тег (адрес)" MinWidth="300px">
+            <RadzenDataGridColumn TItem="string" Title="Тег (адрес)">
                 <Template Context="tagName">
                     @tagName
                 </Template>
@@ -14,7 +15,7 @@
         </Columns>
     </RadzenDataGrid>
     <div class="dialog-buttons">
-        <RadzenButton Text="Продолжить" Icon="check"
+        <RadzenButton Text="Закрыть" Icon="close"
                       Click="@OnClose"
                       ButtonStyle="ButtonStyle.Primary" />
     </div>
