@@ -24,31 +24,72 @@ public class RecipeTagValidator(
         IReadOnlyList<RecipeResponseDto> recipes,
         CancellationToken ct = default)
     {
-        if (recipes.Count == 0)
+        return ValidateNotEmpty(recipes)
+            ?? ValidateHasPlcRecipes(recipes, out var plcRecipes)
+            ?? await ValidateTagsExistInPlc(plcRecipes!, ct);
+    }
+
+    private TagValidationResult? ValidateNotEmpty(IReadOnlyList<RecipeResponseDto> recipes)
+    {
+        if (recipes.Count != 0)
         {
-            const string error = "Список рецептов пуст";
-            logger.LogError(error);
-            testStepLogger.LogError(null, error);
-            return new TagValidationResult([], error);
+            return null;
         }
-        var plcRecipes = recipes.Where(r => r.IsPlc).ToList();
-        if (plcRecipes.Count == 0)
+        const string error = "Список рецептов пуст";
+        logger.LogError(error);
+        testStepLogger.LogError(null, error);
+        return new TagValidationResult([], error);
+    }
+
+    private TagValidationResult? ValidateHasPlcRecipes(
+        IReadOnlyList<RecipeResponseDto> recipes,
+        out List<RecipeResponseDto>? plcRecipes)
+    {
+        plcRecipes = recipes.Where(r => r.IsPlc).ToList();
+        if (plcRecipes.Count != 0)
         {
-            logger.LogInformation("Нет рецептов для PLC, валидация пропущена");
-            return new TagValidationResult([], null);
+            return null;
         }
+        logger.LogInformation("Нет рецептов для PLC, валидация пропущена");
+        testStepLogger.LogInformation("Нет рецептов для PLC, валидация пропущена");
+        plcRecipes = null;
+        return new TagValidationResult([], null);
+    }
+
+    private async Task<TagValidationResult> ValidateTagsExistInPlc(
+        List<RecipeResponseDto> plcRecipes,
+        CancellationToken ct)
+    {
         var browseResult = await browseService.BrowseChildTagsAsync(DbRecipeNodeId, ct);
         if (!browseResult.Success)
         {
-            logger.LogError("Ошибка browse PLC: {Error}", browseResult.Error);
-            testStepLogger.LogError(null, "Ошибка browse PLC: {Error}", browseResult.Error);
-            return new TagValidationResult([], browseResult.Error);
+            return HandleBrowseError(browseResult.Error);
         }
-        var plcAddresses = new HashSet<string>(browseResult.Addresses, StringComparer.OrdinalIgnoreCase);
-        var missingTags = plcRecipes
-            .Where(r => !string.IsNullOrEmpty(r.Address) && !plcAddresses.Contains(r.Address))
+        var missingTags = FindMissingTags(plcRecipes, browseResult.Addresses);
+        LogMissingTagsResult(missingTags);
+        return new TagValidationResult(missingTags, null);
+    }
+
+    private TagValidationResult HandleBrowseError(string? error)
+    {
+        logger.LogError("Ошибка browse PLC: {Error}", error);
+        testStepLogger.LogError(null, "Ошибка browse PLC: {Error}", error);
+        return new TagValidationResult([], error);
+    }
+
+    private List<string> FindMissingTags(
+        List<RecipeResponseDto> plcRecipes,
+        IReadOnlyList<string> plcAddresses)
+    {
+        var addressSet = new HashSet<string>(plcAddresses, StringComparer.OrdinalIgnoreCase);
+        return plcRecipes
+            .Where(r => !string.IsNullOrEmpty(r.Address) && !addressSet.Contains(r.Address))
             .Select(r => $"{r.TagName} ({r.Address})")
             .ToList();
+    }
+
+    private void LogMissingTagsResult(List<string> missingTags)
+    {
         if (missingTags.Count > 0)
         {
             logger.LogWarning("Отсутствующие теги в PLC: {Tags}", string.Join(", ", missingTags));
@@ -59,6 +100,5 @@ public class RecipeTagValidator(
             logger.LogInformation("Все теги рецептов найдены в PLC");
             testStepLogger.LogInformation("Все теги рецептов найдены в PLC");
         }
-        return new TagValidationResult(missingTags, null);
     }
 }

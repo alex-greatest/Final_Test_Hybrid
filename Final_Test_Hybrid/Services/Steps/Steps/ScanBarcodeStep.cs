@@ -60,6 +60,7 @@ public class ScanBarcodeStep(
         if (cycle == null)
         {
             logger.LogWarning("Тип котла не найден: {Article}", ctx.Validation.Article);
+            testStepLogger.LogWarning("Тип котла не найден: {Article}", ctx.Validation.Article);
             boilerState.SetData(ctx.Validation.Barcode, ctx.Validation.Article!, isValid: false);
             return BarcodeStepResult.Fail("Тип котла не найден");
         }
@@ -76,6 +77,7 @@ public class ScanBarcodeStep(
             return null;
         }
         logger.LogWarning("Рецепты не найдены: {Id}", ctx.Cycle.BoilerTypeId);
+        testStepLogger.LogWarning("Рецепты не найдены: {Id}", ctx.Cycle.BoilerTypeId);
         boilerState.Clear();
         return BarcodeStepResult.Fail("Рецепты не найдены");
     }
@@ -94,6 +96,8 @@ public class ScanBarcodeStep(
     private BarcodeStepResult Success(BarcodeContext ctx)
     {
         logger.LogInformation("Успешно: {Serial}, {Article}, {Type}, рецептов: {Count}",
+            ctx.Validation.Barcode, ctx.Validation.Article, ctx.Cycle.Type, ctx.Recipes.Count);
+        testStepLogger.LogInformation("Успешно: {Serial}, {Article}, {Type}, рецептов: {Count}",
             ctx.Validation.Barcode, ctx.Validation.Article, ctx.Cycle.Type, ctx.Recipes.Count);
         boilerState.SetData(ctx.Validation.Barcode, ctx.Validation.Article!, isValid: true, ctx.Cycle, ctx.Recipes);
         testStepLogger.LogStepEnd(Name);
