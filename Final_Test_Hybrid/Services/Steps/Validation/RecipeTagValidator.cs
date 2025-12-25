@@ -25,8 +25,7 @@ public class RecipeTagValidator(
         CancellationToken ct = default)
     {
         return ValidateNotEmpty(recipes)
-            ?? ValidateHasPlcRecipes(recipes, out var plcRecipes)
-            ?? await ValidateTagsExistInPlc(plcRecipes!, ct);
+            ?? await ValidateTagsExistInPlc(recipes, ct);
     }
 
     private TagValidationResult? ValidateNotEmpty(IReadOnlyList<RecipeResponseDto> recipes)
@@ -41,23 +40,8 @@ public class RecipeTagValidator(
         return new TagValidationResult([], error);
     }
 
-    private TagValidationResult? ValidateHasPlcRecipes(
-        IReadOnlyList<RecipeResponseDto> recipes,
-        out List<RecipeResponseDto>? plcRecipes)
-    {
-        plcRecipes = recipes.Where(r => r.IsPlc).ToList();
-        if (plcRecipes.Count != 0)
-        {
-            return null;
-        }
-        logger.LogInformation("Нет рецептов для PLC, валидация пропущена");
-        testStepLogger.LogInformation("Нет рецептов для PLC, валидация пропущена");
-        plcRecipes = null;
-        return new TagValidationResult([], null);
-    }
-
     private async Task<TagValidationResult> ValidateTagsExistInPlc(
-        List<RecipeResponseDto> plcRecipes,
+        IReadOnlyList<RecipeResponseDto> recipes,
         CancellationToken ct)
     {
         var browseResult = await browseService.BrowseChildTagsAsync(DbRecipeNodeId, ct);
@@ -65,7 +49,7 @@ public class RecipeTagValidator(
         {
             return HandleBrowseError(browseResult.Error);
         }
-        var missingTags = FindMissingTags(plcRecipes, browseResult.Addresses);
+        var missingTags = FindMissingTags(recipes, browseResult.Addresses);
         LogMissingTagsResult(missingTags);
         return new TagValidationResult(missingTags, null);
     }
@@ -78,11 +62,11 @@ public class RecipeTagValidator(
     }
 
     private List<string> FindMissingTags(
-        List<RecipeResponseDto> plcRecipes,
+        IReadOnlyList<RecipeResponseDto> recipes,
         IReadOnlyList<string> plcAddresses)
     {
         var addressSet = new HashSet<string>(plcAddresses, StringComparer.OrdinalIgnoreCase);
-        return plcRecipes
+        return recipes
             .Where(r => !string.IsNullOrEmpty(r.Address) && !addressSet.Contains(r.Address))
             .Select(r => $"{r.TagName} ({r.Address})")
             .ToList();
