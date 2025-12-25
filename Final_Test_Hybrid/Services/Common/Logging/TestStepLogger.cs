@@ -38,12 +38,12 @@ public class TestStepLogger : ITestStepLogger, IDisposable
 
     public void LogStepStart(string stepName)
     {
-        _logger?.Information("[STEP START] {StepName}", stepName);
+        _logger?.Information("[Начало шага] {StepName}", stepName);
     }
 
     public void LogStepEnd(string stepName)
     {
-        _logger?.Information("[STEP END] {StepName}", stepName);
+        _logger?.Information("[Конец шага] {StepName}", stepName);
     }
 
     private static string BuildPathWithTimestamp(string basePath)

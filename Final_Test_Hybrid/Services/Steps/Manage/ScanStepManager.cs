@@ -115,6 +115,11 @@ public class ScanStepManager : IDisposable
             _scanSession ??= _rawInputService.RequestScan(OnBarcodeScanned);
         }
     }
+    
+    private async void OnBarcodeScanned(string barcode)
+    {
+        await ProcessBarcodeAsync(barcode);
+    }
 
     public async Task ProcessBarcodeAsync(string barcode)
     {
@@ -136,7 +141,7 @@ public class ScanStepManager : IDisposable
             _processLock.Release();
         }
     }
-
+    
     private void BlockInput()
     {
         ReleaseScanSession();
@@ -150,7 +155,7 @@ public class ScanStepManager : IDisposable
         AcquireScanSession();
         OnChange?.Invoke();
     }
-
+    
     private async Task<StepResult> ProcessBarcodeInternalAsync(string barcode)
     {
         _validationState.ClearError();
@@ -173,13 +178,18 @@ public class ScanStepManager : IDisposable
             return StepResult.WithError("Ошибка сканера");
         }
     }
-
+    
     private async Task ShowMissingTagsDialogIfNeeded(IReadOnlyList<string> missingTags)
     {
         if (missingTags.Count == 0)
         {
             return;
         }
+        await ShowMissingTagsDialog(missingTags);
+    }
+
+    private async Task ShowMissingTagsDialog(IReadOnlyList<string> missingTags)
+    {
         _notificationService.ShowWarning("Внимание", $"Обнаружено {missingTags.Count} отсутствующих тегов для PLC");
         var dialogService = _serviceProvider.GetRequiredService<DialogService>();
         await dialogService.OpenAsync<MissingTagsDialog>(
@@ -202,12 +212,7 @@ public class ScanStepManager : IDisposable
         _validationState.SetError(error);
         _sequenseService.SetErrorOnCurrent(error);
     }
-
-    private async void OnBarcodeScanned(string barcode)
-    {
-        await ProcessBarcodeAsync(barcode);
-    }
-
+    
     private void ReleaseScanSession()
     {
         lock (_sessionLock)

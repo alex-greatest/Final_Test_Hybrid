@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Database;
+using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Database;
 using Final_Test_Hybrid.Services.Main;
@@ -36,67 +37,68 @@ public class ScanBarcodeStep(
         testStepLogger.LogStepStart(Name);
         logger.LogInformation("Обработка штрихкода: {Barcode}", barcode);
         LastMissingTags = [];
-
-        var (validation, e1) = ValidateBarcode(barcode);
-        var (cycle, e2) = await FindCycleAsync(validation);
-        var (recipes, e3) = await LoadRecipesAsync(cycle);
-        var e4 = await CheckTagsAsync(recipes);
-
-        return e1 ?? e2 ?? e3 ?? e4 ?? SaveSuccess(validation!, cycle!, recipes!);
+        var ctx = new BarcodeContext(barcode);
+        return ValidateBarcode(ctx)
+            ?? await FindCycleAsync(ctx)
+            ?? await LoadRecipesAsync(ctx)
+            ?? await CheckTagsAsync(ctx)
+            ?? Success(ctx);
     }
 
-    private (BarcodeValidationResult?, StepResult?) ValidateBarcode(string barcode)
+    private StepResult? ValidateBarcode(BarcodeContext ctx)
     {
-        var v = barcodeScanService.Validate(barcode);
-        if (v.IsValid) return (v, null);
-        boilerState.SetData(barcode, "", isValid: false);
-        return (null, StepResult.Fail(v.Error!));
+        ctx.Validation = barcodeScanService.Validate(ctx.Barcode);
+        if (ctx.Validation.IsValid)
+        {
+            return null;
+        }
+        boilerState.SetData(ctx.Barcode, "", isValid: false);
+        return StepResult.Fail(ctx.Validation.Error!);
     }
 
-    private async Task<(BoilerTypeCycle?, StepResult?)> FindCycleAsync(BarcodeValidationResult? v)
+    private async Task<StepResult?> FindCycleAsync(BarcodeContext ctx)
     {
-        if (v == null) return (null, null);
-        var cycle = await boilerTypeService.FindActiveByArticleAsync(v.Article!);
-        if (cycle != null) return (cycle, null);
-        logger.LogWarning("Тип котла не найден: {Article}", v.Article);
-        boilerState.SetData(v.Barcode, v.Article!, isValid: false);
-        return (null, StepResult.Fail("Тип котла не найден"));
+        var cycle = await boilerTypeService.FindActiveByArticleAsync(ctx.Validation.Article!);
+        if (cycle == null)
+        {
+            logger.LogWarning("Тип котла не найден: {Article}", ctx.Validation.Article);
+            boilerState.SetData(ctx.Validation.Barcode, ctx.Validation.Article!, isValid: false);
+            return StepResult.Fail("Тип котла не найден");
+        }
+        ctx.Cycle = cycle;
+        return null;
     }
 
-    private async Task<(IReadOnlyList<RecipeResponseDto>?, StepResult?)> LoadRecipesAsync(BoilerTypeCycle? cycle)
+    private async Task<StepResult?> LoadRecipesAsync(BarcodeContext ctx)
     {
-        if (cycle == null) return (null, null);
-        var recipes = await recipeService.GetByBoilerTypeIdAsync(cycle.BoilerTypeId);
-        var dtos = MapToRecipeResponseDtos(recipes);
-        return dtos.Count != 0 ? (dtos, null) : OnEmptyRecipes(cycle.BoilerTypeId);
-    }
-
-    private (IReadOnlyList<RecipeResponseDto>?, StepResult?) OnEmptyRecipes(long boilerTypeId)
-    {
-        logger.LogWarning("Рецепты не найдены: {Id}", boilerTypeId);
+        var recipes = await recipeService.GetByBoilerTypeIdAsync(ctx.Cycle.BoilerTypeId);
+        ctx.Recipes = MapToRecipeResponseDtos(recipes);
+        if (ctx.Recipes.Count != 0)
+        {
+            return null;
+        }
+        logger.LogWarning("Рецепты не найдены: {Id}", ctx.Cycle.BoilerTypeId);
         boilerState.Clear();
-        return (null, StepResult.Fail("Рецепты не найдены"));
+        return StepResult.Fail("Рецепты не найдены");
     }
 
-    private async Task<StepResult?> CheckTagsAsync(IReadOnlyList<RecipeResponseDto>? recipes)
+    private async Task<StepResult?> CheckTagsAsync(BarcodeContext ctx)
     {
-        if (recipes == null) return null;
-        var result = await tagValidator.ValidateAsync(recipes);
-        return result.Success ? null : OnTagValidationFailed(result);
-    }
-
-    private StepResult OnTagValidationFailed(TagValidationResult result)
-    {
+        var result = await tagValidator.ValidateAsync(ctx.Recipes);
+        if (result.Success)
+        {
+            return null;
+        }
         LastMissingTags = result.MissingTags;
         boilerState.Clear();
         return StepResult.Fail(result.ErrorMessage!);
     }
 
-    private StepResult SaveSuccess(BarcodeValidationResult v, BoilerTypeCycle cycle, IReadOnlyList<RecipeResponseDto> recipes)
+    private StepResult Success(BarcodeContext ctx)
     {
         logger.LogInformation("Успешно: {Serial}, {Article}, {Type}, рецептов: {Count}",
-            v.Barcode, v.Article, cycle.Type, recipes.Count);
-        boilerState.SetData(v.Barcode, v.Article!, isValid: true, cycle, recipes);
+            ctx.Validation.Barcode, ctx.Validation.Article, ctx.Cycle.Type, ctx.Recipes.Count);
+        boilerState.SetData(ctx.Validation.Barcode, ctx.Validation.Article!, isValid: true, ctx.Cycle, ctx.Recipes);
         testStepLogger.LogStepEnd(Name);
         return StepResult.Pass();
     }
