@@ -42,13 +42,18 @@ public record StepResult : StepResult<object>
 
 public record BarcodeStepResult(
     StepStatus Status,
-    IReadOnlyList<string> MissingTags,
+    IReadOnlyList<string> MissingPlcTags,
+    IReadOnlyList<string> MissingRequiredTags,
     string? ErrorMessage = null)
 {
     public bool IsSuccess => Status == StepStatus.Pass;
 
-    public static BarcodeStepResult Pass() => new(StepStatus.Pass, []);
-    public static BarcodeStepResult Fail(string error, IReadOnlyList<string>? missingTags = null)
-        => new(StepStatus.Fail, missingTags ?? [], error);
-    public static BarcodeStepResult WithError(string error) => new(StepStatus.Error, [], error);
+    public static BarcodeStepResult Pass() => new(StepStatus.Pass, [], []);
+    public static BarcodeStepResult FailPlcTags(string error, IReadOnlyList<string> missingTags)
+        => new(StepStatus.Fail, missingTags, [], error);
+    public static BarcodeStepResult FailRequiredTags(string error, IReadOnlyList<string> missingTags)
+        => new(StepStatus.Fail, [], missingTags, error);
+    public static BarcodeStepResult Fail(string error)
+        => new(StepStatus.Fail, [], [], error);
+    public static BarcodeStepResult WithError(string error) => new(StepStatus.Error, [], [], error);
 }

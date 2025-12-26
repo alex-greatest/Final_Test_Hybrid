@@ -29,7 +29,8 @@ public class ScanStepManager : IDisposable
     private IDisposable? _scanSession;
     public bool IsProcessing { get; private set; }
     public event Action? OnChange;
-    public event Func<IReadOnlyList<string>, Task>? OnMissingTagsDialogRequested;
+    public event Func<IReadOnlyList<string>, Task>? OnMissingPlcTagsDialogRequested;
+    public event Func<IReadOnlyList<string>, Task>? OnMissingRequiredTagsDialogRequested;
     private const string ScanBarcodeId = "scan-barcode";
     private const string ScanBarcodeMesId = "scan-barcode-mes";
     private const int MessagePriority = 100;
@@ -162,7 +163,8 @@ public class ScanStepManager : IDisposable
             {
                 return StepResult.Pass();
             }
-            await ShowMissingTagsDialogIfNeeded(result.MissingTags);
+            await ShowMissingPlcTagsDialogIfNeeded(result.MissingPlcTags);
+            await ShowMissingRequiredTagsDialogIfNeeded(result.MissingRequiredTags);
             HandleStepError(result.ErrorMessage!);
             return StepResult.Fail(result.ErrorMessage!);
         }
@@ -174,21 +176,29 @@ public class ScanStepManager : IDisposable
         }
     }
     
-    private async Task ShowMissingTagsDialogIfNeeded(IReadOnlyList<string> missingTags)
+    private async Task ShowMissingPlcTagsDialogIfNeeded(IReadOnlyList<string> missingTags)
     {
         if (missingTags.Count == 0)
         {
             return;
         }
-        await ShowMissingTagsDialog(missingTags);
+        _notificationService.ShowWarning("Внимание", $"Обнаружено {missingTags.Count} отсутствующих тегов для PLC");
+        if (OnMissingPlcTagsDialogRequested != null)
+        {
+            await OnMissingPlcTagsDialogRequested.Invoke(missingTags);
+        }
     }
 
-    private async Task ShowMissingTagsDialog(IReadOnlyList<string> missingTags)
+    private async Task ShowMissingRequiredTagsDialogIfNeeded(IReadOnlyList<string> missingTags)
     {
-        _notificationService.ShowWarning("Внимание", $"Обнаружено {missingTags.Count} отсутствующих тегов для PLC");
-        if (OnMissingTagsDialogRequested != null)
+        if (missingTags.Count == 0)
         {
-            await OnMissingTagsDialogRequested.Invoke(missingTags);
+            return;
+        }
+        _notificationService.ShowWarning("Внимание", $"Обнаружено {missingTags.Count} обязательных тегов, отсутствующих в рецептах");
+        if (OnMissingRequiredTagsDialogRequested != null)
+        {
+            await OnMissingRequiredTagsDialogRequested.Invoke(missingTags);
         }
     }
 

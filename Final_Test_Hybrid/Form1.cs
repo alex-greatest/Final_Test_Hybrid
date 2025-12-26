@@ -70,6 +70,7 @@ namespace Final_Test_Hybrid
             RegisterScannerServices(services);
             RegisterDatabaseServices(services);
             services.AddSingleton<RecipeTagValidator>();
+            services.AddSingleton<RequiredTagValidator>();
             services.AddSingleton<MessageService>();
             services.AddSingleton<AutoReadySubscription>();
             services.AddSingleton<MessageServiceInitializer>();

@@ -36,7 +36,8 @@
         BoilerState.OnChanged += OnBoilerStateChanged;
         TestSequenseService.OnDataChanged += OnStepChanged;
         ScanStepManager.OnChange += OnScanStateChanged;
-        ScanStepManager.OnMissingTagsDialogRequested += ShowMissingTagsDialogAsync;
+        ScanStepManager.OnMissingPlcTagsDialogRequested += ShowMissingPlcTagsDialogAsync;
+        ScanStepManager.OnMissingRequiredTagsDialogRequested += ShowMissingRequiredTagsDialogAsync;
     }
 
     private string GetDisplayValue() => BoilerState.SerialNumber ?? _manualInput;
@@ -116,7 +117,7 @@
         });
     }
 
-    private async Task ShowMissingTagsDialogAsync(IReadOnlyList<string> missingTags)
+    private async Task ShowMissingPlcTagsDialogAsync(IReadOnlyList<string> missingTags)
     {
         await InvokeAsync(async () =>
         {
@@ -137,6 +138,27 @@
         });
     }
 
+    private async Task ShowMissingRequiredTagsDialogAsync(IReadOnlyList<string> missingTags)
+    {
+        await InvokeAsync(async () =>
+        {
+            await DialogService.OpenAsync<MissingTagsDialog>(
+                "Отсутствующие обязательные теги",
+                new Dictionary<string, object>
+                {
+                    { "MissingTags", missingTags.ToList() },
+                    { "InfoMessage", $"В рецептах БД отсутствуют обязательные теги: {missingTags.Count}" }
+                },
+                new DialogOptions
+                {
+                    Width = "95vw",
+                    Height = "90vh",
+                    CloseDialogOnOverlayClick = false,
+                    CssClass = "missing-tags-dialog-window"
+                });
+        });
+    }
+
     public void Dispose()
     {
         _disposed = true;
@@ -144,6 +166,7 @@
         BoilerState.OnChanged -= OnBoilerStateChanged;
         TestSequenseService.OnDataChanged -= OnStepChanged;
         ScanStepManager.OnChange -= OnScanStateChanged;
-        ScanStepManager.OnMissingTagsDialogRequested -= ShowMissingTagsDialogAsync;
+        ScanStepManager.OnMissingPlcTagsDialogRequested -= ShowMissingPlcTagsDialogAsync;
+        ScanStepManager.OnMissingRequiredTagsDialogRequested -= ShowMissingRequiredTagsDialogAsync;
     }
 }

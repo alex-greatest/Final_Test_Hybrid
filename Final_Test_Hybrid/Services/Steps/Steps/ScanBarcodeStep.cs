@@ -18,6 +18,7 @@ public class ScanBarcodeStep(
     RecipeService recipeService,
     BoilerState boilerState,
     RecipeTagValidator tagValidator,
+    RequiredTagValidator requiredTagValidator,
     ILogger<ScanBarcodeStep> logger,
     ITestStepLogger testStepLogger) : ITestStep, IScanBarcodeStep
 {
@@ -40,6 +41,7 @@ public class ScanBarcodeStep(
             ?? await FindCycleAsync(ctx)
             ?? await LoadRecipesAsync(ctx)
             ?? await CheckTagsAsync(ctx)
+            ?? CheckRequiredTags(ctx)
             ?? Success(ctx);
     }
 
@@ -90,7 +92,18 @@ public class ScanBarcodeStep(
             return null;
         }
         boilerState.Clear();
-        return BarcodeStepResult.Fail(result.ErrorMessage!, result.MissingTags);
+        return BarcodeStepResult.FailPlcTags(result.ErrorMessage!, result.MissingTags);
+    }
+
+    private BarcodeStepResult? CheckRequiredTags(BarcodeContext ctx)
+    {
+        var result = requiredTagValidator.Validate(ctx.Recipes);
+        if (result.Success)
+        {
+            return null;
+        }
+        boilerState.Clear();
+        return BarcodeStepResult.FailRequiredTags(result.ErrorMessage!, result.MissingTags);
     }
 
     private BarcodeStepResult Success(BarcodeContext ctx)
