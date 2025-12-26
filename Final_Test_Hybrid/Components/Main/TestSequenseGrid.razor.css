@@ -21,6 +21,18 @@
     border: 1px solid #dee2e6 !important;
 }
 
+.test-sequense-grid ::deep .cell-container {
+    display: flex;
+    align-items: center;
+    margin: -0.25rem -1rem;
+    padding: 0.25rem 1rem;
+    width: calc(100% + 2rem);
+}
+
+.test-sequense-grid ::deep .cell-container.error {
+    background-color: red;
+}
+
 .test-sequense-grid ::deep .cell-text {
     font-size: 17px;
     font-weight: bold;
@@ -28,5 +40,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
 }

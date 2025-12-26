@@ -13,27 +13,37 @@
         <Columns>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Module" Title="Модуль">
                 <Template Context="data">
-                    <span class="cell-text" style="@GetCellStyle(data)" title="@data.Module">@data.Module</span>
+                    <div class="cell-container @(data.IsError ? "error" : "")">
+                        <span class="cell-text" title="@data.Module">@data.Module</span>
+                    </div>
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Description" Title="Описание">
                 <Template Context="data">
-                    <span class="cell-text" style="@GetCellStyle(data)" title="@data.Description">@data.Description</span>
+                    <div class="cell-container @(data.IsError ? "error" : "")">
+                        <span class="cell-text" title="@data.Description">@data.Description</span>
+                    </div>
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Status" Title="Статус" Width="50px">
                 <Template Context="data">
-                    <span class="cell-text" style="@GetCellStyle(data)" title="@data.Status">@data.Status</span>
+                    <div class="cell-container @(data.IsError ? "error" : "")">
+                        <span class="cell-text" title="@data.Status">@data.Status</span>
+                    </div>
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Result" Title="Результаты">
                 <Template Context="data">
-                    <span class="cell-text" style="@GetCellStyle(data)" title="@data.Result">@data.Result</span>
+                    <div class="cell-container @(data.IsError ? "error" : "")">
+                        <span class="cell-text" title="@data.Result">@data.Result</span>
+                    </div>
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Range" Title="Пределы">
                 <Template Context="data">
-                    <span class="cell-text" style="@GetCellStyle(data)" title="@data.Range">@(string.IsNullOrEmpty(data.Range) ? "\u00A0" : data.Range)</span>
+                    <div class="cell-container @(data.IsError ? "error" : "")">
+                        <span class="cell-text" title="@data.Range">@(string.IsNullOrEmpty(data.Range) ? "\u00A0" : data.Range)</span>
+                    </div>
                 </Template>
             </RadzenDataGridColumn>
         </Columns>
@@ -69,11 +79,6 @@
             // ignored
         }
     }
-
-    private static string GetCellStyle(TestSequenseData data) =>
-        data.IsError
-            ? "background-color: red; display: flex; align-items: center; margin: -0.25rem -1rem; padding: 0.25rem 1rem;"
-            : "display: flex; align-items: center; margin: -0.25rem -1rem; padding: 0.25rem 1rem;";
 
     public void Dispose()
     {
