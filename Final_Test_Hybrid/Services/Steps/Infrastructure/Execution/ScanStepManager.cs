@@ -5,47 +5,46 @@ using Final_Test_Hybrid.Services.Common.UI;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
-using Final_Test_Hybrid.Services.Steps.Infrastructure;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Base;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Microsoft.Extensions.Logging;
 
-namespace Final_Test_Hybrid.Services.Steps.Manage;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 
 public class ScanStepManager : IDisposable
 {
+    private const string ScanBarcodeId = "scan-barcode";
+    private const string ScanBarcodeMesId = "scan-barcode-mes";
+    private const int MessagePriority = 100;
     private readonly OperatorState _operatorState;
     private readonly AutoReadySubscription _autoReady;
     private readonly AppSettingsService _appSettings;
     private readonly ITestStepRegistry _stepRegistry;
+    private readonly ITestMapResolver _mapResolver;
     private readonly TestSequenseService _sequenseService;
     private readonly MessageService _messageService;
     private readonly RawInputService _rawInputService;
-    private readonly SequenceValidationState _validationState;
     private readonly INotificationService _notificationService;
     private readonly ILogger<ScanStepManager> _logger;
     private readonly ITestStepLogger _testStepLogger;
     private readonly Lock _sessionLock = new();
     private readonly SemaphoreSlim _processLock = new(1, 1);
     private IDisposable? _scanSession;
+
     public bool IsProcessing { get; private set; }
     public event Action? OnChange;
     public event Func<IReadOnlyList<string>, Task>? OnMissingPlcTagsDialogRequested;
     public event Func<IReadOnlyList<string>, Task>? OnMissingRequiredTagsDialogRequested;
-    private const string ScanBarcodeId = "scan-barcode";
-    private const string ScanBarcodeMesId = "scan-barcode-mes";
-    private const int MessagePriority = 100;
+    public event Func<IReadOnlyList<UnknownStepInfo>, Task>? OnUnknownStepsDialogRequested;
 
     public ScanStepManager(
         OperatorState operatorState,
         AutoReadySubscription autoReady,
         AppSettingsService appSettings,
         ITestStepRegistry stepRegistry,
+        ITestMapResolver mapResolver,
         TestSequenseService sequenseService,
         MessageService messageService,
         RawInputService rawInputService,
-        SequenceValidationState validationState,
         INotificationService notificationService,
         ILogger<ScanStepManager> logger,
         ITestStepLogger testStepLogger)
@@ -54,31 +53,40 @@ public class ScanStepManager : IDisposable
         _autoReady = autoReady;
         _appSettings = appSettings;
         _stepRegistry = stepRegistry;
+        _mapResolver = mapResolver;
         _sequenseService = sequenseService;
         _messageService = messageService;
         _rawInputService = rawInputService;
-        _validationState = validationState;
         _notificationService = notificationService;
         _logger = logger;
         _testStepLogger = testStepLogger;
-        _operatorState.OnChange += UpdateState;
-        _autoReady.OnChange += UpdateState;
-        _appSettings.UseMesChanged += OnUseMesChanged;
-        _messageService.RegisterProvider(MessagePriority, GetScanMessage);
+        SubscribeToEvents();
         UpdateState();
     }
 
-    private bool ShouldShowScanStep =>
+    private void SubscribeToEvents()
+    {
+        _operatorState.OnChange += HandleStateChange;
+        _autoReady.OnChange += HandleStateChange;
+        _appSettings.UseMesChanged += HandleUseMesChanged;
+        _messageService.RegisterProvider(MessagePriority, GetScanMessage);
+    }
+
+    private bool IsScanModeEnabled =>
         _operatorState.IsAuthenticated && _autoReady.IsReady;
 
     private string? GetScanMessage() =>
-        ShouldShowScanStep ? "Отсканируйте серийный номер котла" : null;
+        IsScanModeEnabled ? "Отсканируйте серийный номер котла" : null;
 
-    private void OnUseMesChanged(bool _) => UpdateState();
+    private void HandleUseMesChanged(bool _) =>
+        UpdateState();
+
+    private void HandleStateChange() =>
+        UpdateState();
 
     private void UpdateState()
     {
-        if (ShouldShowScanStep)
+        if (IsScanModeEnabled)
         {
             ActivateScanMode();
         }
@@ -92,6 +100,11 @@ public class ScanStepManager : IDisposable
     private void ActivateScanMode()
     {
         AcquireScanSession();
+        InitializeCurrentStep();
+    }
+
+    private void InitializeCurrentStep()
+    {
         var step = _stepRegistry.GetById(GetCurrentStepId());
         _testStepLogger.StartNewSession();
         _sequenseService.SetCurrentStep(step);
@@ -110,106 +123,178 @@ public class ScanStepManager : IDisposable
     {
         lock (_sessionLock)
         {
-            _scanSession ??= _rawInputService.RequestScan(OnBarcodeScanned);
+            _scanSession ??= _rawInputService.RequestScan(HandleBarcodeScanned);
         }
     }
-    
-    private async void OnBarcodeScanned(string barcode)
+
+    private async void HandleBarcodeScanned(string barcode)
     {
-        await ProcessBarcodeAsync(barcode);
+        try
+        {
+            await ProcessBarcodeAsync(barcode);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Необработанная ошибка при сканировании: {Barcode}", barcode);
+        }
     }
 
     public async Task ProcessBarcodeAsync(string barcode)
     {
-        if (!await _processLock.WaitAsync(0))
+        if (!TryAcquireProcessLock())
         {
             return;
         }
         try
         {
-            BlockInput();
-            var result = await ProcessBarcodeInternalAsync(barcode);
-            if (!result.IsSuccess)
-            {
-                UnblockInput();
-            }
+            await ExecuteBarcodeProcessing(barcode);
         }
         finally
         {
             _processLock.Release();
         }
     }
-    
+
+    private bool TryAcquireProcessLock() =>
+        _processLock.Wait(0);
+
+    private async Task ExecuteBarcodeProcessing(string barcode)
+    {
+        BlockInput();
+        var result = await ProcessBarcodeWithErrorHandling(barcode);
+        if (!result.IsSuccess)
+        {
+            UnblockInput();
+        }
+    }
+
     private void BlockInput()
     {
         ReleaseScanSession();
         IsProcessing = true;
-        OnChange?.Invoke();
+        NotifyStateChanged();
     }
 
     private void UnblockInput()
     {
         IsProcessing = false;
         AcquireScanSession();
-        OnChange?.Invoke();
+        NotifyStateChanged();
     }
-    
-    private async Task<StepResult> ProcessBarcodeInternalAsync(string barcode)
+
+    private void NotifyStateChanged() =>
+        OnChange?.Invoke();
+
+    private async Task<StepResult> ProcessBarcodeWithErrorHandling(string barcode)
     {
-        _validationState.ClearError();
         try
         {
-            var step = (IScanBarcodeStep)_stepRegistry.GetById(GetCurrentStepId())!;
-            var result = await step.ProcessBarcodeAsync(barcode);
-            if (result.IsSuccess)
-            {
-                return StepResult.Pass();
-            }
-            await ShowMissingPlcTagsDialogIfNeeded(result.MissingPlcTags);
-            await ShowMissingRequiredTagsDialogIfNeeded(result.MissingRequiredTags);
-            HandleStepError(result.ErrorMessage!);
-            return StepResult.Fail(result.ErrorMessage!);
+            return await ProcessBarcodeCore(barcode);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка сканера: {Barcode}", barcode);
-            HandleStepError("Ошибка сканера");
-            return StepResult.WithError("Ошибка сканера");
-        }
-    }
-    
-    private async Task ShowMissingPlcTagsDialogIfNeeded(IReadOnlyList<string> missingTags)
-    {
-        if (missingTags.Count == 0)
-        {
-            return;
-        }
-        _notificationService.ShowWarning("Внимание", $"Обнаружено {missingTags.Count} отсутствующих тегов для PLC");
-        if (OnMissingPlcTagsDialogRequested != null)
-        {
-            await OnMissingPlcTagsDialogRequested.Invoke(missingTags);
+            return HandleScannerError(ex, barcode);
         }
     }
 
-    private async Task ShowMissingRequiredTagsDialogIfNeeded(IReadOnlyList<string> missingTags)
+    private async Task<StepResult> ProcessBarcodeCore(string barcode)
     {
-        if (missingTags.Count == 0)
+        var step = GetCurrentScanStep();
+        var result = await step.ProcessBarcodeAsync(barcode);
+        if (!result.IsSuccess)
+        {
+            return await HandleBarcodeFailure(result);
+        }
+        return ResolveAndValidateMaps(result.RawMaps!);
+    }
+
+    private IScanBarcodeStep GetCurrentScanStep() =>
+        (IScanBarcodeStep)_stepRegistry.GetById(GetCurrentStepId())!;
+
+    private StepResult HandleScannerError(Exception ex, string barcode)
+    {
+        _logger.LogError(ex, "Ошибка сканера: {Barcode}", barcode);
+        ReportError("Ошибка сканера");
+        return StepResult.WithError("Ошибка сканера");
+    }
+
+    private async Task<StepResult> HandleBarcodeFailure(BarcodeStepResult result)
+    {
+        await ShowMissingPlcTagsDialog(result.MissingPlcTags);
+        await ShowMissingRequiredTagsDialog(result.MissingRequiredTags);
+        ReportError(result.ErrorMessage!);
+        return StepResult.Fail(result.ErrorMessage!);
+    }
+
+    private StepResult ResolveAndValidateMaps(List<RawTestMap> rawMaps)
+    {
+        var resolveResult = _mapResolver.Resolve(rawMaps);
+        if (resolveResult.UnknownSteps.Count > 0)
+        {
+            return HandleUnknownSteps(resolveResult.UnknownSteps);
+        }
+        LogResolveSuccess(resolveResult.Maps?.Count ?? 0);
+        return StepResult.Pass();
+    }
+
+    private void LogResolveSuccess(int mapCount) =>
+        _logger.LogInformation("Резолв завершён успешно: {Count} maps", mapCount);
+
+    private StepResult HandleUnknownSteps(IReadOnlyList<UnknownStepInfo> unknownSteps)
+    {
+        var error = $"Неизвестных шагов: {unknownSteps.Count}";
+        NotifyUnknownStepsDetected(unknownSteps.Count);
+        _ = InvokeDialogHandler(OnUnknownStepsDialogRequested, unknownSteps);
+        ReportError(error);
+        return StepResult.Fail(error);
+    }
+
+    private void NotifyUnknownStepsDetected(int count) =>
+        _notificationService.ShowWarning(
+            "Внимание",
+            $"Обнаружено {count} неизвестных шагов в последовательности");
+
+    private async Task ShowMissingPlcTagsDialog(IReadOnlyList<string> missingTags) =>
+        await ShowTagsDialog(
+            missingTags,
+            count => $"Обнаружено {count} отсутствующих тегов для PLC",
+            OnMissingPlcTagsDialogRequested);
+
+    private async Task ShowMissingRequiredTagsDialog(IReadOnlyList<string> missingTags) =>
+        await ShowTagsDialog(
+            missingTags,
+            count => $"Обнаружено {count} обязательных тегов, отсутствующих в рецептах",
+            OnMissingRequiredTagsDialogRequested);
+
+    private async Task ShowTagsDialog(
+        IReadOnlyList<string> tags,
+        Func<int, string> messageBuilder,
+        Func<IReadOnlyList<string>, Task>? dialogHandler)
+    {
+        if (tags.Count == 0)
         {
             return;
         }
-        _notificationService.ShowWarning("Внимание", $"Обнаружено {missingTags.Count} обязательных тегов, отсутствующих в рецептах");
-        if (OnMissingRequiredTagsDialogRequested != null)
+        _notificationService.ShowWarning("Внимание", messageBuilder(tags.Count));
+        await InvokeDialogHandler(dialogHandler, tags);
+    }
+
+    private static async Task InvokeDialogHandler<T>(
+        Func<IReadOnlyList<T>, Task>? handler,
+        IReadOnlyList<T> items)
+    {
+        if (handler != null)
         {
-            await OnMissingRequiredTagsDialogRequested.Invoke(missingTags);
+            await handler.Invoke(items);
         }
     }
 
-    private void HandleStepError(string error)
+    private void ReportError(string error)
     {
-        _validationState.SetError(error);
+        _notificationService.ShowError("Ошибка", error);
         _sequenseService.SetErrorOnCurrent(error);
     }
-    
+
     private void ReleaseScanSession()
     {
         lock (_sessionLock)
@@ -222,8 +307,14 @@ public class ScanStepManager : IDisposable
     public void Dispose()
     {
         ReleaseScanSession();
-        _operatorState.OnChange -= UpdateState;
-        _autoReady.OnChange -= UpdateState;
-        _appSettings.UseMesChanged -= OnUseMesChanged;
+        UnsubscribeFromEvents();
+        _processLock.Dispose();
+    }
+
+    private void UnsubscribeFromEvents()
+    {
+        _operatorState.OnChange -= HandleStateChange;
+        _autoReady.OnChange -= HandleStateChange;
+        _appSettings.UseMesChanged -= HandleUseMesChanged;
     }
 }

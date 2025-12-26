@@ -10,4 +10,6 @@ internal sealed class BarcodeContext(string barcode)
     public BarcodeValidationResult Validation { get; set; } = null!;
     public BoilerTypeCycle Cycle { get; set; } = null!;
     public IReadOnlyList<RecipeResponseDto> Recipes { get; set; } = null!;
+    public List<string?[]>? RawSequenceData { get; set; }
+    public List<RawTestMap>? RawMaps { get; set; }
 }

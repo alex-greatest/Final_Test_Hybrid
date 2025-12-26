@@ -1,8 +1,8 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Scanner;
-using Final_Test_Hybrid.Services.Steps.Infrastructure;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
+using Final_Test_Hybrid.Services.Steps.Infrastructure;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Steps;
@@ -41,6 +41,6 @@ public class ScanBarcodeMesStep(
         logger.LogInformation("MES: Серийный номер: {Serial}, Артикул: {Article}",
             validation.Barcode, validation.Article);
         boilerState.SetData(validation.Barcode, validation.Article!, isValid: true);
-        return BarcodeStepResult.Pass();
+        return BarcodeStepResult.Pass([]);
     }
 }

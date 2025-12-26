@@ -1,0 +1,34 @@
+@using Final_Test_Hybrid.Models.Steps
+
+<div class="unknown-steps-dialog">
+    <div class="info-message">
+        В файле последовательности обнаружено неизвестных шагов: @UnknownSteps.Count
+    </div>
+    <RadzenDataGrid Data="@UnknownSteps" TItem="UnknownStepInfo"
+                    AllowPaging="false"
+                    AllowSorting="true"
+                    Style="flex: 1; min-height: 0;">
+        <Columns>
+            <RadzenDataGridColumn TItem="UnknownStepInfo" Property="StepName" Title="Название шага" Width="auto" />
+            <RadzenDataGridColumn TItem="UnknownStepInfo" Property="Row" Title="Строка" Width="100px" />
+            <RadzenDataGridColumn TItem="UnknownStepInfo" Property="Column" Title="Колонка" Width="100px" />
+        </Columns>
+    </RadzenDataGrid>
+    <div class="dialog-buttons">
+        <RadzenButton Text="Закрыть" Icon="close"
+                      Click="@OnClose"
+                      ButtonStyle="ButtonStyle.Primary" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public List<UnknownStepInfo> UnknownSteps { get; set; } = [];
+    [Inject]
+    public required DialogService DialogService { get; set; }
+
+    private void OnClose()
+    {
+        DialogService.Close();
+    }
+}

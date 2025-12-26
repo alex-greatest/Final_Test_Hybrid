@@ -25,4 +25,8 @@
     font-size: 17px;
     font-weight: bold;
     color: #000000;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
 }

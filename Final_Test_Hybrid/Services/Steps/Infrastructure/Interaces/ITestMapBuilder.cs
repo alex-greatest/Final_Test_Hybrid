@@ -2,12 +2,20 @@ using Final_Test_Hybrid.Models.Steps;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 
+public record RawMapBuildResult(
+    List<RawTestMap>? Maps,
+    string? Error)
+{
+    public bool IsSuccess => Error == null && Maps != null;
+
+    public static RawMapBuildResult Success(List<RawTestMap> maps) =>
+        new(maps, null);
+
+    public static RawMapBuildResult WithError(string error) =>
+        new(null, error);
+}
+
 public interface ITestMapBuilder
 {
-    /// <summary>
-    /// Создаёт Maps из сырых данных Excel
-    /// </summary>
-    /// <param name="rawData">Сырые данные из Excel (список строк по 4 ячейки)</param>
-    /// <returns>Список Maps или null при ошибке валидации</returns>
-    List<TestMap>? Build(List<string?[]> rawData);
+    RawMapBuildResult Build(List<string?[]> rawData);
 }

@@ -40,20 +40,29 @@ public record StepResult : StepResult<object>
     public new static StepResult WithError(string error) => new(StepStatus.Error, error);
 }
 
-public record BarcodeStepResult(
-    StepStatus Status,
-    IReadOnlyList<string> MissingPlcTags,
-    IReadOnlyList<string> MissingRequiredTags,
-    string? ErrorMessage = null)
+public record BarcodeStepResult
 {
+    public StepStatus Status { get; init; }
+    public IReadOnlyList<string> MissingPlcTags { get; init; } = [];
+    public IReadOnlyList<string> MissingRequiredTags { get; init; } = [];
+    public List<RawTestMap>? RawMaps { get; init; }
+    public string? ErrorMessage { get; init; }
     public bool IsSuccess => Status == StepStatus.Pass;
 
-    public static BarcodeStepResult Pass() => new(StepStatus.Pass, [], []);
-    public static BarcodeStepResult FailPlcTags(string error, IReadOnlyList<string> missingTags)
-        => new(StepStatus.Fail, missingTags, [], error);
-    public static BarcodeStepResult FailRequiredTags(string error, IReadOnlyList<string> missingTags)
-        => new(StepStatus.Fail, [], missingTags, error);
-    public static BarcodeStepResult Fail(string error)
-        => new(StepStatus.Fail, [], [], error);
-    public static BarcodeStepResult WithError(string error) => new(StepStatus.Error, [], [], error);
+    public static BarcodeStepResult Pass(List<RawTestMap> rawMaps) =>
+        new() { Status = StepStatus.Pass, RawMaps = rawMaps };
+
+    public static BarcodeStepResult FailPlcTags(string error, IReadOnlyList<string> missingTags) =>
+        new() { Status = StepStatus.Fail, MissingPlcTags = missingTags, ErrorMessage = error };
+
+    public static BarcodeStepResult FailRequiredTags(string error, IReadOnlyList<string> missingTags) =>
+        new() { Status = StepStatus.Fail, MissingRequiredTags = missingTags, ErrorMessage = error };
+
+    public static BarcodeStepResult Fail(string error) =>
+        new() { Status = StepStatus.Fail, ErrorMessage = error };
+
+    public static BarcodeStepResult WithError(string error) =>
+        new() { Status = StepStatus.Error, ErrorMessage = error };
 }
+
+public record UnknownStepInfo(string StepName, int Row, int Column);

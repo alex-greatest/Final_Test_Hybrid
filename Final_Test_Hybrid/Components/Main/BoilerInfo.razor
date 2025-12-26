@@ -1,12 +1,9 @@
 @using Final_Test_Hybrid.Components.Main.Modals
+@using Final_Test_Hybrid.Models.Steps
 @using Final_Test_Hybrid.Services.Main
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution
-@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Base
-@using Final_Test_Hybrid.Services.Steps.Manage
-@inject SequenceValidationState ValidationState
 @inject ScanStepManager ScanStepManager
 @inject BoilerState BoilerState
-@inject NotificationService NotificationService
 @inject TestSequenseService TestSequenseService
 @inject DialogService DialogService
 @implements IDisposable
@@ -33,12 +30,12 @@
 
     protected override void OnInitialized()
     {
-        ValidationState.OnErrorChanged += OnValidationChanged;
         BoilerState.OnChanged += OnBoilerStateChanged;
         TestSequenseService.OnDataChanged += OnStepChanged;
         ScanStepManager.OnChange += OnScanStateChanged;
         ScanStepManager.OnMissingPlcTagsDialogRequested += ShowMissingPlcTagsDialogAsync;
         ScanStepManager.OnMissingRequiredTagsDialogRequested += ShowMissingRequiredTagsDialogAsync;
+        ScanStepManager.OnUnknownStepsDialogRequested += ShowUnknownStepsDialogAsync;
     }
 
     private string GetDisplayValue() => BoilerState.SerialNumber ?? _manualInput;
@@ -63,19 +60,6 @@
         }
         await ScanStepManager.ProcessBarcodeAsync(_manualInput);
         _manualInput = "";
-    }
-
-    private void OnValidationChanged(string? error)
-    {
-        InvokeIfNotDisposed(() => ApplyValidationError(error));
-    }
-
-    private void ApplyValidationError(string? error)
-    {
-        if (!string.IsNullOrEmpty(error))
-        {
-            ShowErrorNotification(error);
-        }
     }
 
     private void OnBoilerStateChanged()
@@ -107,67 +91,70 @@
         action();
     }
 
-    private void ShowErrorNotification(string error)
-    {
-        NotificationService.Notify(new NotificationMessage
-        {
-            Severity = NotificationSeverity.Error,
-            Summary = "Ошибка при сканировании",
-            Detail = error,
-            Duration = 10000
-        });
-    }
-
     private async Task ShowMissingPlcTagsDialogAsync(IReadOnlyList<string> missingTags)
     {
-        await InvokeAsync(async () =>
-        {
-            await DialogService.OpenAsync<MissingTagsDialog>(
-                "Отсутствующие теги для PLC",
-                new Dictionary<string, object>
-                {
-                    { "MissingTags", missingTags.ToList() },
-                    { "InfoMessage", $"В PLC DB_Recipe отсутствует тегов: {missingTags.Count}" }
-                },
-                new DialogOptions
-                {
-                    Width = "95vw",
-                    Height = "90vh",
-                    CloseDialogOnOverlayClick = false,
-                    CssClass = "missing-tags-dialog-window"
-                });
-        });
+        await ShowMissingTagsDialogAsync(
+            "Отсутствующие теги для PLC",
+            missingTags,
+            $"В PLC DB_Recipe отсутствует тегов: {missingTags.Count}");
     }
 
     private async Task ShowMissingRequiredTagsDialogAsync(IReadOnlyList<string> missingTags)
     {
+        await ShowMissingTagsDialogAsync(
+            "Отсутствующие обязательные теги",
+            missingTags,
+            $"В рецептах БД отсутствуют обязательные теги: {missingTags.Count}");
+    }
+
+    private async Task ShowMissingTagsDialogAsync(string title, IReadOnlyList<string> missingTags, string infoMessage)
+    {
         await InvokeAsync(async () =>
         {
             await DialogService.OpenAsync<MissingTagsDialog>(
-                "Отсутствующие обязательные теги",
+                title,
                 new Dictionary<string, object>
                 {
                     { "MissingTags", missingTags.ToList() },
-                    { "InfoMessage", $"В рецептах БД отсутствуют обязательные теги: {missingTags.Count}" }
+                    { "InfoMessage", infoMessage }
                 },
-                new DialogOptions
-                {
-                    Width = "95vw",
-                    Height = "90vh",
-                    CloseDialogOnOverlayClick = false,
-                    CssClass = "missing-tags-dialog-window"
-                });
+                CreateFullScreenDialogOptions("missing-tags-dialog-window"));
         });
+    }
+
+    private async Task ShowUnknownStepsDialogAsync(IReadOnlyList<UnknownStepInfo> unknownSteps)
+    {
+        await InvokeAsync(async () =>
+        {
+            await DialogService.OpenAsync<UnknownStepsDialog>(
+                "Неизвестные шаги в последовательности",
+                new Dictionary<string, object>
+                {
+                    { "UnknownSteps", unknownSteps.ToList() }
+                },
+                CreateFullScreenDialogOptions("unknown-steps-dialog-window"));
+        });
+    }
+
+    private static DialogOptions CreateFullScreenDialogOptions(string cssClass)
+    {
+        return new DialogOptions
+        {
+            Width = "95vw",
+            Height = "90vh",
+            CloseDialogOnOverlayClick = false,
+            CssClass = cssClass
+        };
     }
 
     public void Dispose()
     {
         _disposed = true;
-        ValidationState.OnErrorChanged -= OnValidationChanged;
         BoilerState.OnChanged -= OnBoilerStateChanged;
         TestSequenseService.OnDataChanged -= OnStepChanged;
         ScanStepManager.OnChange -= OnScanStateChanged;
         ScanStepManager.OnMissingPlcTagsDialogRequested -= ShowMissingPlcTagsDialogAsync;
         ScanStepManager.OnMissingRequiredTagsDialogRequested -= ShowMissingRequiredTagsDialogAsync;
+        ScanStepManager.OnUnknownStepsDialogRequested -= ShowUnknownStepsDialogAsync;
     }
 }

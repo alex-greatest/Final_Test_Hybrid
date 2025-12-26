@@ -19,6 +19,8 @@ public class ScanBarcodeStep(
     BoilerState boilerState,
     RecipeTagValidator tagValidator,
     RequiredTagValidator requiredTagValidator,
+    ITestSequenceLoader sequenceLoader,
+    ITestMapBuilder mapBuilder,
     ILogger<ScanBarcodeStep> logger,
     ITestStepLogger testStepLogger) : ITestStep, IScanBarcodeStep
 {
@@ -40,20 +42,17 @@ public class ScanBarcodeStep(
         return ValidateBarcode(ctx)
             ?? await FindCycleAsync(ctx)
             ?? await LoadRecipesAsync(ctx)
-            ?? await CheckTagsAsync(ctx)
-            ?? CheckRequiredTags(ctx)
+            /*?? await CheckTagsAsync(ctx)
+            ?? CheckRequiredTags(ctx)*/
+            ?? await LoadTestSequenceAsync(ctx)
+            ?? BuildTestMaps(ctx)
             ?? Success(ctx);
     }
 
     private BarcodeStepResult? ValidateBarcode(BarcodeContext ctx)
     {
         ctx.Validation = barcodeScanService.Validate(ctx.Barcode);
-        if (ctx.Validation.IsValid)
-        {
-            return null;
-        }
-        boilerState.SetData(ctx.Barcode, "", isValid: false);
-        return BarcodeStepResult.Fail(ctx.Validation.Error!);
+        return ctx.Validation.IsValid ? null : Fail(ctx.Validation.Error!);
     }
 
     private async Task<BarcodeStepResult?> FindCycleAsync(BarcodeContext ctx)
@@ -61,10 +60,7 @@ public class ScanBarcodeStep(
         var cycle = await boilerTypeService.FindActiveByArticleAsync(ctx.Validation.Article!);
         if (cycle == null)
         {
-            logger.LogWarning("Тип котла не найден: {Article}", ctx.Validation.Article);
-            testStepLogger.LogWarning("Тип котла не найден: {Article}", ctx.Validation.Article);
-            boilerState.SetData(ctx.Validation.Barcode, ctx.Validation.Article!, isValid: false);
-            return BarcodeStepResult.Fail("Тип котла не найден");
+            return Fail("Тип котла не найден", LogLevel.Warning);
         }
         ctx.Cycle = cycle;
         return null;
@@ -74,14 +70,7 @@ public class ScanBarcodeStep(
     {
         var recipes = await recipeService.GetByBoilerTypeIdAsync(ctx.Cycle.BoilerTypeId);
         ctx.Recipes = MapToRecipeResponseDtos(recipes);
-        if (ctx.Recipes.Count != 0)
-        {
-            return null;
-        }
-        logger.LogWarning("Рецепты не найдены: {Id}", ctx.Cycle.BoilerTypeId);
-        testStepLogger.LogWarning("Рецепты не найдены: {Id}", ctx.Cycle.BoilerTypeId);
-        boilerState.Clear();
-        return BarcodeStepResult.Fail("Рецепты не найдены");
+        return ctx.Recipes.Count != 0 ? null : Fail("Рецепты не найдены", LogLevel.Warning);
     }
 
     private async Task<BarcodeStepResult?> CheckTagsAsync(BarcodeContext ctx)
@@ -106,15 +95,66 @@ public class ScanBarcodeStep(
         return BarcodeStepResult.FailRequiredTags(result.ErrorMessage!, result.MissingTags);
     }
 
+    private async Task<BarcodeStepResult?> LoadTestSequenceAsync(BarcodeContext ctx)
+    {
+        var result = await sequenceLoader.LoadRawDataAsync(ctx.Validation.Article!);
+        if (!result.IsSuccess)
+        {
+            return Fail(result.Error!, LogLevel.Warning);
+        }
+        ctx.RawSequenceData = result.RawData;
+        return null;
+    }
+
+    private BarcodeStepResult? BuildTestMaps(BarcodeContext ctx)
+    {
+        var result = mapBuilder.Build(ctx.RawSequenceData!);
+        if (!result.IsSuccess)
+        {
+            return Fail(result.Error!, LogLevel.Error);
+        }
+        ctx.RawMaps = result.Maps;
+        return null;
+    }
+
+    private BarcodeStepResult Fail(string error, LogLevel level = LogLevel.None)
+    {
+        LogByLevel(error, level);
+        boilerState.Clear();
+        return BarcodeStepResult.Fail(error);
+    }
+
+    private void LogByLevel(string message, LogLevel level)
+    {
+        switch (level)
+        {
+            case LogLevel.Warning:
+                logger.LogWarning("{Error}", message);
+                testStepLogger.LogWarning("{Error}", message);
+                break;
+            case LogLevel.Error:
+                logger.LogError("{Error}", message);
+                testStepLogger.LogError(null, "{Error}", message);
+                break;
+            case LogLevel.Trace:
+            case LogLevel.Debug:
+            case LogLevel.Information:
+            case LogLevel.Critical:
+            case LogLevel.None:
+            default:
+                throw new ArgumentOutOfRangeException(nameof(level), level, null);
+        }
+    }
+
     private BarcodeStepResult Success(BarcodeContext ctx)
     {
-        logger.LogInformation("Успешно: {Serial}, {Article}, {Type}, рецептов: {Count}",
-            ctx.Validation.Barcode, ctx.Validation.Article, ctx.Cycle.Type, ctx.Recipes.Count);
-        testStepLogger.LogInformation("Успешно: {Serial}, {Article}, {Type}, рецептов: {Count}",
-            ctx.Validation.Barcode, ctx.Validation.Article, ctx.Cycle.Type, ctx.Recipes.Count);
+        logger.LogInformation("Успешно: {Serial}, {Article}, {Type}, рецептов: {Count}, RawMaps: {Maps}",
+            ctx.Validation.Barcode, ctx.Validation.Article, ctx.Cycle.Type, ctx.Recipes.Count, ctx.RawMaps?.Count ?? 0);
+        testStepLogger.LogInformation("Успешно: {Serial}, {Article}, {Type}, рецептов: {Count}, RawMaps: {Maps}",
+            ctx.Validation.Barcode, ctx.Validation.Article, ctx.Cycle.Type, ctx.Recipes.Count, ctx.RawMaps?.Count ?? 0);
         boilerState.SetData(ctx.Validation.Barcode, ctx.Validation.Article!, isValid: true, ctx.Cycle, ctx.Recipes);
         testStepLogger.LogStepEnd(Name);
-        return BarcodeStepResult.Pass();
+        return BarcodeStepResult.Pass(ctx.RawMaps!);
     }
 
     private static IReadOnlyList<RecipeResponseDto> MapToRecipeResponseDtos(List<Recipe> recipes)
