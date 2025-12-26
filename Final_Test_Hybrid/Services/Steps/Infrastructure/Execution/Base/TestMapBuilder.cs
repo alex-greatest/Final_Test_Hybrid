@@ -1,8 +1,8 @@
-using Final_Test_Hybrid.Services.Steps.Interaces;
-using Final_Test_Hybrid.Services.Steps.Models;
+using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Microsoft.Extensions.Logging;
 
-namespace Final_Test_Hybrid.Services.Steps.Execution;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Base;
 
 public class TestMapBuilder(
     ITestStepRegistry registry,
@@ -45,12 +45,12 @@ public class TestMapBuilder(
 
     private bool ProcessRow(string?[] cells, int rowNumber, MapBuildContext context)
     {
-        if (IsPlaceholderRow(cells))
+        if (!IsPlaceholderRow(cells))
         {
-            FinalizeCurrentMap(context);
-            return true;
+            return AddRowToCurrentMap(cells, rowNumber, context);
         }
-        return AddRowToCurrentMap(cells, rowNumber, context);
+        FinalizeCurrentMap(context);
+        return true;
     }
 
     private bool AddRowToCurrentMap(string?[] cells, int rowNumber, MapBuildContext context)

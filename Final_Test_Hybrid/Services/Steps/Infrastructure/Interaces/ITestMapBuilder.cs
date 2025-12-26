@@ -1,6 +1,6 @@
-using Final_Test_Hybrid.Services.Steps.Models;
+using Final_Test_Hybrid.Models.Steps;
 
-namespace Final_Test_Hybrid.Services.Steps.Execution;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 
 public interface ITestMapBuilder
 {

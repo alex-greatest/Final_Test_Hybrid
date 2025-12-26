@@ -2,7 +2,7 @@ using Final_Test_Hybrid.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace Final_Test_Hybrid.Services.Sequence;
+namespace Final_Test_Hybrid.Services.Editor;
 
 public class TestSequenceService(
     ISequenceExcelService sequenceExcelService,

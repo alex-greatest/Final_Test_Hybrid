@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using OfficeOpenXml;
 using FileInfo = System.IO.FileInfo;
 
-namespace Final_Test_Hybrid.Services.Sequence;
+namespace Final_Test_Hybrid.Services.Editor;
 
 public class SequenceExcelService(ILogger<SequenceExcelService> logger) : ISequenceExcelService
 {

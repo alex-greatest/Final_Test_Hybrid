@@ -1,9 +1,10 @@
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OfficeOpenXml;
 using FileInfo = System.IO.FileInfo;
 
-namespace Final_Test_Hybrid.Services.Steps.Execution;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Base;
 
 public class TestSequenceLoader(
     IConfiguration configuration,

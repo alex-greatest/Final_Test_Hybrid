@@ -1,7 +1,7 @@
 using Final_Test_Hybrid.Models;
-using Final_Test_Hybrid.Services.Steps.Interaces;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 
-namespace Final_Test_Hybrid.Services.Steps.Manage;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 
 public class TestSequenseService
 {

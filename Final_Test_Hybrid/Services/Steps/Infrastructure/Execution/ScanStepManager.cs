@@ -1,12 +1,14 @@
+using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Common.UI;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
-using Final_Test_Hybrid.Services.Steps.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure;
-using Final_Test_Hybrid.Services.Steps.Interaces;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Base;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Manage;

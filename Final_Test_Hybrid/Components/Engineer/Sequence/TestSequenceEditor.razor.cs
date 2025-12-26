@@ -1,7 +1,7 @@
 using Final_Test_Hybrid.Models;
 using Final_Test_Hybrid.Services.Common.IO;
 using Final_Test_Hybrid.Services.Steps;
-using Final_Test_Hybrid.Services.Steps.Interaces;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Radzen.Blazor;
