@@ -9,6 +9,7 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 public class TestExecutionCoordinator : IDisposable
 {
     private const int ColumnCount = 4;
+
     private readonly ColumnExecutor[] _executors;
     private readonly ILogger<TestExecutionCoordinator> _logger;
     private readonly ITestStepLogger _testLogger;
@@ -23,7 +24,9 @@ public class TestExecutionCoordinator : IDisposable
     public int TotalMaps => _maps.Count;
     public bool IsRunning { get; private set; }
     public bool HasErrors => _executors.Any(e => e.HasFailed);
-    private bool ShouldStop => _cts?.IsCancellationRequested == true || HasErrors;
+
+    private bool ShouldStop => IsCancellationRequested || HasErrors;
+    private bool IsCancellationRequested => _cts?.IsCancellationRequested == true;
 
     public TestExecutionCoordinator(
         OpcUaTagService opcUaTagService,
@@ -34,14 +37,18 @@ public class TestExecutionCoordinator : IDisposable
         _logger = logger;
         _testLogger = testLogger;
         _onExecutorStateChanged = () => OnStateChanged?.Invoke();
-        _executors = Enumerable.Range(0, ColumnCount)
-            .Select(i => CreateExecutor(i, opcUaTagService, testLogger, loggerFactory))
-            .ToArray();
+        _executors = CreateAllExecutors(opcUaTagService, testLogger, loggerFactory);
+        SubscribeToExecutorEvents();
+    }
 
-        foreach (var executor in _executors)
-        {
-            executor.OnStateChanged += _onExecutorStateChanged;
-        }
+    private ColumnExecutor[] CreateAllExecutors(
+        OpcUaTagService opcUaTagService,
+        ITestStepLogger testLogger,
+        ILoggerFactory loggerFactory)
+    {
+        return Enumerable.Range(0, ColumnCount)
+            .Select(index => CreateExecutor(index, opcUaTagService, testLogger, loggerFactory))
+            .ToArray();
     }
 
     private static ColumnExecutor CreateExecutor(
@@ -51,7 +58,24 @@ public class TestExecutionCoordinator : IDisposable
         ILoggerFactory loggerFactory)
     {
         var context = new TestStepContext(index, opcUa, loggerFactory.CreateLogger($"Column{index}"));
-        return new ColumnExecutor(index, context, testLogger, loggerFactory.CreateLogger<ColumnExecutor>());
+        var executorLogger = loggerFactory.CreateLogger<ColumnExecutor>();
+        return new ColumnExecutor(index, context, testLogger, executorLogger);
+    }
+
+    private void SubscribeToExecutorEvents()
+    {
+        foreach (var executor in _executors)
+        {
+            executor.OnStateChanged += _onExecutorStateChanged;
+        }
+    }
+
+    private void UnsubscribeFromExecutorEvents()
+    {
+        foreach (var executor in _executors)
+        {
+            executor.OnStateChanged -= _onExecutorStateChanged;
+        }
     }
 
     public void SetMaps(List<TestMap> maps)
@@ -60,18 +84,38 @@ public class TestExecutionCoordinator : IDisposable
         {
             if (IsRunning)
             {
-                _logger.LogWarning("Попытка загрузить Maps во время выполнения");
+                LogCannotLoadMapsWhileRunning();
                 return;
             }
-            _maps = [..maps];
-            CurrentMapIndex = 0;
-            foreach (var executor in _executors)
-            {
-                executor.Reset();
-            }
-            _logger.LogInformation("Загружено {Count} Maps", maps.Count);
-            _testLogger.LogInformation("Загружена последовательность из {Count} блоков", maps.Count);
+            ApplyNewMaps(maps);
+            ResetAllExecutors();
+            LogMapsLoaded(maps.Count);
         }
+    }
+
+    private void LogCannotLoadMapsWhileRunning()
+    {
+        _logger.LogWarning("Попытка загрузить Maps во время выполнения");
+    }
+
+    private void ApplyNewMaps(List<TestMap> maps)
+    {
+        _maps = [..maps];
+        CurrentMapIndex = 0;
+    }
+
+    private void ResetAllExecutors()
+    {
+        foreach (var executor in _executors)
+        {
+            executor.Reset();
+        }
+    }
+
+    private void LogMapsLoaded(int count)
+    {
+        _logger.LogInformation("Загружено {Count} Maps", count);
+        _testLogger.LogInformation("Загружена последовательность из {Count} блоков", count);
     }
 
     public async Task StartAsync()
@@ -99,18 +143,33 @@ public class TestExecutionCoordinator : IDisposable
                 _logger.LogWarning("Координатор уже выполняется");
                 return false;
             }
-            if (_maps.Count == 0)
+            if (!HasMapsLoaded())
             {
-                _logger.LogError("Последовательность не загружена");
-                _testLogger.LogError(null, "Ошибка: последовательность тестов не загружена");
+                LogNoSequenceLoaded();
                 return false;
             }
-            IsRunning = true;
-            _cts = new CancellationTokenSource();
-            _logger.LogInformation("Запуск {Count} Maps", _maps.Count);
-            _testLogger.LogInformation("═══ ЗАПУСК ТЕСТИРОВАНИЯ ({Count} блоков) ═══", _maps.Count);
+            BeginExecution();
             return true;
         }
+    }
+
+    private bool HasMapsLoaded()
+    {
+        return _maps.Count > 0;
+    }
+
+    private void LogNoSequenceLoaded()
+    {
+        _logger.LogError("Последовательность не загружена");
+        _testLogger.LogError(null, "Ошибка: последовательность тестов не загружена");
+    }
+
+    private void BeginExecution()
+    {
+        IsRunning = true;
+        _cts = new CancellationTokenSource();
+        _logger.LogInformation("Запуск {Count} Maps", _maps.Count);
+        _testLogger.LogInformation("═══ ЗАПУСК ТЕСТИРОВАНИЯ ({Count} блоков) ═══", _maps.Count);
     }
 
     private async Task RunAllMaps()
@@ -124,9 +183,20 @@ public class TestExecutionCoordinator : IDisposable
     private async Task RunCurrentMap()
     {
         var map = _maps[CurrentMapIndex];
+        LogMapStart();
+        await ExecuteMapOnAllColumns(map);
+    }
+
+    private void LogMapStart()
+    {
         _logger.LogInformation("Map {Index}/{Total}", CurrentMapIndex + 1, _maps.Count);
         _testLogger.LogInformation("─── Блок {Index} из {Total} ───", CurrentMapIndex + 1, _maps.Count);
-        await Task.WhenAll(_executors.Select(e => e.ExecuteMapAsync(map, _cts!.Token)));
+    }
+
+    private async Task ExecuteMapOnAllColumns(TestMap map)
+    {
+        var executionTasks = _executors.Select(executor => executor.ExecuteMapAsync(map, _cts!.Token));
+        await Task.WhenAll(executionTasks);
     }
 
     private void Complete()
@@ -135,10 +205,16 @@ public class TestExecutionCoordinator : IDisposable
         {
             IsRunning = false;
         }
+
+        LogExecutionCompleted();
+        OnSequenceCompleted?.Invoke();
+    }
+
+    private void LogExecutionCompleted()
+    {
         _logger.LogInformation("Завершено. Ошибки: {HasErrors}", HasErrors);
         var result = HasErrors ? "С ОШИБКАМИ" : "УСПЕШНО";
         _testLogger.LogInformation("═══ ТЕСТИРОВАНИЕ ЗАВЕРШЕНО: {Result} ═══", result);
-        OnSequenceCompleted?.Invoke();
     }
 
     public void Stop()
@@ -149,19 +225,22 @@ public class TestExecutionCoordinator : IDisposable
             {
                 return;
             }
-            _logger.LogInformation("Остановка");
-            _testLogger.LogWarning("Тестирование остановлено оператором");
+
+            LogStopRequested();
             _cts?.Cancel();
         }
+    }
+
+    private void LogStopRequested()
+    {
+        _logger.LogInformation("Остановка");
+        _testLogger.LogWarning("Тестирование остановлено оператором");
     }
 
     public void Dispose()
     {
         Stop();
         _cts?.Dispose();
-        foreach (var executor in _executors)
-        {
-            executor.OnStateChanged -= _onExecutorStateChanged;
-        }
+        UnsubscribeFromExecutorEvents();
     }
 }

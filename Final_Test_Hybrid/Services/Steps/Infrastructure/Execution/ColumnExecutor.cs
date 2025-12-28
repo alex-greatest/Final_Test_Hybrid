@@ -1,5 +1,6 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Logging;
 
@@ -22,47 +23,53 @@ public class ColumnExecutor(
 
     public event Action? OnStateChanged;
 
-    public async Task ExecuteMapAsync(TestMap map, CancellationToken ct)
+    public async Task ExecuteMapAsync(TestMap map, CancellationToken cancellationToken)
     {
-        foreach (var row in map.Rows.TakeWhile(_ => !ct.IsCancellationRequested && !HasFailed))
+        foreach (var row in map.Rows.TakeWhile(row => !ShouldStopExecution(cancellationToken)))
         {
-            await ExecuteRowStep(row, ct);
+            await ExecuteRowStep(row, cancellationToken);
         }
-        ClearStatus();
+
+        ClearStatusIfNotFailed();
     }
 
-    private async Task ExecuteRowStep(TestMapRow row, CancellationToken ct)
+    private bool ShouldStopExecution(CancellationToken cancellationToken)
+    {
+        return cancellationToken.IsCancellationRequested || HasFailed;
+    }
+
+    private async Task ExecuteRowStep(TestMapRow row, CancellationToken cancellationToken)
     {
         var step = row.Steps[ColumnIndex];
+
         if (step == null)
         {
             SetStatus("Пропуск");
             return;
         }
-        await ExecuteStep(step, ct);
+
+        await ExecuteStep(step, cancellationToken);
     }
 
-    private async Task ExecuteStep(Interaces.ITestStep step, CancellationToken ct)
+    private async Task ExecuteStep(ITestStep step, CancellationToken cancellationToken)
     {
-        SetRunning(step);
+        SetRunningState(step);
         try
         {
-            var result = await step.ExecuteAsync(context, ct);
-            HandleResult(step, result);
+            var result = await step.ExecuteAsync(context, cancellationToken);
+            ProcessStepResult(step, result);
         }
         catch (OperationCanceledException)
         {
-            ClearStatus();
+            ClearStatusIfNotFailed();
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            SetError(step, ex.Message);
-            logger.LogError(ex, "Исключение в шаге {Step} колонки {Col}", step.Name, ColumnIndex);
-            testLogger.LogError(ex, "Исключение в шаге '{Step}': {Message}", step.Name, ex.Message);
+            HandleStepException(step, exception);
         }
     }
 
-    private void SetRunning(Interaces.ITestStep step)
+    private void SetRunningState(ITestStep step)
     {
         CurrentStepName = step.Name;
         CurrentStepDescription = step.Description;
@@ -71,30 +78,62 @@ public class ColumnExecutor(
         SetStatus("Выполняется");
     }
 
-    private void HandleResult(Interaces.ITestStep step, TestStepResult result)
+    private void ProcessStepResult(ITestStep step, TestStepResult result)
     {
         if (!result.Success)
         {
-            SetError(step, result.Message);
+            SetErrorState(step, result.Message);
             return;
         }
+        SetSuccessState(step, result);
+    }
+
+    private void SetSuccessState(ITestStep step, TestStepResult result)
+    {
         ResultValue = result.Message;
-        var statusText = result.Skipped ? "Пропуск" : "Готово";
+        var statusText = DetermineSuccessStatusText(result);
         testLogger.LogStepEnd(step.Name);
-        if (!string.IsNullOrEmpty(result.Message))
-        {
-            testLogger.LogInformation("  Результат: {Message}", result.Message);
-        }
+        LogResultMessageIfPresent(result.Message);
         SetStatus(statusText);
     }
 
-    private void SetError(Interaces.ITestStep step, string message)
+    private static string DetermineSuccessStatusText(TestStepResult result)
     {
-        logger.LogError("Шаг {Step} в колонке {Col}: {Error}", step.Name, ColumnIndex, message);
-        testLogger.LogError(null, "ОШИБКА в шаге '{Step}': {Message}", step.Name, message);
+        return result.Skipped ? "Пропуск" : "Готово";
+    }
+
+    private void LogResultMessageIfPresent(string? message)
+    {
+        if (!string.IsNullOrEmpty(message))
+        {
+            testLogger.LogInformation("  Результат: {Message}", message);
+        }
+    }
+
+    private void HandleStepException(ITestStep step, Exception exception)
+    {
+        SetErrorState(step, exception.Message);
+        LogException(step, exception);
+    }
+
+    private void LogException(ITestStep step, Exception exception)
+    {
+        logger.LogError(exception, "Исключение в шаге {Step} колонки {Col}", step.Name, ColumnIndex);
+        testLogger.LogError(exception, "Исключение в шаге '{Step}': {Message}", step.Name, exception.Message);
+    }
+
+    private void SetErrorState(ITestStep step, string message)
+    {
+        LogStepError(step, message);
         ErrorMessage = message;
         HasFailed = true;
         SetStatus("Ошибка");
+    }
+
+    private void LogStepError(ITestStep step, string message)
+    {
+        logger.LogError("Шаг {Step} в колонке {Col}: {Error}", step.Name, ColumnIndex, message);
+        testLogger.LogError(null, "ОШИБКА в шаге '{Step}': {Message}", step.Name, message);
     }
 
     private void SetStatus(string status)
@@ -103,7 +142,7 @@ public class ColumnExecutor(
         OnStateChanged?.Invoke();
     }
 
-    private void ClearStatus()
+    private void ClearStatusIfNotFailed()
     {
         if (HasFailed)
         {
