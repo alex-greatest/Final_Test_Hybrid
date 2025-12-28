@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -8,6 +9,7 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Base;
 
 public class TestSequenceLoader(
     IConfiguration configuration,
+    ITestStepLogger testLogger,
     ILogger<TestSequenceLoader> logger) : ITestSequenceLoader
 {
     private const int ColumnCount = 4;
@@ -16,6 +18,7 @@ public class TestSequenceLoader(
     public async Task<SequenceLoadResult> LoadRawDataAsync(string articleNumber)
     {
         logger.LogInformation("Загрузка тестов для артикула {Article}", articleNumber);
+        testLogger.LogInformation("Загрузка файла тестов для артикула {Article}...", articleNumber);
         var filePath = BuildFilePath(articleNumber);
         if (!File.Exists(filePath))
         {
@@ -27,6 +30,7 @@ public class TestSequenceLoader(
     private SequenceLoadResult HandleFileNotFound(string articleNumber, string filePath)
     {
         logger.LogWarning("Файл не найден: {FilePath}", filePath);
+        testLogger.LogError(null, "Файл тестов не найден: {Article}.xlsx", articleNumber);
         return SequenceLoadResult.WithError($"Файл последовательности тестов не найден: {articleNumber}.xlsx");
     }
 
@@ -41,14 +45,17 @@ public class TestSequenceLoader(
             if (rows.Count == 0)
             {
                 logger.LogWarning("Файл пустой: {FilePath}", filePath);
+                testLogger.LogWarning("Файл тестов пустой");
                 return SequenceLoadResult.WithError("Файл последовательности тестов пустой");
             }
             logger.LogInformation("Загружено {Count} строк из {FilePath}", rows.Count, filePath);
+            testLogger.LogInformation("Файл загружен: {Count} строк", rows.Count);
             return SequenceLoadResult.Success(rows);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка чтения Excel файла: {FilePath}", filePath);
+            testLogger.LogError(ex, "Ошибка чтения файла: {Message}", ex.Message);
             return SequenceLoadResult.WithError($"Ошибка чтения файла: {ex.Message}");
         }
     }

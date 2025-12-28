@@ -7,6 +7,7 @@ using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.Extensions.Logging;
 

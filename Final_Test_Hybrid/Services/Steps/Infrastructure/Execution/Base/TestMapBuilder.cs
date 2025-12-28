@@ -1,10 +1,13 @@
 using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Base;
 
-public class TestMapBuilder(ILogger<TestMapBuilder> logger) : ITestMapBuilder
+public class TestMapBuilder(
+    ITestStepLogger testLogger,
+    ILogger<TestMapBuilder> logger) : ITestMapBuilder
 {
     private const int ColumnCount = 4;
     private const string PlaceholderName = "<TEST STEP>";
@@ -23,11 +26,17 @@ public class TestMapBuilder(ILogger<TestMapBuilder> logger) : ITestMapBuilder
         return RawMapBuildResult.Success(context.Maps);
     }
 
-    private void LogBuildStart(int rowCount) =>
+    private void LogBuildStart(int rowCount)
+    {
         logger.LogInformation("Парсинг {Count} строк", rowCount);
+        testLogger.LogInformation("Обработка файла тестов ({Count} строк)...", rowCount);
+    }
 
-    private void LogBuildComplete(int mapCount) =>
+    private void LogBuildComplete(int mapCount)
+    {
         logger.LogInformation("Создано {Count} RawMaps", mapCount);
+        testLogger.LogInformation("Структура тестов разобрана: {Count} блоков", mapCount);
+    }
 
     private string? ProcessAllRows(List<string?[]> rawData, BuildContext context)
     {
@@ -74,6 +83,7 @@ public class TestMapBuilder(ILogger<TestMapBuilder> logger) : ITestMapBuilder
     private string CreatePlaceholderError(int rowNumber)
     {
         logger.LogError("Нарушена структура <TEST STEP> в строке {Row}", rowNumber);
+        testLogger.LogError(null, "Ошибка структуры файла: строка {Row} - некорректный разделитель блоков", rowNumber);
         return $"Строка {rowNumber}: <TEST STEP> должен быть во всех 4 колонках";
     }
 

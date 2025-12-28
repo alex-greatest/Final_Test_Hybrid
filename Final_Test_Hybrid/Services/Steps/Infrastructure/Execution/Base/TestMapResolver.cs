@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Microsoft.Extensions.Logging;
 
@@ -6,6 +7,7 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Base;
 
 public class TestMapResolver(
     ITestStepRegistry registry,
+    ITestStepLogger testLogger,
     ILogger<TestMapResolver> logger) : ITestMapResolver
 {
     private const int ColumnCount = 4;
@@ -19,13 +21,26 @@ public class TestMapResolver(
         return BuildResult(maps, context.UnknownSteps);
     }
 
-    private void LogResolvingStart(int count) =>
+    private void LogResolvingStart(int count)
+    {
         logger.LogInformation("Резолв {Count} Maps", count);
+        testLogger.LogInformation("Поиск шагов тестирования ({Count} блоков)...", count);
+    }
 
-    private void LogResolvingComplete(int mapsCount, int unknownCount) =>
+    private void LogResolvingComplete(int mapsCount, int unknownCount)
+    {
         logger.LogInformation(
             "Резолв завершён: {Maps} maps, {Unknown} неизвестных шагов",
             mapsCount, unknownCount);
+        if (unknownCount > 0)
+        {
+            testLogger.LogWarning("Найдено {Count} неизвестных шагов", unknownCount);
+        }
+        else
+        {
+            testLogger.LogInformation("Все шаги успешно найдены");
+        }
+    }
 
     private static ResolveResult BuildResult(List<TestMap> maps, List<UnknownStepInfo> unknownSteps) =>
         unknownSteps.Count > 0
@@ -79,6 +94,9 @@ public class TestMapResolver(
         var displayColumn = columnIndex + 1;
         logger.LogWarning(
             "Неизвестный шаг '{StepName}' в строке {Row}, колонке {Col}",
+            stepName, rowIndex, displayColumn);
+        testLogger.LogWarning(
+            "Неизвестный шаг '{StepName}' (строка {Row}, колонка {Col})",
             stepName, rowIndex, displayColumn);
         context.UnknownSteps.Add(new UnknownStepInfo(stepName, rowIndex, displayColumn));
     }

@@ -26,6 +26,7 @@ public class ScanStepManager : IDisposable
     private readonly INotificationService _notificationService;
     private readonly ILogger<ScanStepManager> _logger;
     private readonly ITestStepLogger _testStepLogger;
+    private readonly TestExecutionCoordinator _coordinator;
     private readonly Lock _sessionLock = new();
     private readonly SemaphoreSlim _processLock = new(1, 1);
     private IDisposable? _scanSession;
@@ -47,7 +48,8 @@ public class ScanStepManager : IDisposable
         RawInputService rawInputService,
         INotificationService notificationService,
         ILogger<ScanStepManager> logger,
-        ITestStepLogger testStepLogger)
+        ITestStepLogger testStepLogger,
+        TestExecutionCoordinator coordinator)
     {
         _operatorState = operatorState;
         _autoReady = autoReady;
@@ -60,6 +62,7 @@ public class ScanStepManager : IDisposable
         _notificationService = notificationService;
         _logger = logger;
         _testStepLogger = testStepLogger;
+        _coordinator = coordinator;
         SubscribeToEvents();
         UpdateState();
     }
@@ -70,6 +73,7 @@ public class ScanStepManager : IDisposable
         _autoReady.OnChange += HandleStateChange;
         _appSettings.UseMesChanged += HandleUseMesChanged;
         _messageService.RegisterProvider(MessagePriority, GetScanMessage);
+        _coordinator.OnSequenceCompleted += HandleSequenceCompleted;
     }
 
     private bool IsScanModeEnabled =>
@@ -233,12 +237,29 @@ public class ScanStepManager : IDisposable
         {
             return HandleUnknownSteps(resolveResult.UnknownSteps);
         }
-        LogResolveSuccess(resolveResult.Maps?.Count ?? 0);
+        StartExecution(resolveResult.Maps!);
         return StepResult.Pass();
     }
 
-    private void LogResolveSuccess(int mapCount) =>
-        _logger.LogInformation("Резолв завершён успешно: {Count} maps", mapCount);
+    private void StartExecution(List<TestMap> maps)
+    {
+        _logger.LogInformation("Запуск выполнения {Count} maps", maps.Count);
+        _sequenseService.SetSuccessOnCurrent();
+        _coordinator.SetMaps(maps);
+        _ = _coordinator.StartAsync();
+    }
+
+    private void HandleSequenceCompleted()
+    {
+        _logger.LogInformation("Последовательность завершена. Ошибки: {HasErrors}", _coordinator.HasErrors);
+        UnblockInput();
+        if (_coordinator.HasErrors)
+        {
+            _notificationService.ShowError("Тест завершён", "Выполнение прервано из-за ошибки");
+            return;
+        }
+        _notificationService.ShowSuccess("Тест завершён", "Все шаги выполнены успешно");
+    }
 
     private StepResult HandleUnknownSteps(IReadOnlyList<UnknownStepInfo> unknownSteps)
     {
@@ -316,5 +337,6 @@ public class ScanStepManager : IDisposable
         _operatorState.OnChange -= HandleStateChange;
         _autoReady.OnChange -= HandleStateChange;
         _appSettings.UseMesChanged -= HandleUseMesChanged;
+        _coordinator.OnSequenceCompleted -= HandleSequenceCompleted;
     }
 }

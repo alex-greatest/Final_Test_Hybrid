@@ -8,4 +8,5 @@ public class TestSequenseData
     public string Result { get; set; } = string.Empty;
     public string Range { get; set; } = string.Empty;
     public bool IsError { get; set; }
+    public bool IsSuccess { get; set; }
 }

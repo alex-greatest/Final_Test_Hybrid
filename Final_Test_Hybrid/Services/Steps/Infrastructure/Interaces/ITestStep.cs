@@ -1,3 +1,5 @@
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
+
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 
 public interface ITestStep

@@ -26,6 +26,15 @@ public class TestSequenseService
         }
     }
 
+    public void SetSuccessOnCurrent()
+    {
+        var wasUpdated = TryMarkCurrentStepAsSuccess();
+        if (wasUpdated)
+        {
+            NotifyDataChanged();
+        }
+    }
+
     public void ClearCurrentStep()
     {
         UpdateCurrentStep(null);
@@ -61,11 +70,30 @@ public class TestSequenseService
         }
     }
 
+    private bool TryMarkCurrentStepAsSuccess()
+    {
+        lock (_lock)
+        {
+            if (_currentStep == null)
+            {
+                return false;
+            }
+            ApplySuccessState(_currentStep);
+            return true;
+        }
+    }
+
     private void ApplyErrorState(TestSequenseData step, string errorMessage)
     {
         step.Status = "Ошибка";
         step.Result = errorMessage;
         step.IsError = true;
+    }
+
+    private void ApplySuccessState(TestSequenseData step)
+    {
+        step.Status = "Готово";
+        step.IsSuccess = true;
     }
 
     private void UpdateCurrentStep(TestSequenseData? step)
@@ -91,7 +119,8 @@ public class TestSequenseService
                 Status = _currentStep.Status,
                 Result = _currentStep.Result,
                 Range = _currentStep.Range,
-                IsError = _currentStep.IsError
+                IsError = _currentStep.IsError,
+                IsSuccess = _currentStep.IsSuccess
             }];
         }
     }

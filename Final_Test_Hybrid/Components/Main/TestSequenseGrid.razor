@@ -13,35 +13,35 @@
         <Columns>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Module" Title="Модуль">
                 <Template Context="data">
-                    <div class="cell-container @(data.IsError ? "error" : "")">
+                    <div class="cell-container @GetCellClass(data)">
                         <span class="cell-text" title="@data.Module">@data.Module</span>
                     </div>
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Description" Title="Описание">
                 <Template Context="data">
-                    <div class="cell-container @(data.IsError ? "error" : "")">
+                    <div class="cell-container @GetCellClass(data)">
                         <span class="cell-text" title="@data.Description">@data.Description</span>
                     </div>
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Status" Title="Статус" Width="50px">
                 <Template Context="data">
-                    <div class="cell-container @(data.IsError ? "error" : "")">
+                    <div class="cell-container @GetCellClass(data)">
                         <span class="cell-text" title="@data.Status">@data.Status</span>
                     </div>
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Result" Title="Результаты">
                 <Template Context="data">
-                    <div class="cell-container @(data.IsError ? "error" : "")">
+                    <div class="cell-container @GetCellClass(data)">
                         <span class="cell-text" title="@data.Result">@data.Result</span>
                     </div>
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Range" Title="Пределы">
                 <Template Context="data">
-                    <div class="cell-container @(data.IsError ? "error" : "")">
+                    <div class="cell-container @GetCellClass(data)">
                         <span class="cell-text" title="@data.Range">@(string.IsNullOrEmpty(data.Range) ? "\u00A0" : data.Range)</span>
                     </div>
                 </Template>
@@ -53,6 +53,13 @@
 @code {
     private RadzenDataGrid<TestSequenseData>? _grid;
     private IEnumerable<TestSequenseData> _data = [];
+
+    private static string GetCellClass(TestSequenseData data)
+    {
+        if (data.IsError) return "error";
+        if (data.IsSuccess) return "success";
+        return "";
+    }
 
     protected override void OnInitialized()
     {

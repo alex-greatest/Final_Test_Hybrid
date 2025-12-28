@@ -81,6 +81,7 @@ namespace Final_Test_Hybrid
             services.AddSingleton<ITestSequenceLoader, TestSequenceLoader>();
             services.AddSingleton<ITestMapBuilder, TestMapBuilder>();
             services.AddSingleton<ITestMapResolver, TestMapResolver>();
+            services.AddSingleton<TestExecutionCoordinator>();
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();

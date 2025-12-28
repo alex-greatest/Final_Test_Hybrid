@@ -33,6 +33,10 @@
     background-color: red;
 }
 
+.test-sequense-grid ::deep .cell-container.success {
+    background-color: #28a745;
+}
+
 .test-sequense-grid ::deep .cell-text {
     font-size: 17px;
     font-weight: bold;
