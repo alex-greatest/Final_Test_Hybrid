@@ -276,19 +276,3 @@
     color: #999 !important;
 }
 
-/* DropDown List Items */
-::deep .rz-dropdown-panel .rz-dropdown-item {
-    font-size: 18px !important;
-    font-weight: bold !important;
-    color: #000 !important;
-    padding: 10px 12px !important;
-}
-
-::deep .rz-dropdown-panel .rz-dropdown-item:hover {
-    background-color: #e3f2fd !important;
-}
-
-::deep .rz-dropdown-panel .rz-dropdown-item.rz-state-highlight {
-    background-color: #1976d2 !important;
-    color: #fff !important;
-}
