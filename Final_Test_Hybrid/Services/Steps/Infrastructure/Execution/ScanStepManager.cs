@@ -30,6 +30,7 @@ public class ScanStepManager : IDisposable
     private readonly Lock _sessionLock = new();
     private readonly SemaphoreSlim _processLock = new(1, 1);
     private IDisposable? _scanSession;
+    private Guid _currentScanStepId;
 
     public bool IsProcessing { get; private set; }
     public event Action? OnChange;
@@ -109,15 +110,12 @@ public class ScanStepManager : IDisposable
 
     private void InitializeCurrentStep()
     {
-        var step = _stepRegistry.GetById(GetCurrentStepId());
         _testStepLogger.StartNewSession();
-        _sequenseService.SetCurrentStep(step);
     }
 
     private void DeactivateScanMode()
     {
         ReleaseScanSession();
-        _sequenseService.ClearCurrentStep();
     }
 
     private string GetCurrentStepId() =>
@@ -203,8 +201,11 @@ public class ScanStepManager : IDisposable
 
     private async Task<StepResult> ProcessBarcodeCore(string barcode)
     {
-        var step = GetCurrentScanStep();
-        var result = await step.ProcessBarcodeAsync(barcode);
+        _sequenseService.ClearAll();
+        var testStep = GetCurrentTestStep();
+        var scanStep = (IScanBarcodeStep)testStep;
+        _currentScanStepId = _sequenseService.AddStep(testStep);
+        var result = await scanStep.ProcessBarcodeAsync(barcode);
         if (!result.IsSuccess)
         {
             return await HandleBarcodeFailure(result);
@@ -212,8 +213,8 @@ public class ScanStepManager : IDisposable
         return ResolveAndValidateMaps(result.RawMaps!);
     }
 
-    private IScanBarcodeStep GetCurrentScanStep() =>
-        (IScanBarcodeStep)_stepRegistry.GetById(GetCurrentStepId())!;
+    private ITestStep GetCurrentTestStep() =>
+        _stepRegistry.GetById(GetCurrentStepId())!;
 
     private StepResult HandleScannerError(Exception ex, string barcode)
     {
@@ -244,7 +245,7 @@ public class ScanStepManager : IDisposable
     private void StartExecution(List<TestMap> maps)
     {
         _logger.LogInformation("Запуск выполнения {Count} maps", maps.Count);
-        _sequenseService.SetSuccessOnCurrent();
+        _sequenseService.SetSuccess(_currentScanStepId);
         _coordinator.SetMaps(maps);
         _ = _coordinator.StartAsync();
     }
@@ -313,7 +314,7 @@ public class ScanStepManager : IDisposable
     private void ReportError(string error)
     {
         _notificationService.ShowError("Ошибка", error);
-        _sequenseService.SetErrorOnCurrent(error);
+        _sequenseService.SetError(_currentScanStepId, error);
     }
 
     private void ReleaseScanSession()

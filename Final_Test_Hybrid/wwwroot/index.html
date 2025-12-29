@@ -52,6 +52,15 @@
                 titleElement.textContent = title;
             }
         };
+
+        window.scrollGridToBottom = (containerId) => {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const scrollArea = container.querySelector('.rz-data-grid-data');
+            if (scrollArea) {
+                scrollArea.scrollTop = scrollArea.scrollHeight;
+            }
+        };
     </script>
 </body>
 

@@ -10,72 +10,82 @@ public class ColumnExecutor(
     int columnIndex,
     TestStepContext context,
     ITestStepLogger testLogger,
-    ILogger logger)
+    ILogger logger,
+    TestSequenseService sequenseService)
 {
+    private record StepState(
+        string? Name,
+        string? Description,
+        string? Status,
+        string? ErrorMessage,
+        string? ResultValue,
+        bool HasFailed,
+        Guid UiStepId,
+        ITestStep? FailedStep);
+
+    private static readonly StepState EmptyState = new(null, null, null, null, null, false, Guid.Empty, null);
+    private StepState _state = EmptyState;
+
     public int ColumnIndex { get; } = columnIndex;
-    public string? CurrentStepName { get; private set; }
-    public string? CurrentStepDescription { get; private set; }
-    public string? Status { get; private set; }
-    public string? ErrorMessage { get; private set; }
-    public string? ResultValue { get; private set; }
-    public bool HasFailed { get; private set; }
-    public bool IsVisible => Status != null;
+    public string? CurrentStepName => _state.Name;
+    public string? CurrentStepDescription => _state.Description;
+    public string? Status => _state.Status;
+    public string? ErrorMessage => _state.ErrorMessage;
+    public string? ResultValue => _state.ResultValue;
+    public bool HasFailed => _state.HasFailed;
+    public bool IsVisible => _state.Status != null;
 
     public event Action? OnStateChanged;
 
-    public async Task ExecuteMapAsync(TestMap map, CancellationToken cancellationToken)
+    public async Task ExecuteMapAsync(TestMap map, CancellationToken ct)
     {
-        foreach (var row in map.Rows.TakeWhile(row => !ShouldStopExecution(cancellationToken)))
+        var stepsToExecute = map.Rows
+            .TakeWhile(_ => !ct.IsCancellationRequested && !_state.HasFailed)
+            .Select(row => row.Steps[ColumnIndex])
+            .Where(step => step != null);
+        foreach (var step in stepsToExecute)
         {
-            await ExecuteRowStep(row, cancellationToken);
+            await ExecuteStep(step!, ct);
         }
-
         ClearStatusIfNotFailed();
     }
 
-    private bool ShouldStopExecution(CancellationToken cancellationToken)
+    private async Task ExecuteStep(ITestStep step, CancellationToken ct)
     {
-        return cancellationToken.IsCancellationRequested || HasFailed;
-    }
-
-    private async Task ExecuteRowStep(TestMapRow row, CancellationToken cancellationToken)
-    {
-        var step = row.Steps[ColumnIndex];
-
-        if (step == null)
-        {
-            SetStatus("Пропуск");
-            return;
-        }
-
-        await ExecuteStep(step, cancellationToken);
-    }
-
-    private async Task ExecuteStep(ITestStep step, CancellationToken cancellationToken)
-    {
-        SetRunningState(step);
+        StartNewStep(step);
         try
         {
-            var result = await step.ExecuteAsync(context, cancellationToken);
+            var result = await step.ExecuteAsync(context, ct);
             ProcessStepResult(step, result);
         }
         catch (OperationCanceledException)
         {
             ClearStatusIfNotFailed();
         }
-        catch (Exception exception)
+        catch (Exception ex)
         {
-            HandleStepException(step, exception);
+            SetErrorState(step, ex.Message);
+            LogError(step, ex.Message, ex);
         }
     }
 
-    private void SetRunningState(ITestStep step)
+    private void StartNewStep(ITestStep step)
     {
-        CurrentStepName = step.Name;
-        CurrentStepDescription = step.Description;
-        ResultValue = null;
+        var uiId = sequenseService.AddStep(step);
+        ApplyRunningState(step, uiId);
+    }
+
+    private void RestartFailedStep()
+    {
+        sequenseService.SetRunning(_state.UiStepId);
+        ApplyRunningState(_state.FailedStep!, _state.UiStepId);
+    }
+
+    private void ApplyRunningState(ITestStep step, Guid uiId)
+    {
+        _state = new StepState(step.Name, step.Description, "Выполняется", null, null, false, uiId, null);
         testLogger.LogStepStart(step.Name);
-        SetStatus("Выполняется");
+        OnStateChanged?.Invoke();
     }
 
     private void ProcessStepResult(ITestStep step, TestStepResult result)
@@ -83,6 +93,7 @@ public class ColumnExecutor(
         if (!result.Success)
         {
             SetErrorState(step, result.Message);
+            LogError(step, result.Message, null);
             return;
         }
         SetSuccessState(step, result);
@@ -90,76 +101,67 @@ public class ColumnExecutor(
 
     private void SetSuccessState(ITestStep step, TestStepResult result)
     {
-        ResultValue = result.Message;
-        var statusText = DetermineSuccessStatusText(result);
+        var statusText = result.Skipped ? "Пропуск" : "Готово";
+        sequenseService.SetSuccess(_state.UiStepId, result.Message ?? "");
+        _state = _state with { Status = statusText, ResultValue = result.Message, FailedStep = null };
         testLogger.LogStepEnd(step.Name);
-        LogResultMessageIfPresent(result.Message);
-        SetStatus(statusText);
-    }
-
-    private static string DetermineSuccessStatusText(TestStepResult result)
-    {
-        return result.Skipped ? "Пропуск" : "Готово";
-    }
-
-    private void LogResultMessageIfPresent(string? message)
-    {
-        if (!string.IsNullOrEmpty(message))
+        if (!string.IsNullOrEmpty(result.Message))
         {
-            testLogger.LogInformation("  Результат: {Message}", message);
+            testLogger.LogInformation("  Результат: {Message}", result.Message);
         }
-    }
-
-    private void HandleStepException(ITestStep step, Exception exception)
-    {
-        SetErrorState(step, exception.Message);
-        LogException(step, exception);
-    }
-
-    private void LogException(ITestStep step, Exception exception)
-    {
-        logger.LogError(exception, "Исключение в шаге {Step} колонки {Col}", step.Name, ColumnIndex);
-        testLogger.LogError(exception, "Исключение в шаге '{Step}': {Message}", step.Name, exception.Message);
+        OnStateChanged?.Invoke();
     }
 
     private void SetErrorState(ITestStep step, string message)
     {
-        LogStepError(step, message);
-        ErrorMessage = message;
-        HasFailed = true;
-        SetStatus("Ошибка");
-    }
-
-    private void LogStepError(ITestStep step, string message)
-    {
-        logger.LogError("Шаг {Step} в колонке {Col}: {Error}", step.Name, ColumnIndex, message);
-        testLogger.LogError(null, "ОШИБКА в шаге '{Step}': {Message}", step.Name, message);
-    }
-
-    private void SetStatus(string status)
-    {
-        Status = status;
+        sequenseService.SetError(_state.UiStepId, message);
+        _state = _state with { Status = "Ошибка", ErrorMessage = message, HasFailed = true, FailedStep = step };
         OnStateChanged?.Invoke();
+    }
+
+    private void LogError(ITestStep step, string message, Exception? ex)
+    {
+        logger.LogError(ex, "Шаг {Step} в колонке {Col}: {Error}", step.Name, ColumnIndex, message);
+        testLogger.LogError(ex, "ОШИБКА в шаге '{Step}': {Message}", step.Name, message);
     }
 
     private void ClearStatusIfNotFailed()
     {
-        if (HasFailed)
+        if (_state.HasFailed)
         {
             return;
         }
-        Status = null;
+        _state = _state with { Status = null };
         OnStateChanged?.Invoke();
     }
 
     public void Reset()
     {
-        CurrentStepName = null;
-        CurrentStepDescription = null;
-        Status = null;
-        ErrorMessage = null;
-        ResultValue = null;
-        HasFailed = false;
+        _state = EmptyState;
         context.Variables.Clear();
+    }
+
+    public async Task RetryLastFailedStepAsync(CancellationToken ct)
+    {
+        if (_state.FailedStep == null)
+        {
+            return;
+        }
+        var step = _state.FailedStep;
+        RestartFailedStep();
+        try
+        {
+            var result = await step.ExecuteAsync(context, ct);
+            ProcessStepResult(step, result);
+        }
+        catch (OperationCanceledException)
+        {
+            ClearStatusIfNotFailed();
+        }
+        catch (Exception ex)
+        {
+            SetErrorState(step, ex.Message);
+            LogError(step, ex.Message, ex);
+        }
     }
 }

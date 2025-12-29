@@ -1,8 +1,10 @@
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution
+@using Microsoft.JSInterop
 @implements IDisposable
 @inject TestSequenseService TestSequenseService
+@inject IJSRuntime Js
 
-<div class="test-sequense-grid">
+<div class="test-sequense-grid" id="test-sequense-grid-container">
     <RadzenDataGrid @ref="_grid"
         TItem="TestSequenseData"
         Data="_data"
@@ -78,6 +80,7 @@
                 if (_grid != null)
                 {
                     await _grid.Reload();
+                    await ScrollToBottom();
                 }
             });
         }
@@ -85,6 +88,11 @@
         {
             // ignored
         }
+    }
+
+    private async Task ScrollToBottom()
+    {
+        await Js.InvokeVoidAsync("scrollGridToBottom", "test-sequense-grid-container");
     }
 
     public void Dispose()

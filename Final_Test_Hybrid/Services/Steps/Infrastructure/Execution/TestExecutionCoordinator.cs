@@ -9,7 +9,6 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 public class TestExecutionCoordinator : IDisposable
 {
     private const int ColumnCount = 4;
-
     private readonly ColumnExecutor[] _executors;
     private readonly ILogger<TestExecutionCoordinator> _logger;
     private readonly ITestStepLogger _testLogger;
@@ -32,22 +31,24 @@ public class TestExecutionCoordinator : IDisposable
         OpcUaTagService opcUaTagService,
         ILogger<TestExecutionCoordinator> logger,
         ITestStepLogger testLogger,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        TestSequenseService sequenseService)
     {
         _logger = logger;
         _testLogger = testLogger;
         _onExecutorStateChanged = () => OnStateChanged?.Invoke();
-        _executors = CreateAllExecutors(opcUaTagService, testLogger, loggerFactory);
+        _executors = CreateAllExecutors(opcUaTagService, testLogger, loggerFactory, sequenseService);
         SubscribeToExecutorEvents();
     }
 
     private ColumnExecutor[] CreateAllExecutors(
         OpcUaTagService opcUaTagService,
         ITestStepLogger testLogger,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        TestSequenseService sequenseService)
     {
         return Enumerable.Range(0, ColumnCount)
-            .Select(index => CreateExecutor(index, opcUaTagService, testLogger, loggerFactory))
+            .Select(index => CreateExecutor(index, opcUaTagService, testLogger, loggerFactory, sequenseService))
             .ToArray();
     }
 
@@ -55,11 +56,12 @@ public class TestExecutionCoordinator : IDisposable
         int index,
         OpcUaTagService opcUa,
         ITestStepLogger testLogger,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        TestSequenseService sequenseService)
     {
         var context = new TestStepContext(index, opcUa, loggerFactory.CreateLogger($"Column{index}"));
         var executorLogger = loggerFactory.CreateLogger<ColumnExecutor>();
-        return new ColumnExecutor(index, context, testLogger, executorLogger);
+        return new ColumnExecutor(index, context, testLogger, executorLogger, sequenseService);
     }
 
     private void SubscribeToExecutorEvents()
