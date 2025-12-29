@@ -28,7 +28,8 @@ public class TestSequenseService
         {
             Module = name,
             Description = description,
-            Status = "Выполняется"
+            Status = "Выполняется",
+            StartTime = DateTime.Now
         };
         lock (_lock)
         {
@@ -46,6 +47,8 @@ public class TestSequenseService
             step.IsError = false;
             step.IsSuccess = false;
             step.Result = "";
+            step.StartTime = DateTime.Now;
+            step.EndTime = null;
         });
         if (updated)
         {
@@ -61,6 +64,7 @@ public class TestSequenseService
             step.IsSuccess = true;
             step.IsError = false;
             step.Result = message;
+            step.EndTime = DateTime.Now;
         });
         if (updated)
         {
@@ -76,6 +80,7 @@ public class TestSequenseService
             step.IsError = true;
             step.IsSuccess = false;
             step.Result = errorMessage;
+            step.EndTime = DateTime.Now;
         });
         if (updated)
         {
@@ -98,7 +103,8 @@ public class TestSequenseService
         {
             Module = step.Name,
             Description = step.Description,
-            Status = "Выполняется"
+            Status = "Выполняется",
+            StartTime = DateTime.Now
         };
     }
 
@@ -129,7 +135,9 @@ public class TestSequenseService
                 Result = s.Result,
                 Range = s.Range,
                 IsError = s.IsError,
-                IsSuccess = s.IsSuccess
+                IsSuccess = s.IsSuccess,
+                StartTime = s.StartTime,
+                EndTime = s.EndTime
             }).ToList();
         }
     }

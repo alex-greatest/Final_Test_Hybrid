@@ -10,4 +10,6 @@ public class TestSequenseData
     public string Range { get; set; } = string.Empty;
     public bool IsError { get; set; }
     public bool IsSuccess { get; set; }
+    public DateTime StartTime { get; set; }
+    public DateTime? EndTime { get; set; }
 }
