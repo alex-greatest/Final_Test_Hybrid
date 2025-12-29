@@ -27,6 +27,7 @@ using Final_Test_Hybrid.Settings.Spring.Shift;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Base;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
@@ -81,6 +82,10 @@ namespace Final_Test_Hybrid
             services.AddSingleton<TestSequenseService>();
             services.AddSingleton<BoilerState>();
             services.AddSingleton<BarcodeScanService>();
+            services.AddSingleton<ScanSessionManager>();
+            services.AddSingleton<ScanInputStateManager>();
+            services.AddSingleton<BarcodeProcessingPipeline>();
+            services.AddSingleton<ScanErrorHandler>();
             services.AddSingleton<ScanStepManager>();
             services.AddSingleton<ITestSequenceLoader, TestSequenceLoader>();
             services.AddSingleton<ITestMapBuilder, TestMapBuilder>();
