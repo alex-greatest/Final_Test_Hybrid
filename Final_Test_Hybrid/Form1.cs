@@ -28,6 +28,8 @@ using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Base;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure;
 using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.EntityFrameworkCore;
@@ -71,6 +73,8 @@ namespace Final_Test_Hybrid
             RegisterDatabaseServices(services);
             services.AddSingleton<RecipeTagValidator>();
             services.AddSingleton<RequiredTagValidator>();
+            services.AddSingleton<RecipeValidator>();
+            services.AddSingleton<IRecipeProvider, RecipeProvider>();
             services.AddSingleton<MessageService>();
             services.AddSingleton<AutoReadySubscription>();
             services.AddSingleton<MessageServiceInitializer>();

@@ -1,4 +1,4 @@
-namespace Final_Test_Hybrid.Services.Steps.Validation;
+namespace Final_Test_Hybrid.Models.Validation;
 
 public static class RequiredRecipeTags
 {

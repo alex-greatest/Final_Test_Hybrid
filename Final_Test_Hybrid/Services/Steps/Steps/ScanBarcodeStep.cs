@@ -71,7 +71,27 @@ public class ScanBarcodeStep(
     {
         var recipes = await recipeService.GetByBoilerTypeIdAsync(ctx.Cycle.BoilerTypeId);
         ctx.Recipes = MapToRecipeResponseDtos(recipes);
-        return ctx.Recipes.Count != 0 ? null : Fail("Рецепты не найдены", LogLevel.Warning);
+        if (ctx.Recipes.Count == 0)
+        {
+            return Fail("Рецепты не найдены", LogLevel.Warning);
+        }
+        LogRecipes(ctx.Recipes);
+        return null;
+    }
+
+    private void LogRecipes(IReadOnlyList<RecipeResponseDto> recipes)
+    {
+        LogInfo("Загружено рецептов: {Count}", recipes.Count);
+        foreach (var recipe in recipes)
+        {
+            LogInfo("Рецепт: {TagName} = {Value} ({PlcType})", recipe.TagName, recipe.Value, recipe.PlcType);
+        }
+    }
+
+    private void LogInfo(string message, params object?[] args)
+    {
+        logger.LogInformation(message, args);
+        testStepLogger.LogInformation(message, args);
     }
 
     private async Task<BarcodeStepResult?> CheckTagsAsync(BarcodeContext ctx)

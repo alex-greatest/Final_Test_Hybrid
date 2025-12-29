@@ -6,6 +6,8 @@ using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces;
+using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
@@ -27,6 +29,9 @@ public class ScanStepManager : IDisposable
     private readonly ILogger<ScanStepManager> _logger;
     private readonly ITestStepLogger _testStepLogger;
     private readonly TestExecutionCoordinator _coordinator;
+    private readonly RecipeValidator _recipeValidator;
+    private readonly BoilerState _boilerState;
+    private readonly IRecipeProvider _recipeProvider;
     private readonly Lock _sessionLock = new();
     private readonly SemaphoreSlim _processLock = new(1, 1);
     private IDisposable? _scanSession;
@@ -37,6 +42,7 @@ public class ScanStepManager : IDisposable
     public event Func<IReadOnlyList<string>, Task>? OnMissingPlcTagsDialogRequested;
     public event Func<IReadOnlyList<string>, Task>? OnMissingRequiredTagsDialogRequested;
     public event Func<IReadOnlyList<UnknownStepInfo>, Task>? OnUnknownStepsDialogRequested;
+    public event Func<IReadOnlyList<MissingRecipeInfo>, Task>? OnMissingRecipesDialogRequested;
 
     public ScanStepManager(
         OperatorState operatorState,
@@ -50,7 +56,10 @@ public class ScanStepManager : IDisposable
         INotificationService notificationService,
         ILogger<ScanStepManager> logger,
         ITestStepLogger testStepLogger,
-        TestExecutionCoordinator coordinator)
+        TestExecutionCoordinator coordinator,
+        RecipeValidator recipeValidator,
+        BoilerState boilerState,
+        IRecipeProvider recipeProvider)
     {
         _operatorState = operatorState;
         _autoReady = autoReady;
@@ -64,6 +73,9 @@ public class ScanStepManager : IDisposable
         _logger = logger;
         _testStepLogger = testStepLogger;
         _coordinator = coordinator;
+        _recipeValidator = recipeValidator;
+        _boilerState = boilerState;
+        _recipeProvider = recipeProvider;
         SubscribeToEvents();
         UpdateState();
     }
@@ -238,8 +250,45 @@ public class ScanStepManager : IDisposable
         {
             return HandleUnknownSteps(resolveResult.UnknownSteps);
         }
-        StartExecution(resolveResult.Maps!);
+        return ValidateRecipesAndStart(resolveResult.Maps!);
+    }
+
+    private StepResult ValidateRecipesAndStart(List<TestMap> maps)
+    {
+        var allSteps = ExtractAllSteps(maps);
+        var recipeValidation = _recipeValidator.Validate(allSteps, _boilerState.Recipes);
+        if (!recipeValidation.IsValid)
+        {
+            return HandleMissingRecipes(recipeValidation.MissingRecipes);
+        }
+        SetRecipesAndStartExecution(maps);
         return StepResult.Pass();
+    }
+
+    private static List<ITestStep> ExtractAllSteps(List<TestMap> maps)
+    {
+        return maps
+            .SelectMany(m => m.Rows)
+            .SelectMany(r => r.Steps)
+            .Where(s => s != null)
+            .Cast<ITestStep>()
+            .Distinct()
+            .ToList();
+    }
+
+    private StepResult HandleMissingRecipes(IReadOnlyList<MissingRecipeInfo> missingRecipes)
+    {
+        var error = $"Отсутствуют рецепты: {missingRecipes.Count}";
+        _notificationService.ShowWarning("Внимание", $"Обнаружено {missingRecipes.Count} отсутствующих рецептов");
+        _ = InvokeDialogHandler(OnMissingRecipesDialogRequested, missingRecipes);
+        ReportError(error);
+        return StepResult.Fail(error);
+    }
+
+    private void SetRecipesAndStartExecution(List<TestMap> maps)
+    {
+        _recipeProvider.SetRecipes(_boilerState.Recipes ?? []);
+        StartExecution(maps);
     }
 
     private void StartExecution(List<TestMap> maps)

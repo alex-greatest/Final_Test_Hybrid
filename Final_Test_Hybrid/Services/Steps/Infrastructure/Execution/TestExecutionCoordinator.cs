@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.OpcUa;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Logging;
 
@@ -32,12 +33,13 @@ public class TestExecutionCoordinator : IDisposable
         ILogger<TestExecutionCoordinator> logger,
         ITestStepLogger testLogger,
         ILoggerFactory loggerFactory,
-        TestSequenseService sequenseService)
+        TestSequenseService sequenseService,
+        IRecipeProvider recipeProvider)
     {
         _logger = logger;
         _testLogger = testLogger;
         _onExecutorStateChanged = () => OnStateChanged?.Invoke();
-        _executors = CreateAllExecutors(opcUaTagService, testLogger, loggerFactory, sequenseService);
+        _executors = CreateAllExecutors(opcUaTagService, testLogger, loggerFactory, sequenseService, recipeProvider);
         SubscribeToExecutorEvents();
     }
 
@@ -45,10 +47,11 @@ public class TestExecutionCoordinator : IDisposable
         OpcUaTagService opcUaTagService,
         ITestStepLogger testLogger,
         ILoggerFactory loggerFactory,
-        TestSequenseService sequenseService)
+        TestSequenseService sequenseService,
+        IRecipeProvider recipeProvider)
     {
         return Enumerable.Range(0, ColumnCount)
-            .Select(index => CreateExecutor(index, opcUaTagService, testLogger, loggerFactory, sequenseService))
+            .Select(index => CreateExecutor(index, opcUaTagService, testLogger, loggerFactory, sequenseService, recipeProvider))
             .ToArray();
     }
 
@@ -57,9 +60,10 @@ public class TestExecutionCoordinator : IDisposable
         OpcUaTagService opcUa,
         ITestStepLogger testLogger,
         ILoggerFactory loggerFactory,
-        TestSequenseService sequenseService)
+        TestSequenseService sequenseService,
+        IRecipeProvider recipeProvider)
     {
-        var context = new TestStepContext(index, opcUa, loggerFactory.CreateLogger($"Column{index}"));
+        var context = new TestStepContext(index, opcUa, loggerFactory.CreateLogger($"Column{index}"), recipeProvider);
         var executorLogger = loggerFactory.CreateLogger<ColumnExecutor>();
         return new ColumnExecutor(index, context, testLogger, executorLogger, sequenseService);
     }

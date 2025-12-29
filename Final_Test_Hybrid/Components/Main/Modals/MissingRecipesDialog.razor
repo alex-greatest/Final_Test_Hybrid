@@ -1,0 +1,33 @@
+@using Final_Test_Hybrid.Services.Steps.Validation
+
+<div class="missing-recipes-dialog">
+    <div class="info-message">
+        Шаги требуют отсутствующих рецептов: @MissingRecipes.Count
+    </div>
+    <RadzenDataGrid Data="@MissingRecipes" TItem="MissingRecipeInfo"
+                    AllowPaging="false"
+                    AllowSorting="true"
+                    Style="flex: 1; min-height: 0;">
+        <Columns>
+            <RadzenDataGridColumn TItem="MissingRecipeInfo" Property="StepName" Title="Шаг" Width="auto" />
+            <RadzenDataGridColumn TItem="MissingRecipeInfo" Property="RecipeAddress" Title="Адрес рецепта" Width="auto" />
+        </Columns>
+    </RadzenDataGrid>
+    <div class="dialog-buttons">
+        <RadzenButton Text="Закрыть" Icon="close"
+                      Click="@OnClose"
+                      ButtonStyle="ButtonStyle.Primary" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public List<MissingRecipeInfo> MissingRecipes { get; set; } = [];
+    [Inject]
+    public required DialogService DialogService { get; set; }
+
+    private void OnClose()
+    {
+        DialogService.Close();
+    }
+}

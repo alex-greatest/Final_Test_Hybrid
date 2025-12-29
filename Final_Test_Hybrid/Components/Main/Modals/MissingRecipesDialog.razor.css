@@ -1,0 +1,63 @@
+.missing-recipes-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 10px;
+    height: 100%;
+}
+
+.info-message {
+    font-size: 18px;
+    color: #f57c00;
+    font-weight: 600;
+}
+
+::deep .rz-data-grid {
+    flex: 1;
+    min-height: 0;
+}
+
+::deep .rz-data-grid .rz-column-title,
+::deep .rz-data-grid .rz-column-title-content,
+::deep .rz-data-grid .rz-cell-data,
+::deep .rz-data-grid th span {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+}
+
+::deep .rz-data-grid .rz-column-title {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+::deep .rz-data-grid .rz-cell-data {
+    font-size: 19px;
+    color: black !important;
+}
+
+::deep .rz-data-grid .rz-grid-table {
+    border-collapse: collapse;
+}
+
+::deep .rz-data-grid th,
+::deep .rz-data-grid td {
+    border: 1px solid #ccc !important;
+}
+
+::deep .rz-data-grid th {
+    padding: 10px 8px !important;
+    overflow: visible !important;
+    line-height: 1.2 !important;
+    height: auto !important;
+}
+
+.dialog-buttons {
+    display: flex;
+    justify-content: flex-end;
+}
+
+::deep .dialog-buttons .rz-button {
+    font-size: 20px;
+    padding: 12px 24px;
+}
