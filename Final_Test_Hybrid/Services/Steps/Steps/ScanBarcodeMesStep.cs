@@ -44,4 +44,10 @@ public class ScanBarcodeMesStep(
         boilerState.SetData(validation.Barcode, validation.Article!, isValid: true);
         return BarcodeStepResult.Pass([]);
     }
+
+    public Task OnExecutionStartingAsync()
+    {
+        // TODO: Отправка в MES при необходимости
+        return Task.CompletedTask;
+    }
 }

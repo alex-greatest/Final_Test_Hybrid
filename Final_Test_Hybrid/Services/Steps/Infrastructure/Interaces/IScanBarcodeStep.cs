@@ -5,4 +5,5 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 public interface IScanBarcodeStep
 {
     Task<BarcodeStepResult> ProcessBarcodeAsync(string barcode);
+    Task OnExecutionStartingAsync();
 }

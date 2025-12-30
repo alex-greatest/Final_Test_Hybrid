@@ -173,18 +173,25 @@ public class ScanBarcodeStep(
         }
     }
 
-    private async Task<BarcodeStepResult> SuccessAsync(BarcodeContext ctx)
+    private Task<BarcodeStepResult> SuccessAsync(BarcodeContext ctx)
     {
         logger.LogInformation("Успешно: {Serial}, {Article}, {Type}, рецептов: {Count}, RawMaps: {Maps}",
             ctx.Validation.Barcode, ctx.Validation.Article, ctx.Cycle.Type, ctx.Recipes.Count, ctx.RawMaps?.Count ?? 0);
         testStepLogger.LogInformation("Успешно: {Serial}, {Article}, {Type}, рецептов: {Count}, RawMaps: {Maps}",
             ctx.Validation.Barcode, ctx.Validation.Article, ctx.Cycle.Type, ctx.Recipes.Count, ctx.RawMaps?.Count ?? 0);
-        var operatorName = operatorState.Username ?? "Unknown";
-        var boiler = await boilerService.FindOrCreateAsync(ctx.Validation.Barcode, ctx.Cycle.Id, operatorName);
-        await operationService.CreateAsync(boiler.Id, operatorName, shiftState.ShiftNumber ?? 0);
         boilerState.SetData(ctx.Validation.Barcode, ctx.Validation.Article!, isValid: true, ctx.Cycle, ctx.Recipes);
         testStepLogger.LogStepEnd(Name);
-        return BarcodeStepResult.Pass(ctx.RawMaps!);
+        return Task.FromResult(BarcodeStepResult.Pass(ctx.RawMaps!));
+    }
+
+    public async Task OnExecutionStartingAsync()
+    {
+        var operatorName = operatorState.Username ?? "Unknown";
+        var boiler = await boilerService.FindOrCreateAsync(
+            boilerState.SerialNumber!,
+            boilerState.BoilerTypeCycle!.Id,
+            operatorName);
+        await operationService.CreateAsync(boiler.Id, operatorName, shiftState.ShiftNumber ?? 0);
     }
 
     private static IReadOnlyList<RecipeResponseDto> MapToRecipeResponseDtos(List<Recipe> recipes)

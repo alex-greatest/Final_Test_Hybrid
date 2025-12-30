@@ -19,10 +19,12 @@ public class BarcodeProcessingPipeline(
     BoilerState boilerState,
     IRecipeProvider recipeProvider,
     TestExecutionCoordinator coordinator,
+    ITestStepLogger testStepLogger,
     ILogger<BarcodeProcessingPipeline> logger)
 {
     private const string ScanBarcodeId = "scan-barcode";
     private const string ScanBarcodeMesId = "scan-barcode-mes";
+    private IScanBarcodeStep? _currentScanStep;
 
     public async Task<BarcodeProcessingResult> ProcessAsync(string barcode)
     {
@@ -40,10 +42,10 @@ public class BarcodeProcessingPipeline(
     {
         statusReporter.ClearAll();
         var testStep = GetCurrentTestStep();
-        var scanStep = (IScanBarcodeStep)testStep;
+        _currentScanStep = (IScanBarcodeStep)testStep;
         var scanStepId = statusReporter.ReportStepStarted(testStep);
-        var result = await scanStep.ProcessBarcodeAsync(barcode);
-        return !result.IsSuccess ? HandleBarcodeFailure(result, scanStepId) : ResolveAndValidateMaps(result.RawMaps!, scanStepId);
+        var result = await _currentScanStep.ProcessBarcodeAsync(barcode);
+        return !result.IsSuccess ? HandleBarcodeFailure(result, scanStepId) : await ResolveAndValidateMapsAsync(result.RawMaps!, scanStepId);
     }
 
     private ITestStep GetCurrentTestStep()
@@ -73,10 +75,10 @@ public class BarcodeProcessingPipeline(
         return result.MissingRequiredTags.Count > 0 ? BarcodeProcessingResult.WithMissingRequiredTags(scanStepId, result.ErrorMessage!, result.MissingRequiredTags) : BarcodeProcessingResult.Fail(scanStepId, result.ErrorMessage!);
     }
 
-    private BarcodeProcessingResult ResolveAndValidateMaps(List<RawTestMap> rawMaps, Guid scanStepId)
+    private async Task<BarcodeProcessingResult> ResolveAndValidateMapsAsync(List<RawTestMap> rawMaps, Guid scanStepId)
     {
         var resolveResult = mapResolver.Resolve(rawMaps);
-        return resolveResult.UnknownSteps.Count > 0 ? HandleUnknownSteps(resolveResult.UnknownSteps, scanStepId) : ValidateRecipesAndStart(resolveResult.Maps!, scanStepId);
+        return resolveResult.UnknownSteps.Count > 0 ? HandleUnknownSteps(resolveResult.UnknownSteps, scanStepId) : await ValidateRecipesAndStartAsync(resolveResult.Maps!, scanStepId);
     }
 
     private BarcodeProcessingResult HandleUnknownSteps(IReadOnlyList<UnknownStepInfo> unknownSteps, Guid scanStepId)
@@ -86,7 +88,7 @@ public class BarcodeProcessingPipeline(
         return BarcodeProcessingResult.WithUnknownSteps(scanStepId, error, unknownSteps);
     }
 
-    private BarcodeProcessingResult ValidateRecipesAndStart(List<TestMap> maps, Guid scanStepId)
+    private async Task<BarcodeProcessingResult> ValidateRecipesAndStartAsync(List<TestMap> maps, Guid scanStepId)
     {
         var allSteps = ExtractAllSteps(maps);
         var recipeValidation = recipeValidator.Validate(allSteps, boilerState.Recipes);
@@ -94,8 +96,7 @@ public class BarcodeProcessingPipeline(
         {
             return HandleMissingRecipes(recipeValidation.MissingRecipes, scanStepId);
         }
-        SetRecipesAndStartExecution(maps, scanStepId);
-        return BarcodeProcessingResult.Success(scanStepId);
+        return await SetRecipesAndStartExecutionAsync(maps, scanStepId);
     }
 
     private static List<ITestStep> ExtractAllSteps(List<TestMap> maps)
@@ -118,10 +119,22 @@ public class BarcodeProcessingPipeline(
         return BarcodeProcessingResult.WithMissingRecipes(scanStepId, error, missingRecipes);
     }
 
-    private void SetRecipesAndStartExecution(List<TestMap> maps, Guid scanStepId)
+    private async Task<BarcodeProcessingResult> SetRecipesAndStartExecutionAsync(List<TestMap> maps, Guid scanStepId)
     {
         recipeProvider.SetRecipes(boilerState.Recipes ?? []);
+        try
+        {
+            await _currentScanStep!.OnExecutionStartingAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при создании записей в БД");
+            testStepLogger.LogError(ex, "Ошибка при создании записей в БД");
+            statusReporter.ReportError(scanStepId, "Ошибка БД: " + ex.Message);
+            return BarcodeProcessingResult.Fail(scanStepId, "Ошибка при создании записей в БД");
+        }
         StartExecution(maps, scanStepId);
+        return BarcodeProcessingResult.Success(scanStepId);
     }
 
     private void StartExecution(List<TestMap> maps, Guid scanStepId)
