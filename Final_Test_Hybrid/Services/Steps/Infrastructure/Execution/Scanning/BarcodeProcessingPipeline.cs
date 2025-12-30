@@ -12,6 +12,7 @@ public class BarcodeProcessingPipeline(
     ITestStepRegistry stepRegistry,
     ITestMapResolver mapResolver,
     TestSequenseService sequenseService,
+    StepStatusReporter statusReporter,
     RecipeValidator recipeValidator,
     BoilerState boilerState,
     IRecipeProvider recipeProvider,
@@ -38,13 +39,9 @@ public class BarcodeProcessingPipeline(
         sequenseService.ClearAll();
         var testStep = GetCurrentTestStep();
         var scanStep = (IScanBarcodeStep)testStep;
-        var scanStepId = sequenseService.AddStep(testStep);
+        var scanStepId = statusReporter.ReportStepStarted(testStep);
         var result = await scanStep.ProcessBarcodeAsync(barcode);
-        if (!result.IsSuccess)
-        {
-            return HandleBarcodeFailure(result, scanStepId);
-        }
-        return ResolveAndValidateMaps(result.RawMaps!, scanStepId);
+        return !result.IsSuccess ? HandleBarcodeFailure(result, scanStepId) : ResolveAndValidateMaps(result.RawMaps!, scanStepId);
     }
 
     private ITestStep GetCurrentTestStep()
@@ -70,21 +67,13 @@ public class BarcodeProcessingPipeline(
         {
             return BarcodeProcessingResult.WithMissingPlcTags(scanStepId, result.ErrorMessage!, result.MissingPlcTags);
         }
-        if (result.MissingRequiredTags.Count > 0)
-        {
-            return BarcodeProcessingResult.WithMissingRequiredTags(scanStepId, result.ErrorMessage!, result.MissingRequiredTags);
-        }
-        return BarcodeProcessingResult.Fail(scanStepId, result.ErrorMessage!);
+        return result.MissingRequiredTags.Count > 0 ? BarcodeProcessingResult.WithMissingRequiredTags(scanStepId, result.ErrorMessage!, result.MissingRequiredTags) : BarcodeProcessingResult.Fail(scanStepId, result.ErrorMessage!);
     }
 
     private BarcodeProcessingResult ResolveAndValidateMaps(List<RawTestMap> rawMaps, Guid scanStepId)
     {
         var resolveResult = mapResolver.Resolve(rawMaps);
-        if (resolveResult.UnknownSteps.Count > 0)
-        {
-            return HandleUnknownSteps(resolveResult.UnknownSteps, scanStepId);
-        }
-        return ValidateRecipesAndStart(resolveResult.Maps!, scanStepId);
+        return resolveResult.UnknownSteps.Count > 0 ? HandleUnknownSteps(resolveResult.UnknownSteps, scanStepId) : ValidateRecipesAndStart(resolveResult.Maps!, scanStepId);
     }
 
     private static BarcodeProcessingResult HandleUnknownSteps(IReadOnlyList<UnknownStepInfo> unknownSteps, Guid scanStepId)
@@ -133,7 +122,7 @@ public class BarcodeProcessingPipeline(
     private void StartExecution(List<TestMap> maps, Guid scanStepId)
     {
         logger.LogInformation("Запуск выполнения {Count} maps", maps.Count);
-        sequenseService.SetSuccess(scanStepId);
+        statusReporter.ReportSuccess(scanStepId);
         coordinator.SetMaps(maps);
         _ = coordinator.StartAsync();
     }

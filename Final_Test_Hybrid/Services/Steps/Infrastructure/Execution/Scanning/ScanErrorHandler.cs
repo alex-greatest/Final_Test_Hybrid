@@ -7,7 +7,7 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 
 public class ScanErrorHandler(
     INotificationService notificationService,
-    TestSequenseService sequenseService,
+    StepStatusReporter statusReporter,
     ILogger<ScanErrorHandler> logger)
 {
     public event Func<IReadOnlyList<string>, Task>? OnMissingPlcTagsDialogRequested;
@@ -77,7 +77,7 @@ public class ScanErrorHandler(
     {
         logger.LogError("Scan error: {Error}", error);
         notificationService.ShowError("Ошибка", error);
-        sequenseService.SetError(scanStepId, error);
+        statusReporter.ReportError(scanStepId, error);
     }
 
     public void ShowSuccess(string title, string message)

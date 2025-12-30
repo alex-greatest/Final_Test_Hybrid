@@ -27,6 +27,7 @@ using Final_Test_Hybrid.Settings.Spring.Shift;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Base;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorHandling;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
@@ -89,6 +90,10 @@ namespace Final_Test_Hybrid
             services.AddSingleton<ITestSequenceLoader, TestSequenceLoader>();
             services.AddSingleton<ITestMapBuilder, TestMapBuilder>();
             services.AddSingleton<ITestMapResolver, TestMapResolver>();
+            services.AddSingleton<ExecutionStateManager>();
+            services.AddSingleton<StepStatusReporter>();
+            services.AddSingleton<ErrorPlcMonitor>();
+            services.AddSingleton<StepErrorHandler>();
             services.AddSingleton<TestExecutionCoordinator>();
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();

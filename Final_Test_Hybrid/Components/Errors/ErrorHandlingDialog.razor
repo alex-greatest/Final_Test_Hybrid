@@ -1,0 +1,34 @@
+<div class="error-dialog-container">
+    <div class="error-dialog-header">
+        <RadzenIcon Icon="warning" class="warning-icon" />
+        <span>Ошибка @GetStandName()</span>
+    </div>
+
+    <div class="error-dialog-body">
+        <div class="step-info">
+            <span class="step-label">Шаг:</span>
+            <span class="step-name">@StepName</span>
+        </div>
+
+        <div class="error-message">
+            @ErrorMessage
+        </div>
+
+        <div class="waiting-message">
+            Ожидание команды от PLC...
+        </div>
+    </div>
+
+    <div class="error-dialog-footer">
+        <div class="signal-indicator @GetRetryClass()">
+            <span class="indicator-dot"></span>
+            <span class="indicator-label">Повтор</span>
+            <span class="indicator-hint">- "Повтор" для повтора шага</span>
+        </div>
+        <div class="signal-indicator @GetSkipClass()">
+            <span class="indicator-dot"></span>
+            <span class="indicator-label">Один шаг</span>
+            <span class="indicator-hint">- пропуск на следующий шаг</span>
+        </div>
+    </div>
+</div>

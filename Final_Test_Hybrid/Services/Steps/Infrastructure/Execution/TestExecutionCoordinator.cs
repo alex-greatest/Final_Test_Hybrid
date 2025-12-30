@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.OpcUa;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorHandling;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Logging;
@@ -13,19 +14,26 @@ public class TestExecutionCoordinator : IDisposable
     private readonly ColumnExecutor[] _executors;
     private readonly ILogger<TestExecutionCoordinator> _logger;
     private readonly ITestStepLogger _testLogger;
+    private readonly ExecutionStateManager _stateManager;
+    private readonly StepErrorHandler _errorHandler;
     private readonly Lock _stateLock = new();
     private readonly Action _onExecutorStateChanged;
     private List<TestMap> _maps = [];
     private CancellationTokenSource? _cts;
+    private TaskCompletionSource<ErrorResolution>? _errorResolutionTcs;
+
     public event Action? OnStateChanged;
     public event Action? OnSequenceCompleted;
+    public event Action<StepError>? OnErrorOccurred;
+
     public IReadOnlyList<ColumnExecutor> Executors => _executors;
     public int CurrentMapIndex { get; private set; }
     public int TotalMaps => _maps.Count;
-    public bool IsRunning { get; private set; }
+    public bool IsRunning => _stateManager.State == ExecutionState.Running;
     public bool HasErrors => _executors.Any(e => e.HasFailed);
+    public ExecutionStateManager StateManager => _stateManager;
 
-    private bool ShouldStop => IsCancellationRequested || HasErrors;
+    private bool ShouldStop => IsCancellationRequested;
     private bool IsCancellationRequested => _cts?.IsCancellationRequested == true;
 
     public TestExecutionCoordinator(
@@ -33,25 +41,30 @@ public class TestExecutionCoordinator : IDisposable
         ILogger<TestExecutionCoordinator> logger,
         ITestStepLogger testLogger,
         ILoggerFactory loggerFactory,
-        TestSequenseService sequenseService,
-        IRecipeProvider recipeProvider)
+        StepStatusReporter statusReporter,
+        IRecipeProvider recipeProvider,
+        ExecutionStateManager stateManager,
+        StepErrorHandler errorHandler)
     {
         _logger = logger;
         _testLogger = testLogger;
-        _onExecutorStateChanged = () => OnStateChanged?.Invoke();
-        _executors = CreateAllExecutors(opcUaTagService, testLogger, loggerFactory, sequenseService, recipeProvider);
+        _stateManager = stateManager;
+        _errorHandler = errorHandler;
+        _onExecutorStateChanged = HandleExecutorStateChanged;
+        _executors = CreateAllExecutors(opcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider);
         SubscribeToExecutorEvents();
+        SubscribeToErrorHandler();
     }
 
     private ColumnExecutor[] CreateAllExecutors(
         OpcUaTagService opcUaTagService,
         ITestStepLogger testLogger,
         ILoggerFactory loggerFactory,
-        TestSequenseService sequenseService,
+        StepStatusReporter statusReporter,
         IRecipeProvider recipeProvider)
     {
         return Enumerable.Range(0, ColumnCount)
-            .Select(index => CreateExecutor(index, opcUaTagService, testLogger, loggerFactory, sequenseService, recipeProvider))
+            .Select(index => CreateExecutor(index, opcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider))
             .ToArray();
     }
 
@@ -60,12 +73,12 @@ public class TestExecutionCoordinator : IDisposable
         OpcUaTagService opcUa,
         ITestStepLogger testLogger,
         ILoggerFactory loggerFactory,
-        TestSequenseService sequenseService,
+        StepStatusReporter statusReporter,
         IRecipeProvider recipeProvider)
     {
         var context = new TestStepContext(index, opcUa, loggerFactory.CreateLogger($"Column{index}"), recipeProvider);
         var executorLogger = loggerFactory.CreateLogger<ColumnExecutor>();
-        return new ColumnExecutor(index, context, testLogger, executorLogger, sequenseService);
+        return new ColumnExecutor(index, context, testLogger, executorLogger, statusReporter);
     }
 
     private void SubscribeToExecutorEvents()
@@ -82,6 +95,55 @@ public class TestExecutionCoordinator : IDisposable
         {
             executor.OnStateChanged -= _onExecutorStateChanged;
         }
+    }
+
+    private void SubscribeToErrorHandler()
+    {
+        _errorHandler.OnResolutionReceived += HandleErrorResolution;
+    }
+
+    private void UnsubscribeFromErrorHandler()
+    {
+        _errorHandler.OnResolutionReceived -= HandleErrorResolution;
+    }
+
+    private void HandleExecutorStateChanged()
+    {
+        OnStateChanged?.Invoke();
+        CheckForErrors();
+    }
+
+    private void CheckForErrors()
+    {
+        if (_stateManager.State != ExecutionState.Running)
+        {
+            return;
+        }
+        var failedExecutor = _executors.FirstOrDefault(e => e.HasFailed);
+        if (failedExecutor == null)
+        {
+            return;
+        }
+        ReportError(failedExecutor);
+    }
+
+    private void ReportError(ColumnExecutor executor)
+    {
+        var error = new StepError(
+            executor.ColumnIndex,
+            executor.CurrentStepName ?? "Неизвестный шаг",
+            executor.CurrentStepDescription ?? "",
+            executor.ErrorMessage ?? "Неизвестная ошибка",
+            DateTime.Now,
+            Guid.Empty);
+        _stateManager.TransitionTo(ExecutionState.PausedOnError, error);
+        _errorResolutionTcs = new TaskCompletionSource<ErrorResolution>();
+        OnErrorOccurred?.Invoke(error);
+    }
+
+    private void HandleErrorResolution(ErrorResolution resolution)
+    {
+        _errorResolutionTcs?.TrySetResult(resolution);
     }
 
     public void SetMaps(List<TestMap> maps)
@@ -144,7 +206,7 @@ public class TestExecutionCoordinator : IDisposable
     {
         lock (_stateLock)
         {
-            if (IsRunning)
+            if (_stateManager.IsActive)
             {
                 _logger.LogWarning("Координатор уже выполняется");
                 return false;
@@ -172,46 +234,98 @@ public class TestExecutionCoordinator : IDisposable
 
     private void BeginExecution()
     {
-        IsRunning = true;
+        _stateManager.TransitionTo(ExecutionState.Running);
         _cts = new CancellationTokenSource();
+        _errorHandler.StartMonitoring();
         _logger.LogInformation("Запуск {Count} Maps", _maps.Count);
         _testLogger.LogInformation("═══ ЗАПУСК ТЕСТИРОВАНИЯ ({Count} блоков) ═══", _maps.Count);
     }
 
     private async Task RunAllMaps()
     {
-        for (CurrentMapIndex = 0; CurrentMapIndex < _maps.Count && !ShouldStop; CurrentMapIndex++)
+        var maps = _maps;
+        var totalMaps = maps.Count;
+        for (CurrentMapIndex = 0; CurrentMapIndex < totalMaps && !ShouldStop; CurrentMapIndex++)
         {
-            await RunCurrentMap();
+            await RunCurrentMap(maps[CurrentMapIndex], totalMaps);
         }
     }
 
-    private async Task RunCurrentMap()
+    private async Task RunCurrentMap(TestMap map, int totalMaps)
     {
-        var map = _maps[CurrentMapIndex];
-        LogMapStart();
+        LogMapStart(totalMaps);
         await ExecuteMapOnAllColumns(map);
     }
 
-    private void LogMapStart()
+    private void LogMapStart(int totalMaps)
     {
-        _logger.LogInformation("Map {Index}/{Total}", CurrentMapIndex + 1, _maps.Count);
-        _testLogger.LogInformation("─── Блок {Index} из {Total} ───", CurrentMapIndex + 1, _maps.Count);
+        _logger.LogInformation("Map {Index}/{Total}", CurrentMapIndex + 1, totalMaps);
+        _testLogger.LogInformation("─── Блок {Index} из {Total} ───", CurrentMapIndex + 1, totalMaps);
     }
 
     private async Task ExecuteMapOnAllColumns(TestMap map)
     {
         var executionTasks = _executors.Select(executor => executor.ExecuteMapAsync(map, _cts!.Token));
         await Task.WhenAll(executionTasks);
+        await HandleErrorsIfAny();
+    }
+
+    private async Task HandleErrorsIfAny()
+    {
+        while (HasErrors && !IsCancellationRequested)
+        {
+            var resolution = await WaitForErrorResolution();
+            await ProcessErrorResolution(resolution);
+        }
+    }
+
+    private async Task<ErrorResolution> WaitForErrorResolution()
+    {
+        if (_errorResolutionTcs == null)
+        {
+            return ErrorResolution.None;
+        }
+        return await _errorResolutionTcs.Task;
+    }
+
+    private async Task ProcessErrorResolution(ErrorResolution resolution)
+    {
+        switch (resolution)
+        {
+            case ErrorResolution.Retry:
+                await RetryFailedSteps();
+                break;
+            case ErrorResolution.Skip:
+                SkipFailedSteps();
+                break;
+            case ErrorResolution.None:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(resolution), resolution, null);
+        }
+    }
+
+    private async Task RetryFailedSteps()
+    {
+        var failedExecutors = _executors.Where(e => e.HasFailed).ToList();
+        var retryTasks = failedExecutors.Select(e => e.RetryLastFailedStepAsync(_cts!.Token));
+        await Task.WhenAll(retryTasks);
+    }
+
+    private void SkipFailedSteps()
+    {
+        foreach (var executor in _executors.Where(e => e.HasFailed))
+        {
+            executor.ClearFailedState();
+        }
+        _stateManager.TransitionTo(ExecutionState.Running);
     }
 
     private void Complete()
     {
-        lock (_stateLock)
-        {
-            IsRunning = false;
-        }
-
+        _errorHandler.StopMonitoring();
+        var finalState = HasErrors ? ExecutionState.Failed : ExecutionState.Completed;
+        _stateManager.TransitionTo(finalState);
         LogExecutionCompleted();
         OnSequenceCompleted?.Invoke();
     }
@@ -248,5 +362,6 @@ public class TestExecutionCoordinator : IDisposable
         Stop();
         _cts?.Dispose();
         UnsubscribeFromExecutorEvents();
+        UnsubscribeFromErrorHandler();
     }
 }

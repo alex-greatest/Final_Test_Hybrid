@@ -1,4 +1,4 @@
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
 public class TestStepResult
 {

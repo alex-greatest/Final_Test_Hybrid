@@ -11,7 +11,7 @@ public class ColumnExecutor(
     TestStepContext context,
     ITestStepLogger testLogger,
     ILogger logger,
-    TestSequenseService sequenseService)
+    StepStatusReporter statusReporter)
 {
     private record StepState(
         string? Name,
@@ -25,7 +25,6 @@ public class ColumnExecutor(
 
     private static readonly StepState EmptyState = new(null, null, null, null, null, false, Guid.Empty, null);
     private StepState _state = EmptyState;
-
     public int ColumnIndex { get; } = columnIndex;
     public string? CurrentStepName => _state.Name;
     public string? CurrentStepDescription => _state.Description;
@@ -71,13 +70,13 @@ public class ColumnExecutor(
 
     private void StartNewStep(ITestStep step)
     {
-        var uiId = sequenseService.AddStep(step);
+        var uiId = statusReporter.ReportStepStarted(step);
         ApplyRunningState(step, uiId);
     }
 
     private void RestartFailedStep()
     {
-        sequenseService.SetRunning(_state.UiStepId);
+        statusReporter.ReportRetry(_state.UiStepId);
         ApplyRunningState(_state.FailedStep!, _state.UiStepId);
     }
 
@@ -102,7 +101,7 @@ public class ColumnExecutor(
     private void SetSuccessState(ITestStep step, TestStepResult result)
     {
         var statusText = result.Skipped ? "Пропуск" : "Готово";
-        sequenseService.SetSuccess(_state.UiStepId, result.Message ?? "");
+        statusReporter.ReportSuccess(_state.UiStepId, result.Message);
         _state = _state with { Status = statusText, ResultValue = result.Message, FailedStep = null };
         testLogger.LogStepEnd(step.Name);
         if (!string.IsNullOrEmpty(result.Message))
@@ -114,7 +113,7 @@ public class ColumnExecutor(
 
     private void SetErrorState(ITestStep step, string message)
     {
-        sequenseService.SetError(_state.UiStepId, message);
+        statusReporter.ReportError(_state.UiStepId, message);
         _state = _state with { Status = "Ошибка", ErrorMessage = message, HasFailed = true, FailedStep = step };
         OnStateChanged?.Invoke();
     }
@@ -139,6 +138,16 @@ public class ColumnExecutor(
     {
         _state = EmptyState;
         context.Variables.Clear();
+    }
+
+    public void ClearFailedState()
+    {
+        if (!_state.HasFailed)
+        {
+            return;
+        }
+        _state = _state with { HasFailed = false, FailedStep = null, Status = null };
+        OnStateChanged?.Invoke();
     }
 
     public async Task RetryLastFailedStepAsync(CancellationToken ct)

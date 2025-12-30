@@ -2,7 +2,7 @@ using System.Reflection;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
 public class TestStepRegistry(IServiceProvider serviceProvider) : ITestStepRegistry
 {

@@ -1,0 +1,129 @@
+.error-dialog-container {
+    display: flex;
+    flex-direction: column;
+    min-width: 400px;
+    background: var(--rz-base-background-color);
+    border-radius: 8px;
+}
+
+.error-dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 20px;
+    background: var(--rz-danger);
+    color: white;
+    font-size: 1.2rem;
+    font-weight: 600;
+    border-radius: 8px 8px 0 0;
+}
+
+.warning-icon {
+    font-size: 1.5rem;
+}
+
+.error-dialog-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.step-info {
+    display: flex;
+    gap: 8px;
+    font-size: 1rem;
+}
+
+.step-label {
+    color: var(--rz-text-secondary-color);
+}
+
+.step-name {
+    font-weight: 600;
+    color: var(--rz-text-color);
+}
+
+.error-message {
+    padding: 12px;
+    background: var(--rz-danger-lighter);
+    border-left: 4px solid var(--rz-danger);
+    border-radius: 4px;
+    color: var(--rz-danger-dark);
+    font-size: 0.95rem;
+}
+
+.waiting-message {
+    text-align: center;
+    color: var(--rz-text-secondary-color);
+    font-style: italic;
+    padding: 8px 0;
+}
+
+.error-dialog-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--rz-border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.signal-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--rz-base-200);
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.indicator-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--rz-base-400);
+    transition: all 0.3s ease;
+}
+
+.indicator-label {
+    font-weight: 600;
+    min-width: 80px;
+}
+
+.indicator-hint {
+    color: var(--rz-text-secondary-color);
+    font-size: 0.9rem;
+}
+
+.signal-indicator:nth-child(1) .indicator-dot {
+    background: var(--rz-success);
+    opacity: 0.4;
+}
+
+.signal-indicator:nth-child(2) .indicator-dot {
+    background: var(--rz-warning);
+    opacity: 0.4;
+}
+
+.signal-indicator.active-retry {
+    background: var(--rz-success-lighter);
+}
+
+.signal-indicator.active-retry .indicator-dot {
+    background: var(--rz-success);
+    opacity: 1;
+    box-shadow: 0 0 8px var(--rz-success);
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.7;
+    }
+}

@@ -7,8 +7,7 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 public class RecipeProvider : IRecipeProvider
 {
     private readonly Lock _lock = new();
-    private IReadOnlyDictionary<string, RecipeResponseDto> _recipesByAddress =
-        new Dictionary<string, RecipeResponseDto>();
+    private Dictionary<string, RecipeResponseDto> _recipesByAddress = new ();
     private IReadOnlyList<RecipeResponseDto> _recipes = [];
 
     public RecipeResponseDto? GetByAddress(string address)
