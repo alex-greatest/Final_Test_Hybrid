@@ -1,0 +1,117 @@
+﻿@JmixEntity
+@Table(name = "TB_BOILER", indexes = {
+        @Index(name = "IDX_TB_BOILER_BOILER_TYPE_CYCLE", columnList = "BOILER_TYPE_CYCLE_ID"),
+}, uniqueConstraints = {
+        @UniqueConstraint(name = "IDX_TB_BOILER_UNQ_SERIAL_NUMBER", columnNames = {"SERIAL_NUMBER"})
+})
+@Entity(name = "tb_Boiler")
+public class Boiler {
+    @JmixGeneratedValue
+    @Column(name = "ID", nullable = false)
+    @Id
+    private Long id;
+
+    @InstanceName
+    @Column(name = "SERIAL_NUMBER", nullable = false, length = 100)
+    @NotNull
+    private String serialNumber;
+
+    @OnDeleteInverse(DeletePolicy.CASCADE)
+    @JoinColumn(name = "BOILER_TYPE_CYCLE_ID", nullable = false)
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    private BoilerTypeCycle boilerTypeCycle;
+
+    @Column(name = "DATE_CREATE", nullable = false)
+    @NotNull
+    private LocalDateTime dateCreate;
+
+    @Column(name = "DATE_UPDATE")
+    private LocalDateTime dateUpdate;
+
+    @Column(name = "STATUS", nullable = false)
+    @NotNull
+    private Integer status;
+    
+    
+    
+    
+    
+    
+    @JmixEntity
+    @Table(name = "TB_OPERATION", indexes = {
+            @Index(name = "IDX_TB_OPERATION_STATION_HISTORY", columnList = "STATION_HISTORY_ID"),
+            @Index(name = "IDX_TB_OPERATION_BOILER", columnList = "BOILER_ID"),
+            @Index(name = "IDX_TB_OPERATION_ADMIN_MANAGE", columnList = "ADMIN_MANAGE_ID"),
+            @Index(name = "IDX_TB_OPERATION_OPERATOR", columnList = "OPERATOR_ID"),
+            @Index(name = "IDX_TB_OPERATION_BOILER_STATION_DATE_START", columnList = "BOILER_ID, STATION_HISTORY_ID, DATE_START")
+    })
+    @Entity(name = "tb_Operation")
+    public class Operation {
+        @JmixGeneratedValue
+        @Column(name = "ID", nullable = false)
+        @Id
+        private Long id;
+    
+        @Column(name = "DATE_START", nullable = false)
+        @NotNull
+        private LocalDateTime dateStart;
+    
+        @Column(name = "DATE_END")
+        private LocalDateTime dateEnd;
+    
+        @OnDeleteInverse(DeletePolicy.CASCADE)
+        @JoinColumn(name = "BOILER_ID", nullable = false)
+        @NotNull
+        @ManyToOne(fetch = FetchType.LAZY, optional = false)
+        private Boiler boiler;
+    
+        @Column(name = "STATUS", nullable = false)
+        @NotNull
+        private Integer status;
+   
+        @Column(name = "NUMBER_SHIFT", nullable = false)
+        @NotNull
+        private Integer numberShift;
+   
+        @Column(name = "COMMENT_")
+        @Lob
+        private String comment;
+    
+        @Column(name = "VERSION", nullable = false)
+        @Version
+        private Integer version;
+        
+        
+        
+        
+        
+        
+        
+public enum OperationResultStatus implements EnumClass<Integer> {
+
+    OK(1),
+    NOK(2),
+    IN_WORK(3),
+    INTERRUPTED(4);
+
+    private final Integer id;
+
+    OperationResultStatus(Integer id) {
+        this.id = id;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    @Nullable
+    public static OperationResultStatus fromId(Integer id) {
+        for (OperationResultStatus at : OperationResultStatus.values()) {
+            if (at.getId().equals(id)) {
+                return at;
+            }
+        }
+        return null;
+    }
+}

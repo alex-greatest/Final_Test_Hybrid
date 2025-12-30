@@ -2,6 +2,8 @@ using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Recipe;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
 using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.Extensions.Logging;
 
@@ -11,7 +13,6 @@ public class BarcodeProcessingPipeline(
     AppSettingsService appSettings,
     ITestStepRegistry stepRegistry,
     ITestMapResolver mapResolver,
-    TestSequenseService sequenseService,
     StepStatusReporter statusReporter,
     RecipeValidator recipeValidator,
     BoilerState boilerState,
@@ -36,7 +37,7 @@ public class BarcodeProcessingPipeline(
 
     private async Task<BarcodeProcessingResult> ProcessBarcodeCore(string barcode)
     {
-        sequenseService.ClearAll();
+        statusReporter.ClearAll();
         var testStep = GetCurrentTestStep();
         var scanStep = (IScanBarcodeStep)testStep;
         var scanStepId = statusReporter.ReportStepStarted(testStep);
@@ -61,8 +62,9 @@ public class BarcodeProcessingPipeline(
         return BarcodeProcessingResult.Fail(Guid.Empty, "Ошибка сканера");
     }
 
-    private static BarcodeProcessingResult HandleBarcodeFailure(BarcodeStepResult result, Guid scanStepId)
+    private BarcodeProcessingResult HandleBarcodeFailure(BarcodeStepResult result, Guid scanStepId)
     {
+        statusReporter.ReportError(scanStepId, result.ErrorMessage!);
         if (result.MissingPlcTags.Count > 0)
         {
             return BarcodeProcessingResult.WithMissingPlcTags(scanStepId, result.ErrorMessage!, result.MissingPlcTags);
@@ -76,9 +78,10 @@ public class BarcodeProcessingPipeline(
         return resolveResult.UnknownSteps.Count > 0 ? HandleUnknownSteps(resolveResult.UnknownSteps, scanStepId) : ValidateRecipesAndStart(resolveResult.Maps!, scanStepId);
     }
 
-    private static BarcodeProcessingResult HandleUnknownSteps(IReadOnlyList<UnknownStepInfo> unknownSteps, Guid scanStepId)
+    private BarcodeProcessingResult HandleUnknownSteps(IReadOnlyList<UnknownStepInfo> unknownSteps, Guid scanStepId)
     {
         var error = $"Неизвестных шагов: {unknownSteps.Count}";
+        statusReporter.ReportError(scanStepId, error);
         return BarcodeProcessingResult.WithUnknownSteps(scanStepId, error, unknownSteps);
     }
 
@@ -105,11 +108,12 @@ public class BarcodeProcessingPipeline(
             .ToList();
     }
 
-    private static BarcodeProcessingResult HandleMissingRecipes(
+    private BarcodeProcessingResult HandleMissingRecipes(
         IReadOnlyList<MissingRecipeInfo> missingRecipes,
         Guid scanStepId)
     {
         var error = $"Отсутствуют рецепты: {missingRecipes.Count}";
+        statusReporter.ReportError(scanStepId, error);
         return BarcodeProcessingResult.WithMissingRecipes(scanStepId, error, missingRecipes);
     }
 

@@ -1,5 +1,5 @@
 using Final_Test_Hybrid.Services.OpcUa;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Recipe;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;

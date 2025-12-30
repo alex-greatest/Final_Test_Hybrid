@@ -1,5 +1,5 @@
 using System.Reflection;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;

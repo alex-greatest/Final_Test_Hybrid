@@ -102,6 +102,33 @@ Modals/                            # Диалоги копирования и о
 - `ErrorSettingsTemplateService` - CRUD для шаблонов ошибок
 - `DatabaseConnectionService` - Управление подключением к SQLite
 
+**Test Execution Services (`Services/Steps/Infrastructure/Execution/`):**
+
+Архитектура обновления грида (SRP):
+```
+ColumnExecutor ─────────┐
+ScanErrorHandler ───────┼──► StepStatusReporter ──► TestSequenseService
+BarcodeProcessingPipeline ──┘   (единственный        (CRUD хранилище,
+                                 фасад для            НЕ вызывать
+                                 обновлений)          напрямую!)
+```
+
+**ВАЖНО: Единая точка входа**
+- `StepStatusReporter` — **единственный** класс для обновления грида тестов
+- `TestSequenseService` — внутреннее хранилище, **НИКОГДА** не вызывать напрямую из других сервисов
+- UI компоненты (TestSequenseGrid, BoilerInfo) могут читать данные и подписываться на события
+
+Сервисы:
+- `StepStatusReporter` - Фасад для обновления грида (ReportStepStarted, ReportSuccess, ReportError, ClearAll)
+- `TestSequenseService` - CRUD хранилище данных грида (внутренний, не использовать напрямую)
+- `ColumnExecutor` - Выполнение шагов в колонке (4 параллельных executor'а)
+- `TestExecutionCoordinator` - Координация выполнения тестов
+- `ExecutionStateManager` - State machine состояния выполнения
+
+Error Handling (`ErrorHandling/`):
+- `ErrorPlcMonitor` - OPC UA подписки на сигналы ошибок (Retry, Skip)
+- `StepErrorHandler` - Бизнес-логика обработки ошибок
+
 ### Configuration (appsettings.json)
 
 **Configuration Sections:**

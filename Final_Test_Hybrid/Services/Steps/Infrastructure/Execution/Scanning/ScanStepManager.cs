@@ -2,11 +2,10 @@ using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.Extensions.Logging;
 
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 
 public class ScanStepManager : IDisposable
 {
@@ -200,3 +199,4 @@ public class ScanStepManager : IDisposable
         _coordinator.OnSequenceCompleted -= HandleSequenceCompleted;
     }
 }
+ 

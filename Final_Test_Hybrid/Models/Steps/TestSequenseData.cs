@@ -1,4 +1,4 @@
-namespace Final_Test_Hybrid.Models;
+namespace Final_Test_Hybrid.Models.Steps;
 
 public class TestSequenseData
 {

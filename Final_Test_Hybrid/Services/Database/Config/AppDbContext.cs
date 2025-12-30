@@ -14,6 +14,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<StepFinalTestHistory> StepFinalTestHistories => Set<StepFinalTestHistory>();
     public DbSet<ErrorSettingsTemplate> ErrorSettingsTemplates => Set<ErrorSettingsTemplate>();
     public DbSet<ErrorSettingsHistory> ErrorSettingsHistories => Set<ErrorSettingsHistory>();
+    public DbSet<Boiler> Boilers => Set<Boiler>();
+    public DbSet<Operation> Operations => Set<Operation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -27,6 +29,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         ConfigureStepFinalTestHistory(modelBuilder);
         ConfigureErrorSettingsTemplate(modelBuilder);
         ConfigureErrorSettingsHistory(modelBuilder);
+        ConfigureBoiler(modelBuilder);
+        ConfigureOperation(modelBuilder);
     }
 
     private static void ConfigureBoilerType(ModelBuilder modelBuilder)
@@ -220,6 +224,59 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .IsUnique()
                 .HasFilter("\"IS_ACTIVE\" = true")
                 .HasDatabaseName("IDX_TB_ERROR_SETTINGS_HISTORY_UNQ_ACTIVE");
+        });
+    }
+
+    private static void ConfigureBoiler(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Boiler>(entity =>
+        {
+            entity.ToTable("TB_BOILER");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("ID").ValueGeneratedOnAdd();
+            entity.Property(e => e.SerialNumber).HasColumnName("SERIAL_NUMBER").IsRequired().HasMaxLength(100);
+            entity.Property(e => e.BoilerTypeCycleId).HasColumnName("BOILER_TYPE_CYCLE_ID").IsRequired();
+            entity.Property(e => e.DateCreate).HasColumnName("DATE_CREATE").IsRequired();
+            entity.Property(e => e.DateUpdate).HasColumnName("DATE_UPDATE");
+            entity.Property(e => e.Status).HasColumnName("STATUS").IsRequired()
+                .HasConversion<string>().HasMaxLength(30);
+            entity.Property(e => e.Operator).HasColumnName("OPERATOR").IsRequired().HasMaxLength(255);
+            entity.HasOne(e => e.BoilerTypeCycle).WithMany().HasForeignKey(e => e.BoilerTypeCycleId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => e.SerialNumber).IsUnique().HasDatabaseName("IDX_TB_BOILER_UNQ_SERIAL_NUMBER");
+            entity.HasIndex(e => e.BoilerTypeCycleId).HasDatabaseName("IDX_TB_BOILER_BOILER_TYPE_CYCLE");
+            entity.HasIndex(e => e.Status).HasDatabaseName("IDX_TB_BOILER_STATUS");
+            entity.HasIndex(e => e.DateCreate).HasDatabaseName("IDX_TB_BOILER_DATE_CREATE");
+            entity.HasIndex(e => e.DateUpdate).HasDatabaseName("IDX_TB_BOILER_DATE_UPDATE");
+            entity.HasIndex(e => e.Operator).HasDatabaseName("IDX_TB_BOILER_OPERATOR");
+        });
+    }
+
+    private static void ConfigureOperation(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Operation>(entity =>
+        {
+            entity.ToTable("TB_OPERATION");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("ID").ValueGeneratedOnAdd();
+            entity.Property(e => e.DateStart).HasColumnName("DATE_START").IsRequired();
+            entity.Property(e => e.DateEnd).HasColumnName("DATE_END");
+            entity.Property(e => e.BoilerId).HasColumnName("BOILER_ID").IsRequired();
+            entity.Property(e => e.Status).HasColumnName("STATUS").IsRequired()
+                .HasConversion<string>().HasMaxLength(30);
+            entity.Property(e => e.NumberShift).HasColumnName("NUMBER_SHIFT").IsRequired();
+            entity.Property(e => e.Comment).HasColumnName("COMMENT_");
+            entity.Property(e => e.Version).HasColumnName("VERSION").IsRequired().IsConcurrencyToken();
+            entity.Property(e => e.Operator).HasColumnName("OPERATOR").IsRequired().HasMaxLength(255);
+            entity.HasOne(e => e.Boiler).WithMany().HasForeignKey(e => e.BoilerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => e.BoilerId).HasDatabaseName("IDX_TB_OPERATION_BOILER");
+            entity.HasIndex(e => e.Status).HasDatabaseName("IDX_TB_OPERATION_STATUS");
+            entity.HasIndex(e => e.DateStart).HasDatabaseName("IDX_TB_OPERATION_DATE_START");
+            entity.HasIndex(e => e.DateEnd).HasDatabaseName("IDX_TB_OPERATION_DATE_END");
+            entity.HasIndex(e => e.Operator).HasDatabaseName("IDX_TB_OPERATION_OPERATOR");
+            entity.HasIndex(e => new { e.BoilerId, e.DateStart })
+                .HasDatabaseName("IDX_TB_OPERATION_BOILER_DATE_START");
         });
     }
 }

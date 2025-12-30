@@ -1,5 +1,5 @@
-using Final_Test_Hybrid.Models;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
+using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 
@@ -56,7 +56,7 @@ public class TestSequenseService
         }
     }
 
-    public void SetSuccess(Guid id, string message = "")
+    public void SetSuccess(Guid id, string message = "", string? limits = null)
     {
         var updated = TryUpdateStep(id, step =>
         {
@@ -64,6 +64,7 @@ public class TestSequenseService
             step.IsSuccess = true;
             step.IsError = false;
             step.Result = message;
+            step.Range = limits ?? "";
             step.EndTime = DateTime.Now;
         });
         if (updated)
@@ -72,7 +73,7 @@ public class TestSequenseService
         }
     }
 
-    public void SetError(Guid id, string errorMessage)
+    public void SetError(Guid id, string errorMessage, string? limits = null)
     {
         var updated = TryUpdateStep(id, step =>
         {
@@ -80,6 +81,7 @@ public class TestSequenseService
             step.IsError = true;
             step.IsSuccess = false;
             step.Result = errorMessage;
+            step.Range = limits ?? "";
             step.EndTime = DateTime.Now;
         });
         if (updated)

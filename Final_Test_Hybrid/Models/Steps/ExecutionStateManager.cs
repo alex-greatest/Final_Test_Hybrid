@@ -1,6 +1,4 @@
-using Final_Test_Hybrid.Models.Steps;
-
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
+namespace Final_Test_Hybrid.Models.Steps;
 
 public enum ExecutionState
 {

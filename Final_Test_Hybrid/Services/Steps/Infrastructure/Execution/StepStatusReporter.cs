@@ -1,12 +1,10 @@
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 
 public class StepStatusReporter(TestSequenseService sequenseService)
 {
-    private const string DefaultErrorMessage = "Ошибка";
-
     public Guid ReportStepStarted(ITestStep step)
     {
         return sequenseService.AddStep(step);
@@ -19,13 +17,13 @@ public class StepStatusReporter(TestSequenseService sequenseService)
 
     public void ReportStepCompleted(Guid id, TestStepResult result)
     {
+        var limits = result.OutputData?.GetValueOrDefault("Limits")?.ToString();
         if (result.Success)
         {
-            ReportSuccess(id, result.Message);
+            ReportSuccess(id, result.Message, limits);
             return;
         }
-
-        ReportError(id, result.Message);
+        ReportError(id, result.Message, limits);
     }
 
     public void ReportRetry(Guid id)
@@ -40,13 +38,18 @@ public class StepStatusReporter(TestSequenseService sequenseService)
     {
     }
 
-    public void ReportError(Guid id, string message)
+    public void ReportError(Guid id, string message, string? limits = null)
     {
-        sequenseService.SetError(id, message);
+        sequenseService.SetError(id, message, limits);
     }
 
-    public void ReportSuccess(Guid id, string message = "")
+    public void ReportSuccess(Guid id, string message = "", string? limits = null)
     {
-        sequenseService.SetSuccess(id, message);
+        sequenseService.SetSuccess(id, message, limits);
+    }
+
+    public void ClearAll()
+    {
+        sequenseService.ClearAll();
     }
 }

@@ -1,4 +1,4 @@
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
 
 public interface ITestStepRegistry
 {
