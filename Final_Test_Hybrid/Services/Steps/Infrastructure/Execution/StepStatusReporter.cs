@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
@@ -8,6 +9,11 @@ public class StepStatusReporter(TestSequenseService sequenseService)
     public Guid ReportStepStarted(ITestStep step)
     {
         return sequenseService.AddStep(step);
+    }
+
+    public Guid ReportStepStarted(IPreExecutionStep step)
+    {
+        return sequenseService.AddStep(step.Name, step.Description);
     }
 
     public Guid ReportStepStarted(string name, string description)

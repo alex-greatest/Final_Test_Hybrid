@@ -2,7 +2,8 @@ using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
-using Final_Test_Hybrid.Services.Steps.Validation;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
@@ -12,7 +13,7 @@ public class ScanStepManager : IDisposable
     private const int MessagePriority = 100;
     private readonly ScanSessionManager _sessionManager;
     private readonly ScanInputStateManager _inputStateManager;
-    private readonly BarcodeProcessingPipeline _pipeline;
+    private readonly PreExecutionCoordinator _preExecutionCoordinator;
     private readonly ScanErrorHandler _errorHandler;
     private readonly OperatorState _operatorState;
     private readonly AutoReadySubscription _autoReady;
@@ -28,34 +29,14 @@ public class ScanStepManager : IDisposable
         remove => _inputStateManager.OnStateChanged -= value;
     }
 
-    public event Func<IReadOnlyList<string>, Task>? OnMissingPlcTagsDialogRequested
-    {
-        add => _errorHandler.OnMissingPlcTagsDialogRequested += value;
-        remove => _errorHandler.OnMissingPlcTagsDialogRequested -= value;
-    }
-
-    public event Func<IReadOnlyList<string>, Task>? OnMissingRequiredTagsDialogRequested
-    {
-        add => _errorHandler.OnMissingRequiredTagsDialogRequested += value;
-        remove => _errorHandler.OnMissingRequiredTagsDialogRequested -= value;
-    }
-
-    public event Func<IReadOnlyList<UnknownStepInfo>, Task>? OnUnknownStepsDialogRequested
-    {
-        add => _errorHandler.OnUnknownStepsDialogRequested += value;
-        remove => _errorHandler.OnUnknownStepsDialogRequested -= value;
-    }
-
-    public event Func<IReadOnlyList<MissingRecipeInfo>, Task>? OnMissingRecipesDialogRequested
-    {
-        add => _errorHandler.OnMissingRecipesDialogRequested += value;
-        remove => _errorHandler.OnMissingRecipesDialogRequested -= value;
-    }
+    public event Func<IReadOnlyList<string>, Task>? OnMissingPlcTagsDialogRequested;
+    public event Func<IReadOnlyList<string>, Task>? OnMissingRequiredTagsDialogRequested;
+    public event Func<IReadOnlyList<UnknownStepInfo>, Task>? OnUnknownStepsDialogRequested;
 
     public ScanStepManager(
         ScanSessionManager sessionManager,
         ScanInputStateManager inputStateManager,
-        BarcodeProcessingPipeline pipeline,
+        PreExecutionCoordinator preExecutionCoordinator,
         ScanErrorHandler errorHandler,
         OperatorState operatorState,
         AutoReadySubscription autoReady,
@@ -66,7 +47,7 @@ public class ScanStepManager : IDisposable
     {
         _sessionManager = sessionManager;
         _inputStateManager = inputStateManager;
-        _pipeline = pipeline;
+        _preExecutionCoordinator = preExecutionCoordinator;
         _errorHandler = errorHandler;
         _operatorState = operatorState;
         _autoReady = autoReady;
@@ -154,12 +135,31 @@ public class ScanStepManager : IDisposable
     private async Task ExecuteBarcodeProcessing(string barcode)
     {
         BlockInput();
-        var result = await _pipeline.ProcessAsync(barcode);
-        await _errorHandler.HandleResultAsync(result);
-        if (!result.IsSuccess)
+        var result = await _preExecutionCoordinator.ExecuteAsync(barcode, CancellationToken.None);
+        if (result.Success)
         {
-            UnblockInput();
+            return;
         }
+        await HandlePreExecutionError(result);
+        UnblockInput();
+    }
+
+    private async Task HandlePreExecutionError(PreExecutionResult result)
+    {
+        _errorHandler.ShowError("Ошибка", result.ErrorMessage ?? "Неизвестная ошибка");
+        await RaiseDetailedErrorDialogAsync(result);
+    }
+
+    private async Task RaiseDetailedErrorDialogAsync(PreExecutionResult result)
+    {
+        var task = result.ErrorDetails switch
+        {
+            MissingPlcTagsDetails details => OnMissingPlcTagsDialogRequested?.Invoke(details.Tags),
+            MissingRequiredTagsDetails details => OnMissingRequiredTagsDialogRequested?.Invoke(details.Tags),
+            UnknownStepsDetails details => OnUnknownStepsDialogRequested?.Invoke(details.Steps),
+            _ => null
+        };
+        await (task ?? Task.CompletedTask);
     }
 
     private void BlockInput()

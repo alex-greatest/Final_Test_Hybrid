@@ -2,6 +2,7 @@ using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Logging;
@@ -11,7 +12,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps;
 public class ScanBarcodeMesStep(
     BarcodeScanService barcodeScanService,
     BoilerState boilerState,
-    ILogger<ScanBarcodeMesStep> logger) : ITestStep, IScanBarcodeStep
+    ILogger<ScanBarcodeMesStep> logger) : ITestStep, IScanBarcodeStep, IPreExecutionStep
 {
     public string Id => "scan-barcode-mes";
     public string Name => "Сканирование штрихкода MES";
@@ -49,5 +50,16 @@ public class ScanBarcodeMesStep(
     {
         // TODO: Отправка в MES при необходимости
         return Task.CompletedTask;
+    }
+
+    async Task<PreExecutionResult> IPreExecutionStep.ExecuteAsync(PreExecutionContext context, CancellationToken ct)
+    {
+        var result = await ProcessBarcodeAsync(context.Barcode);
+        if (!result.IsSuccess)
+        {
+            return PreExecutionResult.Fail(result.ErrorMessage!);
+        }
+        context.RawMaps = result.RawMaps;
+        return PreExecutionResult.Ok();
     }
 }

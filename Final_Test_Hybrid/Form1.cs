@@ -35,6 +35,8 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
@@ -98,6 +100,8 @@ namespace Final_Test_Hybrid
             services.AddSingleton<ErrorPlcMonitor>();
             services.AddSingleton<StepErrorHandler>();
             services.AddSingleton<TestExecutionCoordinator>();
+            services.AddSingleton<IPreExecutionStepRegistry, PreExecutionStepRegistry>();
+            services.AddSingleton<PreExecutionCoordinator>();
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();

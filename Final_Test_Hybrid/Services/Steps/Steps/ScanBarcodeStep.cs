@@ -8,6 +8,7 @@ using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
 using Final_Test_Hybrid.Services.SpringBoot.Shift;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Validation;
@@ -29,7 +30,7 @@ public class ScanBarcodeStep(
     ITestSequenceLoader sequenceLoader,
     ITestMapBuilder mapBuilder,
     ILogger<ScanBarcodeStep> logger,
-    ITestStepLogger testStepLogger) : ITestStep, IScanBarcodeStep
+    ITestStepLogger testStepLogger) : ITestStep, IScanBarcodeStep, IPreExecutionStep
 {
     public string Id => "scan-barcode";
     public string Name => "Сканирование штрихкода";
@@ -192,6 +193,17 @@ public class ScanBarcodeStep(
             boilerState.BoilerTypeCycle!.Id,
             operatorName);
         await operationService.CreateAsync(boiler.Id, operatorName, shiftState.ShiftNumber ?? 0);
+    }
+
+    async Task<PreExecutionResult> IPreExecutionStep.ExecuteAsync(PreExecutionContext context, CancellationToken ct)
+    {
+        var result = await ProcessBarcodeAsync(context.Barcode);
+        if (!result.IsSuccess)
+        {
+            return PreExecutionResult.Fail(result.ErrorMessage!);
+        }
+        context.RawMaps = result.RawMaps;
+        return PreExecutionResult.Ok();
     }
 
     private static IReadOnlyList<RecipeResponseDto> MapToRecipeResponseDtos(List<Recipe> recipes)
