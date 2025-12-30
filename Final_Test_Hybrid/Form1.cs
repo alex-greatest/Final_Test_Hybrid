@@ -251,6 +251,8 @@ namespace Final_Test_Hybrid
             services.AddSingleton<DatabaseConnectionState>();
             services.AddSingleton<DatabaseConnectionService>();
             services.AddScoped<BoilerTypeService>();
+            services.AddScoped<BoilerService>();
+            services.AddScoped<OperationService>();
             services.AddScoped<RecipeService>();
             services.AddScoped<ResultSettingsService>();
             services.AddScoped<StepFinalTestService>();

@@ -4,7 +4,9 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Database;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Scanner;
+using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
+using Final_Test_Hybrid.Services.SpringBoot.Shift;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
@@ -17,7 +19,11 @@ public class ScanBarcodeStep(
     BarcodeScanService barcodeScanService,
     BoilerTypeService boilerTypeService,
     RecipeService recipeService,
+    BoilerService boilerService,
+    OperationService operationService,
     BoilerState boilerState,
+    OperatorState operatorState,
+    ShiftState shiftState,
     RecipeTagValidator tagValidator,
     RequiredTagValidator requiredTagValidator,
     ITestSequenceLoader sequenceLoader,
@@ -47,7 +53,7 @@ public class ScanBarcodeStep(
             ?? CheckRequiredTags(ctx)*/
             ?? await LoadTestSequenceAsync(ctx)
             ?? BuildTestMaps(ctx)
-            ?? Success(ctx);
+            ?? await SuccessAsync(ctx);
     }
 
     private BarcodeStepResult? ValidateBarcode(BarcodeContext ctx)
@@ -167,12 +173,15 @@ public class ScanBarcodeStep(
         }
     }
 
-    private BarcodeStepResult Success(BarcodeContext ctx)
+    private async Task<BarcodeStepResult> SuccessAsync(BarcodeContext ctx)
     {
         logger.LogInformation("Успешно: {Serial}, {Article}, {Type}, рецептов: {Count}, RawMaps: {Maps}",
             ctx.Validation.Barcode, ctx.Validation.Article, ctx.Cycle.Type, ctx.Recipes.Count, ctx.RawMaps?.Count ?? 0);
         testStepLogger.LogInformation("Успешно: {Serial}, {Article}, {Type}, рецептов: {Count}, RawMaps: {Maps}",
             ctx.Validation.Barcode, ctx.Validation.Article, ctx.Cycle.Type, ctx.Recipes.Count, ctx.RawMaps?.Count ?? 0);
+        var operatorName = operatorState.Username ?? "Unknown";
+        var boiler = await boilerService.FindOrCreateAsync(ctx.Validation.Barcode, ctx.Cycle.Id, operatorName);
+        await operationService.CreateAsync(boiler.Id, operatorName, shiftState.ShiftNumber ?? 0);
         boilerState.SetData(ctx.Validation.Barcode, ctx.Validation.Article!, isValid: true, ctx.Cycle, ctx.Recipes);
         testStepLogger.LogStepEnd(Name);
         return BarcodeStepResult.Pass(ctx.RawMaps!);
