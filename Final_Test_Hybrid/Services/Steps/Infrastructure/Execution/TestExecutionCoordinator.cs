@@ -1,7 +1,7 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.OpcUa;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Logging;
 

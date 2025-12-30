@@ -1,6 +1,6 @@
 using System.Globalization;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
@@ -48,11 +48,7 @@ public class RecipeProvider : IRecipeProvider
     public T? GetValue<T>(string address) where T : struct
     {
         var recipe = GetByAddress(address);
-        if (recipe == null)
-        {
-            return null;
-        }
-        return ConvertValue<T>(recipe.Value);
+        return recipe == null ? null : ConvertValue<T>(recipe.Value);
     }
 
     public string? GetStringValue(string address)
