@@ -4,12 +4,12 @@ using Microsoft.Extensions.Logging;
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorHandling;
 
 /// <summary>
-/// Handles step errors by monitoring PLC signals and resolving errors via Retry or Skip.
+/// Handles step errors by listening to PLC signals and resolving errors via Retry or Skip.
+/// Subscribed to ErrorPlcMonitor at construction time (singleton lifecycle).
 /// </summary>
-public class StepErrorHandler : IDisposable
+public class StepErrorHandler
 {
     private readonly ExecutionStateManager _stateManager;
-    private readonly ErrorPlcMonitor _plcMonitor;
     private readonly ILogger<StepErrorHandler> _logger;
 
     public event Action<ErrorResolution>? OnResolutionReceived;
@@ -20,25 +20,8 @@ public class StepErrorHandler : IDisposable
         ILogger<StepErrorHandler> logger)
     {
         _stateManager = stateManager;
-        _plcMonitor = plcMonitor;
         _logger = logger;
-        _plcMonitor.OnSignalsChanged += HandlePlcSignals;
-    }
-
-    public void StartMonitoring()
-    {
-        _plcMonitor.StartMonitoring();
-    }
-
-    public void StopMonitoring()
-    {
-        _plcMonitor.StopMonitoring();
-    }
-
-    public void Dispose()
-    {
-        _plcMonitor.OnSignalsChanged -= HandlePlcSignals;
-        _plcMonitor.Dispose();
+        plcMonitor.OnSignalsChanged += HandlePlcSignals;
     }
 
     private void HandlePlcSignals(bool retry, bool skip)
@@ -47,13 +30,11 @@ public class StepErrorHandler : IDisposable
         {
             return;
         }
-
         if (retry)
         {
             ProcessRetrySignal();
             return;
         }
-
         if (skip)
         {
             ProcessSkipSignal();

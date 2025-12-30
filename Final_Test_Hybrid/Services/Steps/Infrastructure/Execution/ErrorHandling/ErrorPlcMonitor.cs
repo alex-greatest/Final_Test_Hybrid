@@ -1,124 +1,41 @@
 using Final_Test_Hybrid.Models.Plc.Tags;
-using Final_Test_Hybrid.Services.OpcUa;
+using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorHandling;
 
 /// <summary>
-/// Monitors PLC error handling signals (Retry, Skip).
+/// Monitors PLC error handling signals (Retry, Skip) via OPC UA subscriptions.
+/// Initialized once at application startup.
 /// </summary>
-public class ErrorPlcMonitor(OpcUaTagService opcUa, ILogger<ErrorPlcMonitor> logger) : IDisposable
+public class ErrorPlcMonitor(OpcUaSubscription subscription, ILogger<ErrorPlcMonitor> logger)
 {
-    private const int PollingIntervalMs = 100;
-    private readonly Lock _lock = new();
-    private CancellationTokenSource? _monitoringCts;
-    private bool _disposed;
-
     public event Action<bool, bool>? OnSignalsChanged;
 
-    public void StartMonitoring()
+    /// <summary>
+    /// Subscribes to error handling tags. Called once at application startup.
+    /// Throws if subscription fails — application should crash.
+    /// </summary>
+    public async Task InitializeAsync(CancellationToken ct = default)
     {
-        lock (_lock)
-        {
-            if (_disposed || _monitoringCts != null)
-            {
-                return;
-            }
-
-            _monitoringCts = new CancellationTokenSource();
-            _ = MonitorLoopAsync(_monitoringCts.Token);
-        }
+        await subscription.SubscribeAsync(BaseTags.ErrorRetry, OnRetryChanged, ct);
+        await subscription.SubscribeAsync(BaseTags.ErrorSkip, OnSkipChanged, ct);
+        logger.LogInformation("Подписка на теги ошибок создана (ErrorRetry, ErrorSkip)");
     }
 
-    public void StopMonitoring()
+    private Task OnRetryChanged(object? value)
     {
-        lock (_lock)
-        {
-            if (_monitoringCts == null)
-            {
-                return;
-            }
-
-            CancelAndDisposeMonitoring();
-        }
+        logger.LogInformation("ErrorRetry = {Value}", value);
+        if (value is not true) return Task.CompletedTask;
+        OnSignalsChanged?.Invoke(true, false);
+        return Task.CompletedTask;
     }
 
-    public void Dispose()
+    private Task OnSkipChanged(object? value)
     {
-        lock (_lock)
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            _disposed = true;
-            CancelAndDisposeMonitoring();
-        }
+        logger.LogInformation("ErrorSkip = {Value}", value);
+        if (value is not true) return Task.CompletedTask;
+        OnSignalsChanged?.Invoke(false, true);
+        return Task.CompletedTask;
     }
-
-    private void CancelAndDisposeMonitoring()
-    {
-        _monitoringCts?.Cancel();
-        _monitoringCts?.Dispose();
-        _monitoringCts = null;
-    }
-
-    private async Task MonitorLoopAsync(CancellationToken cancellationToken)
-    {
-        logger.LogDebug("ErrorPlcMonitor started");
-        try
-        {
-            await ExecutePollingLoop(cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected when stopping
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error in PLC monitor loop");
-        }
-        logger.LogDebug("ErrorPlcMonitor stopped");
-    }
-
-    private async Task ExecutePollingLoop(CancellationToken cancellationToken)
-    {
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            await PollAndNotifyAsync(cancellationToken);
-            await Task.Delay(PollingIntervalMs, cancellationToken);
-        }
-    }
-
-    private async Task PollAndNotifyAsync(CancellationToken cancellationToken)
-    {
-        var signals = await ReadAllSignalsAsync(cancellationToken);
-        OnSignalsChanged?.Invoke(signals.Retry, signals.Skip);
-    }
-
-    private async Task<PlcErrorSignals> ReadAllSignalsAsync(CancellationToken cancellationToken)
-    {
-        var retryTask = ReadBoolTagAsync(BaseTags.ErrorRetry, cancellationToken);
-        var skipTask = ReadBoolTagAsync(BaseTags.ErrorSkip, cancellationToken);
-
-        await Task.WhenAll(retryTask, skipTask);
-
-        return new PlcErrorSignals(
-            Retry: await retryTask,
-            Skip: await skipTask);
-    }
-
-    private async Task<bool> ReadBoolTagAsync(string tagId, CancellationToken cancellationToken)
-    {
-        var result = await opcUa.ReadAsync<bool>(tagId, cancellationToken);
-        if (result.Error == null)
-        {
-            return result.Value;
-        }
-        logger.LogWarning("Failed to read {TagId}: {Error}", tagId, result.Error);
-        return false;
-    }
-
-    private record PlcErrorSignals(bool Retry, bool Skip);
 }

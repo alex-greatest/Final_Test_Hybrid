@@ -257,8 +257,8 @@ public class OpcUaSubscription(
     private void StoreAndLogValue(string nodeId, object? value)
     {
         _values[nodeId] = value;
-        logger.LogDebug("Тег {NodeId} = {Value}", nodeId, value);
-        subscriptionLogger.LogDebug("Тег {NodeId} = {Value}", nodeId, value);
+        logger.LogInformation("Тег {NodeId} = {Value}", nodeId, value);
+        subscriptionLogger.LogInformation("Тег {NodeId} = {Value}", nodeId, value);
     }
 
     private void InvokeCallbacks(string nodeId, object? value)

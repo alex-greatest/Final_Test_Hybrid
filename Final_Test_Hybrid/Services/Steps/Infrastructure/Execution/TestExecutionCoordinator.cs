@@ -236,7 +236,6 @@ public class TestExecutionCoordinator : IDisposable
     {
         _stateManager.TransitionTo(ExecutionState.Running);
         _cts = new CancellationTokenSource();
-        _errorHandler.StartMonitoring();
         _logger.LogInformation("Запуск {Count} Maps", _maps.Count);
         _testLogger.LogInformation("═══ ЗАПУСК ТЕСТИРОВАНИЯ ({Count} блоков) ═══", _maps.Count);
     }
@@ -323,7 +322,6 @@ public class TestExecutionCoordinator : IDisposable
 
     private void Complete()
     {
-        _errorHandler.StopMonitoring();
         var finalState = HasErrors ? ExecutionState.Failed : ExecutionState.Completed;
         _stateManager.TransitionTo(finalState);
         LogExecutionCompleted();
@@ -345,7 +343,6 @@ public class TestExecutionCoordinator : IDisposable
             {
                 return;
             }
-
             LogStopRequested();
             _cts?.Cancel();
         }

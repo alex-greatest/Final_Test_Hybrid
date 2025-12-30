@@ -287,6 +287,10 @@ namespace Final_Test_Hybrid
             _opcUaService = serviceProvider.GetRequiredService<OpcUaConnectionService>();
             _opcUaService.ValidateSettings();
             await _opcUaService.ConnectAsync();
+
+            // Подписка на теги ошибок — если не удастся, приложение упадёт
+            var errorPlcMonitor = serviceProvider.GetRequiredService<ErrorPlcMonitor>();
+            await errorPlcMonitor.InitializeAsync();
         }
 
         protected override async void OnFormClosing(FormClosingEventArgs e)
