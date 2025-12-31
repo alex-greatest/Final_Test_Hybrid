@@ -1,0 +1,16 @@
+@if (IsVisible)
+{
+    <div class="subscription-overlay">
+        <RadzenProgressBarCircular
+            Value="100"
+            ShowValue="false"
+            Mode="ProgressBarMode.Indeterminate"
+            Size="ProgressBarCircularSize.Large" />
+        <div class="subscription-text">Выполняется подписка...</div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+}

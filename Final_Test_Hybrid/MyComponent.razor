@@ -2,6 +2,12 @@
 @using Final_Test_Hybrid.Components.Indicators
 @using Final_Test_Hybrid.Components.Main
 @using Final_Test_Hybrid.Components.Overview
+@using Final_Test_Hybrid.Components.Loading
+@using Final_Test_Hybrid.Services.OpcUa
+@inject PlcSubscriptionState SubscriptionState
+@implements IDisposable
+
+<SubscriptionLoadingOverlay IsVisible="@SubscriptionState.IsInitializing" />
 
 <RadzenDialog />
 <RadzenNotification />
@@ -9422,4 +9428,19 @@
 @code {
     private int selectedIndex = 0;
     private int innerSelectedIndex = 0;
+
+    protected override void OnInitialized()
+    {
+        SubscriptionState.OnStateChanged += HandleStateChanged;
+    }
+
+    private void HandleStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        SubscriptionState.OnStateChanged -= HandleStateChanged;
+    }
 }

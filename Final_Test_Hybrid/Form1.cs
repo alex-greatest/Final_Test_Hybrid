@@ -82,6 +82,9 @@ namespace Final_Test_Hybrid
             services.AddSingleton<RecipeTagValidator>();
             services.AddSingleton<RequiredTagValidator>();
             services.AddSingleton<RecipeValidator>();
+            services.AddSingleton<PlcSubscriptionValidator>();
+            services.AddSingleton<PlcSubscriptionState>();
+            services.AddSingleton<PlcSubscriptionInitializer>();
             services.AddSingleton<IRecipeProvider, RecipeProvider>();
             services.AddSingleton<MessageService>();
             services.AddSingleton<AutoReadySubscription>();
@@ -308,6 +311,10 @@ namespace Final_Test_Hybrid
             // Подписка на теги ошибок — если не удастся, приложение упадёт
             var errorPlcMonitor = serviceProvider.GetRequiredService<ErrorPlcMonitor>();
             await errorPlcMonitor.InitializeAsync();
+
+            // Подписка на теги всех шагов — если не удастся, приложение упадёт
+            var subscriptionInitializer = serviceProvider.GetRequiredService<PlcSubscriptionInitializer>();
+            await subscriptionInitializer.InitializeAsync();
         }
 
         protected override async void OnFormClosing(FormClosingEventArgs e)
