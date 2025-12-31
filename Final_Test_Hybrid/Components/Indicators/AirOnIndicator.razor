@@ -26,6 +26,6 @@
 
     public async ValueTask DisposeAsync()
     {
-        await Subscription.UnsubscribeAsync(BaseTags.PneuValveEv31AirOn, OnValueChanged);
+        await Subscription.UnsubscribeAsync(BaseTags.PneuValveEv31AirOn, OnValueChanged, removeTag: false, ct: CancellationToken.None);
     }
 }

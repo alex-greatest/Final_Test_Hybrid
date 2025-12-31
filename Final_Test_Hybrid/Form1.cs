@@ -6,6 +6,7 @@ using Final_Test_Hybrid.Services.Database.Config;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
+using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.IO;
 using Final_Test_Hybrid.Services.Common.UI;
 using Final_Test_Hybrid.Services.Steps;
@@ -100,7 +101,9 @@ namespace Final_Test_Hybrid
             services.AddSingleton<StepStatusReporter>();
             services.AddSingleton<ErrorPlcMonitor>();
             services.AddSingleton<StepErrorHandler>();
+            services.AddSingleton<PauseTokenSource>();
             services.AddSingleton<TestExecutionCoordinator>();
+            services.AddSingleton<TestInterruptCoordinator>();
             services.AddSingleton<IPreExecutionStepRegistry, PreExecutionStepRegistry>();
             services.AddSingleton<IPreExecutionStep, ScanBarcodeStep>();
             services.AddSingleton<IPreExecutionStep, ScanBarcodeMesStep>();
@@ -215,6 +218,8 @@ namespace Final_Test_Hybrid
             services.AddSingleton<OpcUaConnectionService>();
             services.AddSingleton<OpcUaTagService>();
             services.AddSingleton<OpcUaBrowseService>();
+            services.AddSingleton<PausableOpcUaTagService>();
+            services.AddSingleton<PausableTagWaiter>();
         }
 
         private void RegisterSpringBootServices(ServiceCollection services)

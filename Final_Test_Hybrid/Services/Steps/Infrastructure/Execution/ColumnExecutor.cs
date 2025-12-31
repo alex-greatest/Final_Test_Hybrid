@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
@@ -11,7 +12,8 @@ public class ColumnExecutor(
     TestStepContext context,
     ITestStepLogger testLogger,
     ILogger logger,
-    StepStatusReporter statusReporter)
+    StepStatusReporter statusReporter,
+    PauseTokenSource pauseToken)
 {
     private record StepState(
         string? Name,
@@ -44,6 +46,7 @@ public class ColumnExecutor(
             .Where(step => step != null);
         foreach (var step in stepsToExecute)
         {
+            await pauseToken.WaitWhilePausedAsync(ct);
             await ExecuteStep(step!, ct);
         }
         ClearStatusIfNotFailed();

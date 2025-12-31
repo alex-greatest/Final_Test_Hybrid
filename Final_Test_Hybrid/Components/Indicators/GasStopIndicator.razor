@@ -26,6 +26,6 @@
 
     public async ValueTask DisposeAsync()
     {
-        await Subscription.UnsubscribeAsync(BaseTags.Sb3011, OnValueChanged);
+        await Subscription.UnsubscribeAsync(BaseTags.Sb3011, OnValueChanged, removeTag: false, ct: CancellationToken.None);
     }
 }

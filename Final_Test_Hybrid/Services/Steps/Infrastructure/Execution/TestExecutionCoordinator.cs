@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorHandling;
@@ -16,6 +17,7 @@ public class TestExecutionCoordinator : IDisposable
     private readonly ITestStepLogger _testLogger;
     private readonly ExecutionStateManager _stateManager;
     private readonly StepErrorHandler _errorHandler;
+    private readonly PauseTokenSource _pauseToken;
     private readonly Lock _stateLock = new();
     private readonly Action _onExecutorStateChanged;
     private List<TestMap> _maps = [];
@@ -42,12 +44,14 @@ public class TestExecutionCoordinator : IDisposable
         StepStatusReporter statusReporter,
         IRecipeProvider recipeProvider,
         ExecutionStateManager stateManager,
-        StepErrorHandler errorHandler)
+        StepErrorHandler errorHandler,
+        PauseTokenSource pauseToken)
     {
         _logger = logger;
         _testLogger = testLogger;
         _stateManager = stateManager;
         _errorHandler = errorHandler;
+        _pauseToken = pauseToken;
         _onExecutorStateChanged = HandleExecutorStateChanged;
         _executors = CreateAllExecutors(opcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider);
         SubscribeToExecutorEvents();
@@ -62,7 +66,7 @@ public class TestExecutionCoordinator : IDisposable
         IRecipeProvider recipeProvider)
     {
         return Enumerable.Range(0, ColumnCount)
-            .Select(index => CreateExecutor(index, opcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider))
+            .Select(index => CreateExecutor(index, opcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider, _pauseToken))
             .ToArray();
     }
 
@@ -72,11 +76,12 @@ public class TestExecutionCoordinator : IDisposable
         ITestStepLogger testLogger,
         ILoggerFactory loggerFactory,
         StepStatusReporter statusReporter,
-        IRecipeProvider recipeProvider)
+        IRecipeProvider recipeProvider,
+        PauseTokenSource pauseToken)
     {
         var context = new TestStepContext(index, opcUa, loggerFactory.CreateLogger($"Column{index}"), recipeProvider);
         var executorLogger = loggerFactory.CreateLogger<ColumnExecutor>();
-        return new ColumnExecutor(index, context, testLogger, executorLogger, statusReporter);
+        return new ColumnExecutor(index, context, testLogger, executorLogger, statusReporter, pauseToken);
     }
 
     private void SubscribeToExecutorEvents()
@@ -233,6 +238,7 @@ public class TestExecutionCoordinator : IDisposable
     private void BeginExecution()
     {
         _stateManager.TransitionTo(ExecutionState.Running);
+        _cts?.Dispose();
         _cts = new CancellationTokenSource();
         _logger.LogInformation("Запуск {Count} Maps", _maps.Count);
         _testLogger.LogInformation("═══ ЗАПУСК ТЕСТИРОВАНИЯ ({Count} блоков) ═══", _maps.Count);
