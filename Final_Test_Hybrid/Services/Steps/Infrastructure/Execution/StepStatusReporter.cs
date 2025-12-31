@@ -1,24 +1,33 @@
+using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 
-public class StepStatusReporter(TestSequenseService sequenseService)
+public class StepStatusReporter
 {
+    private readonly TestSequenseService _sequenseService;
+
+    public StepStatusReporter(TestSequenseService sequenseService, AppSettingsService appSettings)
+    {
+        _sequenseService = sequenseService;
+        appSettings.UseMesChanged += _ => ClearAll();
+    }
+
     public Guid ReportStepStarted(ITestStep step)
     {
-        return sequenseService.AddStep(step);
+        return _sequenseService.AddStep(step);
     }
 
     public Guid ReportStepStarted(IPreExecutionStep step)
     {
-        return sequenseService.AddStep(step.Name, step.Description);
+        return _sequenseService.AddStep(step.Name, step.Description);
     }
 
     public Guid ReportStepStarted(string name, string description)
     {
-        return sequenseService.AddStep(name, description);
+        return _sequenseService.AddStep(name, description);
     }
 
     public void ReportStepCompleted(Guid id, TestStepResult result)
@@ -34,7 +43,7 @@ public class StepStatusReporter(TestSequenseService sequenseService)
 
     public void ReportRetry(Guid id)
     {
-        sequenseService.SetRunning(id);
+        _sequenseService.SetRunning(id);
     }
 
     /// <summary>
@@ -46,16 +55,16 @@ public class StepStatusReporter(TestSequenseService sequenseService)
 
     public void ReportError(Guid id, string message, string? limits = null)
     {
-        sequenseService.SetError(id, message, limits);
+        _sequenseService.SetError(id, message, limits);
     }
 
     public void ReportSuccess(Guid id, string message = "", string? limits = null)
     {
-        sequenseService.SetSuccess(id, message, limits);
+        _sequenseService.SetSuccess(id, message, limits);
     }
 
     public void ClearAll()
     {
-        sequenseService.ClearAll();
+        _sequenseService.ClearAll();
     }
 }

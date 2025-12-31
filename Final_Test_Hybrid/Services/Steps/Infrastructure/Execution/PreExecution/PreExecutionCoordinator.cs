@@ -21,6 +21,7 @@ public class PreExecutionCoordinator(
 {
     public async Task<PreExecutionResult> ExecuteAsync(string barcode, CancellationToken ct)
     {
+        statusReporter.ClearAll();
         var context = CreateContext(barcode);
         var stepsResult = await ExecuteAllStepsAsync(context, ct);
         if (!stepsResult.Success)

@@ -37,6 +37,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
+using Final_Test_Hybrid.Services.Steps.Steps;
 using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
@@ -101,6 +102,8 @@ namespace Final_Test_Hybrid
             services.AddSingleton<StepErrorHandler>();
             services.AddSingleton<TestExecutionCoordinator>();
             services.AddSingleton<IPreExecutionStepRegistry, PreExecutionStepRegistry>();
+            services.AddSingleton<IPreExecutionStep, ScanBarcodeStep>();
+            services.AddSingleton<IPreExecutionStep, ScanBarcodeMesStep>();
             services.AddSingleton<PreExecutionCoordinator>();
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();

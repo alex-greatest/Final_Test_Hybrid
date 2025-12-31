@@ -1,6 +1,8 @@
+@implements IDisposable
+
 <div class="switch-mes">
     <span class="switch-mes-label">Работа с MES</span>
     <div class="switch-wrapper" @onclick="OnSwitchClick">
-        <RadzenCheckBox Value="@_useMes" ReadOnly="true" Style="transform: scale(1.5); transform-origin: center center;" />
+        <RadzenCheckBox Value="@_useMes" ReadOnly="true" Disabled="@IsDisabled" Style="transform: scale(1.5); transform-origin: center center;" />
     </div>
 </div>

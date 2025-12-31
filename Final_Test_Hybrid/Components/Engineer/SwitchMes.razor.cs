@@ -1,12 +1,13 @@
 using Final_Test_Hybrid.Components.Engineer.Modals;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 using Microsoft.AspNetCore.Components;
 using Radzen;
 
 namespace Final_Test_Hybrid.Components.Engineer;
 
-public partial class SwitchMes
+public partial class SwitchMes : IDisposable
 {
     [Inject]
     public required AppSettingsService AppSettingsService { get; set; }
@@ -18,15 +19,28 @@ public partial class SwitchMes
     public required OperatorAuthService OperatorAuthService { get; set; }
     [Inject]
     public required NotificationService NotificationService { get; set; }
+    [Inject]
+    public required ScanStepManager ScanStepManager { get; set; }
     private bool _useMes;
+    private bool IsDisabled => ScanStepManager.IsProcessing;
 
     protected override void OnInitialized()
     {
         _useMes = AppSettingsService.UseMes;
+        ScanStepManager.OnChange += HandleScanStateChanged;
+    }
+
+    private void HandleScanStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
     }
 
     private async Task OnSwitchClick()
     {
+        if (IsDisabled)
+        {
+            return;
+        }
         var result = await ShowPasswordDialog();
         if (!result)
         {
@@ -77,5 +91,10 @@ public partial class SwitchMes
             new Dictionary<string, object>(),
             new DialogOptions { Width = "350px", CloseDialogOnOverlayClick = false });
         return result is true;
+    }
+
+    public void Dispose()
+    {
+        ScanStepManager.OnChange -= HandleScanStateChanged;
     }
 }

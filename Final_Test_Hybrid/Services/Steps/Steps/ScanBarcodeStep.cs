@@ -108,19 +108,13 @@ public class ScanBarcodeStep(
         {
             return null;
         }
-        boilerState.Clear();
         return BarcodeStepResult.FailPlcTags(result.ErrorMessage!, result.MissingTags);
     }
 
     private BarcodeStepResult? CheckRequiredTags(BarcodeContext ctx)
     {
         var result = requiredTagValidator.Validate(ctx.Recipes);
-        if (result.Success)
-        {
-            return null;
-        }
-        boilerState.Clear();
-        return BarcodeStepResult.FailRequiredTags(result.ErrorMessage!, result.MissingTags);
+        return result.Success ? null : BarcodeStepResult.FailRequiredTags(result.ErrorMessage!, result.MissingTags);
     }
 
     private async Task<BarcodeStepResult?> LoadTestSequenceAsync(BarcodeContext ctx)
@@ -148,7 +142,6 @@ public class ScanBarcodeStep(
     private BarcodeStepResult Fail(string error, LogLevel level = LogLevel.None)
     {
         LogByLevel(error, level);
-        boilerState.Clear();
         return BarcodeStepResult.Fail(error);
     }
 

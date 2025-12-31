@@ -3,6 +3,7 @@
 @using Final_Test_Hybrid.Services.Main
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning
+@using Final_Test_Hybrid.Services.Steps.Validation
 @inject ScanStepManager ScanStepManager
 @inject BoilerState BoilerState
 @inject TestSequenseService TestSequenseService
@@ -37,6 +38,7 @@
         ScanStepManager.OnMissingPlcTagsDialogRequested += ShowMissingPlcTagsDialogAsync;
         ScanStepManager.OnMissingRequiredTagsDialogRequested += ShowMissingRequiredTagsDialogAsync;
         ScanStepManager.OnUnknownStepsDialogRequested += ShowUnknownStepsDialogAsync;
+        ScanStepManager.OnMissingRecipesDialogRequested += ShowMissingRecipesDialogAsync;
     }
 
     private string GetDisplayValue() => BoilerState.SerialNumber ?? _manualInput;
@@ -137,6 +139,20 @@
         });
     }
 
+    private async Task ShowMissingRecipesDialogAsync(IReadOnlyList<MissingRecipeInfo> missingRecipes)
+    {
+        await InvokeAsync(async () =>
+        {
+            await DialogService.OpenAsync<MissingRecipesDialog>(
+                "Отсутствующие рецепты",
+                new Dictionary<string, object>
+                {
+                    { "MissingRecipes", missingRecipes.ToList() }
+                },
+                CreateFullScreenDialogOptions("missing-recipes-dialog-window"));
+        });
+    }
+
     private static DialogOptions CreateFullScreenDialogOptions(string cssClass)
     {
         return new DialogOptions
@@ -157,5 +173,6 @@
         ScanStepManager.OnMissingPlcTagsDialogRequested -= ShowMissingPlcTagsDialogAsync;
         ScanStepManager.OnMissingRequiredTagsDialogRequested -= ShowMissingRequiredTagsDialogAsync;
         ScanStepManager.OnUnknownStepsDialogRequested -= ShowUnknownStepsDialogAsync;
+        ScanStepManager.OnMissingRecipesDialogRequested -= ShowMissingRecipesDialogAsync;
     }
 }

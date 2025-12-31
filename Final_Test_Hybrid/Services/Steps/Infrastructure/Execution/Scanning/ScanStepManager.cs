@@ -4,6 +4,7 @@ using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
+using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
@@ -32,6 +33,7 @@ public class ScanStepManager : IDisposable
     public event Func<IReadOnlyList<string>, Task>? OnMissingPlcTagsDialogRequested;
     public event Func<IReadOnlyList<string>, Task>? OnMissingRequiredTagsDialogRequested;
     public event Func<IReadOnlyList<UnknownStepInfo>, Task>? OnUnknownStepsDialogRequested;
+    public event Func<IReadOnlyList<MissingRecipeInfo>, Task>? OnMissingRecipesDialogRequested;
 
     public ScanStepManager(
         ScanSessionManager sessionManager,
@@ -157,6 +159,7 @@ public class ScanStepManager : IDisposable
             MissingPlcTagsDetails details => OnMissingPlcTagsDialogRequested?.Invoke(details.Tags),
             MissingRequiredTagsDetails details => OnMissingRequiredTagsDialogRequested?.Invoke(details.Tags),
             UnknownStepsDetails details => OnUnknownStepsDialogRequested?.Invoke(details.Steps),
+            MissingRecipesDetails details => OnMissingRecipesDialogRequested?.Invoke(details.Recipes),
             _ => null
         };
         await (task ?? Task.CompletedTask);

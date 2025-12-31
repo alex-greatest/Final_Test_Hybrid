@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Database;
+using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
 
 namespace Final_Test_Hybrid.Services.Main;
@@ -6,6 +7,11 @@ namespace Final_Test_Hybrid.Services.Main;
 public class BoilerState
 {
     private readonly Lock _lock = new();
+
+    public BoilerState(AppSettingsService appSettings)
+    {
+        appSettings.UseMesChanged += _ => Clear();
+    }
     private string? _serialNumber;
     private string? _article;
     private bool _isValid;
