@@ -238,6 +238,8 @@ public class TestExecutionCoordinator : IDisposable
     private void BeginExecution()
     {
         _stateManager.TransitionTo(ExecutionState.Running);
+        _errorResolutionTcs?.TrySetCanceled();
+        _errorResolutionTcs = null;
         _cts?.Dispose();
         _cts = new CancellationTokenSource();
         _logger.LogInformation("Запуск {Count} Maps", _maps.Count);

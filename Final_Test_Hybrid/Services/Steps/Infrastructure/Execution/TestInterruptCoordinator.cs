@@ -179,6 +179,7 @@ public class TestInterruptCoordinator : IDisposable
     private void Reset()
     {
         _logger.LogInformation("Сброс теста");
+        _pauseToken.Resume();
         _testCoordinator.Stop();
         _statusReporter.ClearAll();
         _boilerState.Clear();
