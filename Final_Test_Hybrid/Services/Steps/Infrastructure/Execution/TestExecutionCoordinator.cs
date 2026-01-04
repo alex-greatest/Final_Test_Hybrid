@@ -18,6 +18,7 @@ public class TestExecutionCoordinator : IDisposable
     private readonly ExecutionStateManager _stateManager;
     private readonly StepErrorHandler _errorHandler;
     private readonly PauseTokenSource _pauseToken;
+    private readonly ExecutionActivityTracker _activityTracker;
     private readonly Lock _stateLock = new();
     private readonly Action _onExecutorStateChanged;
     private List<TestMap> _maps = [];
@@ -45,13 +46,15 @@ public class TestExecutionCoordinator : IDisposable
         IRecipeProvider recipeProvider,
         ExecutionStateManager stateManager,
         StepErrorHandler errorHandler,
-        PauseTokenSource pauseToken)
+        PauseTokenSource pauseToken,
+        ExecutionActivityTracker activityTracker)
     {
         _logger = logger;
         _testLogger = testLogger;
         _stateManager = stateManager;
         _errorHandler = errorHandler;
         _pauseToken = pauseToken;
+        _activityTracker = activityTracker;
         _onExecutorStateChanged = HandleExecutorStateChanged;
         _executors = CreateAllExecutors(opcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider);
         SubscribeToExecutorEvents();
@@ -238,6 +241,7 @@ public class TestExecutionCoordinator : IDisposable
     private void BeginExecution()
     {
         _stateManager.TransitionTo(ExecutionState.Running);
+        _activityTracker.SetTestExecutionActive(true);
         _errorResolutionTcs?.TrySetCanceled();
         _errorResolutionTcs = null;
         _cts?.Dispose();
@@ -330,6 +334,7 @@ public class TestExecutionCoordinator : IDisposable
     {
         var finalState = HasErrors ? ExecutionState.Failed : ExecutionState.Completed;
         _stateManager.TransitionTo(finalState);
+        _activityTracker.SetTestExecutionActive(false);
         LogExecutionCompleted();
         OnSequenceCompleted?.Invoke();
     }

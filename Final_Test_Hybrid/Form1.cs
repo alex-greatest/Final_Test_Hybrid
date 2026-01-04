@@ -89,6 +89,9 @@ namespace Final_Test_Hybrid
             services.AddSingleton<MessageService>();
             services.AddSingleton<AutoReadySubscription>();
             services.AddSingleton<MessageServiceInitializer>();
+            services.AddSingleton<ExecutionActivityTracker>();
+            services.AddSingleton<ExecutionMessageState>();
+            services.AddSingleton<InterruptMessageState>();
             services.AddSingleton<TestSequenseService>();
             services.AddSingleton<BoilerState>();
             services.AddSingleton<BarcodeScanService>();
@@ -286,6 +289,16 @@ namespace Final_Test_Hybrid
         {
             var initializer = serviceProvider.GetRequiredService<MessageServiceInitializer>();
             await initializer.InitializeAsync();
+
+            var messageService = serviceProvider.GetRequiredService<MessageService>();
+            var executionState = serviceProvider.GetRequiredService<ExecutionMessageState>();
+            var interruptState = serviceProvider.GetRequiredService<InterruptMessageState>();
+
+            messageService.RegisterProvider(110, executionState.GetMessage);
+            messageService.RegisterProvider(120, interruptState.GetMessage);
+
+            executionState.OnChange += messageService.NotifyChanged;
+            interruptState.OnChange += messageService.NotifyChanged;
         }
 
         private void StartSpringBootHealthCheck(ServiceProvider serviceProvider)

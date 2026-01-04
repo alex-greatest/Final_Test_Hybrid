@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Final_Test_Hybrid** is a hybrid WinForms + Blazor desktop application for managing industrial test sequences.
 
-> **См. также:** [ARCHITECTURE.md](ARCHITECTURE.md) — детальная архитектура системы выполнения тестов (PreExecution, TestExecution, передача данных между шагами).
+> **См. также:**
+> - [ARCHITECTURE.md](ARCHITECTURE.md) — детальная архитектура системы выполнения тестов (PreExecution, TestExecution, передача данных между шагами)
+> - [MessageServiceDescription.md](MessageServiceDescription.md) — система управления сообщениями (приоритеты, состояния, прерывания)
 
 It runs on .NET 10 with a Windows Forms host containing a BlazorWebView control that renders the UI using Radzen Blazor components.
 

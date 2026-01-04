@@ -9,9 +9,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 
+/// <summary>
+/// Manages barcode scanning workflow: session control, barcode processing, and error handling.
+/// Coordinates between scanner hardware, PreExecution pipeline, and UI notifications.
+/// </summary>
 public class ScanStepManager : IDisposable
 {
     private const int MessagePriority = 100;
+    private const string ScanPromptMessage = "Отсканируйте серийный номер котла";
     private readonly ScanSessionManager _sessionManager;
     private readonly ScanInputStateManager _inputStateManager;
     private readonly PreExecutionCoordinator _preExecutionCoordinator;
@@ -19,9 +24,12 @@ public class ScanStepManager : IDisposable
     private readonly OperatorState _operatorState;
     private readonly AutoReadySubscription _autoReady;
     private readonly MessageService _messageService;
+    private readonly ExecutionMessageState _executionMessageState;
     private readonly TestExecutionCoordinator _coordinator;
     private readonly ITestStepLogger _testStepLogger;
     private readonly ILogger<ScanStepManager> _logger;
+    private object? _messageProviderKey;
+
     public bool IsProcessing => _inputStateManager.IsProcessing;
 
     public event Action? OnChange
@@ -35,6 +43,8 @@ public class ScanStepManager : IDisposable
     public event Func<IReadOnlyList<UnknownStepInfo>, Task>? OnUnknownStepsDialogRequested;
     public event Func<IReadOnlyList<MissingRecipeInfo>, Task>? OnMissingRecipesDialogRequested;
 
+    private bool IsScanModeEnabled => _operatorState.IsAuthenticated && _autoReady.IsReady;
+
     public ScanStepManager(
         ScanSessionManager sessionManager,
         ScanInputStateManager inputStateManager,
@@ -43,6 +53,7 @@ public class ScanStepManager : IDisposable
         OperatorState operatorState,
         AutoReadySubscription autoReady,
         MessageService messageService,
+        ExecutionMessageState executionMessageState,
         TestExecutionCoordinator coordinator,
         ITestStepLogger testStepLogger,
         ILogger<ScanStepManager> logger)
@@ -54,37 +65,41 @@ public class ScanStepManager : IDisposable
         _operatorState = operatorState;
         _autoReady = autoReady;
         _messageService = messageService;
+        _executionMessageState = executionMessageState;
         _coordinator = coordinator;
         _testStepLogger = testStepLogger;
         _logger = logger;
         SubscribeToEvents();
-        UpdateState();
+        UpdateScanModeState();
     }
 
     private void SubscribeToEvents()
     {
         _operatorState.OnChange += HandleStateChange;
         _autoReady.OnChange += HandleStateChange;
-        _messageService.RegisterProvider(MessagePriority, GetScanMessage);
+        _messageProviderKey = _messageService.RegisterProvider(MessagePriority, GetScanMessage);
         _coordinator.OnSequenceCompleted += HandleSequenceCompleted;
     }
 
-    private bool IsScanModeEnabled =>
-        _operatorState.IsAuthenticated && _autoReady.IsReady;
-
     private string? GetScanMessage()
     {
-        return IsScanModeEnabled ? "Отсканируйте серийный номер котла" : null;
+        return IsScanModeEnabled ? ScanPromptMessage : null;
     }
 
     private void HandleStateChange()
     {
-        UpdateState();
+        UpdateScanModeState();
     }
 
-    private void UpdateState()
+    private void UpdateScanModeState()
     {
-        if (IsScanModeEnabled)
+        SetScanModeActive(IsScanModeEnabled);
+        _messageService.NotifyChanged();
+    }
+
+    private void SetScanModeActive(bool isActive)
+    {
+        if (isActive)
         {
             ActivateScanMode();
         }
@@ -92,7 +107,6 @@ public class ScanStepManager : IDisposable
         {
             DeactivateScanMode();
         }
-        _messageService.NotifyChanged();
     }
 
     private void ActivateScanMode()
@@ -173,14 +187,25 @@ public class ScanStepManager : IDisposable
 
     private void UnblockInput()
     {
+        _executionMessageState.Clear();
         _inputStateManager.SetProcessing(false);
         _sessionManager.AcquireSession(HandleBarcodeScanned);
     }
 
     private void HandleSequenceCompleted()
     {
-        _logger.LogInformation("Последовательность завершена. Ошибки: {HasErrors}", _coordinator.HasErrors);
+        LogSequenceCompleted();
         UnblockInput();
+        ShowSequenceCompletionNotification();
+    }
+
+    private void LogSequenceCompleted()
+    {
+        _logger.LogInformation("Последовательность завершена. Ошибки: {HasErrors}", _coordinator.HasErrors);
+    }
+
+    private void ShowSequenceCompletionNotification()
+    {
         if (_coordinator.HasErrors)
         {
             _errorHandler.ShowError("Тест завершён", "Выполнение прервано из-за ошибки");
@@ -200,6 +225,10 @@ public class ScanStepManager : IDisposable
         _operatorState.OnChange -= HandleStateChange;
         _autoReady.OnChange -= HandleStateChange;
         _coordinator.OnSequenceCompleted -= HandleSequenceCompleted;
+        if (_messageProviderKey != null)
+        {
+            _messageService.UnregisterProvider(_messageProviderKey);
+        }
     }
 }
  

@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.OpcUa;
@@ -17,48 +18,91 @@ public class PreExecutionCoordinator(
     IRecipeProvider recipeProvider,
     OpcUaTagService opcUa,
     ITestStepLogger testStepLogger,
+    ExecutionActivityTracker activityTracker,
+    ExecutionMessageState messageState,
+    PauseTokenSource pauseToken,
     ILogger<PreExecutionCoordinator> logger)
 {
     public async Task<PreExecutionResult> ExecuteAsync(string barcode, CancellationToken ct)
     {
+        activityTracker.SetPreExecutionActive(true);
+        try
+        {
+            return await ExecutePreExecutionPipelineAsync(barcode, ct);
+        }
+        finally
+        {
+            activityTracker.SetPreExecutionActive(false);
+        }
+    }
+
+    private async Task<PreExecutionResult> ExecutePreExecutionPipelineAsync(string barcode, CancellationToken ct)
+    {
         statusReporter.ClearAll();
         var context = CreateContext(barcode);
+
         var stepsResult = await ExecuteAllStepsAsync(context, ct);
         if (!stepsResult.Success)
         {
-            return stepsResult;
+            return HandleFailedResult(stepsResult);
         }
+
         var resolveResult = ResolveTestMaps(context);
         if (!resolveResult.Success)
         {
-            return resolveResult;
+            return HandleFailedResult(resolveResult);
         }
+
+        messageState.Clear();
         StartTestExecution(context);
         return PreExecutionResult.Ok();
     }
 
+    private PreExecutionResult HandleFailedResult(PreExecutionResult result)
+    {
+        if (result.UserMessage != null)
+        {
+            messageState.SetMessage(result.UserMessage);
+        }
+        return result;
+    }
+
     private PreExecutionResult ResolveTestMaps(PreExecutionContext context)
     {
-        if (context.RawMaps == null || context.RawMaps.Count == 0)
+        if (!HasRawMaps(context))
         {
             return PreExecutionResult.Fail("Нет тестовых последовательностей");
         }
-        var resolveResult = mapResolver.Resolve(context.RawMaps);
+
+        var resolveResult = mapResolver.Resolve(context.RawMaps!);
         if (resolveResult.UnknownSteps.Count > 0)
         {
-            var error = $"Неизвестных шагов: {resolveResult.UnknownSteps.Count}";
-            logger.LogWarning("{Error}", error);
-            testStepLogger.LogWarning("{Error}", error);
-            return PreExecutionResult.Fail(error, new UnknownStepsDetails(resolveResult.UnknownSteps));
+            return HandleUnknownSteps(resolveResult);
         }
+
         context.Maps = resolveResult.Maps;
         return PreExecutionResult.Ok();
+    }
+
+    private static bool HasRawMaps(PreExecutionContext context)
+    {
+        return context.RawMaps is { Count: > 0 };
+    }
+
+    private PreExecutionResult HandleUnknownSteps(ResolveResult resolveResult)
+    {
+        var error = $"Неизвестных шагов: {resolveResult.UnknownSteps.Count}";
+        logger.LogWarning("{Error}", error);
+        testStepLogger.LogWarning("{Error}", error);
+        return PreExecutionResult.Fail(error, new UnknownStepsDetails(resolveResult.UnknownSteps));
     }
 
     private async Task<PreExecutionResult> ExecuteAllStepsAsync(PreExecutionContext context, CancellationToken ct)
     {
         foreach (var step in stepRegistry.GetOrderedSteps())
         {
+            await pauseToken.WaitWhilePausedAsync(ct);
+
             var result = await ExecuteStepAsync(step, context, ct);
             if (!result.Success || result.ShouldStop)
             {
@@ -115,10 +159,16 @@ public class PreExecutionCoordinator(
 
     private void StartTestExecution(PreExecutionContext context)
     {
-        logger.LogInformation("Запуск TestExecutionCoordinator с {Count} maps", context.Maps?.Count ?? 0);
-        testStepLogger.LogInformation("Запуск TestExecutionCoordinator с {Count} maps", context.Maps?.Count ?? 0);
+        LogTestExecutionStart(context);
         testCoordinator.SetMaps(context.Maps!);
         _ = testCoordinator.StartAsync();
+    }
+
+    private void LogTestExecutionStart(PreExecutionContext context)
+    {
+        var mapCount = context.Maps?.Count ?? 0;
+        logger.LogInformation("Запуск TestExecutionCoordinator с {Count} maps", mapCount);
+        testStepLogger.LogInformation("Запуск TestExecutionCoordinator с {Count} maps", mapCount);
     }
 
     private PreExecutionContext CreateContext(string barcode)

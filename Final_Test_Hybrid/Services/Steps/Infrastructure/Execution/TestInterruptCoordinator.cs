@@ -7,6 +7,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 
+/// <summary>
+/// Handles test execution interrupts (PLC connection loss, auto mode disabled, timeouts).
+/// Coordinates pause/resume and reset behaviors based on interrupt type.
+/// </summary>
 public class TestInterruptCoordinator : IDisposable
 {
     private readonly OpcUaConnectionState _connectionState;
@@ -15,23 +19,26 @@ public class TestInterruptCoordinator : IDisposable
     private readonly TestExecutionCoordinator _testCoordinator;
     private readonly StepStatusReporter _statusReporter;
     private readonly BoilerState _boilerState;
+    private readonly ExecutionActivityTracker _activityTracker;
+    private readonly InterruptMessageState _interruptMessage;
     private readonly INotificationService _notifications;
     private readonly ILogger<TestInterruptCoordinator> _logger;
+    private readonly SemaphoreSlim _interruptLock = new(1, 1);
     private int _isHandlingInterrupt;
 
-    private readonly Dictionary<TestInterruptReason, InterruptBehavior> _behaviors = new()
+    private static readonly Dictionary<TestInterruptReason, InterruptBehavior> Behaviors = new()
     {
-        [TestInterruptReason.PlcConnectionLost] = new(
+        [TestInterruptReason.PlcConnectionLost] = new InterruptBehavior(
             Message: "Потеря связи с PLC",
             Action: InterruptAction.ResetAfterDelay,
             Delay: TimeSpan.FromSeconds(5)),
 
-        [TestInterruptReason.AutoModeDisabled] = new(
+        [TestInterruptReason.AutoModeDisabled] = new InterruptBehavior(
             Message: "Нет автомата",
             Action: InterruptAction.PauseAndWait,
             WaitForRecovery: null),
 
-        [TestInterruptReason.TagTimeout] = new(
+        [TestInterruptReason.TagTimeout] = new InterruptBehavior(
             Message: "Нет ответа",
             Action: InterruptAction.ResetAfterDelay,
             Delay: null)
@@ -48,6 +55,8 @@ public class TestInterruptCoordinator : IDisposable
         TestExecutionCoordinator testCoordinator,
         StepStatusReporter statusReporter,
         BoilerState boilerState,
+        ExecutionActivityTracker activityTracker,
+        InterruptMessageState interruptMessage,
         INotificationService notifications,
         ILogger<TestInterruptCoordinator> logger)
     {
@@ -57,6 +66,8 @@ public class TestInterruptCoordinator : IDisposable
         _testCoordinator = testCoordinator;
         _statusReporter = statusReporter;
         _boilerState = boilerState;
+        _activityTracker = activityTracker;
+        _interruptMessage = interruptMessage;
         _notifications = notifications;
         _logger = logger;
 
@@ -69,50 +80,73 @@ public class TestInterruptCoordinator : IDisposable
         _autoReady.OnChange += HandleAutoReadyChanged;
     }
 
-    private void HandleConnectionChanged(bool connected)
+    private void HandleConnectionChanged(bool isConnected)
     {
-        if (connected || !_testCoordinator.IsRunning)
+        if (isConnected || !_activityTracker.IsAnyActive)
         {
             return;
         }
-        HandleInterruptAsync(TestInterruptReason.PlcConnectionLost)
-            .ContinueWith(t =>
-            {
-                if (t.IsFaulted)
-                {
-                    _logger.LogError(t.Exception, "Ошибка обработки потери связи");
-                }
-            });
+        TriggerInterruptAsync(TestInterruptReason.PlcConnectionLost);
     }
 
     private void HandleAutoReadyChanged()
     {
-        if (!_autoReady.IsReady && _testCoordinator.IsRunning)
+        if (_autoReady.IsReady)
         {
-            TriggerAutoModeDisabledInterrupt();
+            TriggerResumeAsync();
             return;
         }
-        TryResumeFromAutoReady();
+        HandleAutoModeDisabled();
     }
 
-    private void TriggerAutoModeDisabledInterrupt()
+    private void HandleAutoModeDisabled()
     {
-        HandleInterruptAsync(TestInterruptReason.AutoModeDisabled)
-            .ContinueWith(t =>
+        if (!_activityTracker.IsAnyActive)
+        {
+            return;
+        }
+        TriggerInterruptAsync(TestInterruptReason.AutoModeDisabled);
+    }
+
+    private void TriggerInterruptAsync(TestInterruptReason reason)
+    {
+        _ = HandleInterruptAsync(reason).ContinueWith(
+            task => LogInterruptError(task, reason),
+            TaskContinuationOptions.OnlyOnFaulted);
+    }
+
+    private void TriggerResumeAsync()
+    {
+        _ = TryResumeFromPauseAsync().ContinueWith(
+            task => _logger.LogError(task.Exception, "Ошибка восстановления"),
+            TaskContinuationOptions.OnlyOnFaulted);
+    }
+
+    private void LogInterruptError(Task task, TestInterruptReason reason)
+    {
+        _logger.LogError(task.Exception, "Ошибка обработки прерывания: {Reason}", reason);
+    }
+
+    private async Task TryResumeFromPauseAsync()
+    {
+        await _interruptLock.WaitAsync();
+        try
+        {
+            if (!_pauseToken.IsPaused)
             {
-                if (t.IsFaulted)
-                {
-                    _logger.LogError(t.Exception, "Ошибка обработки потери автомата");
-                }
-            });
+                return;
+            }
+            ResumeExecution();
+        }
+        finally
+        {
+            _interruptLock.Release();
+        }
     }
 
-    private void TryResumeFromAutoReady()
+    private void ResumeExecution()
     {
-        if (!_autoReady.IsReady || !_pauseToken.IsPaused)
-        {
-            return;
-        }
+        _interruptMessage.Clear();
         _pauseToken.Resume();
         _notifications.ShowSuccess("Автомат восстановлен", "Тест продолжается");
         OnRecovered?.Invoke();
@@ -120,25 +154,41 @@ public class TestInterruptCoordinator : IDisposable
 
     public async Task HandleInterruptAsync(TestInterruptReason reason, CancellationToken ct = default)
     {
-        if (Interlocked.CompareExchange(ref _isHandlingInterrupt, 1, 0) != 0)
+        if (!TryAcquireInterruptFlag())
         {
             return;
         }
 
+        await _interruptLock.WaitAsync(ct);
         try
         {
-            var behavior = _behaviors[reason];
-            _logger.LogWarning("Прерывание: {Reason} - {Message}", reason, behavior.Message);
-
-            OnInterrupt?.Invoke(reason, behavior);
-            _notifications.ShowWarning(behavior.Message, GetInterruptDetails(behavior));
-
-            await ExecuteInterruptActionAsync(behavior, ct);
+            await ProcessInterruptAsync(reason, ct);
         }
         finally
         {
-            Interlocked.Exchange(ref _isHandlingInterrupt, 0);
+            _interruptLock.Release();
+            ReleaseInterruptFlag();
         }
+    }
+
+    private bool TryAcquireInterruptFlag()
+    {
+        return Interlocked.CompareExchange(ref _isHandlingInterrupt, 1, 0) == 0;
+    }
+
+    private void ReleaseInterruptFlag()
+    {
+        Interlocked.Exchange(ref _isHandlingInterrupt, 0);
+    }
+
+    private async Task ProcessInterruptAsync(TestInterruptReason reason, CancellationToken ct)
+    {
+        var behavior = Behaviors[reason];
+        _logger.LogWarning("Прерывание: {Reason} - {Message}", reason, behavior.Message);
+        _interruptMessage.SetMessage(behavior.Message);
+        OnInterrupt?.Invoke(reason, behavior);
+        _notifications.ShowWarning(behavior.Message, GetInterruptDetails(behavior));
+        await ExecuteInterruptActionAsync(behavior, ct);
     }
 
     private async Task ExecuteInterruptActionAsync(InterruptBehavior behavior, CancellationToken ct)
@@ -150,7 +200,7 @@ public class TestInterruptCoordinator : IDisposable
                 break;
 
             case InterruptAction.ResetAfterDelay:
-                await ResetAfterDelayAsync(behavior, ct);
+                await ResetAfterDelayAsync(behavior.Delay, ct);
                 break;
         }
     }
@@ -167,11 +217,11 @@ public class TestInterruptCoordinator : IDisposable
         };
     }
 
-    private async Task ResetAfterDelayAsync(InterruptBehavior behavior, CancellationToken ct)
+    private async Task ResetAfterDelayAsync(TimeSpan? delay, CancellationToken ct)
     {
-        if (behavior.Delay.HasValue)
+        if (delay.HasValue)
         {
-            await Task.Delay(behavior.Delay.Value, ct);
+            await Task.Delay(delay.Value, ct);
         }
         Reset();
     }
@@ -179,6 +229,7 @@ public class TestInterruptCoordinator : IDisposable
     private void Reset()
     {
         _logger.LogInformation("Сброс теста");
+        _interruptMessage.Clear();
         _pauseToken.Resume();
         _testCoordinator.Stop();
         _statusReporter.ClearAll();
@@ -190,5 +241,6 @@ public class TestInterruptCoordinator : IDisposable
     {
         _connectionState.ConnectionStateChanged -= HandleConnectionChanged;
         _autoReady.OnChange -= HandleAutoReadyChanged;
+        _interruptLock.Dispose();
     }
 }

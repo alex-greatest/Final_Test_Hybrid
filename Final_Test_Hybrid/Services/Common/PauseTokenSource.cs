@@ -1,5 +1,9 @@
 namespace Final_Test_Hybrid.Services.Common;
 
+/// <summary>
+/// Provides cooperative pause/resume mechanism for async operations.
+/// Callers use WaitWhilePausedAsync to check pause state at safe points.
+/// </summary>
 public class PauseTokenSource
 {
     private readonly Lock _lock = new();
@@ -36,7 +40,7 @@ public class PauseTokenSource
         {
             tcs = _pauseTcs;
         }
-        if (tcs == null) return;
+        if (tcs == null) { return; }
         await tcs.Task.WaitAsync(ct);
     }
 }

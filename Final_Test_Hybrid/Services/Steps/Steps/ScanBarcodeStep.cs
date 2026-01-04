@@ -29,6 +29,7 @@ public class ScanBarcodeStep(
     RequiredTagValidator requiredTagValidator,
     ITestSequenceLoader sequenceLoader,
     ITestMapBuilder mapBuilder,
+    ExecutionMessageState messageState,
     ILogger<ScanBarcodeStep> logger,
     ITestStepLogger testStepLogger) : ITestStep, IScanBarcodeStep, IPreExecutionStep
 {
@@ -45,48 +46,62 @@ public class ScanBarcodeStep(
     public async Task<BarcodeStepResult> ProcessBarcodeAsync(string barcode)
     {
         testStepLogger.LogStepStart(Name);
-        logger.LogInformation("Обработка штрихкода: {Barcode}", barcode);
-        var ctx = new BarcodeContext(barcode);
-        return ValidateBarcode(ctx)
-            ?? await FindCycleAsync(ctx)
-            ?? await LoadRecipesAsync(ctx)
-            /*?? await CheckTagsAsync(ctx)
-            ?? CheckRequiredTags(ctx)*/
-            ?? await LoadTestSequenceAsync(ctx)
-            ?? BuildTestMaps(ctx)
-            ?? await SuccessAsync(ctx);
+        LogInfo("Обработка штрихкода: {Barcode}", barcode);
+        var pipeline = new BarcodePipeline(barcode);
+        var result = await ExecutePipelineAsync(pipeline);
+        if (!result.IsSuccess)
+        {
+            return result;
+        }
+        return CompleteSuccessfully(pipeline);
     }
 
-    private BarcodeStepResult? ValidateBarcode(BarcodeContext ctx)
+    private async Task<BarcodeStepResult> ExecutePipelineAsync(BarcodePipeline pipeline)
     {
-        ctx.Validation = barcodeScanService.Validate(ctx.Barcode);
-        return ctx.Validation.IsValid ? null : Fail(ctx.Validation.Error!);
+        return await pipeline
+            .Step("Проверка штрихкода...", ValidateBarcode)
+            .StepAsync("Поиск типа котла...", FindBoilerTypeAsync)
+            .StepAsync("Загрузка рецептов...", LoadRecipesAsync)
+            .StepAsync("Загрузка последовательности...", LoadTestSequenceAsync)
+            .Step("Построение карт тестов...", BuildTestMaps)
+            .ExecuteAsync(messageState);
     }
 
-    private async Task<BarcodeStepResult?> FindCycleAsync(BarcodeContext ctx)
+    private BarcodeStepResult? ValidateBarcode(BarcodePipeline pipeline)
     {
-        var cycle = await boilerTypeService.FindActiveByArticleAsync(ctx.Validation.Article!);
+        pipeline.Validation = barcodeScanService.Validate(pipeline.Barcode);
+        if (!pipeline.Validation.IsValid)
+        {
+            return Fail(pipeline.Validation.Error!);
+        }
+        return null;
+    }
+
+    private async Task<BarcodeStepResult?> FindBoilerTypeAsync(BarcodePipeline pipeline)
+    {
+        var cycle = await boilerTypeService.FindActiveByArticleAsync(pipeline.Validation.Article!);
         if (cycle == null)
         {
             return Fail("Тип котла не найден", LogLevel.Warning);
         }
-        ctx.Cycle = cycle;
+        pipeline.Cycle = cycle;
         return null;
     }
 
-    private async Task<BarcodeStepResult?> LoadRecipesAsync(BarcodeContext ctx)
+    private async Task<BarcodeStepResult?> LoadRecipesAsync(BarcodePipeline pipeline)
     {
-        var recipes = await recipeService.GetByBoilerTypeIdAsync(ctx.Cycle.BoilerTypeId);
-        ctx.Recipes = MapToRecipeResponseDtos(recipes);
-        if (ctx.Recipes.Count == 0)
+        var recipes = await recipeService.GetByBoilerTypeIdAsync(pipeline.Cycle.BoilerTypeId);
+        pipeline.Recipes = MapToRecipeResponseDtos(recipes);
+
+        if (pipeline.Recipes.Count == 0)
         {
             return Fail("Рецепты не найдены", LogLevel.Warning);
         }
-        LogRecipes(ctx.Recipes);
+        LogLoadedRecipes(pipeline.Recipes);
         return null;
     }
 
-    private void LogRecipes(IReadOnlyList<RecipeResponseDto> recipes)
+    private void LogLoadedRecipes(IReadOnlyList<RecipeResponseDto> recipes)
     {
         LogInfo("Загружено рецептов: {Count}", recipes.Count);
         foreach (var recipe in recipes)
@@ -95,48 +110,54 @@ public class ScanBarcodeStep(
         }
     }
 
-    private void LogInfo(string message, params object?[] args)
+    private async Task<BarcodeStepResult?> LoadTestSequenceAsync(BarcodePipeline pipeline)
     {
-        logger.LogInformation(message, args);
-        testStepLogger.LogInformation(message, args);
-    }
-
-    private async Task<BarcodeStepResult?> CheckTagsAsync(BarcodeContext ctx)
-    {
-        var result = await tagValidator.ValidateAsync(ctx.Recipes);
-        if (result.Success)
-        {
-            return null;
-        }
-        return BarcodeStepResult.FailPlcTags(result.ErrorMessage!, result.MissingTags);
-    }
-
-    private BarcodeStepResult? CheckRequiredTags(BarcodeContext ctx)
-    {
-        var result = requiredTagValidator.Validate(ctx.Recipes);
-        return result.Success ? null : BarcodeStepResult.FailRequiredTags(result.ErrorMessage!, result.MissingTags);
-    }
-
-    private async Task<BarcodeStepResult?> LoadTestSequenceAsync(BarcodeContext ctx)
-    {
-        var result = await sequenceLoader.LoadRawDataAsync(ctx.Validation.Article!);
+        var result = await sequenceLoader.LoadRawDataAsync(pipeline.Validation.Article!);
         if (!result.IsSuccess)
         {
             return Fail(result.Error!, LogLevel.Warning);
         }
-        ctx.RawSequenceData = result.RawData;
+        pipeline.RawSequenceData = result.RawData!;
         return null;
     }
 
-    private BarcodeStepResult? BuildTestMaps(BarcodeContext ctx)
+    private BarcodeStepResult? BuildTestMaps(BarcodePipeline pipeline)
     {
-        var result = mapBuilder.Build(ctx.RawSequenceData!);
+        var result = mapBuilder.Build(pipeline.RawSequenceData);
         if (!result.IsSuccess)
         {
             return Fail(result.Error!, LogLevel.Error);
         }
-        ctx.RawMaps = result.Maps;
+        pipeline.RawMaps = result.Maps!;
         return null;
+    }
+
+    private BarcodeStepResult CompleteSuccessfully(BarcodePipeline pipeline)
+    {
+        LogSuccessfulProcessing(pipeline);
+        SaveBoilerState(pipeline);
+        testStepLogger.LogStepEnd(Name);
+        return BarcodeStepResult.Pass(pipeline.RawMaps!);
+    }
+
+    private void LogSuccessfulProcessing(BarcodePipeline pipeline)
+    {
+        LogInfo("Успешно: {Serial}, {Article}, {Type}, рецептов: {Count}, RawMaps: {Maps}",
+            pipeline.Validation.Barcode,
+            pipeline.Validation.Article,
+            pipeline.Cycle.Type,
+            pipeline.Recipes.Count,
+            pipeline.RawMaps?.Count ?? 0);
+    }
+
+    private void SaveBoilerState(BarcodePipeline pipeline)
+    {
+        boilerState.SetData(
+            pipeline.Validation.Barcode,
+            pipeline.Validation.Article!,
+            isValid: true,
+            pipeline.Cycle,
+            pipeline.Recipes);
     }
 
     private BarcodeStepResult Fail(string error, LogLevel level = LogLevel.None)
@@ -147,35 +168,36 @@ public class ScanBarcodeStep(
 
     private void LogByLevel(string message, LogLevel level)
     {
-        switch (level)
-        {
-            case LogLevel.Warning:
-                logger.LogWarning("{Error}", message);
-                testStepLogger.LogWarning("{Error}", message);
-                break;
-            case LogLevel.Error:
-                logger.LogError("{Error}", message);
-                testStepLogger.LogError(null, "{Error}", message);
-                break;
-            case LogLevel.Trace:
-            case LogLevel.Debug:
-            case LogLevel.Information:
-            case LogLevel.Critical:
-            case LogLevel.None:
-            default:
-                throw new ArgumentOutOfRangeException(nameof(level), level, null);
-        }
+        var logAction = GetLogAction(level);
+        logAction?.Invoke(message);
     }
 
-    private Task<BarcodeStepResult> SuccessAsync(BarcodeContext ctx)
+    private Action<string>? GetLogAction(LogLevel level)
     {
-        logger.LogInformation("Успешно: {Serial}, {Article}, {Type}, рецептов: {Count}, RawMaps: {Maps}",
-            ctx.Validation.Barcode, ctx.Validation.Article, ctx.Cycle.Type, ctx.Recipes.Count, ctx.RawMaps?.Count ?? 0);
-        testStepLogger.LogInformation("Успешно: {Serial}, {Article}, {Type}, рецептов: {Count}, RawMaps: {Maps}",
-            ctx.Validation.Barcode, ctx.Validation.Article, ctx.Cycle.Type, ctx.Recipes.Count, ctx.RawMaps?.Count ?? 0);
-        boilerState.SetData(ctx.Validation.Barcode, ctx.Validation.Article!, isValid: true, ctx.Cycle, ctx.Recipes);
-        testStepLogger.LogStepEnd(Name);
-        return Task.FromResult(BarcodeStepResult.Pass(ctx.RawMaps!));
+        return level switch
+        {
+            LogLevel.Warning => LogWarning,
+            LogLevel.Error => LogError,
+            _ => null
+        };
+    }
+
+    private void LogInfo(string message, params object?[] args)
+    {
+        logger.LogInformation(message, args);
+        testStepLogger.LogInformation(message, args);
+    }
+
+    private void LogWarning(string message)
+    {
+        logger.LogWarning("{Error}", message);
+        testStepLogger.LogWarning("{Error}", message);
+    }
+
+    private void LogError(string message)
+    {
+        logger.LogError("{Error}", message);
+        testStepLogger.LogError(null, "{Error}", message);
     }
 
     public async Task OnExecutionStartingAsync()
@@ -193,7 +215,7 @@ public class ScanBarcodeStep(
         var result = await ProcessBarcodeAsync(context.Barcode);
         if (!result.IsSuccess)
         {
-            return PreExecutionResult.Fail(result.ErrorMessage!);
+            return PreExecutionResult.Fail(result.ErrorMessage!, "Ошибка. Повторите сканирование");
         }
         context.RawMaps = result.RawMaps;
         return PreExecutionResult.Ok();
@@ -211,5 +233,18 @@ public class ScanBarcodeStep(
             Unit = r.Unit,
             Description = r.Description
         }).ToList();
+    }
+
+    // Currently disabled tag validation methods - preserved for future use
+    private async Task<BarcodeStepResult?> CheckTagsAsync(BarcodePipeline pipeline)
+    {
+        var result = await tagValidator.ValidateAsync(pipeline.Recipes);
+        return result.Success ? null : BarcodeStepResult.FailPlcTags(result.ErrorMessage!, result.MissingTags);
+    }
+
+    private BarcodeStepResult? CheckRequiredTags(BarcodePipeline pipeline)
+    {
+        var result = requiredTagValidator.Validate(pipeline.Recipes);
+        return result.Success ? null : BarcodeStepResult.FailRequiredTags(result.ErrorMessage!, result.MissingTags);
     }
 }
