@@ -1,0 +1,38 @@
+@inject DialogService DialogService
+
+<div class="route-error-dialog">
+    <div class="error-header">
+        <RadzenIcon Icon="warning" class="warning-icon" />
+        <span>Ошибка маршрута!</span>
+    </div>
+
+    <div class="error-content">
+        <p class="error-message">@Message</p>
+    </div>
+
+    <div class="dialog-buttons">
+        <RadzenButton Text="Отмена"
+                      Click="@OnCancel"
+                      ButtonStyle="ButtonStyle.Light"
+                      class="cancel-button" />
+        <RadzenButton Text="Продолжить"
+                      Click="@OnContinue"
+                      ButtonStyle="ButtonStyle.Light"
+                      class="continue-button" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Message { get; set; } = "Котёл находится на более позднем этапе маршрута";
+
+    private void OnCancel()
+    {
+        DialogService.Close(false);
+    }
+
+    private void OnContinue()
+    {
+        DialogService.Close(true);
+    }
+}

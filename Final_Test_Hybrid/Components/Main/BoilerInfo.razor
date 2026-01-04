@@ -12,7 +12,9 @@
 
 <div class="field-row field-row-middle">
     <RadzenLabel Text="Тип котла"/>
-    <RadzenTextBox Style="width:100%" ReadOnly="true"/>
+    <RadzenTextBox Style="width:100%"
+                   Value="@(BoilerState.BoilerTypeCycle?.Type ?? "")"
+                   ReadOnly="true"/>
 </div>
 <div class="field-row field-row-middle">
     <RadzenLabel Text="Серийный номер"/>

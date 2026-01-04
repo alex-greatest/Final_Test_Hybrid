@@ -1,0 +1,78 @@
+.rework-reason-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 10px;
+    min-width: 450px;
+}
+
+.field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.field-label {
+    font-size: 18px;
+    color: black;
+    font-weight: 600;
+}
+
+::deep .rz-textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 14px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 18px;
+    font-weight: 500;
+    color: black;
+    resize: vertical;
+}
+
+::deep .rz-textarea:focus {
+    border-color: #3b82f6;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.validation-error {
+    color: #dc2626;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.dialog-buttons {
+    display: flex;
+    justify-content: flex-start;
+    gap: 16px;
+    margin-top: 10px;
+}
+
+::deep .cancel-button.rz-button {
+    background: transparent;
+    border: 2px solid #9ca3af;
+    color: #6b7280;
+    padding: 14px 32px;
+    font-size: 18px;
+    font-weight: 600;
+    border-radius: 6px;
+}
+
+::deep .cancel-button.rz-button:hover {
+    background: #f3f4f6;
+    border-color: #6b7280;
+}
+
+::deep .confirm-button.rz-button {
+    background-color: #3b82f6;
+    color: white;
+    padding: 14px 32px;
+    font-size: 18px;
+    font-weight: 700;
+    border-radius: 6px;
+}
+
+::deep .confirm-button.rz-button:hover {
+    background-color: #2563eb;
+}

@@ -1,40 +1,63 @@
 @using Final_Test_Hybrid.Services.Common.Settings
+@using Final_Test_Hybrid.Services.Main
 @inject AppSettingsService AppSettingsService
+@inject OrderState OrderState
 @implements IDisposable
 
 <div class="field-row">
     <RadzenLabel Text="Номер заказа"/>
-    <RadzenTextBox Style="width:100%" Disabled="@(!AppSettingsService.UseMes)" ReadOnly="true"/>
+    <RadzenTextBox Style="width:100%"
+                   Value="@OrderNumberText"
+                   Disabled="@(!AppSettingsService.UseMes)"
+                   ReadOnly="true"/>
 </div>
 <div class="field-row">
     <RadzenLabel Text="Котлов в заказе"/>
-    <RadzenTextBox Style="width:100%" Disabled="@(!AppSettingsService.UseMes)" ReadOnly="true"/>
+    <RadzenTextBox Style="width:100%"
+                   Value="@AmountBoilerOrderText"
+                   Disabled="@(!AppSettingsService.UseMes)"
+                   ReadOnly="true"/>
 </div>
 <div class="field-row">
     <RadzenLabel Text="Котлов сделано"/>
-    <RadzenTextBox Style="width:100%" Disabled="@(!AppSettingsService.UseMes)" ReadOnly="true"/>
+    <RadzenTextBox Style="width:100%"
+                   Value="@AmountBoilerMadeOrderText"
+                   Disabled="@(!AppSettingsService.UseMes)"
+                   ReadOnly="true"/>
 </div>
 
 @code {
+    private string OrderNumberText => OrderState.OrderNumber?.ToString() ?? "";
+    private string AmountBoilerOrderText => OrderState.AmountBoilerOrder?.ToString() ?? "";
+    private string AmountBoilerMadeOrderText => OrderState.AmountBoilerMadeOrder?.ToString() ?? "";
+
     protected override void OnInitialized()
     {
         AppSettingsService.UseMesChanged += OnUseMesChanged;
+        OrderState.OnChanged += OnStateChanged;
     }
 
-    private async void OnUseMesChanged(bool _)
+    private async void OnStateChanged()
     {
         try
         {
             await InvokeAsync(StateHasChanged);
         }
-        catch
+        catch (ObjectDisposedException)
         {
-            // ignored - component may be disposed
+            // Component disposed during async operation
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer disposed during navigation
         }
     }
+
+    private void OnUseMesChanged(bool _) => OnStateChanged();
 
     public void Dispose()
     {
         AppSettingsService.UseMesChanged -= OnUseMesChanged;
+        OrderState.OnChanged -= OnStateChanged;
     }
 }

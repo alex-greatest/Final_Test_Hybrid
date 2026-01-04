@@ -1,0 +1,48 @@
+@inject DialogService DialogService
+
+<div class="rework-reason-dialog">
+    <div class="field-group">
+        <label class="field-label">Описание причины доработки/пропуска</label>
+        <RadzenTextArea @bind-Value="_reason"
+                        Placeholder="Введите причину доработки/пропуска"
+                        Rows="3"
+                        Style="width: 100%;" />
+    </div>
+
+    @if (!string.IsNullOrEmpty(_validationError))
+    {
+        <div class="validation-error">@_validationError</div>
+    }
+
+    <div class="dialog-buttons">
+        <RadzenButton Text="Отмена"
+                      Click="@OnCancel"
+                      ButtonStyle="ButtonStyle.Light"
+                      class="cancel-button" />
+        <RadzenButton Text="Подтвердить"
+                      Click="@OnConfirm"
+                      ButtonStyle="ButtonStyle.Primary"
+                      class="confirm-button" />
+    </div>
+</div>
+
+@code {
+    private string _reason = string.Empty;
+    private string _validationError = string.Empty;
+
+    private void OnConfirm()
+    {
+        _validationError = string.Empty;
+        if (string.IsNullOrWhiteSpace(_reason))
+        {
+            _validationError = "Введите причину доработки/пропуска";
+            return;
+        }
+        DialogService.Close(_reason.Trim());
+    }
+
+    private void OnCancel()
+    {
+        DialogService.Close(null);
+    }
+}

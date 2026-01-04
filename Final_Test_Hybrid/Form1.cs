@@ -11,6 +11,7 @@ using Final_Test_Hybrid.Services.Common.IO;
 using Final_Test_Hybrid.Services.Common.UI;
 using Final_Test_Hybrid.Services.Steps;
 using Final_Test_Hybrid.Services.SpringBoot.Health;
+using Final_Test_Hybrid.Services.SpringBoot.Operation;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
 using Final_Test_Hybrid.Services.SpringBoot.ErrorSettings;
 using Final_Test_Hybrid.Services.SpringBoot.ResultSettings;
@@ -94,6 +95,7 @@ namespace Final_Test_Hybrid
             services.AddSingleton<InterruptMessageState>();
             services.AddSingleton<TestSequenseService>();
             services.AddSingleton<BoilerState>();
+            services.AddSingleton<OrderState>();
             services.AddSingleton<BarcodeScanService>();
             services.AddSingleton<ScanSessionManager>();
             services.AddSingleton<ScanInputStateManager>();
@@ -243,6 +245,8 @@ namespace Final_Test_Hybrid
             services.AddScoped<ResultSettingsDownloadService>();
             services.AddScoped<ErrorSettingsDownloadService>();
             services.AddScoped<StepFinalTestDownloadService>();
+            services.AddScoped<OperationStartService>();
+            services.AddScoped<ReworkDialogService>();
         }
 
         private void RegisterShiftServices(ServiceCollection services)

@@ -42,7 +42,7 @@
         <RadzenDataGrid @ref="_grid" Data="@_filteredRecipes" TItem="RecipeEditModel"
                         EditMode="DataGridEditMode.Single"
                         AllowFiltering="true" AllowSorting="true"
-                        AllowColumnResize="true" AllowColumnReorder="true"
+                        AllowColumnReorder="true"
                         FilterText="@DataGridRu.Filter"
                         ApplyFilterText="@DataGridRu.ApplyFilter"
                         ClearFilterText="@DataGridRu.ClearFilter"
@@ -79,19 +79,19 @@
                     </Template>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="Address"
-                                      Title="Адрес" Width="200px">
+                                      Title="Адрес">
                     <EditTemplate Context="item">
                         <RadzenTextBox @bind-Value="item.Address" MaxLength="100" class="w-full" />
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="TagName"
-                                      Title="Название параметра" Width="250px">
+                                      Title="Название параметра">
                     <EditTemplate Context="item">
                         <RadzenTextBox @bind-Value="item.TagName" MaxLength="100" class="w-full" />
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="PlcType"
-                                      Title="Тип PLC" Width="120px">
+                                      Title="Тип PLC" Width="100px">
                     <Template Context="item">
                         @item.PlcType
                     </Template>
@@ -103,7 +103,7 @@
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="IsPlc"
-                                      Title="PLC" Width="80px" TextAlign="TextAlign.Center">
+                                      Title="PLC" Width="60px" TextAlign="TextAlign.Center">
                     <Template Context="item">
                         <RadzenCheckBox Value="@item.IsPlc" Disabled="true" />
                     </Template>
@@ -112,7 +112,7 @@
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="Value"
-                                      Title="Значение" Width="150px">
+                                      Title="Значение">
                     <EditTemplate Context="item">
                         @if (item.PlcType == PlcType.Bool)
                         {
@@ -130,7 +130,7 @@
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="Unit"
-                                      Title="Ед.изм." Width="100px">
+                                      Title="Ед.изм." Width="80px">
                     <EditTemplate Context="item">
                         <RadzenTextBox @bind-Value="item.Unit" MaxLength="20" class="w-full" />
                     </EditTemplate>

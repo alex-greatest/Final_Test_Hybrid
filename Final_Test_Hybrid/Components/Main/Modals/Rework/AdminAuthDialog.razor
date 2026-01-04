@@ -1,0 +1,155 @@
+@using Final_Test_Hybrid.Services.Scanner.RawInput
+@using Final_Test_Hybrid.Services.SpringBoot.Operator
+@using Final_Test_Hybrid.Services.Common.Settings
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject RawInputService ScannerService
+@inject OperatorAuthService OperatorAuthService
+@inject AppSettingsService AppSettingsService
+@implements IDisposable
+
+<div class="admin-auth-dialog">
+    @if (UseQrAuth)
+    {
+        <RadzenIcon Icon="qr_code_scanner" class="qr-icon" />
+        <div class="instruction-text">Отсканируйте код администратора</div>
+    }
+    else
+    {
+        <div class="field-group">
+            <label class="field-label">Логин</label>
+            <RadzenTextBox @bind-Value="_login" Placeholder="Логин" Style="width: 100%;" />
+        </div>
+        <div class="field-group">
+            <label class="field-label">Пароль</label>
+            <RadzenPassword @bind-Value="_password" Placeholder="Пароль" Style="width: 100%;" />
+        </div>
+        @if (!string.IsNullOrEmpty(_validationError))
+        {
+            <div class="validation-error">@_validationError</div>
+        }
+    }
+
+    @if (_isLoading)
+    {
+        <div class="loading-text">Авторизация...</div>
+    }
+
+    <div class="dialog-buttons">
+        @if (!UseQrAuth)
+        {
+            <RadzenButton Text="Подтвердить"
+                          Icon="check"
+                          Click="@OnConfirm"
+                          ButtonStyle="ButtonStyle.Primary"
+                          IsBusy="_isLoading"
+                          class="confirm-button" />
+        }
+        <RadzenButton Text="Отмена"
+                      Click="@OnCancel"
+                      ButtonStyle="ButtonStyle.Light"
+                      Disabled="@_isLoading"
+                      class="cancel-button" />
+    </div>
+</div>
+
+@code {
+    private bool UseQrAuth => AppSettingsService.UseAdminQrAuth;
+
+    private IDisposable? _scanSession;
+    private bool _disposed;
+    private bool _isLoading;
+    private string _login = string.Empty;
+    private string _password = string.Empty;
+    private string _validationError = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        if (UseQrAuth)
+        {
+            _scanSession = ScannerService.RequestScan(OnBarcodeScanned);
+        }
+    }
+
+    private async void OnBarcodeScanned(string barcode)
+    {
+        try
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            await InvokeAsync(() => ProcessBarcodeAsync(barcode));
+        }
+        catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException)
+        {
+            // Component or renderer disposed
+        }
+        catch (Exception)
+        {
+            // Async void cannot propagate exceptions
+        }
+    }
+
+    private async Task ProcessBarcodeAsync(string barcode)
+    {
+        if (_disposed || _isLoading)
+        {
+            return;
+        }
+        await ExecuteWithLoadingAsync(() => OperatorAuthService.AuthenticateByQrAsync(barcode));
+    }
+
+    private async Task OnConfirm()
+    {
+        _validationError = string.Empty;
+        if (!ValidateFields())
+        {
+            return;
+        }
+        await ExecuteWithLoadingAsync(() => OperatorAuthService.AuthenticateAsync(_login, _password));
+    }
+
+    private bool ValidateFields()
+    {
+        if (!string.IsNullOrWhiteSpace(_login) && !string.IsNullOrWhiteSpace(_password))
+        {
+            return true;
+        }
+        _validationError = "Заполните все поля";
+        return false;
+    }
+
+    private async Task ExecuteWithLoadingAsync(Func<Task<OperatorAuthResult>> action)
+    {
+        _isLoading = true;
+        StateHasChanged();
+        var result = await action();
+        _isLoading = false;
+        StateHasChanged();
+        HandleResult(result);
+    }
+
+    private void HandleResult(OperatorAuthResult result)
+    {
+        if (result.Success)
+        {
+            NotificationService.Notify(NotificationSeverity.Success, "Авторизация успешна");
+            DialogService.Close(new AdminAuthResult { Success = true, Username = result.Username ?? _login });
+            return;
+        }
+        NotificationService.Notify(NotificationSeverity.Error, result.ErrorMessage ?? "Неизвестная ошибка");
+        StateHasChanged();
+    }
+
+    private void OnCancel()
+    {
+        DialogService.Close(new AdminAuthResult { Success = false });
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        _scanSession?.Dispose();
+    }
+}

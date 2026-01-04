@@ -1,0 +1,105 @@
+.admin-auth-dialog {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    min-width: 350px;
+}
+
+::deep .qr-icon {
+    font-size: 100px !important;
+    color: #333;
+}
+
+.instruction-text {
+    font-size: 22px;
+    font-weight: 600;
+    color: #3b82f6;
+    text-align: center;
+}
+
+.field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.field-label {
+    font-size: 18px;
+    color: black;
+    font-weight: 700;
+}
+
+::deep .rz-textbox {
+    width: 100%;
+    height: 50px;
+    padding: 0 16px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 20px;
+    font-weight: 600;
+    color: black;
+}
+
+::deep .rz-password {
+    width: 100%;
+}
+
+::deep .rz-password input {
+    height: 50px;
+    padding: 0 16px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 20px;
+    font-weight: 600;
+    color: black;
+}
+
+.validation-error {
+    color: #dc2626;
+    font-size: 16px;
+    font-weight: 500;
+    width: 100%;
+}
+
+.loading-text {
+    font-size: 18px;
+    font-weight: 500;
+    color: #666;
+}
+
+.dialog-buttons {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+}
+
+::deep .confirm-button.rz-button {
+    background-color: #3b82f6;
+    color: white;
+    padding: 14px 32px;
+    font-size: 20px;
+    font-weight: 700;
+    border-radius: 6px;
+}
+
+::deep .confirm-button.rz-button:hover {
+    background-color: #2563eb;
+}
+
+::deep .cancel-button.rz-button {
+    background: transparent;
+    border: 2px solid #9ca3af;
+    color: #6b7280;
+    padding: 14px 32px;
+    font-size: 20px;
+    font-weight: 600;
+    border-radius: 6px;
+}
+
+::deep .cancel-button.rz-button:hover {
+    background: #f3f4f6;
+    border-color: #6b7280;
+}

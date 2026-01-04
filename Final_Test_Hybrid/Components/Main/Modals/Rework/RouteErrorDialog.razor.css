@@ -1,0 +1,81 @@
+.route-error-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 0;
+    min-width: 400px;
+}
+
+.error-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+    background: #fee2e2;
+    border-radius: 8px 8px 0 0;
+    margin: -16px -16px 0 -16px;
+}
+
+.error-header span {
+    font-size: 24px;
+    font-weight: 600;
+    color: #ef4444;
+}
+
+::deep .warning-icon {
+    font-size: 28px;
+    color: #ef4444;
+}
+
+.error-content {
+    padding: 10px 20px;
+    text-align: center;
+}
+
+.error-message {
+    font-size: 20px;
+    color: #333;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.dialog-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    padding: 10px 20px 20px;
+}
+
+::deep .cancel-button.rz-button {
+    background: transparent;
+    border: 2px solid #9ca3af;
+    color: #6b7280;
+    font-size: 20px;
+    font-weight: 600;
+    padding: 14px 32px;
+    border-radius: 6px;
+    min-width: 140px;
+}
+
+::deep .cancel-button.rz-button:hover {
+    background: #f3f4f6;
+    border-color: #6b7280;
+}
+
+::deep .continue-button.rz-button {
+    background: transparent;
+    border: 2px solid #ef4444;
+    color: #ef4444;
+    font-size: 20px;
+    font-weight: 600;
+    padding: 14px 32px;
+    border-radius: 6px;
+    min-width: 140px;
+}
+
+::deep .continue-button.rz-button:hover {
+    background: #fef2f2;
+    border-color: #dc2626;
+    color: #dc2626;
+}
