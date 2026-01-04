@@ -13,7 +13,7 @@
     <RadzenDataGrid @ref="_grid" Data="@Items" TItem="ResultSettingsEditModel"
                 EditMode="DataGridEditMode.Single"
                 AllowFiltering="true" AllowSorting="true"
-                AllowColumnResize="true" AllowColumnReorder="true"
+                AllowColumnReorder="true"
                 FilterText="@DataGridRu.Filter"
                 ApplyFilterText="@DataGridRu.ApplyFilter"
                 ClearFilterText="@DataGridRu.ClearFilter"
@@ -46,19 +46,19 @@
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="AddressValue"
-                                  Title="Адрес значения" Width="150px">
+                                  Title="Адрес значения">
                 <EditTemplate Context="item">
                     <RadzenTextBox @bind-Value="item.AddressValue" MaxLength="100" class="w-full" />
                 </EditTemplate>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="ParameterName"
-                                  Title="Название параметра" Width="200px">
+                                  Title="Название параметра">
                 <EditTemplate Context="item">
                     <RadzenTextBox @bind-Value="item.ParameterName" MaxLength="100" class="w-full"/>
                 </EditTemplate>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="AddressStatus"
-                                  Title="Адрес статуса" Width="150px">
+                                  Title="Адрес статуса">
                 <EditTemplate Context="item">
                     <RadzenTextBox @bind-Value="item.AddressStatus" MaxLength="100" class="w-full"/>
                 </EditTemplate>
