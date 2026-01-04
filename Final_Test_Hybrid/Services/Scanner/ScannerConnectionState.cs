@@ -85,7 +85,7 @@ public class ScannerConnectionState : IDisposable
         }
     }
 
-    private void OnDeviceChanged(object sender, EventArrivedEventArgs e)
+    private async void OnDeviceChanged(object sender, EventArrivedEventArgs e)
     {
         if (_disposed)
         {
@@ -100,17 +100,34 @@ public class ScannerConnectionState : IDisposable
                     return;
                 }
                 var now = DateTime.UtcNow;
-                if ((now - _lastCheck).TotalMilliseconds < 500)
+                if ((now - _lastCheck).TotalMilliseconds < 1000)
                 {
                     return;
                 }
                 _lastCheck = now;
             }
-            CheckScannerPresent();
+            await CheckWithRetryAsync();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка обработки события USB");
+        }
+    }
+
+    private async Task CheckWithRetryAsync()
+    {
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            await Task.Delay(300);
+            if (_disposed)
+            {
+                return;
+            }
+            CheckScannerPresent();
+            if (IsConnected)
+            {
+                return;
+            }
         }
     }
 

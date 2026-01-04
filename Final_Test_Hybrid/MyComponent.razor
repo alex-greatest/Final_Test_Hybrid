@@ -4,10 +4,12 @@
 @using Final_Test_Hybrid.Components.Overview
 @using Final_Test_Hybrid.Components.Loading
 @using Final_Test_Hybrid.Services.OpcUa
+@using Final_Test_Hybrid.Services.OpcUa.Connection
 @inject PlcSubscriptionState SubscriptionState
+@inject OpcUaConnectionState ConnectionState
 @implements IDisposable
 
-<SubscriptionLoadingOverlay IsVisible="@SubscriptionState.IsInitializing" />
+<SubscriptionLoadingOverlay IsVisible="@(SubscriptionState.IsInitializing && ConnectionState.IsConnected)" />
 
 <RadzenDialog />
 <RadzenNotification />
@@ -9432,15 +9434,16 @@
     protected override void OnInitialized()
     {
         SubscriptionState.OnStateChanged += HandleStateChanged;
+        ConnectionState.ConnectionStateChanged += HandleConnectionChanged;
     }
 
-    private void HandleStateChanged()
-    {
-        InvokeAsync(StateHasChanged);
-    }
+    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
+
+    private void HandleConnectionChanged(bool _) => InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {
         SubscriptionState.OnStateChanged -= HandleStateChanged;
+        ConnectionState.ConnectionStateChanged -= HandleConnectionChanged;
     }
 }

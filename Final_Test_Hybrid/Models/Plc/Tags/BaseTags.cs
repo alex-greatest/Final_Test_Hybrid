@@ -8,6 +8,6 @@ public static class BaseTags
     public const string TestAskAuto = "ns=3;s=\"DB_Station\".\"Test\".\"Ask_Auto\"";
 
     // Error handling tags - placeholders
-    public const string ErrorRetry = "ns=3;s=\"DB_Station\".\"Error\".\"Retry\"";
-    public const string ErrorSkip = "ns=3;s=\"DB_Station\".\"Error\".\"Skip\"";
+    public const string ErrorRetry = "ns=3;s=\"DB_Station\".\"Test\".\"Req_Repeat\"";
+    public const string ErrorSkip = "ns=3;s=\"DB_Station\".\"Test\".\"EndStep\"";
 }

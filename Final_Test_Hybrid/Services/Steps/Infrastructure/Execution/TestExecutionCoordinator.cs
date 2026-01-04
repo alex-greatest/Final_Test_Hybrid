@@ -15,7 +15,6 @@ public class TestExecutionCoordinator : IDisposable
     private readonly ColumnExecutor[] _executors;
     private readonly ILogger<TestExecutionCoordinator> _logger;
     private readonly ITestStepLogger _testLogger;
-    private readonly ExecutionStateManager _stateManager;
     private readonly StepErrorHandler _errorHandler;
     private readonly PauseTokenSource _pauseToken;
     private readonly ExecutionActivityTracker _activityTracker;
@@ -30,9 +29,9 @@ public class TestExecutionCoordinator : IDisposable
     public IReadOnlyList<ColumnExecutor> Executors => _executors;
     public int CurrentMapIndex { get; private set; }
     public int TotalMaps => _maps.Count;
-    public bool IsRunning => _stateManager.State == ExecutionState.Running;
+    public bool IsRunning => StateManager.State == ExecutionState.Running;
     public bool HasErrors => _executors.Any(e => e.HasFailed);
-    public ExecutionStateManager StateManager => _stateManager;
+    public ExecutionStateManager StateManager { get; }
 
     private bool ShouldStop => IsCancellationRequested;
     private bool IsCancellationRequested => _cts?.IsCancellationRequested == true;
@@ -51,7 +50,7 @@ public class TestExecutionCoordinator : IDisposable
     {
         _logger = logger;
         _testLogger = testLogger;
-        _stateManager = stateManager;
+        StateManager = stateManager;
         _errorHandler = errorHandler;
         _pauseToken = pauseToken;
         _activityTracker = activityTracker;
@@ -131,11 +130,7 @@ public class TestExecutionCoordinator : IDisposable
 
     private ColumnExecutor? GetFirstFailedExecutorIfRunning()
     {
-        if (_stateManager.State != ExecutionState.Running)
-        {
-            return null;
-        }
-        return _executors.FirstOrDefault(e => e.HasFailed);
+        return StateManager.State != ExecutionState.Running ? null : _executors.FirstOrDefault(e => e.HasFailed);
     }
 
     private void ReportError(ColumnExecutor executor)
@@ -147,7 +142,7 @@ public class TestExecutionCoordinator : IDisposable
             executor.ErrorMessage ?? "Неизвестная ошибка",
             DateTime.Now,
             Guid.Empty);
-        _stateManager.TransitionTo(ExecutionState.PausedOnError, error);
+        StateManager.TransitionTo(ExecutionState.PausedOnError, error);
         lock (_stateLock)
         {
             _errorResolutionTcs = new TaskCompletionSource<ErrorResolution>();
@@ -244,12 +239,12 @@ public class TestExecutionCoordinator : IDisposable
 
     private bool CanStart()
     {
-        if (_stateManager.IsActive)
+        if (!StateManager.IsActive)
         {
-            _logger.LogWarning("Координатор уже выполняется");
-            return false;
+            return ValidateMapsLoaded();
         }
-        return ValidateMapsLoaded();
+        _logger.LogWarning("Координатор уже выполняется");
+        return false;
     }
 
     private bool ValidateMapsLoaded()
@@ -275,7 +270,7 @@ public class TestExecutionCoordinator : IDisposable
 
     private void BeginExecution()
     {
-        _stateManager.TransitionTo(ExecutionState.Running);
+        StateManager.TransitionTo(ExecutionState.Running);
         _activityTracker.SetTestExecutionActive(true);
         CancelPendingErrorResolution();
         _cts?.Dispose();
@@ -380,13 +375,13 @@ public class TestExecutionCoordinator : IDisposable
         {
             executor.ClearFailedState();
         }
-        _stateManager.TransitionTo(ExecutionState.Running);
+        StateManager.TransitionTo(ExecutionState.Running);
     }
 
     private void Complete()
     {
         var finalState = HasErrors ? ExecutionState.Failed : ExecutionState.Completed;
-        _stateManager.TransitionTo(finalState);
+        StateManager.TransitionTo(finalState);
         _activityTracker.SetTestExecutionActive(false);
         LogExecutionCompleted();
         OnSequenceCompleted?.Invoke();
@@ -401,7 +396,7 @@ public class TestExecutionCoordinator : IDisposable
 
     public void Stop()
     {
-        CancellationTokenSource? ctsToCancel = null;
+        CancellationTokenSource? ctsToCancel;
         lock (_stateLock)
         {
             if (!IsRunning)

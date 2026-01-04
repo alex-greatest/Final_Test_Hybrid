@@ -86,8 +86,8 @@ public class OpcUaSubscription(
         _monitoredItems.TryRemove(nodeId, out _);
         item.Notification -= OnNotification;
         var message = OpcUaErrorMapper.ToHumanReadable(item.Status.Error.StatusCode);
-        logger.LogWarning("Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
-        subscriptionLogger.LogWarning("Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
+        logger.LogError("Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
+        subscriptionLogger.LogError(null, "Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
         return new TagError(nodeId, message);
     }
 
