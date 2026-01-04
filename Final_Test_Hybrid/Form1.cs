@@ -113,6 +113,8 @@ namespace Final_Test_Hybrid
             services.AddSingleton<IPreExecutionStepRegistry, PreExecutionStepRegistry>();
             services.AddSingleton<IPreExecutionStep, ScanBarcodeStep>();
             services.AddSingleton<IPreExecutionStep, ScanBarcodeMesStep>();
+            services.AddSingleton<IPreExecutionStep, WriteRecipesToPlcStep>();
+            services.AddSingleton<IPreExecutionStep, ResolveTestMapsStep>();
             services.AddSingleton<PreExecutionCoordinator>();
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
@@ -192,6 +194,7 @@ namespace Final_Test_Hybrid
             services.AddSingleton<IDatabaseLogger, DatabaseLogger>();
             services.AddSingleton<ISpringBootLogger, SpringBootLogger>();
             services.AddSingleton<ITestStepLogger, TestStepLogger>();
+            services.AddTransient(typeof(DualLogger<>));
             var logLevel = Enum.Parse<LogLevel>(_config?["Logging:General:LogLevel"] ?? "Warning");
             services.AddLogging(logging =>
             {

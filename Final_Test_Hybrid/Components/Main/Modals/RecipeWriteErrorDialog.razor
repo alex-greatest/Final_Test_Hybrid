@@ -1,0 +1,35 @@
+@using Final_Test_Hybrid.Models.Steps
+
+<div class="recipe-write-error-dialog">
+    <div class="info-message">
+        Ошибка записи рецепта в PLC
+    </div>
+    <RadzenDataGrid Data="@Errors" TItem="RecipeWriteErrorInfo"
+                    AllowPaging="false"
+                    AllowSorting="true"
+                    Style="flex: 1; min-height: 0;">
+        <Columns>
+            <RadzenDataGridColumn TItem="RecipeWriteErrorInfo" Property="TagName" Title="Тег" Width="200px" />
+            <RadzenDataGridColumn TItem="RecipeWriteErrorInfo" Property="Address" Title="Адрес" Width="250px" />
+            <RadzenDataGridColumn TItem="RecipeWriteErrorInfo" Property="Value" Title="Значение" Width="120px" />
+            <RadzenDataGridColumn TItem="RecipeWriteErrorInfo" Property="Error" Title="Ошибка" Width="auto" />
+        </Columns>
+    </RadzenDataGrid>
+    <div class="dialog-buttons">
+        <RadzenButton Text="Закрыть" Icon="close"
+                      Click="@OnClose"
+                      ButtonStyle="ButtonStyle.Primary" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public List<RecipeWriteErrorInfo> Errors { get; set; } = [];
+    [Inject]
+    public required DialogService DialogService { get; set; }
+
+    private void OnClose()
+    {
+        DialogService.Close();
+    }
+}

@@ -42,6 +42,7 @@ public class ScanStepManager : IDisposable
     public event Func<IReadOnlyList<string>, Task>? OnMissingRequiredTagsDialogRequested;
     public event Func<IReadOnlyList<UnknownStepInfo>, Task>? OnUnknownStepsDialogRequested;
     public event Func<IReadOnlyList<MissingRecipeInfo>, Task>? OnMissingRecipesDialogRequested;
+    public event Func<IReadOnlyList<RecipeWriteErrorInfo>, Task>? OnRecipeWriteErrorDialogRequested;
 
     private bool IsScanModeEnabled => _operatorState.IsAuthenticated && _autoReady.IsReady;
 
@@ -174,6 +175,7 @@ public class ScanStepManager : IDisposable
             MissingRequiredTagsDetails details => OnMissingRequiredTagsDialogRequested?.Invoke(details.Tags),
             UnknownStepsDetails details => OnUnknownStepsDialogRequested?.Invoke(details.Steps),
             MissingRecipesDetails details => OnMissingRecipesDialogRequested?.Invoke(details.Recipes),
+            RecipeWriteErrorDetails details => OnRecipeWriteErrorDialogRequested?.Invoke(details.Errors),
             _ => null
         };
         await (task ?? Task.CompletedTask);

@@ -12,3 +12,5 @@ public record MissingRequiredTagsDetails(IReadOnlyList<string> Tags) : IPreExecu
 public record UnknownStepsDetails(IReadOnlyList<UnknownStepInfo> Steps) : IPreExecutionErrorDetails;
 
 public record MissingRecipesDetails(IReadOnlyList<MissingRecipeInfo> Recipes) : IPreExecutionErrorDetails;
+
+public record RecipeWriteErrorDetails(IReadOnlyList<RecipeWriteErrorInfo> Errors) : IPreExecutionErrorDetails;

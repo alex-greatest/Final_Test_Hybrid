@@ -7,6 +7,7 @@ using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
 using Final_Test_Hybrid.Services.SpringBoot.Shift;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
@@ -37,6 +38,7 @@ public class ScanBarcodeStep(
     public string Name => "Сканирование штрихкода";
     public string Description => "Сканирует штрихкод с продукта";
     public bool IsVisibleInEditor => false;
+    public bool IsVisibleInStatusGrid => true;
 
     public Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
     {
@@ -49,11 +51,7 @@ public class ScanBarcodeStep(
         LogInfo("Обработка штрихкода: {Barcode}", barcode);
         var pipeline = new BarcodePipeline(barcode);
         var result = await ExecutePipelineAsync(pipeline);
-        if (!result.IsSuccess)
-        {
-            return result;
-        }
-        return CompleteSuccessfully(pipeline);
+        return !result.IsSuccess ? result : CompleteSuccessfully(pipeline);
     }
 
     private async Task<BarcodeStepResult> ExecutePipelineAsync(BarcodePipeline pipeline)
@@ -70,11 +68,7 @@ public class ScanBarcodeStep(
     private BarcodeStepResult? ValidateBarcode(BarcodePipeline pipeline)
     {
         pipeline.Validation = barcodeScanService.Validate(pipeline.Barcode);
-        if (!pipeline.Validation.IsValid)
-        {
-            return Fail(pipeline.Validation.Error!);
-        }
-        return null;
+        return !pipeline.Validation.IsValid ? Fail(pipeline.Validation.Error!) : null;
     }
 
     private async Task<BarcodeStepResult?> FindBoilerTypeAsync(BarcodePipeline pipeline)

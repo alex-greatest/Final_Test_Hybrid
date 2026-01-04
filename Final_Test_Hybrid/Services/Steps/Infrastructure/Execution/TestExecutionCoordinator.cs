@@ -121,16 +121,21 @@ public class TestExecutionCoordinator : IDisposable
 
     private void CheckForErrors()
     {
-        if (_stateManager.State != ExecutionState.Running)
-        {
-            return;
-        }
-        var failedExecutor = _executors.FirstOrDefault(e => e.HasFailed);
+        var failedExecutor = GetFirstFailedExecutorIfRunning();
         if (failedExecutor == null)
         {
             return;
         }
         ReportError(failedExecutor);
+    }
+
+    private ColumnExecutor? GetFirstFailedExecutorIfRunning()
+    {
+        if (_stateManager.State != ExecutionState.Running)
+        {
+            return null;
+        }
+        return _executors.FirstOrDefault(e => e.HasFailed);
     }
 
     private void ReportError(ColumnExecutor executor)
@@ -143,13 +148,19 @@ public class TestExecutionCoordinator : IDisposable
             DateTime.Now,
             Guid.Empty);
         _stateManager.TransitionTo(ExecutionState.PausedOnError, error);
-        _errorResolutionTcs = new TaskCompletionSource<ErrorResolution>();
+        lock (_stateLock)
+        {
+            _errorResolutionTcs = new TaskCompletionSource<ErrorResolution>();
+        }
         OnErrorOccurred?.Invoke(error);
     }
 
     private void HandleErrorResolution(ErrorResolution resolution)
     {
-        _errorResolutionTcs?.TrySetResult(resolution);
+        lock (_stateLock)
+        {
+            _errorResolutionTcs?.TrySetResult(resolution);
+        }
     }
 
     public void SetMaps(List<TestMap> maps)
@@ -202,29 +213,53 @@ public class TestExecutionCoordinator : IDisposable
         {
             await RunAllMaps();
         }
+        catch (Exception ex)
+        {
+            LogUnhandledException(ex);
+        }
         finally
         {
             Complete();
         }
     }
 
+    private void LogUnhandledException(Exception ex)
+    {
+        _logger.LogError(ex, "Необработанная ошибка в TestExecutionCoordinator");
+        _testLogger.LogError(ex, "Критическая ошибка выполнения тестов");
+    }
+
     private bool TryStart()
     {
         lock (_stateLock)
         {
-            if (_stateManager.IsActive)
+            if (!CanStart())
             {
-                _logger.LogWarning("Координатор уже выполняется");
-                return false;
-            }
-            if (!HasMapsLoaded())
-            {
-                LogNoSequenceLoaded();
                 return false;
             }
             BeginExecution();
             return true;
         }
+    }
+
+    private bool CanStart()
+    {
+        if (_stateManager.IsActive)
+        {
+            _logger.LogWarning("Координатор уже выполняется");
+            return false;
+        }
+        return ValidateMapsLoaded();
+    }
+
+    private bool ValidateMapsLoaded()
+    {
+        if (HasMapsLoaded())
+        {
+            return true;
+        }
+        LogNoSequenceLoaded();
+        return false;
     }
 
     private bool HasMapsLoaded()
@@ -242,12 +277,20 @@ public class TestExecutionCoordinator : IDisposable
     {
         _stateManager.TransitionTo(ExecutionState.Running);
         _activityTracker.SetTestExecutionActive(true);
-        _errorResolutionTcs?.TrySetCanceled();
-        _errorResolutionTcs = null;
+        CancelPendingErrorResolution();
         _cts?.Dispose();
         _cts = new CancellationTokenSource();
         _logger.LogInformation("Запуск {Count} Maps", _maps.Count);
         _testLogger.LogInformation("═══ ЗАПУСК ТЕСТИРОВАНИЯ ({Count} блоков) ═══", _maps.Count);
+    }
+
+    private void CancelPendingErrorResolution()
+    {
+        lock (_stateLock)
+        {
+            _errorResolutionTcs?.TrySetCanceled();
+            _errorResolutionTcs = null;
+        }
     }
 
     private async Task RunAllMaps()
@@ -281,20 +324,30 @@ public class TestExecutionCoordinator : IDisposable
 
     private async Task HandleErrorsIfAny()
     {
-        while (HasErrors && !IsCancellationRequested)
+        while (ShouldContinueErrorHandling())
         {
             var resolution = await WaitForErrorResolution();
             await ProcessErrorResolution(resolution);
         }
     }
 
+    private bool ShouldContinueErrorHandling()
+    {
+        return HasErrors && !IsCancellationRequested;
+    }
+
     private async Task<ErrorResolution> WaitForErrorResolution()
     {
-        if (_errorResolutionTcs == null)
+        Task<ErrorResolution>? taskToAwait;
+        lock (_stateLock)
+        {
+            taskToAwait = _errorResolutionTcs?.Task;
+        }
+        if (taskToAwait == null)
         {
             return ErrorResolution.None;
         }
-        return await _errorResolutionTcs.Task;
+        return await taskToAwait;
     }
 
     private async Task ProcessErrorResolution(ErrorResolution resolution)
@@ -348,6 +401,7 @@ public class TestExecutionCoordinator : IDisposable
 
     public void Stop()
     {
+        CancellationTokenSource? ctsToCancel = null;
         lock (_stateLock)
         {
             if (!IsRunning)
@@ -355,8 +409,9 @@ public class TestExecutionCoordinator : IDisposable
                 return;
             }
             LogStopRequested();
-            _cts?.Cancel();
+            ctsToCancel = _cts;
         }
+        ctsToCancel?.Cancel();
     }
 
     private void LogStopRequested()
@@ -367,6 +422,7 @@ public class TestExecutionCoordinator : IDisposable
 
     public void Dispose()
     {
+        _errorResolutionTcs?.TrySetCanceled();
         Stop();
         _cts?.Dispose();
         UnsubscribeFromExecutorEvents();

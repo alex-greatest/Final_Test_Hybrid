@@ -4,7 +4,6 @@ using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Recipe;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
@@ -12,7 +11,6 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution
 public class PreExecutionCoordinator(
     IPreExecutionStepRegistry stepRegistry,
     TestExecutionCoordinator testCoordinator,
-    ITestMapResolver mapResolver,
     StepStatusReporter statusReporter,
     BoilerState boilerState,
     IRecipeProvider recipeProvider,
@@ -40,19 +38,11 @@ public class PreExecutionCoordinator(
     {
         statusReporter.ClearAll();
         var context = CreateContext(barcode);
-
         var stepsResult = await ExecuteAllStepsAsync(context, ct);
         if (!stepsResult.Success)
         {
             return HandleFailedResult(stepsResult);
         }
-
-        var resolveResult = ResolveTestMaps(context);
-        if (!resolveResult.Success)
-        {
-            return HandleFailedResult(resolveResult);
-        }
-
         messageState.Clear();
         StartTestExecution(context);
         return PreExecutionResult.Ok();
@@ -65,36 +55,6 @@ public class PreExecutionCoordinator(
             messageState.SetMessage(result.UserMessage);
         }
         return result;
-    }
-
-    private PreExecutionResult ResolveTestMaps(PreExecutionContext context)
-    {
-        if (!HasRawMaps(context))
-        {
-            return PreExecutionResult.Fail("Нет тестовых последовательностей");
-        }
-
-        var resolveResult = mapResolver.Resolve(context.RawMaps!);
-        if (resolveResult.UnknownSteps.Count > 0)
-        {
-            return HandleUnknownSteps(resolveResult);
-        }
-
-        context.Maps = resolveResult.Maps;
-        return PreExecutionResult.Ok();
-    }
-
-    private static bool HasRawMaps(PreExecutionContext context)
-    {
-        return context.RawMaps is { Count: > 0 };
-    }
-
-    private PreExecutionResult HandleUnknownSteps(ResolveResult resolveResult)
-    {
-        var error = $"Неизвестных шагов: {resolveResult.UnknownSteps.Count}";
-        logger.LogWarning("{Error}", error);
-        testStepLogger.LogWarning("{Error}", error);
-        return PreExecutionResult.Fail(error, new UnknownStepsDetails(resolveResult.UnknownSteps));
     }
 
     private async Task<PreExecutionResult> ExecuteAllStepsAsync(PreExecutionContext context, CancellationToken ct)

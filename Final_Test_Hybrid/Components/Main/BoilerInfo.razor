@@ -39,6 +39,7 @@
         ScanStepManager.OnMissingRequiredTagsDialogRequested += ShowMissingRequiredTagsDialogAsync;
         ScanStepManager.OnUnknownStepsDialogRequested += ShowUnknownStepsDialogAsync;
         ScanStepManager.OnMissingRecipesDialogRequested += ShowMissingRecipesDialogAsync;
+        ScanStepManager.OnRecipeWriteErrorDialogRequested += ShowRecipeWriteErrorDialogAsync;
     }
 
     private string GetDisplayValue() => BoilerState.SerialNumber ?? _manualInput;
@@ -153,6 +154,20 @@
         });
     }
 
+    private async Task ShowRecipeWriteErrorDialogAsync(IReadOnlyList<RecipeWriteErrorInfo> errors)
+    {
+        await InvokeAsync(async () =>
+        {
+            await DialogService.OpenAsync<RecipeWriteErrorDialog>(
+                "Ошибка записи рецепта в PLC",
+                new Dictionary<string, object>
+                {
+                    { "Errors", errors.ToList() }
+                },
+                CreateFullScreenDialogOptions("recipe-write-error-dialog-window"));
+        });
+    }
+
     private static DialogOptions CreateFullScreenDialogOptions(string cssClass)
     {
         return new DialogOptions
@@ -174,5 +189,6 @@
         ScanStepManager.OnMissingRequiredTagsDialogRequested -= ShowMissingRequiredTagsDialogAsync;
         ScanStepManager.OnUnknownStepsDialogRequested -= ShowUnknownStepsDialogAsync;
         ScanStepManager.OnMissingRecipesDialogRequested -= ShowMissingRecipesDialogAsync;
+        ScanStepManager.OnRecipeWriteErrorDialogRequested -= ShowRecipeWriteErrorDialogAsync;
     }
 }
