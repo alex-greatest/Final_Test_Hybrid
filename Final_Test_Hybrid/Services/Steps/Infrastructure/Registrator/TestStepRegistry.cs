@@ -4,10 +4,17 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
-public class TestStepRegistry(IServiceProvider serviceProvider) : ITestStepRegistry
+public class TestStepRegistry : ITestStepRegistry
 {
-    public IReadOnlyList<ITestStep> Steps { get; } = LoadSteps(serviceProvider);
+    private readonly IServiceProvider _serviceProvider;
+    private List<ITestStep>? _steps;
+    public IReadOnlyList<ITestStep> Steps => _steps ??= LoadSteps();
     public IReadOnlyList<ITestStep> VisibleSteps => Steps.Where(s => s.IsVisibleInEditor).ToList();
+
+    public TestStepRegistry(IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+    }
 
     public ITestStep? GetById(string id)
     {
@@ -19,12 +26,12 @@ public class TestStepRegistry(IServiceProvider serviceProvider) : ITestStepRegis
         return Steps.FirstOrDefault(s => s.Name == name);
     }
 
-    private static List<ITestStep> LoadSteps(IServiceProvider serviceProvider)
+    private List<ITestStep> LoadSteps()
     {
         return Assembly.GetExecutingAssembly()
             .GetTypes()
             .Where(IsTestStepType)
-            .Select(type => CreateInstance(serviceProvider, type))
+            .Select(CreateInstance)
             .Where(s => s != null)
             .Cast<ITestStep>()
             .OrderBy(s => s.Name)
@@ -36,8 +43,8 @@ public class TestStepRegistry(IServiceProvider serviceProvider) : ITestStepRegis
         return typeof(ITestStep).IsAssignableFrom(type) && type is { IsInterface: false, IsAbstract: false };
     }
 
-    private static ITestStep? CreateInstance(IServiceProvider serviceProvider, Type type)
+    private ITestStep? CreateInstance(Type type)
     {
-        return ActivatorUtilities.CreateInstance(serviceProvider, type) as ITestStep;
+        return ActivatorUtilities.CreateInstance(_serviceProvider, type) as ITestStep;
     }
 }

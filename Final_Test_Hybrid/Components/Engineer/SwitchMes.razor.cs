@@ -1,6 +1,8 @@
 using Final_Test_Hybrid.Components.Engineer.Modals;
 using Final_Test_Hybrid.Services.Common.Settings;
+using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 using Microsoft.AspNetCore.Components;
 using Radzen;
@@ -21,13 +23,30 @@ public partial class SwitchMes : IDisposable
     public required NotificationService NotificationService { get; set; }
     [Inject]
     public required ScanStepManager ScanStepManager { get; set; }
+    [Inject]
+    public required TestSequenseService TestSequenseService { get; set; }
+    [Inject]
+    public required AutoReadySubscription AutoReadySubscription { get; set; }
     private bool _useMes;
-    private bool IsDisabled => ScanStepManager.IsProcessing;
+
+    private bool IsOnScanStep
+    {
+        get
+        {
+            var currentStep = TestSequenseService.Data.FirstOrDefault();
+            return currentStep?.Module is "Сканирование штрихкода" or "Сканирование штрихкода MES";
+        }
+    }
+    private bool IsWaitingForAuto => !TestSequenseService.Data.Any() && !AutoReadySubscription.IsReady;
+    private bool CanInteract => IsOnScanStep || IsWaitingForAuto || !TestSequenseService.Data.Any();
+    private bool IsDisabled => ScanStepManager.IsProcessing || !CanInteract;
 
     protected override void OnInitialized()
     {
         _useMes = AppSettingsService.UseMes;
         ScanStepManager.OnChange += HandleScanStateChanged;
+        TestSequenseService.OnDataChanged += HandleScanStateChanged;
+        AutoReadySubscription.OnChange += HandleScanStateChanged;
     }
 
     private void HandleScanStateChanged()
@@ -96,5 +115,7 @@ public partial class SwitchMes : IDisposable
     public void Dispose()
     {
         ScanStepManager.OnChange -= HandleScanStateChanged;
+        TestSequenseService.OnDataChanged -= HandleScanStateChanged;
+        AutoReadySubscription.OnChange -= HandleScanStateChanged;
     }
 }

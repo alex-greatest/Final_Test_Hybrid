@@ -71,14 +71,9 @@ public class ScanBarcodeMesStep(
         var result = await operationStartService.StartOperationAsync(
             pipeline.Validation.Barcode,
             operatorState.Username ?? UnknownOperator);
-
         if (result.IsSuccess)
         {
-            if (result.Data is null)
-            {
-                return Fail("Сервер вернул пустой ответ", LogLevel.Warning);
-            }
-            return HandleSuccessfulStart(pipeline, result.Data);
+            return result.Data is null ? Fail("Сервер вернул пустой ответ", LogLevel.Warning) : HandleSuccessfulStart(pipeline, result.Data);
         }
         if (result.RequiresRework)
         {
