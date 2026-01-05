@@ -3,7 +3,10 @@ using Radzen;
 
 namespace Final_Test_Hybrid.Services.Common.UI
 {
-    public class NotificationServiceWrapper(NotificationService notificationService, ILogger<NotificationServiceWrapper> logger) : INotificationService
+    public class NotificationServiceWrapper(
+        NotificationService notificationService,
+        IUiDispatcher uiDispatcher,
+        ILogger<NotificationServiceWrapper> logger) : INotificationService
     {
         private readonly Lock _lock = new();
 
@@ -29,6 +32,11 @@ namespace Final_Test_Hybrid.Services.Common.UI
         }
 
         private void Notify(NotificationSeverity severity, string summary, string detail, double? duration, bool closeOnClick, string? id, string? style)
+        {
+            uiDispatcher.Dispatch(() => NotifyCore(severity, summary, detail, duration, closeOnClick, id, style));
+        }
+
+        private void NotifyCore(NotificationSeverity severity, string summary, string detail, double? duration, bool closeOnClick, string? id, string? style)
         {
             lock (_lock)
             {

@@ -51,15 +51,24 @@ dotnet clean
 
 ### Dependency Injection Setup (Form1.cs)
 
-Services registered in the DI container:
+**Ключевые сервисы:**
 ```csharp
-- IConfiguration (from appsettings.json)
-- IFilePickerService → WinFormsFilePickerService (scoped)
-- ISequenceExcelService → SequenceExcelService (scoped)
-- INotificationService → NotificationServiceWrapper (scoped)
-- TestSequenceService (scoped)
-- RadzenComponents (DialogService, NotificationService, ContextMenuService, TooltipService)
+// UI Dispatching (SINGLETON - важно для hybrid!)
+services.AddSingleton<BlazorDispatcherAccessor>();
+services.AddSingleton<IUiDispatcher, BlazorUiDispatcher>();
+services.AddSingleton<INotificationService, NotificationServiceWrapper>();
+services.AddSingleton<Radzen.NotificationService>();  // Override Radzen's scoped!
+
+// Scoped сервисы
+services.AddScoped<IFilePickerService, WinFormsFilePickerService>();
+services.AddScoped<ISequenceExcelService, SequenceExcelService>();
+services.AddScoped<TestSequenceService>();
+
+// Radzen components (scoped by default)
+services.AddRadzenComponents();
 ```
+
+**⚠️ ВАЖНО:** В hybrid-приложении `Radzen.NotificationService` должен быть **Singleton**, иначе singleton-сервисы (ScanErrorHandler) получат другой экземпляр, чем UI компоненты.
 
 ### Component Organization
 
@@ -227,6 +236,38 @@ catch (Exception ex) {
 - Use specific messages when possible: "Файл занят. Закройте его в Excel"
 - Use generic messages as fallback: "Не удалось сохранить файл"
 
+### Test Step Logging (ITestStepLogger)
+
+**ВАЖНО:** Все шаги тестирования (`ITestStep`, `IPreExecutionStep`, `IScanBarcodeStep`) должны использовать `ITestStepLogger` для логирования.
+
+`ITestStepLogger` — это человекочитаемый лог, привязанный к тесту. Он отображается пользователю и сохраняется в историю теста.
+
+```csharp
+public class MyTestStep(
+    ILogger<MyTestStep> logger,           // Технический лог (файл/консоль)
+    ITestStepLogger testStepLogger)       // Человекочитаемый лог теста
+{
+    private void LogInfo(string message, params object?[] args)
+    {
+        logger.LogInformation(message, args);       // Файл
+        testStepLogger.LogInformation(message, args); // Лог теста
+    }
+
+    private BarcodeStepResult Fail(string error)
+    {
+        testStepLogger.LogError(null, "{Error}", error); // ОБЯЗАТЕЛЬНО!
+        return BarcodeStepResult.Fail(error);
+    }
+}
+```
+
+**Правила:**
+- Всегда дублировать логи в `ITestStepLogger` и `ILogger`
+- При ошибке ВСЕГДА логировать в `testStepLogger.LogError()`
+- Использовать `testStepLogger.LogStepStart(Name)` в начале шага
+- Использовать `testStepLogger.LogStepEnd(Name)` при успешном завершении
+- Сообщения должны быть на русском языке (для пользователя)
+
 ## Common Patterns
 
 ### Modal Dialog Pattern
@@ -285,6 +326,48 @@ private async Task OnTabChanged(int tabIndex)
 }
 ```
 
+### UI Dispatching (BlazorDispatcherAccessor)
+
+**Проблема:** В hybrid-приложении WinForms UI thread ≠ Blazor renderer context. Вызов Radzen сервисов из background потоков (RawInputService, OPC UA callbacks) требует маршрутизации в Blazor context.
+
+**Решение:**
+```csharp
+// Services/Common/UI/BlazorDispatcherAccessor.cs
+public class BlazorDispatcherAccessor
+{
+    private Func<Action, Task>? _invokeAsync;
+    private Action? _stateHasChanged;
+
+    public void Initialize(Func<Action, Task> invokeAsync, Action stateHasChanged)
+    {
+        _invokeAsync = invokeAsync;
+        _stateHasChanged = stateHasChanged;
+    }
+
+    public Task InvokeAsync(Action action)
+    {
+        if (_invokeAsync == null) { action(); return Task.CompletedTask; }
+        return _invokeAsync(() => { action(); _stateHasChanged?.Invoke(); });
+    }
+}
+
+// MyComponent.razor (root component)
+protected override void OnInitialized()
+{
+    BlazorDispatcherAccessor.Initialize(
+        action => InvokeAsync(action),
+        StateHasChanged);
+}
+```
+
+**Использование в сервисах:**
+```csharp
+public class BlazorUiDispatcher(BlazorDispatcherAccessor accessor) : IUiDispatcher
+{
+    public void Dispatch(Action action) => _ = accessor.InvokeAsync(action);
+}
+```
+
 ## Accepted Patterns (NOT bugs)
 
 При code review НЕ флагать следующие паттерны как проблемы:
@@ -339,17 +422,18 @@ appSettings.UseMesChanged += _ => Clear();
 
 ### Recent Changes
 
-- Добавлены Database сервисы для работы с SQLite (BoilerType, Recipe, ResultSettings, StepFinalTest, ErrorSettingsTemplate)
-- Добавлены StandDatabase компоненты для управления данными стенда
-- Реализована функция копирования рецептов и настроек между типами котлов
-- Исправлено обновление dropdown при изменении типов котлов (HashSet паттерн)
-- OPC UA folder added to project structure
-- Services refactored to `Services/Common/` namespace
+- **UI Dispatching:** Добавлен `BlazorDispatcherAccessor` для маршрутизации вызовов из background потоков в Blazor context
+- **Notifications:** `Radzen.NotificationService` и `INotificationService` теперь Singleton (исправлен scope mismatch)
+- **ITestStepLogger:** Все шаги теперь логируют ошибки в человекочитаемый тестовый лог
+- **OPC UA:** Полная интеграция с PLC (подписки, чтение/запись тегов, обработка прерываний)
+- **MES Integration:** `ScanBarcodeMesStep` для работы с MES сервером (рецепты, rework flow)
+- Database сервисы для SQLite (BoilerType, Recipe, ResultSettings, StepFinalTest, ErrorSettingsTemplate)
+- StandDatabase компоненты для управления данными стенда
+- Система паузы/прерываний (`TestInterruptCoordinator`, `PauseTokenSource`)
 
 ### Known Issues
 
-- `MyComponent.razor` is 947KB - consider breaking into smaller components
-- OPC UA integration prepared but not yet active
+- `MyComponent.razor` — 947KB, рассмотреть разбиение на компоненты
 
 ## File Locations
 

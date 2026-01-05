@@ -74,13 +74,13 @@ public class ScanBarcodeMesStep(
             CurrentOperatorName);
         if (result.IsSuccess)
         {
-            return result.Data is null ? Fail("Сервер вернул пустой ответ", LogLevel.Warning) : HandleSuccessfulStart(pipeline, result.Data);
+            return result.Data is null ? Fail("Сервер вернул пустой ответ") : HandleSuccessfulStart(pipeline, result.Data);
         }
         if (result.RequiresRework)
         {
             return await HandleReworkFlowAsync(pipeline, result.ErrorMessage!);
         }
-        return Fail(result.ErrorMessage!, LogLevel.Warning);
+        return Fail(result.ErrorMessage!);
     }
 
     private BarcodeStepResult? HandleSuccessfulStart(BarcodePipeline pipeline, OperationStartResponse data)
@@ -88,7 +88,7 @@ public class ScanBarcodeMesStep(
         pipeline.Recipes = MapRecipes(data.Recipes);
         if (pipeline.Recipes.Count == 0)
         {
-            return Fail("Рецепты не найдены", LogLevel.Warning);
+            return Fail("Рецепты не найдены");
         }
         pipeline.Cycle = MapToBoilerTypeCycle(data.BoilerTypeCycle);
         SaveOrderState(data.BoilerMadeInformation);
@@ -119,7 +119,7 @@ public class ScanBarcodeMesStep(
         LogWarning("Требуется доработка: {ErrorMessage}", errorMessage);
         if (OnReworkRequired == null)
         {
-            return Fail("Обработчик доработки не настроен", LogLevel.Error);
+            return Fail("Обработчик доработки не настроен");
         }
         var flowResult = await OnReworkRequired(
             errorMessage,
@@ -167,7 +167,7 @@ public class ScanBarcodeMesStep(
         var result = await sequenceLoader.LoadRawDataAsync(article);
         if (!result.IsSuccess)
         {
-            return Fail(result.Error!, LogLevel.Warning);
+            return Fail(result.Error!);
         }
         pipeline.RawSequenceData = result.RawData!;
         return null;
@@ -178,7 +178,7 @@ public class ScanBarcodeMesStep(
         var result = mapBuilder.Build(pipeline.RawSequenceData);
         if (!result.IsSuccess)
         {
-            return Fail(result.Error!, LogLevel.Error);
+            return Fail(result.Error!);
         }
         pipeline.RawMaps = result.Maps!;
         return null;
@@ -245,31 +245,10 @@ public class ScanBarcodeMesStep(
         };
     }
 
-    private BarcodeStepResult Fail(string error, LogLevel level = LogLevel.None)
+    private BarcodeStepResult Fail(string error)
     {
-        LogByLevel(error, level);
+        testStepLogger.LogError(null, "{Error}", error);
         return BarcodeStepResult.Fail(error);
-    }
-
-    private void LogByLevel(string message, LogLevel level)
-    {
-        switch (level)
-        {
-            case LogLevel.Warning:
-                LogWarning("{Message}", message);
-                break;
-            case LogLevel.Error:
-                LogError("{Message}", message);
-                break;
-            case LogLevel.Trace:
-            case LogLevel.Debug:
-            case LogLevel.Information:
-            case LogLevel.Critical:
-            case LogLevel.None:
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(level), level, null);
-        }
     }
 
     private void LogInfo(string message, params object?[] args)
@@ -284,12 +263,6 @@ public class ScanBarcodeMesStep(
         testStepLogger.LogWarning(message, args);
     }
 
-    private void LogError(string message, params object?[] args)
-    {
-        logger.LogError(message, args);
-        testStepLogger.LogError(null, message, args);
-    }
-
     async Task<PreExecutionResult> IPreExecutionStep.ExecuteAsync(PreExecutionContext context, CancellationToken ct)
     {
         var result = await ProcessBarcodeAsync(context.Barcode);
@@ -299,7 +272,7 @@ public class ScanBarcodeMesStep(
         }
         if (!result.IsSuccess)
         {
-            return PreExecutionResult.Fail(result.ErrorMessage!, "Ошибка. Повторите сканирование");
+            return PreExecutionResult.Fail(result.ErrorMessage!);
         }
         context.RawMaps = result.RawMaps;
         return PreExecutionResult.Ok();

@@ -70,7 +70,9 @@ namespace Final_Test_Hybrid
             SettingDevTools(services);
             services.AddScoped<IFilePickerService, WinFormsFilePickerService>();
             services.AddScoped<ISequenceExcelService, SequenceExcelService>();
-            services.AddScoped<INotificationService, NotificationServiceWrapper>();
+            services.AddSingleton<BlazorDispatcherAccessor>();
+            services.AddSingleton<IUiDispatcher, BlazorUiDispatcher>();
+            services.AddSingleton<INotificationService, NotificationServiceWrapper>();
             services.AddScoped<TestSequenceService>();
             services.AddSingleton<ITestStepRegistry, TestStepRegistry>();
             services.Configure<AppSettings>(_config!.GetSection("Settings"));
@@ -122,6 +124,8 @@ namespace Final_Test_Hybrid
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();
             services.AddRadzenComponents();
+            // Override Radzen's scoped NotificationService with singleton for hybrid app
+            services.AddSingleton<Radzen.NotificationService>();
             blazorWebView1.HostPage = "wwwroot\\index.html";
             _serviceProvider = services.BuildServiceProvider();
             var logger = _serviceProvider.GetRequiredService<ILogger<Form1>>();

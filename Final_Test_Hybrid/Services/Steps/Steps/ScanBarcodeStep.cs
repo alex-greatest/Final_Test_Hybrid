@@ -70,7 +70,7 @@ public class ScanBarcodeStep(
         var cycle = await boilerTypeService.FindActiveByArticleAsync(pipeline.Validation.Article!);
         if (cycle == null)
         {
-            return Fail("Тип котла не найден", LogLevel.Warning);
+            return Fail("Тип котла не найден");
         }
         pipeline.Cycle = cycle;
         return null;
@@ -83,7 +83,7 @@ public class ScanBarcodeStep(
 
         if (pipeline.Recipes.Count == 0)
         {
-            return Fail("Рецепты не найдены", LogLevel.Warning);
+            return Fail("Рецепты не найдены");
         }
         LogLoadedRecipes(pipeline.Recipes);
         return null;
@@ -103,7 +103,7 @@ public class ScanBarcodeStep(
         var result = await sequenceLoader.LoadRawDataAsync(pipeline.Validation.Article!);
         if (!result.IsSuccess)
         {
-            return Fail(result.Error!, LogLevel.Warning);
+            return Fail(result.Error!);
         }
         pipeline.RawSequenceData = result.RawData!;
         return null;
@@ -114,7 +114,7 @@ public class ScanBarcodeStep(
         var result = mapBuilder.Build(pipeline.RawSequenceData);
         if (!result.IsSuccess)
         {
-            return Fail(result.Error!, LogLevel.Error);
+            return Fail(result.Error!);
         }
         pipeline.RawMaps = result.Maps!;
         return null;
@@ -148,26 +148,10 @@ public class ScanBarcodeStep(
             pipeline.Recipes);
     }
 
-    private BarcodeStepResult Fail(string error, LogLevel level = LogLevel.None)
+    private BarcodeStepResult Fail(string error)
     {
-        LogByLevel(error, level);
+        testStepLogger.LogError(null, "{Error}", error);
         return BarcodeStepResult.Fail(error);
-    }
-
-    private void LogByLevel(string message, LogLevel level)
-    {
-        var logAction = GetLogAction(level);
-        logAction?.Invoke(message);
-    }
-
-    private Action<string>? GetLogAction(LogLevel level)
-    {
-        return level switch
-        {
-            LogLevel.Warning => LogWarning,
-            LogLevel.Error => LogError,
-            _ => null
-        };
     }
 
     private void LogInfo(string message, params object?[] args)
@@ -176,24 +160,12 @@ public class ScanBarcodeStep(
         testStepLogger.LogInformation(message, args);
     }
 
-    private void LogWarning(string message)
-    {
-        logger.LogWarning("{Error}", message);
-        testStepLogger.LogWarning("{Error}", message);
-    }
-
-    private void LogError(string message)
-    {
-        logger.LogError("{Error}", message);
-        testStepLogger.LogError(null, "{Error}", message);
-    }
-
     async Task<PreExecutionResult> IPreExecutionStep.ExecuteAsync(PreExecutionContext context, CancellationToken ct)
     {
         var result = await ProcessBarcodeAsync(context.Barcode);
         if (!result.IsSuccess)
         {
-            return PreExecutionResult.Fail(result.ErrorMessage!, "Ошибка. Повторите сканирование");
+            return PreExecutionResult.Fail(result.ErrorMessage!);
         }
         context.RawMaps = result.RawMaps;
         return PreExecutionResult.Ok();

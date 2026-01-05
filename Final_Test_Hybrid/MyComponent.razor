@@ -5,8 +5,10 @@
 @using Final_Test_Hybrid.Components.Loading
 @using Final_Test_Hybrid.Services.OpcUa
 @using Final_Test_Hybrid.Services.OpcUa.Connection
+@using Final_Test_Hybrid.Services.Common.UI
 @inject PlcSubscriptionState SubscriptionState
 @inject OpcUaConnectionState ConnectionState
+@inject BlazorDispatcherAccessor BlazorDispatcherAccessor
 @implements IDisposable
 
 <SubscriptionLoadingOverlay IsVisible="@(SubscriptionState.IsInitializing && ConnectionState.IsConnected)" />
@@ -9433,6 +9435,7 @@
 
     protected override void OnInitialized()
     {
+        BlazorDispatcherAccessor.Initialize(action => InvokeAsync(action), StateHasChanged);
         SubscriptionState.OnStateChanged += HandleStateChanged;
         ConnectionState.ConnectionStateChanged += HandleConnectionChanged;
     }
