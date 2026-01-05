@@ -1,15 +1,18 @@
 using Final_Test_Hybrid.Models.Database;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Recipe;
 
 namespace Final_Test_Hybrid.Services.Main;
 
 public class BoilerState
 {
     private readonly Lock _lock = new();
+    private readonly IRecipeProvider _recipeProvider;
 
-    public BoilerState(AppSettingsService appSettings)
+    public BoilerState(AppSettingsService appSettings, IRecipeProvider recipeProvider)
     {
+        _recipeProvider = recipeProvider;
         appSettings.UseMesChanged += _ => Clear();
     }
     private string? _serialNumber;
@@ -89,6 +92,7 @@ public class BoilerState
     public void Clear()
     {
         UpdateState(serialNumber: null, article: null, isValid: false, boilerTypeCycle: null, recipes: null);
+        _recipeProvider.Clear();
         NotifyChanged();
     }
 

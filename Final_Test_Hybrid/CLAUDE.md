@@ -285,6 +285,40 @@ private async Task OnTabChanged(int tabIndex)
 }
 ```
 
+## Accepted Patterns (NOT bugs)
+
+При code review НЕ флагать следующие паттерны как проблемы:
+
+### CancellationToken.None в коротких операциях
+```csharp
+await _preExecutionCoordinator.ExecuteAsync(barcode, CancellationToken.None);
+```
+- Pre-execution занимает 1-2 секунды
+- Пользователь не будет делать dispose в этот момент
+- Добавление токенов везде — overengineering
+
+### Fire-and-forget в singleton сервисах
+```csharp
+_ = HandleInterruptAsync(reason).ContinueWith(t => LogError(t), TaskContinuationOptions.OnlyOnFaulted);
+```
+- Singleton сервисы живут всё время работы приложения
+- Dispose вызывается только при закрытии приложения
+- Ошибки логируются через ContinueWith
+- Tracking задач не нужен
+
+### Event subscriptions в Singleton → Singleton
+```csharp
+// В конструкторе singleton сервиса
+appSettings.UseMesChanged += _ => Clear();
+```
+- Оба сервиса singleton с одинаковым lifetime
+- Unsubscribe не нужен — GC не соберёт ни один из них
+
+### Когда ЭТО проблема:
+- Scoped/Transient сервис подписывается на Singleton — нужен unsubscribe
+- Короткоживущий объект подписывается на долгоживущий — утечка памяти
+- Fire-and-forget без обработки ошибок — исключения теряются
+
 ## Important Implementation Notes
 
 ### Current State

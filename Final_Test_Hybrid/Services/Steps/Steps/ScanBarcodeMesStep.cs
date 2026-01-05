@@ -18,7 +18,6 @@ namespace Final_Test_Hybrid.Services.Steps.Steps;
 public class ScanBarcodeMesStep(
     BarcodeScanService barcodeScanService,
     OperationStartService operationStartService,
-    ReworkDialogService reworkDialogService,
     OperatorState operatorState,
     BoilerState boilerState,
     OrderState orderState,
@@ -28,7 +27,9 @@ public class ScanBarcodeMesStep(
     ILogger<ScanBarcodeMesStep> logger,
     ITestStepLogger testStepLogger) : ITestStep, IScanBarcodeStep, IPreExecutionStep
 {
+    public Func<string, Func<string, string, Task<ReworkSubmitResult>>, Task<ReworkFlowResult>>? OnReworkRequired { get; set; }
     private const string UnknownOperator = "Unknown";
+    private string CurrentOperatorName => operatorState.Username ?? UnknownOperator;
 
     public string Id => "scan-barcode-mes";
     public string Name => "Сканирование штрихкода MES";
@@ -70,7 +71,7 @@ public class ScanBarcodeMesStep(
     {
         var result = await operationStartService.StartOperationAsync(
             pipeline.Validation.Barcode,
-            operatorState.Username ?? UnknownOperator);
+            CurrentOperatorName);
         if (result.IsSuccess)
         {
             return result.Data is null ? Fail("Сервер вернул пустой ответ", LogLevel.Warning) : HandleSuccessfulStart(pipeline, result.Data);
@@ -85,13 +86,27 @@ public class ScanBarcodeMesStep(
     private BarcodeStepResult? HandleSuccessfulStart(BarcodePipeline pipeline, OperationStartResponse data)
     {
         pipeline.Recipes = MapRecipes(data.Recipes);
+        if (pipeline.Recipes.Count == 0)
+        {
+            return Fail("Рецепты не найдены", LogLevel.Warning);
+        }
         pipeline.Cycle = MapToBoilerTypeCycle(data.BoilerTypeCycle);
         SaveOrderState(data.BoilerMadeInformation);
+        LogLoadedRecipes(pipeline.Recipes);
         LogInfo("MES: Тип: {Type}, Артикул: {Article}, Рецептов: {Count}",
             data.BoilerTypeCycle.TypeName,
             data.BoilerTypeCycle.Article,
             data.Recipes.Count);
         return null;
+    }
+
+    private void LogLoadedRecipes(IReadOnlyList<RecipeResponseDto> recipes)
+    {
+        LogInfo("Загружено рецептов: {Count}", recipes.Count);
+        foreach (var recipe in recipes)
+        {
+            LogInfo("Рецепт: {TagName} = {Value} ({PlcType})", recipe.TagName, recipe.Value, recipe.PlcType);
+        }
     }
 
     private void SaveOrderState(BoilerMadeInformation info)
@@ -101,45 +116,49 @@ public class ScanBarcodeMesStep(
 
     private async Task<BarcodeStepResult?> HandleReworkFlowAsync(BarcodePipeline pipeline, string errorMessage)
     {
-        LogWarning($"Требуется доработка: {errorMessage}");
-        var flowResult = await reworkDialogService.ExecuteReworkFlowAsync(errorMessage);
+        LogWarning("Требуется доработка: {ErrorMessage}", errorMessage);
+        if (OnReworkRequired == null)
+        {
+            return Fail("Обработчик доработки не настроен", LogLevel.Error);
+        }
+        var flowResult = await OnReworkRequired(
+            errorMessage,
+            async (adminUsername, reason) => await ExecuteReworkRequestAsync(pipeline, adminUsername, reason));
         if (flowResult.IsCancelled)
         {
-            return Fail("Операция отменена пользователем");
+            return BarcodeStepResult.Cancelled();
         }
-        return await ExecuteReworkAsync(pipeline, flowResult.AdminUsername);
+        return null;
     }
 
-    private async Task<BarcodeStepResult?> ExecuteReworkAsync(BarcodePipeline pipeline, string adminUsername)
+    private async Task<ReworkSubmitResult> ExecuteReworkRequestAsync(
+        BarcodePipeline pipeline,
+        string adminUsername,
+        string reason)
     {
+        LogInfo("Запрос на доработку: Admin={Admin}, Reason={Reason}", adminUsername, reason);
         var reworkResult = await operationStartService.ReworkAsync(
             pipeline.Validation.Barcode,
-            operatorState.Username ?? UnknownOperator,
+            CurrentOperatorName,
             adminUsername);
-
         if (!reworkResult.IsSuccess)
         {
-            return Fail(reworkResult.ErrorMessage!, LogLevel.Warning);
+            return ReworkSubmitResult.Fail(reworkResult.ErrorMessage!);
         }
         LogInfo("Доработка одобрена, повторный запрос в MES...");
-        return await RetryStartOperationAsync(pipeline);
-    }
-
-    private async Task<BarcodeStepResult?> RetryStartOperationAsync(BarcodePipeline pipeline)
-    {
-        var result = await operationStartService.StartOperationAsync(
+        var retryResult = await operationStartService.StartOperationAsync(
             pipeline.Validation.Barcode,
-            operatorState.Username ?? UnknownOperator);
-
-        if (!result.IsSuccess)
+            CurrentOperatorName);
+        if (!retryResult.IsSuccess)
         {
-            return Fail(result.ErrorMessage!, LogLevel.Warning);
+            return ReworkSubmitResult.Fail(retryResult.ErrorMessage!);
         }
-        if (result.Data is null)
+        if (retryResult.Data is null)
         {
-            return Fail("Сервер вернул пустой ответ", LogLevel.Warning);
+            return ReworkSubmitResult.Fail("Сервер вернул пустой ответ");
         }
-        return HandleSuccessfulStart(pipeline, result.Data);
+        HandleSuccessfulStart(pipeline, retryResult.Data);
+        return ReworkSubmitResult.Success();
     }
 
     private async Task<BarcodeStepResult?> LoadTestSequenceAsync(BarcodePipeline pipeline)
@@ -242,6 +261,14 @@ public class ScanBarcodeMesStep(
             case LogLevel.Error:
                 LogError("{Message}", message);
                 break;
+            case LogLevel.Trace:
+            case LogLevel.Debug:
+            case LogLevel.Information:
+            case LogLevel.Critical:
+            case LogLevel.None:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(level), level, null);
         }
     }
 
@@ -263,14 +290,13 @@ public class ScanBarcodeMesStep(
         testStepLogger.LogError(null, message, args);
     }
 
-    public Task OnExecutionStartingAsync()
-    {
-        return Task.CompletedTask;
-    }
-
     async Task<PreExecutionResult> IPreExecutionStep.ExecuteAsync(PreExecutionContext context, CancellationToken ct)
     {
         var result = await ProcessBarcodeAsync(context.Barcode);
+        if (result.IsCancelled)
+        {
+            return PreExecutionResult.Stop();
+        }
         if (!result.IsSuccess)
         {
             return PreExecutionResult.Fail(result.ErrorMessage!, "Ошибка. Повторите сканирование");

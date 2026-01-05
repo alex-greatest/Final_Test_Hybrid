@@ -47,7 +47,8 @@ public record BarcodeStepResult
     public IReadOnlyList<string> MissingRequiredTags { get; init; } = [];
     public List<RawTestMap>? RawMaps { get; init; }
     public string? ErrorMessage { get; init; }
-    public bool IsSuccess => Status == StepStatus.Pass;
+    public bool IsCancelled { get; init; }
+    public bool IsSuccess => Status == StepStatus.Pass && !IsCancelled;
 
     public static BarcodeStepResult Pass(List<RawTestMap> rawMaps) =>
         new() { Status = StepStatus.Pass, RawMaps = rawMaps };
@@ -63,6 +64,9 @@ public record BarcodeStepResult
 
     public static BarcodeStepResult WithError(string error) =>
         new() { Status = StepStatus.Error, ErrorMessage = error };
+
+    public static BarcodeStepResult Cancelled() =>
+        new() { Status = StepStatus.Pass, IsCancelled = true };
 }
 
 public record UnknownStepInfo(string StepName, int Row, int Column);

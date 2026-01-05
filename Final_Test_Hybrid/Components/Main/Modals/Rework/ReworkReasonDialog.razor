@@ -1,4 +1,7 @@
+а @using Final_Test_Hybrid.Services.SpringBoot.Operation
 @inject DialogService DialogService
+@inject NotificationService NotificationService
+@implements IDisposable
 
 <div class="rework-reason-dialog">
     <div class="field-group">
@@ -6,6 +9,7 @@
         <RadzenTextArea @bind-Value="_reason"
                         Placeholder="Введите причину доработки/пропуска"
                         Rows="3"
+                        Disabled="@_isLoading"
                         Style="width: 100%;" />
     </div>
 
@@ -14,23 +18,35 @@
         <div class="validation-error">@_validationError</div>
     }
 
+    @if (_isLoading)
+    {
+        <div class="loading-text">Отправка запроса...</div>
+    }
+
     <div class="dialog-buttons">
         <RadzenButton Text="Отмена"
                       Click="@OnCancel"
                       ButtonStyle="ButtonStyle.Light"
+                      Disabled="@_isLoading"
                       class="cancel-button" />
         <RadzenButton Text="Подтвердить"
                       Click="@OnConfirm"
                       ButtonStyle="ButtonStyle.Primary"
+                      IsBusy="@_isLoading"
                       class="confirm-button" />
     </div>
 </div>
 
 @code {
+    [Parameter]
+    public Func<string, Task<ReworkSubmitResult>>? OnSubmit { get; set; }
+
     private string _reason = string.Empty;
     private string _validationError = string.Empty;
+    private bool _isLoading;
+    private bool _disposed;
 
-    private void OnConfirm()
+    private async Task OnConfirm()
     {
         _validationError = string.Empty;
         if (string.IsNullOrWhiteSpace(_reason))
@@ -38,11 +54,41 @@
             _validationError = "Введите причину доработки/пропуска";
             return;
         }
-        DialogService.Close(_reason.Trim());
+        if (OnSubmit == null)
+        {
+            DialogService.Close(_reason.Trim());
+            return;
+        }
+        _isLoading = true;
+        if (!_disposed) StateHasChanged();
+        try
+        {
+            var result = await OnSubmit(_reason.Trim());
+            if (result.IsSuccess)
+            {
+                DialogService.Close(result);
+            }
+            else
+            {
+                if (_disposed) return;
+                NotificationService.Notify(NotificationSeverity.Error, result.ErrorMessage ?? "Ошибка сервера");
+                StateHasChanged();
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+            if (!_disposed) StateHasChanged();
+        }
     }
 
     private void OnCancel()
     {
-        DialogService.Close(null);
+        DialogService.Close();
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
     }
 }

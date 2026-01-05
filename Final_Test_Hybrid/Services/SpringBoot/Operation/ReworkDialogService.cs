@@ -10,13 +10,7 @@ public class ReworkDialogService(DialogService dialogService)
         var result = await dialogService.OpenAsync<RouteErrorDialog>(
             "",
             new Dictionary<string, object> { ["Message"] = message },
-            new DialogOptions
-            {
-                Width = "500px",
-                ShowTitle = false,
-                CloseDialogOnOverlayClick = false,
-                CloseDialogOnEsc = false
-            });
+            CreateModalOptions("500px", showTitle: false));
         return result is true;
     }
 
@@ -25,12 +19,7 @@ public class ReworkDialogService(DialogService dialogService)
         var result = await dialogService.OpenAsync<AdminAuthDialog>(
             "Авторизация администратора",
             new Dictionary<string, object>(),
-            new DialogOptions
-            {
-                Width = "400px",
-                CloseDialogOnOverlayClick = false,
-                CloseDialogOnEsc = false
-            });
+            CreateModalOptions("400px"));
         return result as AdminAuthResult;
     }
 
@@ -39,29 +28,65 @@ public class ReworkDialogService(DialogService dialogService)
         var result = await dialogService.OpenAsync<ReworkReasonDialog>(
             "Доработка/пропуск",
             new Dictionary<string, object>(),
-            new DialogOptions
-            {
-                Width = "550px",
-                CloseDialogOnOverlayClick = false,
-                CloseDialogOnEsc = false
-            });
+            CreateModalOptions("550px"));
         return result as string;
+    }
+
+    public async Task<ReworkSubmitResult?> ShowReworkReasonAsync(
+        Func<string, Task<ReworkSubmitResult>> onSubmit)
+    {
+        var result = await dialogService.OpenAsync<ReworkReasonDialog>(
+            "Доработка/пропуск",
+            new Dictionary<string, object> { ["OnSubmit"] = onSubmit },
+            CreateModalOptions("550px"));
+        return result as ReworkSubmitResult;
     }
 
     public async Task<ReworkFlowResult> ExecuteReworkFlowAsync(string errorMessage)
     {
-        var wantsToContinue = await ShowRouteErrorAsync(errorMessage);
-        if (!wantsToContinue)
-        {
-            return ReworkFlowResult.Cancelled();
-        }
-        var authResult = await ShowAdminAuthAsync();
-        if (authResult is not { Success: true })
+        var authResult = await ValidateAndAuthenticateAsync(errorMessage);
+        if (authResult == null)
         {
             return ReworkFlowResult.Cancelled();
         }
         var reason = await ShowReworkReasonAsync();
-        return string.IsNullOrEmpty(reason) ? ReworkFlowResult.Cancelled() : ReworkFlowResult.Success(authResult.Username, reason);
+        return string.IsNullOrEmpty(reason) ? ReworkFlowResult.Cancelled() : ReworkFlowResult.Success(authResult.Username);
+    }
+
+    public async Task<ReworkFlowResult> ExecuteReworkFlowAsync(
+        string errorMessage,
+        Func<string, string, Task<ReworkSubmitResult>> executeRework)
+    {
+        var authResult = await ValidateAndAuthenticateAsync(errorMessage);
+        if (authResult == null)
+        {
+            return ReworkFlowResult.Cancelled();
+        }
+        var submitResult = await ShowReworkReasonAsync(
+            reason => executeRework(authResult.Username, reason));
+        return submitResult is not { IsSuccess: true } ? ReworkFlowResult.Cancelled() : ReworkFlowResult.Success(authResult.Username, submitResult.Data);
+    }
+
+    private async Task<AdminAuthResult?> ValidateAndAuthenticateAsync(string errorMessage)
+    {
+        var wantsToContinue = await ShowRouteErrorAsync(errorMessage);
+        if (!wantsToContinue)
+        {
+            return null;
+        }
+        var authResult = await ShowAdminAuthAsync();
+        return authResult is { Success: true } ? authResult : null;
+    }
+
+    private static DialogOptions CreateModalOptions(string width, bool showTitle = true)
+    {
+        return new DialogOptions
+        {
+            Width = width,
+            ShowTitle = showTitle,
+            CloseDialogOnOverlayClick = false,
+            CloseDialogOnEsc = false
+        };
     }
 }
 
@@ -71,10 +96,24 @@ public class ReworkFlowResult
     public bool IsCancelled { get; init; }
     public string AdminUsername { get; init; } = string.Empty;
     public string Reason { get; init; } = string.Empty;
+    public object? Data { get; init; }
 
-    public static ReworkFlowResult Success(string adminUsername, string reason) =>
-        new() { IsSuccess = true, AdminUsername = adminUsername, Reason = reason };
+    public static ReworkFlowResult Success(string adminUsername, object? data = null) =>
+        new() { IsSuccess = true, AdminUsername = adminUsername, Data = data };
 
     public static ReworkFlowResult Cancelled() =>
         new() { IsCancelled = true };
+}
+
+public class ReworkSubmitResult
+{
+    public bool IsSuccess { get; init; }
+    public string? ErrorMessage { get; init; }
+    public object? Data { get; init; }
+
+    public static ReworkSubmitResult Success(object? data = null) =>
+        new() { IsSuccess = true, Data = data };
+
+    public static ReworkSubmitResult Fail(string error) =>
+        new() { IsSuccess = false, ErrorMessage = error };
 }

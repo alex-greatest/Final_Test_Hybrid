@@ -11,19 +11,29 @@ public class PreExecutionStepRegistry(
     private const string ScanBarcodeMesId = "scan-barcode-mes";
     private const string WriteRecipesId = "write-recipes-to-plc";
     private const string ResolveTestMapsId = "resolve-test-maps";
+    private const string ValidateRecipesId = "validate-recipes";
+    private const string InitializeDatabaseId = "initialize-database";
     private readonly List<IPreExecutionStep> _steps = steps.ToList();
 
     public IReadOnlyList<IPreExecutionStep> GetOrderedSteps()
     {
         var scanId = appSettings.UseMes ? ScanBarcodeMesId : ScanBarcodeId;
         var scanStep = GetStep(scanId);
-        var writeRecipesStep = GetStep(WriteRecipesId);
         var resolveStep = GetStep(ResolveTestMapsId);
-        if (!AreAllStepsPresent(scanStep, writeRecipesStep, resolveStep))
+        var validateRecipesStep = GetStep(ValidateRecipesId);
+        var initDbStep = GetStep(InitializeDatabaseId);
+        var writeRecipesStep = GetStep(WriteRecipesId);
+        if (!AreAllStepsPresent(scanStep, resolveStep, validateRecipesStep, initDbStep, writeRecipesStep))
         {
             return [];
         }
-        var scanGroup = new PreExecutionStepGroup(scanStep!, writeRecipesStep!, resolveStep!);
+        // Порядок: Scan → Resolve → ValidateRecipes → InitDb → WriteRecipes
+        var scanGroup = new PreExecutionStepGroup(
+            scanStep!,
+            resolveStep!,
+            validateRecipesStep!,
+            initDbStep!,
+            writeRecipesStep!);
         return [scanGroup];
     }
 

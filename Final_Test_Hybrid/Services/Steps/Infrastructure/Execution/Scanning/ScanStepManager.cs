@@ -1,9 +1,11 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Services.SpringBoot.Operation;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
+using Final_Test_Hybrid.Services.Steps.Steps;
 using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.Extensions.Logging;
 
@@ -29,6 +31,7 @@ public class ScanStepManager : IDisposable
     private readonly ITestStepLogger _testStepLogger;
     private readonly ILogger<ScanStepManager> _logger;
     private object? _messageProviderKey;
+    private bool _disposed;
 
     public bool IsProcessing => _inputStateManager.IsProcessing;
 
@@ -43,6 +46,7 @@ public class ScanStepManager : IDisposable
     public event Func<IReadOnlyList<UnknownStepInfo>, Task>? OnUnknownStepsDialogRequested;
     public event Func<IReadOnlyList<MissingRecipeInfo>, Task>? OnMissingRecipesDialogRequested;
     public event Func<IReadOnlyList<RecipeWriteErrorInfo>, Task>? OnRecipeWriteErrorDialogRequested;
+    public event Func<string, Func<string, string, Task<ReworkSubmitResult>>, Task<ReworkFlowResult>>? OnReworkDialogRequested;
 
     private bool IsScanModeEnabled => _operatorState.IsAuthenticated && _autoReady.IsReady;
 
@@ -57,6 +61,7 @@ public class ScanStepManager : IDisposable
         ExecutionMessageState executionMessageState,
         TestExecutionCoordinator coordinator,
         ITestStepLogger testStepLogger,
+        IEnumerable<IPreExecutionStep> preExecutionSteps,
         ILogger<ScanStepManager> logger)
     {
         _sessionManager = sessionManager;
@@ -70,8 +75,26 @@ public class ScanStepManager : IDisposable
         _coordinator = coordinator;
         _testStepLogger = testStepLogger;
         _logger = logger;
+        ConfigureReworkCallback(preExecutionSteps);
         SubscribeToEvents();
         UpdateScanModeState();
+    }
+
+    private void ConfigureReworkCallback(IEnumerable<IPreExecutionStep> steps)
+    {
+        var mesStep = steps.OfType<ScanBarcodeMesStep>().FirstOrDefault();
+        mesStep?.OnReworkRequired = HandleReworkDialogAsync;
+    }
+
+    private async Task<ReworkFlowResult> HandleReworkDialogAsync(
+        string errorMessage,
+        Func<string, string, Task<ReworkSubmitResult>> executeRework)
+    {
+        if (OnReworkDialogRequested == null)
+        {
+            return ReworkFlowResult.Cancelled();
+        }
+        return await OnReworkDialogRequested(errorMessage, executeRework);
     }
 
     private void SubscribeToEvents()
@@ -123,6 +146,10 @@ public class ScanStepManager : IDisposable
 
     private async void HandleBarcodeScanned(string barcode)
     {
+        if (_disposed)
+        {
+            return;
+        }
         try
         {
             await ProcessBarcodeAsync(barcode);
@@ -218,6 +245,7 @@ public class ScanStepManager : IDisposable
 
     public void Dispose()
     {
+        _disposed = true;
         _sessionManager.ReleaseSession();
         UnsubscribeFromEvents();
     }

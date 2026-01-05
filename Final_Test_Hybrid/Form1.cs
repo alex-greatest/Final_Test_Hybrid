@@ -99,7 +99,6 @@ namespace Final_Test_Hybrid
             services.AddSingleton<BarcodeScanService>();
             services.AddSingleton<ScanSessionManager>();
             services.AddSingleton<ScanInputStateManager>();
-            services.AddSingleton<BarcodeProcessingPipeline>();
             services.AddSingleton<ScanErrorHandler>();
             services.AddSingleton<ScanStepManager>();
             services.AddSingleton<ITestSequenceLoader, TestSequenceLoader>();
@@ -117,6 +116,8 @@ namespace Final_Test_Hybrid
             services.AddSingleton<IPreExecutionStep, ScanBarcodeMesStep>();
             services.AddSingleton<IPreExecutionStep, WriteRecipesToPlcStep>();
             services.AddSingleton<IPreExecutionStep, ResolveTestMapsStep>();
+            services.AddSingleton<IPreExecutionStep, ValidateRecipesStep>();
+            services.AddSingleton<IPreExecutionStep, InitializeDatabaseStep>();
             services.AddSingleton<PreExecutionCoordinator>();
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();

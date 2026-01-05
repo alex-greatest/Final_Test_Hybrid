@@ -4,9 +4,7 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Database;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Scanner;
-using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
-using Final_Test_Hybrid.Services.SpringBoot.Shift;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
@@ -21,11 +19,7 @@ public class ScanBarcodeStep(
     BarcodeScanService barcodeScanService,
     BoilerTypeService boilerTypeService,
     RecipeService recipeService,
-    BoilerService boilerService,
-    OperationService operationService,
     BoilerState boilerState,
-    OperatorState operatorState,
-    ShiftState shiftState,
     RecipeTagValidator tagValidator,
     RequiredTagValidator requiredTagValidator,
     ITestSequenceLoader sequenceLoader,
@@ -192,16 +186,6 @@ public class ScanBarcodeStep(
     {
         logger.LogError("{Error}", message);
         testStepLogger.LogError(null, "{Error}", message);
-    }
-
-    public async Task OnExecutionStartingAsync()
-    {
-        var operatorName = operatorState.Username ?? "Unknown";
-        var boiler = await boilerService.FindOrCreateAsync(
-            boilerState.SerialNumber!,
-            boilerState.BoilerTypeCycle!.Id,
-            operatorName);
-        await operationService.CreateAsync(boiler.Id, operatorName, shiftState.ShiftNumber ?? 0);
     }
 
     async Task<PreExecutionResult> IPreExecutionStep.ExecuteAsync(PreExecutionContext context, CancellationToken ct)

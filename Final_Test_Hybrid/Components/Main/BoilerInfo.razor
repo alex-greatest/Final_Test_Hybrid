@@ -1,6 +1,7 @@
 @using Final_Test_Hybrid.Components.Main.Modals
 @using Final_Test_Hybrid.Models.Steps
 @using Final_Test_Hybrid.Services.Main
+@using Final_Test_Hybrid.Services.SpringBoot.Operation
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning
 @using Final_Test_Hybrid.Services.Steps.Validation
@@ -8,6 +9,7 @@
 @inject BoilerState BoilerState
 @inject TestSequenseService TestSequenseService
 @inject DialogService DialogService
+@inject ReworkDialogService ReworkDialogService
 @implements IDisposable
 
 <div class="field-row field-row-middle">
@@ -42,6 +44,7 @@
         ScanStepManager.OnUnknownStepsDialogRequested += ShowUnknownStepsDialogAsync;
         ScanStepManager.OnMissingRecipesDialogRequested += ShowMissingRecipesDialogAsync;
         ScanStepManager.OnRecipeWriteErrorDialogRequested += ShowRecipeWriteErrorDialogAsync;
+        ScanStepManager.OnReworkDialogRequested += HandleReworkDialogAsync;
     }
 
     private string GetDisplayValue() => BoilerState.SerialNumber ?? _manualInput;
@@ -181,6 +184,13 @@
         };
     }
 
+    private Task<ReworkFlowResult> HandleReworkDialogAsync(
+        string errorMessage,
+        Func<string, string, Task<ReworkSubmitResult>> executeRework)
+    {
+        return ReworkDialogService.ExecuteReworkFlowAsync(errorMessage, executeRework);
+    }
+
     public void Dispose()
     {
         _disposed = true;
@@ -192,5 +202,6 @@
         ScanStepManager.OnUnknownStepsDialogRequested -= ShowUnknownStepsDialogAsync;
         ScanStepManager.OnMissingRecipesDialogRequested -= ShowMissingRecipesDialogAsync;
         ScanStepManager.OnRecipeWriteErrorDialogRequested -= ShowRecipeWriteErrorDialogAsync;
+        ScanStepManager.OnReworkDialogRequested -= HandleReworkDialogAsync;
     }
 }

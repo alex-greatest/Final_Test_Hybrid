@@ -119,9 +119,23 @@ public class PreExecutionCoordinator(
 
     private void StartTestExecution(PreExecutionContext context)
     {
+        recipeProvider.SetRecipes(boilerState.Recipes ?? []);
         LogTestExecutionStart(context);
         testCoordinator.SetMaps(context.Maps!);
-        _ = testCoordinator.StartAsync();
+        _ = StartTestWithErrorHandlingAsync();
+    }
+
+    private async Task StartTestWithErrorHandlingAsync()
+    {
+        try
+        {
+            await testCoordinator.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка запуска теста");
+            testStepLogger.LogError(ex, "Ошибка запуска теста");
+        }
     }
 
     private void LogTestExecutionStart(PreExecutionContext context)

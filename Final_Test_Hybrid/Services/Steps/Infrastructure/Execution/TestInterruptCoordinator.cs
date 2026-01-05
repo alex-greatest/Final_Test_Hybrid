@@ -25,6 +25,7 @@ public class TestInterruptCoordinator : IDisposable
     private readonly ILogger<TestInterruptCoordinator> _logger;
     private readonly SemaphoreSlim _interruptLock = new(1, 1);
     private int _isHandlingInterrupt;
+    private bool _disposed;
 
     private static readonly Dictionary<TestInterruptReason, InterruptBehavior> Behaviors = new()
     {
@@ -154,7 +155,7 @@ public class TestInterruptCoordinator : IDisposable
 
     public async Task HandleInterruptAsync(TestInterruptReason reason, CancellationToken ct = default)
     {
-        if (!TryAcquireInterruptFlag())
+        if (_disposed || !TryAcquireInterruptFlag())
         {
             return;
         }
@@ -202,6 +203,8 @@ public class TestInterruptCoordinator : IDisposable
             case InterruptAction.ResetAfterDelay:
                 await ResetAfterDelayAsync(behavior.Delay, ct);
                 break;
+            default:
+                throw new ArgumentOutOfRangeException();
         }
     }
 
@@ -239,6 +242,7 @@ public class TestInterruptCoordinator : IDisposable
 
     public void Dispose()
     {
+        _disposed = true;
         _connectionState.ConnectionStateChanged -= HandleConnectionChanged;
         _autoReady.OnChange -= HandleAutoReadyChanged;
         _interruptLock.Dispose();
