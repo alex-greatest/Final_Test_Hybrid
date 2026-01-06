@@ -84,7 +84,7 @@ public class ResultSettingsDownloadService(
     {
         logger.LogWarning("Result settings download timed out for article {Article}", article);
         sbLogger.LogWarning("Таймаут загрузки настроек результата для артикула {Article}", article);
-        return ResultSettingsDownloadResult.Fail("Таймаут соединения с сервером");
+        return ResultSettingsDownloadResult.Fail("Нет ответа от сервера");
     }
 
     private ResultSettingsDownloadResult HandleConnectionError(HttpRequestException ex, string article)

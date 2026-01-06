@@ -51,7 +51,7 @@
         ScanStepManager.OnReworkDialogRequested += HandleReworkDialogAsync;
     }
 
-    private string GetDisplayValue() => BoilerState.SerialNumber ?? _manualInput;
+    private string GetDisplayValue() => BoilerState.SerialNumber ?? ScanStepManager.CurrentBarcode ?? _manualInput;
 
     private void OnDataChanged() => InvokeIfNotDisposed(StateHasChanged);
 
@@ -64,12 +64,18 @@
         if (e.Key != "Enter" || IsFieldReadOnly || string.IsNullOrEmpty(_manualInput)) return;
 
         await ScanStepManager.ProcessBarcodeAsync(_manualInput);
-        _manualInput = "";
     }
 
     private void OnBoilerStateChanged()
     {
-        InvokeIfNotDisposed(ClearManualInput);
+        if (BoilerState.SerialNumber != null)
+        {
+            InvokeIfNotDisposed(ClearManualInput);
+        }
+        else
+        {
+            InvokeIfNotDisposed(StateHasChanged);
+        }
     }
 
     private void ClearManualInput()

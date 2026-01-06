@@ -59,9 +59,12 @@
 
     private static string GetCellClass(TestSequenseData data)
     {
-        if (data.IsError) return "error";
-        if (data.IsSuccess) return "success";
-        return "";
+        return data.StepStatus switch
+        {
+            TestStepStatus.Error => "error",
+            TestStepStatus.Success => "success",
+            _ => ""
+        };
     }
 
     protected override void OnInitialized()

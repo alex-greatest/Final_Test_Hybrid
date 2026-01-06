@@ -29,11 +29,16 @@ public class ScanStepManager : IDisposable
     private readonly ExecutionMessageState _executionMessageState;
     private readonly TestExecutionCoordinator _coordinator;
     private readonly ITestStepLogger _testStepLogger;
+    private readonly StepStatusReporter _statusReporter;
+    private readonly IPreExecutionStepRegistry _stepRegistry;
     private readonly ILogger<ScanStepManager> _logger;
     private object? _messageProviderKey;
+    private Guid? _activeScanStepId;
+    private string? _currentBarcode;
     private bool _disposed;
 
     public bool IsProcessing => _inputStateManager.IsProcessing;
+    public string? CurrentBarcode => _currentBarcode;
 
     public event Action? OnChange
     {
@@ -61,6 +66,8 @@ public class ScanStepManager : IDisposable
         ExecutionMessageState executionMessageState,
         TestExecutionCoordinator coordinator,
         ITestStepLogger testStepLogger,
+        StepStatusReporter statusReporter,
+        IPreExecutionStepRegistry stepRegistry,
         IEnumerable<IPreExecutionStep> preExecutionSteps,
         ILogger<ScanStepManager> logger)
     {
@@ -74,6 +81,8 @@ public class ScanStepManager : IDisposable
         _executionMessageState = executionMessageState;
         _coordinator = coordinator;
         _testStepLogger = testStepLogger;
+        _statusReporter = statusReporter;
+        _stepRegistry = stepRegistry;
         _logger = logger;
         ConfigureReworkCallback(preExecutionSteps);
         SubscribeToEvents();
@@ -125,35 +134,50 @@ public class ScanStepManager : IDisposable
 
     private void ActivateScanMode()
     {
+        _inputStateManager.SetProcessing(false);
         _sessionManager.AcquireSession(HandleBarcodeScanned);
         _testStepLogger.StartNewSession();
+        AddScanStepToGrid();
+    }
+
+    private void AddScanStepToGrid()
+    {
+        if (_activeScanStepId.HasValue)
+        {
+            return;
+        }
+        var scanStep = _stepRegistry.GetOrderedSteps().FirstOrDefault();
+        if (scanStep == null)
+        {
+            return;
+        }
+        _activeScanStepId = _statusReporter.ReportStepStarted(scanStep);
     }
 
     private void DeactivateScanMode()
     {
         _sessionManager.ReleaseSession();
+        _activeScanStepId = null;
     }
 
     private async void HandleBarcodeScanned(string barcode)
     {
+        if (_disposed)
+        {
+            return;
+        }
+        await ProcessBarcodeWithLoggingAsync(barcode);
+    }
+
+    private async Task ProcessBarcodeWithLoggingAsync(string barcode)
+    {
         try
         {
-            if (_disposed)
-            {
-                return;
-            }
-            try
-            {
-                await ProcessBarcodeAsync(barcode);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Необработанная ошибка при сканировании: {Barcode}", barcode);
-            }
+            await ProcessBarcodeAsync(barcode);
         }
-        catch
+        catch (Exception ex)
         {
-            // ignored
+            _logger.LogError(ex, "Необработанная ошибка при сканировании: {Barcode}", barcode);
         }
     }
 
@@ -175,27 +199,44 @@ public class ScanStepManager : IDisposable
 
     private async Task ExecuteBarcodeProcessing(string barcode)
     {
+        _currentBarcode = barcode;
         BlockInput();
-        await ProcessBarcodeWithErrorHandlingAsync(barcode);
+        var status = await ProcessBarcodeWithErrorHandlingAsync(barcode);
+        UnblockInputIfNotRunning(status);
+    }
+
+    private void UnblockInputIfNotRunning(PreExecutionStatus status)
+    {
+        if (IsTestRunning(status))
+        {
+            return;
+        }
         UnblockInput();
     }
 
-    private async Task ProcessBarcodeWithErrorHandlingAsync(string barcode)
+    private static bool IsTestRunning(PreExecutionStatus status)
+    {
+        return status == PreExecutionStatus.TestStarted;
+    }
+
+    private async Task<PreExecutionStatus> ProcessBarcodeWithErrorHandlingAsync(string barcode)
     {
         try
         {
-            await ProcessPreExecutionAsync(barcode);
+            return await ProcessPreExecutionAsync(barcode);
         }
         catch (Exception ex)
         {
             HandleCriticalError(ex);
+            return PreExecutionStatus.Failed;
         }
     }
 
-    private async Task ProcessPreExecutionAsync(string barcode)
+    private async Task<PreExecutionStatus> ProcessPreExecutionAsync(string barcode)
     {
-        var result = await _preExecutionCoordinator.ExecuteAsync(barcode, CancellationToken.None);
+        var result = await _preExecutionCoordinator.ExecuteAsync(barcode, _activeScanStepId, CancellationToken.None);
         await HandlePreExecutionResultAsync(result);
+        return result.Status;
     }
 
     private async Task HandlePreExecutionResultAsync(PreExecutionResult result)
@@ -203,12 +244,11 @@ public class ScanStepManager : IDisposable
         switch (result.Status)
         {
             case PreExecutionStatus.TestStarted:
+            case PreExecutionStatus.Continue:
                 return;
             case PreExecutionStatus.Failed:
             case PreExecutionStatus.Cancelled:
                 await HandlePreExecutionError(result);
-                return;
-            case PreExecutionStatus.Continue:
                 return;
             default:
                 throw new InvalidOperationException($"Неизвестный статус PreExecution: {result.Status}");
@@ -257,6 +297,8 @@ public class ScanStepManager : IDisposable
     private void HandleSequenceCompleted()
     {
         LogSequenceCompleted();
+        _activeScanStepId = null;
+        _currentBarcode = null;
         UnblockInput();
         ShowSequenceCompletionNotification();
     }

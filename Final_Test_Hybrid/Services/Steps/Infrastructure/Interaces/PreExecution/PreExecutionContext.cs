@@ -12,6 +12,7 @@ public class PreExecutionContext
     public required OpcUaTagService OpcUa { get; init; }
     public required ITestStepLogger TestStepLogger { get; init; }
 
+    public Guid? ScanStepId { get; set; }
     public List<RawTestMap>? RawMaps { get; set; }
     public List<TestMap>? Maps { get; set; }
 }

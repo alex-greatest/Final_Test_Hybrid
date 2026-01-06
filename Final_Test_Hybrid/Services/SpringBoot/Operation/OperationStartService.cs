@@ -92,13 +92,10 @@ public class OperationStartService(
     private async Task<OperationStartResult> SendReworkRequestAsync(OperationStartRequest request, CancellationToken ct)
     {
         using var response = await httpClient.PostWithResponseAsync(ReworkEndpoint, request, ct);
-        if (response.StatusCode == HttpStatusCode.OK)
-        {
-            logger.LogInformation("Rework approved for {SerialNumber}", request.SerialNumber);
-            sbLogger.LogInformation("Доработка одобрена для {SerialNumber}", request.SerialNumber);
-            return OperationStartResult.Success(new OperationStartResponse());
-        }
-        return await HandleErrorResponseAsync(response, ct);
+        if (response.StatusCode != HttpStatusCode.OK) return await HandleErrorResponseAsync(response, ct);
+        logger.LogInformation("Rework approved for {SerialNumber}", request.SerialNumber);
+        sbLogger.LogInformation("Доработка одобрена для {SerialNumber}", request.SerialNumber);
+        return OperationStartResult.Success(new OperationStartResponse());
     }
 
     private async Task<OperationStartResult> ProcessResponseAsync(HttpResponseMessage response, CancellationToken ct)
@@ -161,11 +158,7 @@ public class OperationStartService(
             {
                 return errorResponse.Error;
             }
-            if (!string.IsNullOrEmpty(errorResponse?.Message))
-            {
-                return errorResponse.Message;
-            }
-            return "Неизвестная ошибка";
+            return !string.IsNullOrEmpty(errorResponse?.Message) ? errorResponse.Message : "Неизвестная ошибка";
         }
         catch
         {
@@ -195,7 +188,7 @@ public class OperationStartService(
     {
         logger.LogWarning("Operation timed out for {SerialNumber}", serialNumber);
         sbLogger.LogWarning("Таймаут операции для {SerialNumber}", serialNumber);
-        return OperationStartResult.Fail("Таймаут соединения с сервером");
+        return OperationStartResult.Fail("Нет ответа от сервера");
     }
 
     private OperationStartResult HandleConnectionError(HttpRequestException ex, string serialNumber)

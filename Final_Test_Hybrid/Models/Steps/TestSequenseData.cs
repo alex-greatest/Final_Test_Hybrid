@@ -1,5 +1,12 @@
 namespace Final_Test_Hybrid.Models.Steps;
 
+public enum TestStepStatus
+{
+    Running,
+    Success,
+    Error
+}
+
 public class TestSequenseData
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -8,8 +15,7 @@ public class TestSequenseData
     public string Status { get; set; } = string.Empty;
     public string Result { get; set; } = string.Empty;
     public string Range { get; set; } = string.Empty;
-    public bool IsError { get; set; }
-    public bool IsSuccess { get; set; }
+    public TestStepStatus StepStatus { get; set; } = TestStepStatus.Running;
     public DateTime StartTime { get; set; }
     public DateTime? EndTime { get; set; }
 }

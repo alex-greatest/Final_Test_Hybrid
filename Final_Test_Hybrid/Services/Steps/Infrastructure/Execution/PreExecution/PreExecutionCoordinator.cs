@@ -19,12 +19,12 @@ public class PreExecutionCoordinator(
     PauseTokenSource pauseToken,
     ILogger<PreExecutionCoordinator> logger)
 {
-    public async Task<PreExecutionResult> ExecuteAsync(string barcode, CancellationToken ct)
+    public async Task<PreExecutionResult> ExecuteAsync(string barcode, Guid? scanStepId, CancellationToken ct)
     {
         activityTracker.SetPreExecutionActive(true);
         try
         {
-            return await ExecutePreExecutionPipelineAsync(barcode, ct);
+            return await ExecutePreExecutionPipelineAsync(barcode, scanStepId, ct);
         }
         finally
         {
@@ -32,10 +32,12 @@ public class PreExecutionCoordinator(
         }
     }
 
-    private async Task<PreExecutionResult> ExecutePreExecutionPipelineAsync(string barcode, CancellationToken ct)
+    private async Task<PreExecutionResult> ExecutePreExecutionPipelineAsync(
+        string barcode,
+        Guid? scanStepId,
+        CancellationToken ct)
     {
-        statusReporter.ClearAll();
-        var context = CreateContext(barcode);
+        var context = CreateContext(barcode, scanStepId);
         var stepsResult = await ExecuteAllStepsAsync(context, ct);
         if (stepsResult.Status != PreExecutionStatus.Continue)
         {
@@ -74,7 +76,7 @@ public class PreExecutionCoordinator(
         PreExecutionContext context,
         CancellationToken ct)
     {
-        var stepId = statusReporter.ReportStepStarted(step);
+        var stepId = GetOrCreateStepId(step, context);
         try
         {
             return await ExecuteStepCoreAsync(step, stepId, context, ct);
@@ -83,6 +85,24 @@ public class PreExecutionCoordinator(
         {
             return HandleStepException(step, stepId, ex);
         }
+    }
+
+    private Guid GetOrCreateStepId(IPreExecutionStep step, PreExecutionContext context)
+    {
+        return !context.ScanStepId.HasValue ? CreateNewStepId(step) : ReuseExistingScanStepId(context);
+    }
+
+    private Guid CreateNewStepId(IPreExecutionStep step)
+    {
+        return statusReporter.ReportStepStarted(step);
+    }
+
+    private Guid ReuseExistingScanStepId(PreExecutionContext context)
+    {
+        var stepId = context.ScanStepId!.Value;
+        statusReporter.ReportRetry(stepId);
+        context.ScanStepId = null;
+        return stepId;
     }
 
     private async Task<PreExecutionResult> ExecuteStepCoreAsync(
@@ -151,11 +171,12 @@ public class PreExecutionCoordinator(
         testStepLogger.LogInformation("Запуск TestExecutionCoordinator с {Count} maps", mapCount);
     }
 
-    private PreExecutionContext CreateContext(string barcode)
+    private PreExecutionContext CreateContext(string barcode, Guid? scanStepId)
     {
         return new PreExecutionContext
         {
             Barcode = barcode,
+            ScanStepId = scanStepId,
             BoilerState = boilerState,
             OpcUa = opcUa,
             TestStepLogger = testStepLogger

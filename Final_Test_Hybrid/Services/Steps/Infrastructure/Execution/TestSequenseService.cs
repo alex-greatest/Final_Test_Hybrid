@@ -5,6 +5,12 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 
 public class TestSequenseService
 {
+    private static class ScanModuleNames
+    {
+        public const string BarcodeScanner = "Сканирование штрихкода";
+        public const string BarcodeScannerMes = "Сканирование штрихкода MES";
+    }
+
     private readonly List<TestSequenseData> _steps = [];
     private readonly Lock _lock = new();
     public event Action? OnDataChanged;
@@ -17,12 +23,24 @@ public class TestSequenseService
         {
             lock (_lock)
             {
-                var step = _steps.FirstOrDefault();
-                if (step == null) return false;
-                var isScan = step.Module is "Сканирование штрихкода" or "Сканирование штрихкода MES";
-                return isScan && !step.IsSuccess && !step.IsError;
+                return IsFirstStepActiveScan();
             }
         }
+    }
+
+    private bool IsFirstStepActiveScan()
+    {
+        var step = _steps.FirstOrDefault();
+        if (step == null)
+        {
+            return false;
+        }
+        return IsScanModule(step.Module) && step.StepStatus != TestStepStatus.Success;
+    }
+
+    private static bool IsScanModule(string moduleName)
+    {
+        return moduleName is ScanModuleNames.BarcodeScanner or ScanModuleNames.BarcodeScannerMes;
     }
 
     public Guid AddStep(ITestStep step)
@@ -55,53 +73,38 @@ public class TestSequenseService
 
     public void SetRunning(Guid id)
     {
-        var updated = TryUpdateStep(id, step =>
+        UpdateStepAndNotify(id, step =>
         {
             step.Status = "Выполняется";
-            step.IsError = false;
-            step.IsSuccess = false;
+            step.StepStatus = TestStepStatus.Running;
             step.Result = "";
             step.StartTime = DateTime.Now;
             step.EndTime = null;
         });
-        if (updated)
-        {
-            NotifyDataChanged();
-        }
     }
 
     public void SetSuccess(Guid id, string message = "", string? limits = null)
     {
-        var updated = TryUpdateStep(id, step =>
+        UpdateStepAndNotify(id, step =>
         {
             step.Status = "Готово";
-            step.IsSuccess = true;
-            step.IsError = false;
+            step.StepStatus = TestStepStatus.Success;
             step.Result = message;
             step.Range = limits ?? "";
             step.EndTime = DateTime.Now;
         });
-        if (updated)
-        {
-            NotifyDataChanged();
-        }
     }
 
     public void SetError(Guid id, string errorMessage, string? limits = null)
     {
-        var updated = TryUpdateStep(id, step =>
+        UpdateStepAndNotify(id, step =>
         {
             step.Status = "Ошибка";
-            step.IsError = true;
-            step.IsSuccess = false;
+            step.StepStatus = TestStepStatus.Error;
             step.Result = errorMessage;
             step.Range = limits ?? "";
             step.EndTime = DateTime.Now;
         });
-        if (updated)
-        {
-            NotifyDataChanged();
-        }
     }
 
     public void ClearAll()
@@ -111,6 +114,15 @@ public class TestSequenseService
             _steps.Clear();
         }
         NotifyDataChanged();
+    }
+
+    private void UpdateStepAndNotify(Guid id, Action<TestSequenseData> updateAction)
+    {
+        var updated = TryUpdateStep(id, updateAction);
+        if (updated)
+        {
+            NotifyDataChanged();
+        }
     }
 
     private TestSequenseData CreateStepData(ITestStep step)
@@ -150,8 +162,7 @@ public class TestSequenseService
                 Status = s.Status,
                 Result = s.Result,
                 Range = s.Range,
-                IsError = s.IsError,
-                IsSuccess = s.IsSuccess,
+                StepStatus = s.StepStatus,
                 StartTime = s.StartTime,
                 EndTime = s.EndTime
             }).ToList();

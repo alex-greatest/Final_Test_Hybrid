@@ -71,7 +71,7 @@ public class ErrorSettingsDownloadService(
     {
         logger.LogWarning("Error settings download timed out");
         sbLogger.LogWarning("Таймаут загрузки настроек ошибок");
-        return ErrorSettingsDownloadResult.Fail("Таймаут соединения с сервером");
+        return ErrorSettingsDownloadResult.Fail("Нет ответа от сервера");
     }
 
     private ErrorSettingsDownloadResult HandleConnectionError(HttpRequestException ex)

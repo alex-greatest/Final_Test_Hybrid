@@ -84,7 +84,7 @@ public class RecipeDownloadService(
     {
         logger.LogWarning("Recipe download timed out for article {Article}", article);
         sbLogger.LogWarning("Таймаут загрузки рецептов для артикула {Article}", article);
-        return RecipeDownloadResult.Fail("Таймаут соединения с сервером");
+        return RecipeDownloadResult.Fail("Нет ответа от сервера");
     }
 
     private RecipeDownloadResult HandleConnectionError(HttpRequestException ex, string article)

@@ -73,7 +73,7 @@ public class StepFinalTestDownloadService(
     {
         logger.LogWarning("Step final tests download timed out");
         sbLogger.LogWarning("Таймаут загрузки шагов финального теста");
-        return StepFinalTestDownloadResult.Fail("Таймаут соединения с сервером");
+        return StepFinalTestDownloadResult.Fail("Нет ответа от сервера");
     }
 
     private StepFinalTestDownloadResult HandleConnectionError(HttpRequestException ex)
