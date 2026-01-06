@@ -40,7 +40,7 @@ public partial class ResultSettingsSimpleGrid
         _itemToInsert = new ResultSettingsEditModel
         {
             BoilerTypeId = SelectedBoilerTypeId.Value,
-            PlcType = PlcType.Real,
+            PlcType = PlcType.REAL,
             AuditType = AuditType.SimpleStatus
         };
         await _grid!.InsertRow(_itemToInsert);

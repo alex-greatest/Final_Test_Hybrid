@@ -242,13 +242,13 @@ public class ScanBarcodeMesStep(
     {
         return plcType switch
         {
-            PlcTypeDto.STRING => PlcType.String,
-            PlcTypeDto.INT => PlcType.Int16,
-            PlcTypeDto.INT16 => PlcType.Int16,
-            PlcTypeDto.DINT => PlcType.Dint,
-            PlcTypeDto.REAL => PlcType.Real,
-            PlcTypeDto.BOOL => PlcType.Bool,
-            _ => PlcType.String
+            PlcTypeDto.STRING => PlcType.STRING,
+            PlcTypeDto.INT => PlcType.INT16,
+            PlcTypeDto.INT16 => PlcType.INT16,
+            PlcTypeDto.DINT => PlcType.DINT,
+            PlcTypeDto.REAL => PlcType.REAL,
+            PlcTypeDto.BOOL => PlcType.BOOL,
+            _ => PlcType.STRING
         };
     }
 

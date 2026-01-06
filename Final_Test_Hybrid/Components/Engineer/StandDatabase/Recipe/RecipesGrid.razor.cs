@@ -78,7 +78,7 @@ public partial class RecipesGrid
         {
             BoilerTypeId = _selectedBoilerTypeId.Value,
             BoilerTypeName = boilerType?.Type,
-            PlcType = PlcType.Real
+            PlcType = PlcType.REAL
         };
         await _grid!.InsertRow(_itemToInsert);
     }
@@ -168,7 +168,7 @@ public partial class RecipesGrid
 
     private void OnPlcTypeChanged(RecipeEditModel item)
     {
-        item.Value = item.PlcType == PlcType.Bool ? "false" : string.Empty;
+        item.Value = item.PlcType == PlcType.BOOL ? "false" : string.Empty;
     }
 
     private void ValidateValue(RecipeEditModel item)
@@ -197,9 +197,9 @@ public partial class RecipesGrid
     {
         return item.PlcType switch
         {
-            PlcType.Real => !float.TryParse(item.Value, out _) ? "Значение: введите число" : null,
-            PlcType.Int16 => !short.TryParse(item.Value, out _) ? "Значение: введите целое число (-32768..32767)" : null,
-            PlcType.Dint => !int.TryParse(item.Value, out _) ? "Значение: введите целое число" : null,
+            PlcType.REAL => !float.TryParse(item.Value, out _) ? "Значение: введите число" : null,
+            PlcType.INT16 => !short.TryParse(item.Value, out _) ? "Значение: введите целое число (-32768..32767)" : null,
+            PlcType.DINT => !int.TryParse(item.Value, out _) ? "Значение: введите целое число" : null,
             _ => null
         };
     }

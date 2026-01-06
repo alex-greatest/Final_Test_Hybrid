@@ -86,12 +86,12 @@ public class WriteRecipesToPlcStep(
     {
         return recipe.PlcType switch
         {
-            PlcType.Real => await WriteFloatAsync(recipe, context, ct),
-            PlcType.Int16 => await WriteInt16Async(recipe, context, ct),
-            PlcType.Dint => await WriteInt32Async(recipe, context, ct),
-            PlcType.Bool => await context.OpcUa.WriteAsync(
+            PlcType.REAL => await WriteFloatAsync(recipe, context, ct),
+            PlcType.INT16 => await WriteInt16Async(recipe, context, ct),
+            PlcType.DINT => await WriteInt32Async(recipe, context, ct),
+            PlcType.BOOL => await context.OpcUa.WriteAsync(
                 recipe.Address, ParseBool(recipe.Value), ct),
-            PlcType.String => await context.OpcUa.WriteAsync(
+            PlcType.STRING => await context.OpcUa.WriteAsync(
                 recipe.Address, recipe.Value, ct),
             _ => new WriteResult(recipe.Address, $"Неизвестный тип: {recipe.PlcType}")
         };

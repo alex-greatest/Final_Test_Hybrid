@@ -40,7 +40,7 @@ public partial class ResultSettingsRangeGrid
         _itemToInsert = new ResultSettingsEditModel
         {
             BoilerTypeId = SelectedBoilerTypeId.Value,
-            PlcType = PlcType.Real,
+            PlcType = PlcType.REAL,
             AuditType = AuditType.NumericWithRange
         };
         await _grid!.InsertRow(_itemToInsert);

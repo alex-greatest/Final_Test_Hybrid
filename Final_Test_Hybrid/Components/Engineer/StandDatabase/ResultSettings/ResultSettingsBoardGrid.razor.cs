@@ -40,7 +40,7 @@ public partial class ResultSettingsBoardGrid
         _itemToInsert = new ResultSettingsEditModel
         {
             BoilerTypeId = SelectedBoilerTypeId.Value,
-            PlcType = PlcType.Real,
+            PlcType = PlcType.REAL,
             AuditType = AuditType.BoardParameters
         };
         await _grid!.InsertRow(_itemToInsert);

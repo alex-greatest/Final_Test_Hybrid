@@ -114,7 +114,7 @@
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="Value"
                                       Title="Значение">
                     <EditTemplate Context="item">
-                        @if (item.PlcType == PlcType.Bool)
+                        @if (item.PlcType == PlcType.BOOL)
                         {
                             <RadzenDropDown @bind-Value="item.Value"
                                             Data="@_boolValues"
