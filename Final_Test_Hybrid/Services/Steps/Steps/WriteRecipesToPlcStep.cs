@@ -23,7 +23,7 @@ public class WriteRecipesToPlcStep(
         var recipes = GetPlcRecipes(context);
         if (recipes.Count == 0)
         {
-            return PreExecutionResult.Ok();
+            return PreExecutionResult.Continue();
         }
         return await WriteAllRecipesAsync(recipes, context, ct);
     }
@@ -45,12 +45,12 @@ public class WriteRecipesToPlcStep(
         {
             UpdateProgress(i + 1, total);
             var result = await WriteRecipeAsync(recipes[i], context, ct);
-            if (!result.Success)
+            if (result.Status == PreExecutionStatus.Failed)
             {
                 return result;
             }
         }
-        return PreExecutionResult.Ok();
+        return PreExecutionResult.Continue();
     }
 
     private void UpdateProgress(int current, int total)
@@ -74,7 +74,7 @@ public class WriteRecipesToPlcStep(
     private PreExecutionResult HandleWriteSuccess(RecipeResponseDto recipe)
     {
         logger.LogInformation("Записан рецепт {Tag} = {Value}", recipe.TagName, recipe.Value);
-        return PreExecutionResult.Ok();
+        return PreExecutionResult.Continue();
     }
 
     private async Task<WriteResult> WriteValueByTypeAsync(

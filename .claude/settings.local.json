@@ -14,7 +14,10 @@
       "WebFetch(domain:www.radzen.com)",
       "Bash(git checkout:*)",
       "Bash(findstr:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(reg query \"HKLM\\\\SOFTWARE\\\\PostgreSQL\" /s)",
+      "Bash(sc query:*)",
+      "Bash(PGPASSWORD=ManLiv123 \"/c/Program Files/PostgreSQL/17/bin/psql.exe\":*)"
     ]
   }
 }

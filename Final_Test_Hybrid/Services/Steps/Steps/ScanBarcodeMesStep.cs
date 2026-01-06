@@ -76,6 +76,11 @@ public class ScanBarcodeMesStep(
         {
             return result.Data is null ? Fail("Сервер вернул пустой ответ") : HandleSuccessfulStart(pipeline, result.Data);
         }
+        return await HandleOperationFailure(pipeline, result);
+    }
+
+    private async Task<BarcodeStepResult?> HandleOperationFailure(BarcodePipeline pipeline, OperationStartResult result)
+    {
         if (result.RequiresRework)
         {
             return await HandleReworkFlowAsync(pipeline, result.ErrorMessage!);
@@ -123,12 +128,8 @@ public class ScanBarcodeMesStep(
         }
         var flowResult = await OnReworkRequired(
             errorMessage,
-            async (adminUsername, reason) => await ExecuteReworkRequestAsync(pipeline, adminUsername, reason));
-        if (flowResult.IsCancelled)
-        {
-            return BarcodeStepResult.Cancelled();
-        }
-        return null;
+            (adminUsername, reason) => ExecuteReworkRequestAsync(pipeline, adminUsername, reason));
+        return flowResult.IsCancelled ? BarcodeStepResult.Cancelled(flowResult.ErrorMessage ?? errorMessage) : null;
     }
 
     private async Task<ReworkSubmitResult> ExecuteReworkRequestAsync(
@@ -137,28 +138,43 @@ public class ScanBarcodeMesStep(
         string reason)
     {
         LogInfo("Запрос на доработку: Admin={Admin}, Reason={Reason}", adminUsername, reason);
-        var reworkResult = await operationStartService.ReworkAsync(
+        var reworkResult = await RequestReworkApprovalAsync(pipeline, adminUsername);
+        if (!reworkResult.IsSuccess) { return reworkResult; }
+        return await RetryOperationStartAsync(pipeline);
+    }
+
+    private async Task<ReworkSubmitResult> RequestReworkApprovalAsync(BarcodePipeline pipeline, string adminUsername)
+    {
+        var result = await operationStartService.ReworkAsync(
             pipeline.Validation.Barcode,
             CurrentOperatorName,
             adminUsername);
-        if (!reworkResult.IsSuccess)
-        {
-            return ReworkSubmitResult.Fail(reworkResult.ErrorMessage!);
-        }
+        if (!result.IsSuccess) { return ReworkSubmitResult.Fail(result.ErrorMessage!); }
         LogInfo("Доработка одобрена, повторный запрос в MES...");
-        var retryResult = await operationStartService.StartOperationAsync(
+        return ReworkSubmitResult.Success();
+    }
+
+    private async Task<ReworkSubmitResult> RetryOperationStartAsync(BarcodePipeline pipeline)
+    {
+        var result = await operationStartService.StartOperationAsync(
             pipeline.Validation.Barcode,
             CurrentOperatorName);
-        if (!retryResult.IsSuccess)
+        var error = GetOperationError(result);
+        if (error != null)
         {
-            return ReworkSubmitResult.Fail(retryResult.ErrorMessage!);
+            return ReworkSubmitResult.Fail(error);
         }
-        if (retryResult.Data is null)
-        {
-            return ReworkSubmitResult.Fail("Сервер вернул пустой ответ");
-        }
-        HandleSuccessfulStart(pipeline, retryResult.Data);
+        HandleSuccessfulStart(pipeline, result.Data!);
         return ReworkSubmitResult.Success();
+    }
+
+    private static string? GetOperationError(OperationStartResult result)
+    {
+        if (!result.IsSuccess)
+        {
+            return result.ErrorMessage!;
+        }
+        return result.Data is null ? "Сервер вернул пустой ответ" : null;
     }
 
     private async Task<BarcodeStepResult?> LoadTestSequenceAsync(BarcodePipeline pipeline)
@@ -230,6 +246,8 @@ public class ScanBarcodeMesStep(
         {
             PlcTypeDto.STRING => PlcType.String,
             PlcTypeDto.INT => PlcType.Int16,
+            PlcTypeDto.INT16 => PlcType.Int16,
+            PlcTypeDto.DINT => PlcType.Dint,
             PlcTypeDto.REAL => PlcType.Real,
             PlcTypeDto.BOOL => PlcType.Bool,
             _ => PlcType.String
@@ -266,15 +284,25 @@ public class ScanBarcodeMesStep(
     async Task<PreExecutionResult> IPreExecutionStep.ExecuteAsync(PreExecutionContext context, CancellationToken ct)
     {
         var result = await ProcessBarcodeAsync(context.Barcode);
+        return MapToPreExecutionResult(result, context);
+    }
+
+    private PreExecutionResult MapToPreExecutionResult(BarcodeStepResult result, PreExecutionContext context)
+    {
         if (result.IsCancelled)
         {
-            return PreExecutionResult.Stop();
+            return PreExecutionResult.Cancelled(result.ErrorMessage);
         }
+        return HandleBarcodeCompletion(result, context);
+    }
+
+    private PreExecutionResult HandleBarcodeCompletion(BarcodeStepResult result, PreExecutionContext context)
+    {
         if (!result.IsSuccess)
         {
             return PreExecutionResult.Fail(result.ErrorMessage!);
         }
         context.RawMaps = result.RawMaps;
-        return PreExecutionResult.Ok();
+        return PreExecutionResult.Continue();
     }
 }

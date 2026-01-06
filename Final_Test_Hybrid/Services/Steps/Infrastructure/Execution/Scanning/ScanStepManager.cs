@@ -99,8 +99,8 @@ public class ScanStepManager : IDisposable
 
     private void SubscribeToEvents()
     {
-        _operatorState.OnChange += HandleStateChange;
-        _autoReady.OnChange += HandleStateChange;
+        _operatorState.OnChange += UpdateScanModeState;
+        _autoReady.OnChange += UpdateScanModeState;
         _messageProviderKey = _messageService.RegisterProvider(MessagePriority, GetScanMessage);
         _coordinator.OnSequenceCompleted += HandleSequenceCompleted;
     }
@@ -110,20 +110,9 @@ public class ScanStepManager : IDisposable
         return IsScanModeEnabled ? ScanPromptMessage : null;
     }
 
-    private void HandleStateChange()
-    {
-        UpdateScanModeState();
-    }
-
     private void UpdateScanModeState()
     {
-        SetScanModeActive(IsScanModeEnabled);
-        _messageService.NotifyChanged();
-    }
-
-    private void SetScanModeActive(bool isActive)
-    {
-        if (isActive)
+        if (IsScanModeEnabled)
         {
             ActivateScanMode();
         }
@@ -131,6 +120,7 @@ public class ScanStepManager : IDisposable
         {
             DeactivateScanMode();
         }
+        _messageService.NotifyChanged();
     }
 
     private void ActivateScanMode()
@@ -146,17 +136,24 @@ public class ScanStepManager : IDisposable
 
     private async void HandleBarcodeScanned(string barcode)
     {
-        if (_disposed)
-        {
-            return;
-        }
         try
         {
-            await ProcessBarcodeAsync(barcode);
+            if (_disposed)
+            {
+                return;
+            }
+            try
+            {
+                await ProcessBarcodeAsync(barcode);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Необработанная ошибка при сканировании: {Barcode}", barcode);
+            }
         }
-        catch (Exception ex)
+        catch
         {
-            _logger.LogError(ex, "Необработанная ошибка при сканировании: {Barcode}", barcode);
+            // ignored
         }
     }
 
@@ -180,11 +177,21 @@ public class ScanStepManager : IDisposable
     {
         BlockInput();
         var result = await _preExecutionCoordinator.ExecuteAsync(barcode, CancellationToken.None);
-        if (result.Success)
+
+        switch (result.Status)
         {
-            return;
+            case PreExecutionStatus.TestStarted:
+                return;
+            case PreExecutionStatus.Failed:
+            case PreExecutionStatus.Cancelled:
+                await HandlePreExecutionError(result);
+                break;
+            case PreExecutionStatus.Continue:
+                break;
+            default:
+                throw new InvalidOperationException($"Неизвестный статус PreExecution: {result.Status}");
         }
-        await HandlePreExecutionError(result);
+
         UnblockInput();
     }
 
@@ -252,8 +259,8 @@ public class ScanStepManager : IDisposable
 
     private void UnsubscribeFromEvents()
     {
-        _operatorState.OnChange -= HandleStateChange;
-        _autoReady.OnChange -= HandleStateChange;
+        _operatorState.OnChange -= UpdateScanModeState;
+        _autoReady.OnChange -= UpdateScanModeState;
         _coordinator.OnSequenceCompleted -= HandleSequenceCompleted;
         if (_messageProviderKey != null)
         {

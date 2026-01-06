@@ -30,7 +30,7 @@ public class InitializeDatabaseStep(
         if (appSettings.UseMes)
         {
             logger.LogInformation("MES режим: пропуск создания записей в локальной БД");
-            return PreExecutionResult.Ok();
+            return PreExecutionResult.Continue();
         }
         if (string.IsNullOrEmpty(boilerState.SerialNumber) || boilerState.BoilerTypeCycle == null)
         {
@@ -44,6 +44,6 @@ public class InitializeDatabaseStep(
             operatorName);
         await operationService.CreateAsync(boiler.Id, operatorName, shiftState.ShiftNumber ?? 0);
         logger.LogInformation("Записи в БД созданы: Boiler={BoilerId}", boiler.Id);
-        return PreExecutionResult.Ok();
+        return PreExecutionResult.Continue();
     }
 }

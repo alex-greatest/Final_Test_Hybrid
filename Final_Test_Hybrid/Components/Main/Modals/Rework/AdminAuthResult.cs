@@ -4,4 +4,5 @@ public class AdminAuthResult
 {
     public bool Success { get; init; }
     public string Username { get; init; } = string.Empty;
+    public string? ErrorMessage { get; init; }
 }

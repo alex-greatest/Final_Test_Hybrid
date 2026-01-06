@@ -192,6 +192,33 @@ public MyService(IConfiguration configuration) {
 - Avoid nested blocks
 - Write small, focused methods
 
+### State Management Pattern
+
+**Используй enum вместо булевых флагов** для представления состояний:
+
+```csharp
+// ❌ ПЛОХО: путаница с комбинациями флагов
+public class Result
+{
+    public bool Success { get; init; }
+    public bool ShouldStop { get; init; }
+}
+// Success=true, ShouldStop=true — что это значит?
+
+// ✅ ХОРОШО: явные состояния
+public enum ResultStatus { Continue, Completed, Cancelled, Failed }
+
+public class Result
+{
+    public ResultStatus Status { get; init; }
+}
+```
+
+**Когда применять:**
+- Результат операции имеет более 2 возможных исходов
+- Комбинации булевых флагов создают неочевидные состояния
+- Нужен switch для обработки разных случаев
+
 ### File Organization
 
 **Max 300 lines per file** - Break into partial classes if needed
@@ -214,6 +241,11 @@ public MyService(IConfiguration configuration) {
 - NEVER use `<style>` tags in `.razor` files
 - Always use separate `.razor.css` files
 - Use `::deep` selector to override Radzen component styles
+
+**Rework Dialogs (RouteErrorDialog, ReworkReasonDialog, AdminAuthDialog):**
+- Текст кнопки "Отмена" должен быть **чёрным** (`color: black`), не серым
+- Размер кнопок: `padding: 12px 24px`, `font-size: 18px`
+- Общие стили определены в `wwwroot/css/app.css` (секция REWORK DIALOGS COMMON STYLES)
 
 **Components:**
 - Minimal markup in `.razor` files
@@ -397,6 +429,30 @@ appSettings.UseMesChanged += _ => Clear();
 - Оба сервиса singleton с одинаковым lifetime
 - Unsubscribe не нужен — GC не соберёт ни один из них
 
+### SemaphoreSlim в IDisposable классах
+```csharp
+// Паттерн защиты SemaphoreSlim от Dispose во время ожидания
+private async Task<bool> TryAcquireLockAsync(CancellationToken ct = default)
+{
+    try
+    {
+        await _semaphore.WaitAsync(ct);
+        return !_disposed;
+    }
+    catch (ObjectDisposedException)
+    {
+        return false;
+    }
+}
+
+private void ReleaseLockIfNotDisposed()
+{
+    if (!_disposed) { _semaphore.Release(); }
+}
+```
+- **Когда применять:** Класс реализует IDisposable и SemaphoreSlim.Dispose() вызывается в Dispose()
+- **Когда НЕ применять (overengineering):** Singleton сервисы, краткоживущие операции где Dispose невозможен во время WaitAsync
+
 ### Когда ЭТО проблема:
 - Scoped/Transient сервис подписывается на Singleton — нужен unsubscribe
 - Короткоживущий объект подписывается на долгоживущий — утечка памяти
@@ -422,6 +478,7 @@ appSettings.UseMesChanged += _ => Clear();
 
 ### Recent Changes
 
+- **TestInterruptCoordinator:** Рефакторинг + исправление SemaphoreSlim race condition при Dispose
 - **UI Dispatching:** Добавлен `BlazorDispatcherAccessor` для маршрутизации вызовов из background потоков в Blazor context
 - **Notifications:** `Radzen.NotificationService` и `INotificationService` теперь Singleton (исправлен scope mismatch)
 - **ITestStepLogger:** Все шаги теперь логируют ошибки в человекочитаемый тестовый лог

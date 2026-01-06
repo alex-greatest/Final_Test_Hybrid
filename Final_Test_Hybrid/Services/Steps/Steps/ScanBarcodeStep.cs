@@ -125,7 +125,7 @@ public class ScanBarcodeStep(
         LogSuccessfulProcessing(pipeline);
         SaveBoilerState(pipeline);
         testStepLogger.LogStepEnd(Name);
-        return BarcodeStepResult.Pass(pipeline.RawMaps!);
+        return BarcodeStepResult.Pass(pipeline.RawMaps);
     }
 
     private void LogSuccessfulProcessing(BarcodePipeline pipeline)
@@ -135,7 +135,7 @@ public class ScanBarcodeStep(
             pipeline.Validation.Article,
             pipeline.Cycle.Type,
             pipeline.Recipes.Count,
-            pipeline.RawMaps?.Count ?? 0);
+            pipeline.RawMaps.Count);
     }
 
     private void SaveBoilerState(BarcodePipeline pipeline)
@@ -168,7 +168,7 @@ public class ScanBarcodeStep(
             return PreExecutionResult.Fail(result.ErrorMessage!);
         }
         context.RawMaps = result.RawMaps;
-        return PreExecutionResult.Ok();
+        return PreExecutionResult.Continue();
     }
 
     private static IReadOnlyList<RecipeResponseDto> MapToRecipeResponseDtos(List<Recipe> recipes)

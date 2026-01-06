@@ -19,7 +19,7 @@ public class PreExecutionStepGroup(IPreExecutionStep mainStep, params IPreExecut
     public async Task<PreExecutionResult> ExecuteAsync(PreExecutionContext context, CancellationToken ct)
     {
         var result = await mainStep.ExecuteAsync(context, ct);
-        if (!result.Success || result.ShouldStop)
+        if (result.Status != PreExecutionStatus.Continue)
         {
             return result;
         }
@@ -31,11 +31,11 @@ public class PreExecutionStepGroup(IPreExecutionStep mainStep, params IPreExecut
         foreach (var subStep in _subSteps)
         {
             var result = await subStep.ExecuteAsync(context, ct);
-            if (!result.Success || result.ShouldStop)
+            if (result.Status != PreExecutionStatus.Continue)
             {
                 return result;
             }
         }
-        return PreExecutionResult.Ok();
+        return PreExecutionResult.Continue();
     }
 }

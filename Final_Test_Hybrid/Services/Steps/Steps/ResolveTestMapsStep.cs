@@ -19,16 +19,12 @@ public class ResolveTestMapsStep(
     {
         messageState.SetMessage("Проверка шагов...");
         var validationResult = ValidateRawMaps(context);
-        if (!validationResult.Success)
-        {
-            return Task.FromResult(validationResult);
-        }
-        return Task.FromResult(ResolveAndApplyMaps(context));
+        return Task.FromResult(validationResult.Status == PreExecutionStatus.Failed ? validationResult : ResolveAndApplyMaps(context));
     }
 
     private PreExecutionResult ValidateRawMaps(PreExecutionContext context)
     {
-        return !HasRawMaps(context) ? Fail("Нет тестовых последовательностей") : PreExecutionResult.Ok();
+        return !HasRawMaps(context) ? Fail("Нет тестовых последовательностей") : PreExecutionResult.Continue();
     }
 
     private PreExecutionResult ResolveAndApplyMaps(PreExecutionContext context)
@@ -40,7 +36,7 @@ public class ResolveTestMapsStep(
         }
         context.Maps = resolveResult.Maps;
         logger.LogInformation("Проверка шагов завершена: {Count} maps", context.Maps!.Count);
-        return PreExecutionResult.Ok();
+        return PreExecutionResult.Continue();
     }
 
     private static bool HasRawMaps(PreExecutionContext context)

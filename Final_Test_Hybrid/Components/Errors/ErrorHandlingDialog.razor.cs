@@ -48,7 +48,7 @@ public partial class ErrorHandlingDialog : ComponentBase, IDisposable
 
             await InvokeAsync(StateHasChanged);
         }
-        catch (Exception e)
+        catch
         {
             // ignored
         }

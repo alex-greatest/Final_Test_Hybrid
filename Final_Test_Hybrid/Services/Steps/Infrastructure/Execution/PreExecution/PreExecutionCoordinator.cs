@@ -39,18 +39,18 @@ public class PreExecutionCoordinator(
         statusReporter.ClearAll();
         var context = CreateContext(barcode);
         var stepsResult = await ExecuteAllStepsAsync(context, ct);
-        if (!stepsResult.Success)
+        if (stepsResult.Status != PreExecutionStatus.Continue)
         {
-            return HandleFailedResult(stepsResult);
+            return HandleNonContinueResult(stepsResult);
         }
         messageState.Clear();
         StartTestExecution(context);
-        return PreExecutionResult.Ok();
+        return PreExecutionResult.TestStarted();
     }
 
-    private PreExecutionResult HandleFailedResult(PreExecutionResult result)
+    private PreExecutionResult HandleNonContinueResult(PreExecutionResult result)
     {
-        if (result.UserMessage != null)
+        if (result.Status == PreExecutionStatus.Failed && result.UserMessage != null)
         {
             messageState.SetMessage(result.UserMessage);
         }
@@ -62,14 +62,13 @@ public class PreExecutionCoordinator(
         foreach (var step in stepRegistry.GetOrderedSteps())
         {
             await pauseToken.WaitWhilePausedAsync(ct);
-
             var result = await ExecuteStepAsync(step, context, ct);
-            if (!result.Success || result.ShouldStop)
+            if (result.Status != PreExecutionStatus.Continue)
             {
                 return result;
             }
         }
-        return PreExecutionResult.Ok();
+        return PreExecutionResult.Continue();
     }
 
     private async Task<PreExecutionResult> ExecuteStepAsync(
@@ -101,12 +100,22 @@ public class PreExecutionCoordinator(
 
     private void ReportStepResult(Guid stepId, PreExecutionResult result)
     {
-        if (result.Success)
+        switch (result.Status)
         {
-            statusReporter.ReportSuccess(stepId);
-            return;
+            case PreExecutionStatus.Continue:
+                statusReporter.ReportSuccess(stepId);
+                return;
+            case PreExecutionStatus.Cancelled:
+                statusReporter.ReportError(stepId, result.ErrorMessage ?? "Операция отменена");
+                return;
+            case PreExecutionStatus.TestStarted:
+                return;
+            case PreExecutionStatus.Failed:
+                statusReporter.ReportError(stepId, result.ErrorMessage!);
+                return;
+            default:
+                throw new InvalidOperationException($"Неизвестный статус PreExecution: {result.Status}");
         }
-        statusReporter.ReportError(stepId, result.ErrorMessage!);
     }
 
     private PreExecutionResult HandleStepException(IPreExecutionStep step, Guid stepId, Exception ex)

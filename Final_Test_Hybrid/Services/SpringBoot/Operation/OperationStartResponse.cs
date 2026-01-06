@@ -38,6 +38,8 @@ public enum PlcTypeDto
 {
     STRING,
     INT,
+    INT16,
+    DINT,
     REAL,
     BOOL
 }

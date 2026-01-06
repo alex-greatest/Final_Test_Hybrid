@@ -92,21 +92,8 @@ public class TestInterruptCoordinator : IDisposable
 
     private void HandleAutoReadyChanged()
     {
-        if (_autoReady.IsReady)
-        {
-            TriggerResumeAsync();
-            return;
-        }
-        HandleAutoModeDisabled();
-    }
-
-    private void HandleAutoModeDisabled()
-    {
-        if (!_activityTracker.IsAnyActive)
-        {
-            return;
-        }
-        TriggerInterruptAsync(TestInterruptReason.AutoModeDisabled);
+        if (_autoReady.IsReady) { TriggerResumeAsync(); }
+        else if (_activityTracker.IsAnyActive) { TriggerInterruptAsync(TestInterruptReason.AutoModeDisabled); }
     }
 
     private void TriggerInterruptAsync(TestInterruptReason reason)
@@ -128,20 +115,34 @@ public class TestInterruptCoordinator : IDisposable
         _logger.LogError(task.Exception, "Ошибка обработки прерывания: {Reason}", reason);
     }
 
-    private async Task TryResumeFromPauseAsync()
+    private async Task<bool> TryAcquireLockAsync(CancellationToken ct = default)
     {
-        await _interruptLock.WaitAsync();
         try
         {
-            if (!_pauseToken.IsPaused)
-            {
-                return;
-            }
-            ResumeExecution();
+            await _interruptLock.WaitAsync(ct);
+            return !_disposed;
+        }
+        catch (ObjectDisposedException)
+        {
+            return false;
+        }
+    }
+
+    private void ReleaseLockIfNotDisposed()
+    {
+        if (!_disposed) { _interruptLock.Release(); }
+    }
+
+    private async Task TryResumeFromPauseAsync()
+    {
+        if (!await TryAcquireLockAsync()) { return; }
+        try
+        {
+            if (_pauseToken.IsPaused) { ResumeExecution(); }
         }
         finally
         {
-            _interruptLock.Release();
+            ReleaseLockIfNotDisposed();
         }
     }
 
@@ -155,19 +156,15 @@ public class TestInterruptCoordinator : IDisposable
 
     public async Task HandleInterruptAsync(TestInterruptReason reason, CancellationToken ct = default)
     {
-        if (_disposed || !TryAcquireInterruptFlag())
-        {
-            return;
-        }
-
-        await _interruptLock.WaitAsync(ct);
+        if (_disposed || !TryAcquireInterruptFlag()) { return; }
+        if (!await TryAcquireLockAsync(ct)) { ReleaseInterruptFlag(); return; }
         try
         {
             await ProcessInterruptAsync(reason, ct);
         }
         finally
         {
-            _interruptLock.Release();
+            ReleaseLockIfNotDisposed();
             ReleaseInterruptFlag();
         }
     }
@@ -194,18 +191,15 @@ public class TestInterruptCoordinator : IDisposable
 
     private async Task ExecuteInterruptActionAsync(InterruptBehavior behavior, CancellationToken ct)
     {
-        switch (behavior.Action)
+        var task = behavior.Action switch
         {
-            case InterruptAction.PauseAndWait:
-                _pauseToken.Pause();
-                break;
+            InterruptAction.PauseAndWait => PauseAction(),
+            InterruptAction.ResetAfterDelay => ResetAfterDelayAsync(behavior.Delay, ct),
+            _ => throw new InvalidOperationException($"Неизвестное действие: {behavior.Action}")
+        };
+        await task;
 
-            case InterruptAction.ResetAfterDelay:
-                await ResetAfterDelayAsync(behavior.Delay, ct);
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
+        Task PauseAction() { _pauseToken.Pause(); return Task.CompletedTask; }
     }
 
     private static string GetInterruptDetails(InterruptBehavior behavior)
@@ -222,10 +216,7 @@ public class TestInterruptCoordinator : IDisposable
 
     private async Task ResetAfterDelayAsync(TimeSpan? delay, CancellationToken ct)
     {
-        if (delay.HasValue)
-        {
-            await Task.Delay(delay.Value, ct);
-        }
+        await Task.Delay(delay ?? TimeSpan.Zero, ct);
         Reset();
     }
 

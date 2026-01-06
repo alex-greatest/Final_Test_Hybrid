@@ -23,7 +23,7 @@ public class ValidateRecipesStep(
         messageState.SetMessage("Проверка рецептов...");
         if (context.Maps == null || context.Maps.Count == 0)
         {
-            return Task.FromResult(PreExecutionResult.Ok());
+            return Task.FromResult(PreExecutionResult.Continue());
         }
         var allSteps = ExtractAllSteps(context.Maps);
         var validation = recipeValidator.Validate(allSteps, boilerState.Recipes);
@@ -37,7 +37,7 @@ public class ValidateRecipesStep(
                 "Ошибка проверки рецептов"));
         }
         logger.LogInformation("Проверка рецептов пройдена");
-        return Task.FromResult(PreExecutionResult.Ok());
+        return Task.FromResult(PreExecutionResult.Continue());
     }
 
     private static List<ITestStep> ExtractAllSteps(List<TestMap> maps)

@@ -65,8 +65,8 @@ public record BarcodeStepResult
     public static BarcodeStepResult WithError(string error) =>
         new() { Status = StepStatus.Error, ErrorMessage = error };
 
-    public static BarcodeStepResult Cancelled() =>
-        new() { Status = StepStatus.Pass, IsCancelled = true };
+    public static BarcodeStepResult Cancelled(string? errorMessage = null) =>
+        new() { Status = StepStatus.Fail, IsCancelled = true, ErrorMessage = errorMessage };
 }
 
 public record UnknownStepInfo(string StepName, int Row, int Column);

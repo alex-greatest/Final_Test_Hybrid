@@ -55,13 +55,13 @@
 
 @code {
     private bool UseQrAuth => AppSettingsService.UseAdminQrAuth;
-
     private IDisposable? _scanSession;
     private bool _disposed;
     private bool _isLoading;
     private string _login = string.Empty;
     private string _password = string.Empty;
     private string _validationError = string.Empty;
+    private string? _lastError;
 
     protected override void OnInitialized()
     {
@@ -73,21 +73,22 @@
 
     private async void OnBarcodeScanned(string barcode)
     {
+        if (_disposed)
+        {
+            return;
+        }
+        await InvokeBarcodeProcessingAsync(barcode);
+    }
+
+    private async Task InvokeBarcodeProcessingAsync(string barcode)
+    {
         try
         {
-            if (_disposed)
-            {
-                return;
-            }
             await InvokeAsync(() => ProcessBarcodeAsync(barcode));
         }
         catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException)
         {
-            // Component or renderer disposed
-        }
-        catch (Exception)
-        {
-            // Async void cannot propagate exceptions
+            // Component or renderer disposed - expected during cleanup
         }
     }
 
@@ -134,17 +135,27 @@
     {
         if (result.Success)
         {
-            NotificationService.Notify(NotificationSeverity.Success, "Авторизация успешна");
-            DialogService.Close(new AdminAuthResult { Success = true, Username = result.Username ?? _login });
+            CloseWithSuccess(result);
             return;
         }
-        NotificationService.Notify(NotificationSeverity.Error, result.ErrorMessage ?? "Неизвестная ошибка");
+        ShowAuthError(result);
+    }
+
+    private void CloseWithSuccess(OperatorAuthResult result)
+    {
+        NotificationService.Notify(NotificationSeverity.Success, "Авторизация успешна");
+        DialogService.Close(new AdminAuthResult { Success = true, Username = result.Username ?? _login });
+    }
+
+    private void ShowAuthError(OperatorAuthResult result)
+    {
+        _lastError = result.ErrorMessage ?? "Ошибка авторизации";
         StateHasChanged();
     }
 
     private void OnCancel()
     {
-        DialogService.Close(new AdminAuthResult { Success = false });
+        DialogService.Close(new AdminAuthResult { Success = false, ErrorMessage = _lastError });
     }
 
     public void Dispose()

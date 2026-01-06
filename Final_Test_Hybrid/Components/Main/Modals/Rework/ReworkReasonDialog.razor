@@ -1,4 +1,4 @@
-а @using Final_Test_Hybrid.Services.SpringBoot.Operation
+@using Final_Test_Hybrid.Services.SpringBoot.Operation
 @inject DialogService DialogService
 @inject NotificationService NotificationService
 @implements IDisposable
@@ -6,11 +6,10 @@
 <div class="rework-reason-dialog">
     <div class="field-group">
         <label class="field-label">Описание причины доработки/пропуска</label>
-        <RadzenTextArea @bind-Value="_reason"
-                        Placeholder="Введите причину доработки/пропуска"
-                        Rows="3"
-                        Disabled="@_isLoading"
-                        Style="width: 100%;" />
+        <RadzenTextBox @bind-Value="_reason"
+                       Placeholder="Введите причину доработки/пропуска"
+                       Disabled="@_isLoading"
+                       Style="width: 100%;" />
     </div>
 
     @if (!string.IsNullOrEmpty(_validationError))
@@ -25,6 +24,7 @@
 
     <div class="dialog-buttons">
         <RadzenButton Text="Отмена"
+                      Icon="close"
                       Click="@OnCancel"
                       ButtonStyle="ButtonStyle.Light"
                       Disabled="@_isLoading"
@@ -40,51 +40,99 @@
 @code {
     [Parameter]
     public Func<string, Task<ReworkSubmitResult>>? OnSubmit { get; set; }
-
     private string _reason = string.Empty;
     private string _validationError = string.Empty;
     private bool _isLoading;
     private bool _disposed;
+    private string? _lastError;
 
     private async Task OnConfirm()
     {
-        _validationError = string.Empty;
-        if (string.IsNullOrWhiteSpace(_reason))
+        if (!ValidateReason())
         {
-            _validationError = "Введите причину доработки/пропуска";
             return;
         }
+        await ProcessConfirmationAsync();
+    }
+
+    private async Task ProcessConfirmationAsync()
+    {
         if (OnSubmit == null)
         {
-            DialogService.Close(_reason.Trim());
+            CloseWithReason();
             return;
         }
-        _isLoading = true;
-        if (!_disposed) StateHasChanged();
+        await SubmitReasonAsync();
+    }
+
+    private bool ValidateReason()
+    {
+        _validationError = string.Empty;
+        if (!string.IsNullOrWhiteSpace(_reason))
+        {
+            return true;
+        }
+        _validationError = "Введите причину доработки/пропуска";
+        return false;
+    }
+
+    private void CloseWithReason()
+    {
+        DialogService.Close(_reason.Trim());
+    }
+
+    private async Task SubmitReasonAsync()
+    {
+        SetLoadingState(true);
         try
         {
-            var result = await OnSubmit(_reason.Trim());
-            if (result.IsSuccess)
-            {
-                DialogService.Close(result);
-            }
-            else
-            {
-                if (_disposed) return;
-                NotificationService.Notify(NotificationSeverity.Error, result.ErrorMessage ?? "Ошибка сервера");
-                StateHasChanged();
-            }
+            var result = await OnSubmit!(_reason.Trim());
+            HandleSubmitResult(result);
         }
         finally
         {
-            _isLoading = false;
-            if (!_disposed) StateHasChanged();
+            SetLoadingState(false);
+        }
+    }
+
+    private void HandleSubmitResult(ReworkSubmitResult result)
+    {
+        if (result.IsSuccess)
+        {
+            DialogService.Close(result);
+            return;
+        }
+        ShowSubmitError(result);
+    }
+
+    private void ShowSubmitError(ReworkSubmitResult result)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+        _lastError = result.ErrorMessage ?? "Ошибка сервера";
+        NotificationService.Notify(NotificationSeverity.Error, _lastError);
+        StateHasChanged();
+    }
+
+    private void SetLoadingState(bool isLoading)
+    {
+        _isLoading = isLoading;
+        if (!_disposed)
+        {
+            StateHasChanged();
         }
     }
 
     private void OnCancel()
     {
-        DialogService.Close();
+        if (OnSubmit == null)
+        {
+            DialogService.Close();
+            return;
+        }
+        DialogService.Close(ReworkSubmitResult.Fail(_lastError ?? "Операция отменена"));
     }
 
     public void Dispose()

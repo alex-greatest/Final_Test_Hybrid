@@ -50,12 +50,12 @@
 ::deep .cancel-button.rz-button {
     background: transparent;
     border: 2px solid #9ca3af;
-    color: #6b7280;
-    font-size: 20px;
+    color: black;
+    font-size: 18px;
     font-weight: 600;
-    padding: 14px 32px;
-    border-radius: 6px;
-    min-width: 140px;
+    padding: 12px 24px;
+    border-radius: 4px;
+    min-width: 130px;
 }
 
 ::deep .cancel-button.rz-button:hover {
@@ -67,11 +67,11 @@
     background: transparent;
     border: 2px solid #ef4444;
     color: #ef4444;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 600;
-    padding: 14px 32px;
-    border-radius: 6px;
-    min-width: 140px;
+    padding: 12px 24px;
+    border-radius: 4px;
+    min-width: 130px;
 }
 
 ::deep .continue-button.rz-button:hover {
