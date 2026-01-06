@@ -1,7 +1,6 @@
 using Final_Test_Hybrid.Components.Engineer.Modals;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Main;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Microsoft.AspNetCore.Components;
 using Radzen;
 
@@ -14,27 +13,13 @@ public partial class AdminAuthorizationQr : IDisposable
     [Inject]
     public required DialogService DialogService { get; set; }
     [Inject]
-    public required TestSequenseService TestSequenseService { get; set; }
-    [Inject]
-    public required AutoReadySubscription AutoReadySubscription { get; set; }
+    public required SettingsInteractionState InteractionState { get; set; }
     private bool _useAdminQrAuth;
-
-    private bool IsOnScanStep
-    {
-        get
-        {
-            var currentStep = TestSequenseService.Data.FirstOrDefault();
-            return currentStep?.Module is "Сканирование штрихкода" or "Сканирование штрихкода MES";
-        }
-    }
-    private bool IsWaitingForAuto => !TestSequenseService.Data.Any() && !AutoReadySubscription.IsReady;
-    private bool CanInteract => IsOnScanStep || IsWaitingForAuto || !TestSequenseService.Data.Any();
 
     protected override void OnInitialized()
     {
         _useAdminQrAuth = AppSettingsService.UseAdminQrAuth;
-        TestSequenseService.OnDataChanged += HandleStateChanged;
-        AutoReadySubscription.OnChange += HandleStateChanged;
+        InteractionState.OnChange += HandleStateChanged;
     }
 
     private void HandleStateChanged()
@@ -44,7 +29,7 @@ public partial class AdminAuthorizationQr : IDisposable
 
     private async Task OnCheckboxClick()
     {
-        if (!CanInteract)
+        if (!InteractionState.CanInteract)
         {
             return;
         }
@@ -67,7 +52,6 @@ public partial class AdminAuthorizationQr : IDisposable
 
     public void Dispose()
     {
-        TestSequenseService.OnDataChanged -= HandleStateChanged;
-        AutoReadySubscription.OnChange -= HandleStateChanged;
+        InteractionState.OnChange -= HandleStateChanged;
     }
 }

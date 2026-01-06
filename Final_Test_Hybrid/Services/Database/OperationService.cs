@@ -19,7 +19,7 @@ public class OperationService(
             var operation = new Operation
             {
                 BoilerId = boilerId,
-                DateStart = DateTime.Now,
+                DateStart = DateTime.UtcNow,
                 DateEnd = null,
                 Status = OperationResultStatus.InWork,
                 NumberShift = shiftNumber,

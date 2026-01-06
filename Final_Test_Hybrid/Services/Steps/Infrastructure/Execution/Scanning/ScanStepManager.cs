@@ -40,6 +40,8 @@ public class ScanStepManager : IDisposable
     public bool IsProcessing => _inputStateManager.IsProcessing;
     public string? CurrentBarcode => _currentBarcode;
 
+    public void ClearBarcode() => _currentBarcode = null;
+
     public event Action? OnChange
     {
         add => _inputStateManager.OnStateChanged += value;

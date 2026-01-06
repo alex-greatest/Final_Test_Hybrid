@@ -1,5 +1,6 @@
 @using Final_Test_Hybrid.Components.Main.Modals
 @using Final_Test_Hybrid.Models.Steps
+@using Final_Test_Hybrid.Services.Common.Settings
 @using Final_Test_Hybrid.Services.Main
 @using Final_Test_Hybrid.Services.SpringBoot.Operation
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution
@@ -10,6 +11,7 @@
 @inject TestSequenseService TestSequenseService
 @inject DialogService DialogService
 @inject ReworkDialogService ReworkDialogService
+@inject AppSettingsService AppSettingsService
 @implements IDisposable
 
 <div class="field-row field-row-middle">
@@ -49,6 +51,7 @@
         ScanStepManager.OnMissingRecipesDialogRequested += ShowMissingRecipesDialogAsync;
         ScanStepManager.OnRecipeWriteErrorDialogRequested += ShowRecipeWriteErrorDialogAsync;
         ScanStepManager.OnReworkDialogRequested += HandleReworkDialogAsync;
+        AppSettingsService.UseMesChanged += OnUseMesChanged;
     }
 
     private string GetDisplayValue() => BoilerState.SerialNumber ?? ScanStepManager.CurrentBarcode ?? _manualInput;
@@ -56,6 +59,14 @@
     private void OnDataChanged() => InvokeIfNotDisposed(StateHasChanged);
 
     private void OnScanStateChanged() => InvokeIfNotDisposed(StateHasChanged);
+
+    private void OnUseMesChanged(bool _)
+    {
+        _manualInput = "";
+        BoilerState.Clear();
+        ScanStepManager.ClearBarcode();
+        InvokeIfNotDisposed(StateHasChanged);
+    }
 
     private void OnInput(ChangeEventArgs e) => _manualInput = e.Value?.ToString() ?? "";
 
@@ -205,5 +216,6 @@
         ScanStepManager.OnMissingRecipesDialogRequested -= ShowMissingRecipesDialogAsync;
         ScanStepManager.OnRecipeWriteErrorDialogRequested -= ShowRecipeWriteErrorDialogAsync;
         ScanStepManager.OnReworkDialogRequested -= HandleReworkDialogAsync;
+        AppSettingsService.UseMesChanged -= OnUseMesChanged;
     }
 }

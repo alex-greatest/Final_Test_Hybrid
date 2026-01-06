@@ -40,22 +40,24 @@ public class OperationStartService(
         string serialNumber,
         string operatorName,
         string admin,
+        string comment,
         CancellationToken ct = default)
     {
-        var request = BuildRequest(serialNumber, operatorName, admin);
+        var request = BuildRequest(serialNumber, operatorName, admin, comment);
         logger.LogInformation("Rework request for {SerialNumber} by admin {Admin}", serialNumber, admin);
         sbLogger.LogInformation("Запрос на доработку для {SerialNumber} от админа {Admin}", serialNumber, admin);
         return await ExecuteReworkAsync(request, ct);
     }
 
-    private OperationStartRequest BuildRequest(string serialNumber, string operatorName, string admin)
+    private OperationStartRequest BuildRequest(string serialNumber, string operatorName, string admin, string comment = "")
     {
         return new OperationStartRequest
         {
             SerialNumber = serialNumber,
             StationName = appSettingsService.NameStation,
             Operator = operatorName,
-            Admin = admin
+            Admin = admin,
+            Comment = comment
         };
     }
 

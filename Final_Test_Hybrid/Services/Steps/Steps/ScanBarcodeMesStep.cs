@@ -138,17 +138,18 @@ public class ScanBarcodeMesStep(
         string reason)
     {
         LogInfo("Запрос на доработку: Admin={Admin}, Reason={Reason}", adminUsername, reason);
-        var reworkResult = await RequestReworkApprovalAsync(pipeline, adminUsername);
+        var reworkResult = await RequestReworkApprovalAsync(pipeline, adminUsername, reason);
         if (!reworkResult.IsSuccess) { return reworkResult; }
         return await RetryOperationStartAsync(pipeline);
     }
 
-    private async Task<ReworkSubmitResult> RequestReworkApprovalAsync(BarcodePipeline pipeline, string adminUsername)
+    private async Task<ReworkSubmitResult> RequestReworkApprovalAsync(BarcodePipeline pipeline, string adminUsername, string comment)
     {
         var result = await operationStartService.ReworkAsync(
             pipeline.Validation.Barcode,
             CurrentOperatorName,
-            adminUsername);
+            adminUsername,
+            comment);
         if (!result.IsSuccess) { return ReworkSubmitResult.Fail(result.ErrorMessage!); }
         LogInfo("Доработка одобрена, повторный запрос в MES...");
         return ReworkSubmitResult.Success();

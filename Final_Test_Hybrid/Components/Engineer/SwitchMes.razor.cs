@@ -2,14 +2,13 @@ using Final_Test_Hybrid.Components.Engineer.Modals;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 using Microsoft.AspNetCore.Components;
 using Radzen;
 
 namespace Final_Test_Hybrid.Components.Engineer;
 
-public partial class SwitchMes : IDisposable
+public partial class SwitchMes
 {
     [Inject]
     public required AppSettingsService AppSettingsService { get; set; }
@@ -24,32 +23,19 @@ public partial class SwitchMes : IDisposable
     [Inject]
     public required ScanStepManager ScanStepManager { get; set; }
     [Inject]
-    public required TestSequenseService TestSequenseService { get; set; }
-    [Inject]
-    public required AutoReadySubscription AutoReadySubscription { get; set; }
+    public required SettingsInteractionState InteractionState { get; set; }
     private bool _useMes;
 
-    private bool IsOnScanStep
-    {
-        get
-        {
-            var currentStep = TestSequenseService.Data.FirstOrDefault();
-            return currentStep?.Module is "Сканирование штрихкода" or "Сканирование штрихкода MES";
-        }
-    }
-    private bool IsWaitingForAuto => !TestSequenseService.Data.Any() && !AutoReadySubscription.IsReady;
-    private bool CanInteract => IsOnScanStep || IsWaitingForAuto || !TestSequenseService.Data.Any();
-    private bool IsDisabled => ScanStepManager.IsProcessing || !CanInteract;
+    private bool IsDisabled => ScanStepManager.IsProcessing || !InteractionState.CanInteract;
 
     protected override void OnInitialized()
     {
         _useMes = AppSettingsService.UseMes;
-        ScanStepManager.OnChange += HandleScanStateChanged;
-        TestSequenseService.OnDataChanged += HandleScanStateChanged;
-        AutoReadySubscription.OnChange += HandleScanStateChanged;
+        ScanStepManager.OnChange += HandleStateChanged;
+        InteractionState.OnChange += HandleStateChanged;
     }
 
-    private void HandleScanStateChanged()
+    private void HandleStateChanged()
     {
         InvokeAsync(StateHasChanged);
     }
@@ -114,8 +100,7 @@ public partial class SwitchMes : IDisposable
 
     public void Dispose()
     {
-        ScanStepManager.OnChange -= HandleScanStateChanged;
-        TestSequenseService.OnDataChanged -= HandleScanStateChanged;
-        AutoReadySubscription.OnChange -= HandleScanStateChanged;
+        ScanStepManager.OnChange -= HandleStateChanged;
+        InteractionState.OnChange -= HandleStateChanged;
     }
 }

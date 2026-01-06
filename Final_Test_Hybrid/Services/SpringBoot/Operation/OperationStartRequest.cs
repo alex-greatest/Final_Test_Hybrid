@@ -6,4 +6,5 @@ public class OperationStartRequest
     public string StationName { get; init; } = string.Empty;
     public string Operator { get; init; } = string.Empty;
     public string Admin { get; init; } = string.Empty;
+    public string Comment { get; init; } = string.Empty;
 }

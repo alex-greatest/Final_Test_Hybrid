@@ -21,7 +21,7 @@ public class ReworkDialogService(DialogService dialogService)
         var result = await dialogService.OpenAsync<AdminAuthDialog>(
             "Авторизация администратора",
             new Dictionary<string, object>(),
-            CreateModalOptions("400px"));
+            CreateModalOptions("450px"));
         return result as AdminAuthResult;
     }
 
@@ -30,7 +30,7 @@ public class ReworkDialogService(DialogService dialogService)
         var result = await dialogService.OpenAsync<ReworkReasonDialog>(
             "Доработка/пропуск",
             new Dictionary<string, object>(),
-            CreateModalOptions("550px"));
+            CreateModalOptions("85vw"));
         return result as string;
     }
 
@@ -40,7 +40,7 @@ public class ReworkDialogService(DialogService dialogService)
         var result = await dialogService.OpenAsync<ReworkReasonDialog>(
             "Доработка/пропуск",
             new Dictionary<string, object> { ["OnSubmit"] = onSubmit },
-            CreateModalOptions("550px"));
+            CreateModalOptions("85vw"));
         return result as ReworkSubmitResult;
     }
 

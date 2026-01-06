@@ -97,6 +97,7 @@ namespace Final_Test_Hybrid
             services.AddSingleton<InterruptMessageState>();
             services.AddSingleton<TestSequenseService>();
             services.AddSingleton<BoilerState>();
+            services.AddSingleton<SettingsInteractionState>();
             services.AddSingleton<OrderState>();
             services.AddSingleton<BarcodeScanService>();
             services.AddSingleton<ScanSessionManager>();

@@ -4,7 +4,7 @@
     align-items: center;
     gap: 13px;
     padding: 8px 0;
-    min-width: 350px;
+    min-width: 100%;
 }
 
 ::deep .qr-icon {
@@ -27,18 +27,18 @@
 }
 
 .field-label {
-    font-size: 16px;
+    font-size: 18px;
     color: black;
     font-weight: 700;
 }
 
 ::deep .rz-textbox {
     width: 100%;
-    height: 40px;
+    height: 44px;
     padding: 0 14px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 700;
     color: black;
 }
@@ -48,11 +48,11 @@
 }
 
 ::deep .rz-password input {
-    height: 40px;
+    height: 44px;
     padding: 0 14px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 700;
     color: black;
 }
@@ -79,8 +79,8 @@
 ::deep .confirm-button.rz-button {
     background-color: #3b82f6;
     color: white;
-    padding: 12px 24px;
-    font-size: 18px;
+    padding: 14px 28px;
+    font-size: 20px;
     font-weight: 700;
     border-radius: 4px;
 }
@@ -90,16 +90,15 @@
 }
 
 ::deep .cancel-button.rz-button {
-    background: transparent;
-    border: 2px solid #9ca3af;
-    color: black;
-    padding: 12px 24px;
-    font-size: 18px;
+    background-color: white;
+    border: 1px solid #3b82f6;
+    color: #3b82f6;
+    padding: 14px 28px;
+    font-size: 20px;
     font-weight: 600;
     border-radius: 4px;
 }
 
 ::deep .cancel-button.rz-button:hover {
-    background: #f3f4f6;
-    border-color: #6b7280;
+    background-color: #f0f7ff;
 }

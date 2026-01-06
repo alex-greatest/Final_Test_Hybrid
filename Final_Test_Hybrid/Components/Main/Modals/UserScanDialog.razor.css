@@ -12,7 +12,7 @@
 }
 
 .instruction-text {
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 600;
     color: #3b82f6;
     text-align: center;
@@ -29,8 +29,8 @@
 }
 
 ::deep .dialog-buttons .rz-button {
-    padding: 10px 30px;
-    font-size: 16px;
+    padding: 14px 28px;
+    font-size: 20px;
     font-weight: 600;
     border: 1px solid #3b82f6;
     border-radius: 6px;

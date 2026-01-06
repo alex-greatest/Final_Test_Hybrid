@@ -1,8 +1,6 @@
-@implements IDisposable
-
 <div class="checkbox-setting">
     <span class="checkbox-setting-label">Авторизация оператора по QR</span>
     <div class="checkbox-wrapper" @onclick="OnCheckboxClick">
-        <RadzenCheckBox Value="@_useOperatorQrAuth" ReadOnly="true" Disabled="@(!CanInteract)" Style="transform: scale(1.5); transform-origin: center center;" />
+        <RadzenCheckBox Value="@_useOperatorQrAuth" ReadOnly="true" Disabled="@(!InteractionState.CanInteract)" Style="transform: scale(1.5); transform-origin: center center;" />
     </div>
 </div>

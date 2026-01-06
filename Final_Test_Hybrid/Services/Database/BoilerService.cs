@@ -34,7 +34,7 @@ public class BoilerService(
 
     private async Task<Boiler> UpdateExistingAsync(AppDbContext dbContext, Boiler existing, string operatorName)
     {
-        existing.DateUpdate = DateTime.Now;
+        existing.DateUpdate = DateTime.UtcNow;
         existing.Status = OperationResultStatus.InWork;
         existing.Operator = operatorName;
         await dbContext.SaveChangesAsync();
@@ -53,7 +53,7 @@ public class BoilerService(
         {
             SerialNumber = serialNumber,
             BoilerTypeCycleId = boilerTypeCycleId,
-            DateCreate = DateTime.Now,
+            DateCreate = DateTime.UtcNow,
             DateUpdate = null,
             Status = OperationResultStatus.InWork,
             Operator = operatorName
