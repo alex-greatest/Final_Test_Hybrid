@@ -168,7 +168,7 @@ public class ScanBarcodeStep(
             return PreExecutionResult.Fail(result.ErrorMessage!);
         }
         context.RawMaps = result.RawMaps;
-        return PreExecutionResult.Continue();
+        return PreExecutionResult.Continue(context.Barcode);
     }
 
     private static IReadOnlyList<RecipeResponseDto> MapToRecipeResponseDtos(List<Recipe> recipes)

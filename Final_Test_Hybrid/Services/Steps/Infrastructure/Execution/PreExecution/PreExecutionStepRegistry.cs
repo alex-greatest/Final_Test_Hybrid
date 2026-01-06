@@ -13,6 +13,7 @@ public class PreExecutionStepRegistry(
     private const string ResolveTestMapsId = "resolve-test-maps";
     private const string ValidateRecipesId = "validate-recipes";
     private const string InitializeDatabaseId = "initialize-database";
+    private const string InitializeRecipeProviderId = "initialize-recipe-provider";
     private readonly List<IPreExecutionStep> _steps = steps.ToList();
 
     public IReadOnlyList<IPreExecutionStep> GetOrderedSteps()
@@ -23,17 +24,19 @@ public class PreExecutionStepRegistry(
         var validateRecipesStep = GetStep(ValidateRecipesId);
         var initDbStep = GetStep(InitializeDatabaseId);
         var writeRecipesStep = GetStep(WriteRecipesId);
-        if (!AreAllStepsPresent(scanStep, resolveStep, validateRecipesStep, initDbStep, writeRecipesStep))
+        var initRecipeProviderStep = GetStep(InitializeRecipeProviderId);
+        if (!AreAllStepsPresent(scanStep, resolveStep, validateRecipesStep, initDbStep, writeRecipesStep, initRecipeProviderStep))
         {
             return [];
         }
-        // Порядок: Scan → Resolve → ValidateRecipes → InitDb → WriteRecipes
+        // Порядок: Scan → Resolve → ValidateRecipes → InitDb → WriteRecipes → InitRecipeProvider
         var scanGroup = new PreExecutionStepGroup(
             scanStep!,
             resolveStep!,
             validateRecipesStep!,
             initDbStep!,
-            writeRecipesStep!);
+            writeRecipesStep!,
+            initRecipeProviderStep!);
         return [scanGroup];
     }
 

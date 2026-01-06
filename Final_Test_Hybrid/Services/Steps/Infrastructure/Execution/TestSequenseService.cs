@@ -11,6 +11,20 @@ public class TestSequenseService
     public IEnumerable<TestSequenseData> Data => GetStepsCopy();
     public int Count => GetCount();
 
+    public bool IsOnActiveScanStep
+    {
+        get
+        {
+            lock (_lock)
+            {
+                var step = _steps.FirstOrDefault();
+                if (step == null) return false;
+                var isScan = step.Module is "Сканирование штрихкода" or "Сканирование штрихкода MES";
+                return isScan && !step.IsSuccess && !step.IsError;
+            }
+        }
+    }
+
     public Guid AddStep(ITestStep step)
     {
         var stepData = CreateStepData(step);

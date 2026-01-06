@@ -120,6 +120,7 @@ namespace Final_Test_Hybrid
             services.AddSingleton<IPreExecutionStep, ResolveTestMapsStep>();
             services.AddSingleton<IPreExecutionStep, ValidateRecipesStep>();
             services.AddSingleton<IPreExecutionStep, InitializeDatabaseStep>();
+            services.AddSingleton<IPreExecutionStep, InitializeRecipeProviderStep>();
             services.AddSingleton<PreExecutionCoordinator>();
             services.AddBlazorWebViewDeveloperTools();
             services.AddWindowsFormsBlazorWebView();

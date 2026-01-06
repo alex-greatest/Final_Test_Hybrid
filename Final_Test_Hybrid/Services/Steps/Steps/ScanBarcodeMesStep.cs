@@ -233,6 +233,7 @@ public class ScanBarcodeMesStep(
         return recipes.Select(r => new RecipeResponseDto
         {
             TagName = r.Parameter,
+            Address = r.Parameter,
             Value = r.Value,
             PlcType = MapPlcType(r.PlcType)
         }).ToList();
@@ -301,6 +302,6 @@ public class ScanBarcodeMesStep(
             return PreExecutionResult.Fail(result.ErrorMessage!);
         }
         context.RawMaps = result.RawMaps;
-        return PreExecutionResult.Continue();
+        return PreExecutionResult.Continue(context.Barcode);
     }
 }

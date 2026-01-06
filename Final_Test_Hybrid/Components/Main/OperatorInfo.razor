@@ -40,14 +40,7 @@
     [Inject]
     public required AutoReadySubscription AutoReadySubscription { get; set; }
 
-    private bool IsOnScanStep
-    {
-        get
-        {
-            var currentStep = TestSequenseService.Data.FirstOrDefault();
-            return currentStep?.Module is "Сканирование штрихкода" or "Сканирование штрихкода MES";
-        }
-    }
+    private bool IsOnScanStep => TestSequenseService.IsOnActiveScanStep;
     private bool IsWaitingForAuto => !TestSequenseService.Data.Any() && !AutoReadySubscription.IsReady;
     private bool CanInteract => IsOnScanStep || IsWaitingForAuto || !TestSequenseService.Data.Any();
     private bool CanShowAuthButton => !OperatorState.IsAuthenticated && CanInteract;

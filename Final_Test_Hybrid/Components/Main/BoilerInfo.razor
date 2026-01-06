@@ -23,21 +23,25 @@
     <RadzenTextBox
         Style="width:100%"
         Value="@GetDisplayValue()"
-        ReadOnly="@ScanStepManager.IsProcessing"
+        ReadOnly="@IsFieldReadOnly"
         @oninput="OnInput"
         @onkeydown="OnKeyDown"
-        Placeholder="@_placeholder"/>
+        Placeholder="@Placeholder"/>
 </div>
 
 @code {
     private string _manualInput = "";
     private bool _disposed;
-    private string _placeholder = "";
+    private const string PlaceholderText = "Отсканируйте или введите";
+
+    private bool IsOnActiveScanStep => TestSequenseService.IsOnActiveScanStep;
+    private bool IsFieldReadOnly => ScanStepManager.IsProcessing || !IsOnActiveScanStep;
+    private string Placeholder => IsOnActiveScanStep ? PlaceholderText : "";
 
     protected override void OnInitialized()
     {
         BoilerState.OnChanged += OnBoilerStateChanged;
-        TestSequenseService.OnDataChanged += OnStepChanged;
+        TestSequenseService.OnDataChanged += OnDataChanged;
         ScanStepManager.OnChange += OnScanStateChanged;
         ScanStepManager.OnMissingPlcTagsDialogRequested += ShowMissingPlcTagsDialogAsync;
         ScanStepManager.OnMissingRequiredTagsDialogRequested += ShowMissingRequiredTagsDialogAsync;
@@ -49,13 +53,7 @@
 
     private string GetDisplayValue() => BoilerState.SerialNumber ?? _manualInput;
 
-    private void OnStepChanged()
-    {
-        var currentStep = TestSequenseService.Data.FirstOrDefault();
-        var isScanStep = currentStep?.Module is "Сканирование штрихкода" or "Сканирование штрихкода MES";
-        _placeholder = isScanStep ? "Отсканируйте или введите" : "";
-        InvokeIfNotDisposed(StateHasChanged);
-    }
+    private void OnDataChanged() => InvokeIfNotDisposed(StateHasChanged);
 
     private void OnScanStateChanged() => InvokeIfNotDisposed(StateHasChanged);
 
@@ -63,10 +61,8 @@
 
     private async Task OnKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key != "Enter" || string.IsNullOrEmpty(_manualInput))
-        {
-            return;
-        }
+        if (e.Key != "Enter" || IsFieldReadOnly || string.IsNullOrEmpty(_manualInput)) return;
+
         await ScanStepManager.ProcessBarcodeAsync(_manualInput);
         _manualInput = "";
     }
@@ -195,7 +191,7 @@
     {
         _disposed = true;
         BoilerState.OnChanged -= OnBoilerStateChanged;
-        TestSequenseService.OnDataChanged -= OnStepChanged;
+        TestSequenseService.OnDataChanged -= OnDataChanged;
         ScanStepManager.OnChange -= OnScanStateChanged;
         ScanStepManager.OnMissingPlcTagsDialogRequested -= ShowMissingPlcTagsDialogAsync;
         ScanStepManager.OnMissingRequiredTagsDialogRequested -= ShowMissingRequiredTagsDialogAsync;

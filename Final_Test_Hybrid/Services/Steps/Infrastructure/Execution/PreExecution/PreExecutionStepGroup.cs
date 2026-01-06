@@ -23,10 +23,13 @@ public class PreExecutionStepGroup(IPreExecutionStep mainStep, params IPreExecut
         {
             return result;
         }
-        return await ExecuteSubStepsAsync(context, ct);
+        return await ExecuteSubStepsAsync(context, result.SuccessMessage, ct);
     }
 
-    private async Task<PreExecutionResult> ExecuteSubStepsAsync(PreExecutionContext context, CancellationToken ct)
+    private async Task<PreExecutionResult> ExecuteSubStepsAsync(
+        PreExecutionContext context,
+        string? successMessage,
+        CancellationToken ct)
     {
         foreach (var subStep in _subSteps)
         {
@@ -36,6 +39,6 @@ public class PreExecutionStepGroup(IPreExecutionStep mainStep, params IPreExecut
                 return result;
             }
         }
-        return PreExecutionResult.Continue();
+        return PreExecutionResult.Continue(successMessage);
     }
 }

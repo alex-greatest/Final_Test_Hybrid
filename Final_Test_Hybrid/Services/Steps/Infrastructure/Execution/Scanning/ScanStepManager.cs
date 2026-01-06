@@ -176,8 +176,30 @@ public class ScanStepManager : IDisposable
     private async Task ExecuteBarcodeProcessing(string barcode)
     {
         BlockInput();
-        var result = await _preExecutionCoordinator.ExecuteAsync(barcode, CancellationToken.None);
+        await ProcessBarcodeWithErrorHandlingAsync(barcode);
+        UnblockInput();
+    }
 
+    private async Task ProcessBarcodeWithErrorHandlingAsync(string barcode)
+    {
+        try
+        {
+            await ProcessPreExecutionAsync(barcode);
+        }
+        catch (Exception ex)
+        {
+            HandleCriticalError(ex);
+        }
+    }
+
+    private async Task ProcessPreExecutionAsync(string barcode)
+    {
+        var result = await _preExecutionCoordinator.ExecuteAsync(barcode, CancellationToken.None);
+        await HandlePreExecutionResultAsync(result);
+    }
+
+    private async Task HandlePreExecutionResultAsync(PreExecutionResult result)
+    {
         switch (result.Status)
         {
             case PreExecutionStatus.TestStarted:
@@ -185,14 +207,18 @@ public class ScanStepManager : IDisposable
             case PreExecutionStatus.Failed:
             case PreExecutionStatus.Cancelled:
                 await HandlePreExecutionError(result);
-                break;
+                return;
             case PreExecutionStatus.Continue:
-                break;
+                return;
             default:
                 throw new InvalidOperationException($"Неизвестный статус PreExecution: {result.Status}");
         }
+    }
 
-        UnblockInput();
+    private void HandleCriticalError(Exception ex)
+    {
+        _logger.LogError(ex, "Критическая ошибка при запуске теста");
+        _errorHandler.ShowError("Критическая ошибка", ex.Message);
     }
 
     private async Task HandlePreExecutionError(PreExecutionResult result)

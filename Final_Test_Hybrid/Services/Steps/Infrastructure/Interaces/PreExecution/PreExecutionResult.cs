@@ -13,9 +13,11 @@ public class PreExecutionResult
     public PreExecutionStatus Status { get; init; }
     public string? ErrorMessage { get; init; }
     public string? UserMessage { get; init; }
+    public string? SuccessMessage { get; init; }
     public IPreExecutionErrorDetails? ErrorDetails { get; init; }
 
-    public static PreExecutionResult Continue() => new() { Status = PreExecutionStatus.Continue };
+    public static PreExecutionResult Continue(string? successMessage = null) =>
+        new() { Status = PreExecutionStatus.Continue, SuccessMessage = successMessage };
     public static PreExecutionResult TestStarted() => new() { Status = PreExecutionStatus.TestStarted };
     public static PreExecutionResult Cancelled(string? errorMessage = null) =>
         new() { Status = PreExecutionStatus.Cancelled, ErrorMessage = errorMessage };

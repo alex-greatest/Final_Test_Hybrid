@@ -3,7 +3,6 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Recipe;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
@@ -13,7 +12,6 @@ public class PreExecutionCoordinator(
     TestExecutionCoordinator testCoordinator,
     StepStatusReporter statusReporter,
     BoilerState boilerState,
-    IRecipeProvider recipeProvider,
     OpcUaTagService opcUa,
     ITestStepLogger testStepLogger,
     ExecutionActivityTracker activityTracker,
@@ -103,7 +101,7 @@ public class PreExecutionCoordinator(
         switch (result.Status)
         {
             case PreExecutionStatus.Continue:
-                statusReporter.ReportSuccess(stepId);
+                statusReporter.ReportSuccess(stepId, result.SuccessMessage ?? "");
                 return;
             case PreExecutionStatus.Cancelled:
                 statusReporter.ReportError(stepId, result.ErrorMessage ?? "Операция отменена");
@@ -128,7 +126,6 @@ public class PreExecutionCoordinator(
 
     private void StartTestExecution(PreExecutionContext context)
     {
-        recipeProvider.SetRecipes(boilerState.Recipes ?? []);
         LogTestExecutionStart(context);
         testCoordinator.SetMaps(context.Maps!);
         _ = StartTestWithErrorHandlingAsync();
@@ -160,7 +157,6 @@ public class PreExecutionCoordinator(
         {
             Barcode = barcode,
             BoilerState = boilerState,
-            RecipeProvider = recipeProvider,
             OpcUa = opcUa,
             TestStepLogger = testStepLogger
         };
