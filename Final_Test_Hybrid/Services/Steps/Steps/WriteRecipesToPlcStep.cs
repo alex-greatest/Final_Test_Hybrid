@@ -63,6 +63,8 @@ public class WriteRecipesToPlcStep(
         PreExecutionContext context,
         CancellationToken ct)
     {
+        logger.LogInformation("WriteRecipe: Tag={Tag}, Address=[{Address}], Value={Value}, Type={Type}",
+            recipe.TagName, recipe.Address, recipe.Value, recipe.PlcType);
         var writeResult = await WriteValueByTypeAsync(recipe, context, ct);
         if (!writeResult.Success)
         {

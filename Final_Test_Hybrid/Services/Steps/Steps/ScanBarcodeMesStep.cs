@@ -234,9 +234,7 @@ public class ScanBarcodeMesStep(
         {
             TagName = r.Parameter,
             Value = r.Value,
-            Address = string.Empty,
-            PlcType = MapPlcType(r.PlcType),
-            IsPlc = true
+            PlcType = MapPlcType(r.PlcType)
         }).ToList();
     }
 

@@ -47,6 +47,12 @@
 ::deep .rz-data-grid .rz-cell-data {
     font-size: 19px;
     color: black !important;
+    white-space: nowrap;
+}
+
+/* Скролл для всей таблицы */
+::deep .rz-data-grid .rz-data-grid-data {
+    overflow-x: auto;
 }
 
 /* Поля ввода при редактировании */
@@ -62,7 +68,8 @@
 
 /* Сетка таблицы */
 ::deep .rz-grid-table {
-    width: unset !important;
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
 }
 

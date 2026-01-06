@@ -49,6 +49,18 @@
 ::deep .rz-data-grid .rz-cell-data {
     font-size: 19px;
     color: black !important;
+    white-space: nowrap;
+}
+
+/* Скролл для всей таблицы */
+::deep .rz-data-grid .rz-data-grid-data {
+    overflow-x: auto;
+}
+
+::deep .rz-grid-table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: collapse;
 }
 
 /* Поля ввода при редактировании */
@@ -62,10 +74,7 @@
     font-size: 19px;
 }
 
-/* Сетка таблицы */
-::deep .rz-grid-table {
-    border-collapse: collapse;
-}
+/* Сетка таблицы - стили перенесены выше */
 
 ::deep .rz-data-grid th,
 ::deep .rz-data-grid td {

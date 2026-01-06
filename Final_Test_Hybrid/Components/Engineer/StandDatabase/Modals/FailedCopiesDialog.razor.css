@@ -17,34 +17,44 @@
     min-height: 0;
 }
 
-/* Заголовки колонок - из RecipesGrid.razor.css */
 ::deep .rz-data-grid .rz-column-title {
     font-size: 20px;
     font-weight: 700;
+    white-space: nowrap;
 }
 
-/* Ячейки таблицы - из RecipesGrid.razor.css */
+::deep .rz-data-grid th {
+    height: auto !important;
+    max-height: none !important;
+}
+
+::deep .rz-data-grid th * {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
 ::deep .rz-data-grid .rz-cell-data {
     font-size: 19px;
     color: black !important;
+    white-space: nowrap;
 }
 
-/* Сетка таблицы - из RecipesGrid.razor.css */
-::deep .rz-data-grid .rz-grid-table {
+/* Скролл для всей таблицы */
+::deep .rz-data-grid .rz-data-grid-data {
+    overflow-x: auto;
+}
+
+::deep .rz-grid-table {
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
 }
 
 ::deep .rz-data-grid th,
 ::deep .rz-data-grid td {
     border: 1px solid #ccc !important;
-}
-
-/* Заголовки - из RecipesGrid.razor.css */
-::deep .rz-data-grid th {
     padding: 10px 8px !important;
-    overflow: visible !important;
-    line-height: 1.2 !important;
-    height: auto !important;
 }
 
 .dialog-buttons {

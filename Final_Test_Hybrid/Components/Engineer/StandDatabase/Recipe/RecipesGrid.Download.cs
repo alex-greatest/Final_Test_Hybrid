@@ -145,7 +145,7 @@ public partial class RecipesGrid
         {
             var entities = MapToEntities(recipes);
             await RecipeService.ReplaceRecipesForBoilerTypeAsync(_selectedBoilerTypeId!.Value, entities, ct);
-            return new DownloadResult(true, null, recipes.Count);
+            return new DownloadResult(true, null, entities.Count);
         }
         catch (Exception ex)
         {
