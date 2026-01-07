@@ -144,6 +144,15 @@ Error Handling (`ErrorHandling/`):
 - `ErrorPlcMonitor` - OPC UA подписки на сигналы ошибок (Retry, Skip)
 - `StepErrorHandler` - Бизнес-логика обработки ошибок
 
+Scanning (`Scanning/`):
+```
+ScanStepManager (координатор)
+├── ScanModeController     - вкл/выкл режима, MessageService, сессия
+├── ScanDialogCoordinator  - 6 событий диалогов, rework callback
+├── ScanStateManager       - state machine (Disabled→Ready→Processing→TestRunning)
+└── ScanSessionManager     - управление RawInput сессией сканера
+```
+
 ### Configuration (appsettings.json)
 
 **Configuration Sections:**
@@ -478,6 +487,7 @@ private void ReleaseLockIfNotDisposed()
 
 ### Recent Changes
 
+- **ScanStepManager:** Рефакторинг — выделены `ScanModeController` (режим сканирования) и `ScanDialogCoordinator` (диалоги ошибок)
 - **TestInterruptCoordinator:** Рефакторинг + исправление SemaphoreSlim race condition при Dispose
 - **UI Dispatching:** Добавлен `BlazorDispatcherAccessor` для маршрутизации вызовов из background потоков в Blazor context
 - **Notifications:** `Radzen.NotificationService` и `INotificationService` теперь Singleton (исправлен scope mismatch)

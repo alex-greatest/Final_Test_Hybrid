@@ -1,6 +1,8 @@
 namespace Final_Test_Hybrid.Services.SpringBoot.Operator;
 
-public class OperatorState
+using Common;
+
+public class OperatorState : INotifyStateChanged
 {
     private readonly Lock _lock = new();
     private bool _isAuthenticated;
@@ -9,7 +11,7 @@ public class OperatorState
     public bool IsAuthenticated { get { lock (_lock) return _isAuthenticated; } }
     public string? Username { get { lock (_lock) return _username; } }
     public string? Role { get { lock (_lock) return _role; } }
-    public event Action? OnChange;
+    public event Action? OnStateChanged;
 
     public void SetAuthenticated(OperatorAuthResponse response)
     {
@@ -19,7 +21,7 @@ public class OperatorState
             _username = response.Username;
             _role = response.Role;
         }
-        OnChange?.Invoke();
+        OnStateChanged?.Invoke();
     }
 
     public void Logout()
@@ -30,7 +32,7 @@ public class OperatorState
             _username = null;
             _role = null;
         }
-        OnChange?.Invoke();
+        OnStateChanged?.Invoke();
     }
 
     public void SetManualAuth(string username)
@@ -41,6 +43,6 @@ public class OperatorState
             _username = username;
             _role = null;
         }
-        OnChange?.Invoke();
+        OnStateChanged?.Invoke();
     }
 }

@@ -30,6 +30,7 @@ using Final_Test_Hybrid.Settings.Spring.Shift;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Base;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorHandling;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
@@ -97,12 +98,14 @@ namespace Final_Test_Hybrid
             services.AddSingleton<InterruptMessageState>();
             services.AddSingleton<TestSequenseService>();
             services.AddSingleton<BoilerState>();
-            services.AddSingleton<SettingsInteractionState>();
+            services.AddSingleton<SettingsAccessStateManager>();
             services.AddSingleton<OrderState>();
             services.AddSingleton<BarcodeScanService>();
             services.AddSingleton<ScanSessionManager>();
-            services.AddSingleton<ScanInputStateManager>();
+            services.AddSingleton<ScanStateManager>();
             services.AddSingleton<ScanErrorHandler>();
+            services.AddSingleton<ScanDialogCoordinator>();
+            services.AddSingleton<ScanModeController>();
             services.AddSingleton<ScanStepManager>();
             services.AddSingleton<ITestSequenceLoader, TestSequenceLoader>();
             services.AddSingleton<ITestMapBuilder, TestMapBuilder>();
@@ -346,24 +349,31 @@ namespace Final_Test_Hybrid
 
         protected override async void OnFormClosing(FormClosingEventArgs e)
         {
-            if (_rawInputMessageFilter != null)
+            try
             {
-                Application.RemoveMessageFilter(_rawInputMessageFilter);
-                _rawInputMessageFilter = null;
+                if (_rawInputMessageFilter != null)
+                {
+                    Application.RemoveMessageFilter(_rawInputMessageFilter);
+                    _rawInputMessageFilter = null;
+                }
+                _rawInputService?.Unregister();
+                _springBootHealthService?.Stop();
+                _shiftService?.Stop();
+                _databaseConnectionService?.Stop();
+                if (_opcUaService != null)
+                {
+                    await _opcUaService.DisconnectAsync();
+                }
+                if (_serviceProvider != null)
+                {
+                    await _serviceProvider.DisposeAsync();
+                }
+                base.OnFormClosing(e);
             }
-            _rawInputService?.Unregister();
-            _springBootHealthService?.Stop();
-            _shiftService?.Stop();
-            _databaseConnectionService?.Stop();
-            if (_opcUaService != null)
+            catch (Exception)
             {
-                await _opcUaService.DisconnectAsync();
+                //ignored
             }
-            if (_serviceProvider != null)
-            {
-                await _serviceProvider.DisposeAsync();
-            }
-            base.OnFormClosing(e);
         }
     }
 }

@@ -48,12 +48,12 @@
 
     protected override void OnInitialized()
     {
-        OperatorState.OnChange += OnStateChanged;
-        TestSequenseService.OnDataChanged += OnStateChanged;
-        AutoReadySubscription.OnChange += OnStateChanged;
+        OperatorState.OnStateChanged += OnLocalStateChanged;
+        TestSequenseService.OnDataChanged += OnLocalStateChanged;
+        AutoReadySubscription.OnStateChanged += OnLocalStateChanged;
     }
 
-    private void OnStateChanged()
+    private void OnLocalStateChanged()
     {
         InvokeAsync(StateHasChanged);
     }
@@ -131,8 +131,8 @@
 
     public void Dispose()
     {
-        OperatorState.OnChange -= OnStateChanged;
-        TestSequenseService.OnDataChanged -= OnStateChanged;
-        AutoReadySubscription.OnChange -= OnStateChanged;
+        OperatorState.OnStateChanged -= OnLocalStateChanged;
+        TestSequenseService.OnDataChanged -= OnLocalStateChanged;
+        AutoReadySubscription.OnStateChanged -= OnLocalStateChanged;
     }
 }

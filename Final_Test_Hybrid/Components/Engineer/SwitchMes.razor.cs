@@ -23,16 +23,16 @@ public partial class SwitchMes
     [Inject]
     public required ScanStepManager ScanStepManager { get; set; }
     [Inject]
-    public required SettingsInteractionState InteractionState { get; set; }
+    public required SettingsAccessStateManager SettingsAccessState { get; set; }
     private bool _useMes;
 
-    private bool IsDisabled => ScanStepManager.IsProcessing || !InteractionState.CanInteract;
+    private bool IsDisabled => ScanStepManager.IsProcessing || !SettingsAccessState.CanInteract;
 
     protected override void OnInitialized()
     {
         _useMes = AppSettingsService.UseMes;
         ScanStepManager.OnChange += HandleStateChanged;
-        InteractionState.OnChange += HandleStateChanged;
+        SettingsAccessState.OnStateChanged += HandleStateChanged;
     }
 
     private void HandleStateChanged()
@@ -101,6 +101,6 @@ public partial class SwitchMes
     public void Dispose()
     {
         ScanStepManager.OnChange -= HandleStateChanged;
-        InteractionState.OnChange -= HandleStateChanged;
+        SettingsAccessState.OnStateChanged -= HandleStateChanged;
     }
 }

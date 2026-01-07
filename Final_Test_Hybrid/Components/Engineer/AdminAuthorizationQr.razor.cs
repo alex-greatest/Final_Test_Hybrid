@@ -13,13 +13,13 @@ public partial class AdminAuthorizationQr : IDisposable
     [Inject]
     public required DialogService DialogService { get; set; }
     [Inject]
-    public required SettingsInteractionState InteractionState { get; set; }
+    public required SettingsAccessStateManager SettingsAccessState { get; set; }
     private bool _useAdminQrAuth;
 
     protected override void OnInitialized()
     {
         _useAdminQrAuth = AppSettingsService.UseAdminQrAuth;
-        InteractionState.OnChange += HandleStateChanged;
+        SettingsAccessState.OnStateChanged += HandleStateChanged;
     }
 
     private void HandleStateChanged()
@@ -29,7 +29,7 @@ public partial class AdminAuthorizationQr : IDisposable
 
     private async Task OnCheckboxClick()
     {
-        if (!InteractionState.CanInteract)
+        if (!SettingsAccessState.CanInteract)
         {
             return;
         }
@@ -52,6 +52,6 @@ public partial class AdminAuthorizationQr : IDisposable
 
     public void Dispose()
     {
-        InteractionState.OnChange -= HandleStateChanged;
+        SettingsAccessState.OnStateChanged -= HandleStateChanged;
     }
 }

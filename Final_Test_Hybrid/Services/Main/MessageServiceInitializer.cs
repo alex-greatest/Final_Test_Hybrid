@@ -1,5 +1,6 @@
 namespace Final_Test_Hybrid.Services.Main;
 
+using Common;
 using SpringBoot.Operator;
 
 public class MessageServiceInitializer(
@@ -7,13 +8,20 @@ public class MessageServiceInitializer(
     OperatorState operatorState,
     AutoReadySubscription autoReadySubscription)
 {
+    private readonly StateChangeAggregator _stateAggregator = new();
+
     public async Task InitializeAsync()
     {
         RegisterLoginProvider();
         RegisterAutoReadyProvider();
         await autoReadySubscription.SubscribeAsync();
-        operatorState.OnChange += messageService.NotifyChanged;
-        autoReadySubscription.OnChange += messageService.NotifyChanged;
+        SubscribeToStateChanges();
+    }
+
+    private void SubscribeToStateChanges()
+    {
+        _stateAggregator.Subscribe(operatorState, autoReadySubscription);
+        _stateAggregator.OnAnyStateChanged += messageService.NotifyChanged;
     }
 
     private void RegisterLoginProvider()

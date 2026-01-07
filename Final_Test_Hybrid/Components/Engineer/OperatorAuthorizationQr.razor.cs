@@ -13,13 +13,13 @@ public partial class OperatorAuthorizationQr : IDisposable
     [Inject]
     public required DialogService DialogService { get; set; }
     [Inject]
-    public required SettingsInteractionState InteractionState { get; set; }
+    public required SettingsAccessStateManager SettingsAccessState { get; set; }
     private bool _useOperatorQrAuth;
 
     protected override void OnInitialized()
     {
         _useOperatorQrAuth = AppSettingsService.UseOperatorQrAuth;
-        InteractionState.OnChange += HandleStateChanged;
+        SettingsAccessState.OnStateChanged += HandleStateChanged;
     }
 
     private void HandleStateChanged()
@@ -29,7 +29,7 @@ public partial class OperatorAuthorizationQr : IDisposable
 
     private async Task OnCheckboxClick()
     {
-        if (!InteractionState.CanInteract)
+        if (!SettingsAccessState.CanInteract)
         {
             return;
         }
@@ -52,6 +52,6 @@ public partial class OperatorAuthorizationQr : IDisposable
 
     public void Dispose()
     {
-        InteractionState.OnChange -= HandleStateChanged;
+        SettingsAccessState.OnStateChanged -= HandleStateChanged;
     }
 }

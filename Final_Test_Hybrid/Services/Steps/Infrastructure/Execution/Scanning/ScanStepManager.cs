@@ -1,11 +1,8 @@
 using Final_Test_Hybrid.Models.Steps;
-using Final_Test_Hybrid.Services.Common.Logging;
-using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.SpringBoot.Operation;
-using Final_Test_Hybrid.Services.SpringBoot.Operator;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
-using Final_Test_Hybrid.Services.Steps.Steps;
 using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.Extensions.Logging;
 
@@ -17,159 +14,115 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 /// </summary>
 public class ScanStepManager : IDisposable
 {
-    private const int MessagePriority = 100;
-    private const string ScanPromptMessage = "Отсканируйте серийный номер котла";
     private readonly ScanSessionManager _sessionManager;
-    private readonly ScanInputStateManager _inputStateManager;
+    private readonly ScanStateManager _scanStateManager;
+    private readonly ScanModeController _modeController;
+    private readonly ScanDialogCoordinator _dialogCoordinator;
     private readonly PreExecutionCoordinator _preExecutionCoordinator;
-    private readonly ScanErrorHandler _errorHandler;
-    private readonly OperatorState _operatorState;
-    private readonly AutoReadySubscription _autoReady;
-    private readonly MessageService _messageService;
-    private readonly ExecutionMessageState _executionMessageState;
     private readonly TestExecutionCoordinator _coordinator;
-    private readonly ITestStepLogger _testStepLogger;
-    private readonly StepStatusReporter _statusReporter;
-    private readonly IPreExecutionStepRegistry _stepRegistry;
     private readonly ILogger<ScanStepManager> _logger;
-    private object? _messageProviderKey;
-    private Guid? _activeScanStepId;
-    private string? _currentBarcode;
     private bool _disposed;
 
-    public bool IsProcessing => _inputStateManager.IsProcessing;
-    public bool CanAcceptInput => IsScanModeEnabled && !IsProcessing;
-    public string? CurrentBarcode => _currentBarcode;
+    /// <summary>
+    /// Текущее состояние state machine.
+    /// </summary>
+    public ScanState State => _scanStateManager.State;
 
-    public void ClearBarcode() => _currentBarcode = null;
+    /// <summary>
+    /// Идёт ли обработка штрихкода (для обратной совместимости).
+    /// </summary>
+    public bool IsProcessing => _scanStateManager.State is ScanState.Processing or ScanState.TestRunning;
 
+    /// <summary>
+    /// Можно ли принимать ввод штрихкода.
+    /// </summary>
+    public bool CanAcceptInput => _scanStateManager.CanAcceptInput;
+
+    /// <summary>
+    /// Текущий штрихкод.
+    /// </summary>
+    public string? CurrentBarcode => _scanStateManager.CurrentBarcode;
+
+    /// <summary>
+    /// Очистить текущий штрихкод.
+    /// </summary>
+    public void ClearBarcode() => _scanStateManager.ClearBarcode();
+
+    /// <summary>
+    /// Событие изменения состояния.
+    /// </summary>
     public event Action? OnChange
     {
-        add => _inputStateManager.OnStateChanged += value;
-        remove => _inputStateManager.OnStateChanged -= value;
+        add => _scanStateManager.OnStateChanged += value;
+        remove => _scanStateManager.OnStateChanged -= value;
     }
 
-    public event Func<IReadOnlyList<string>, Task>? OnMissingPlcTagsDialogRequested;
-    public event Func<IReadOnlyList<string>, Task>? OnMissingRequiredTagsDialogRequested;
-    public event Func<IReadOnlyList<UnknownStepInfo>, Task>? OnUnknownStepsDialogRequested;
-    public event Func<IReadOnlyList<MissingRecipeInfo>, Task>? OnMissingRecipesDialogRequested;
-    public event Func<IReadOnlyList<RecipeWriteErrorInfo>, Task>? OnRecipeWriteErrorDialogRequested;
-    public event Func<string, Func<string, string, Task<ReworkSubmitResult>>, Task<ReworkFlowResult>>? OnReworkDialogRequested;
-
-    private bool IsScanModeEnabled => _operatorState.IsAuthenticated && _autoReady.IsReady;
+    // Делегируем события диалогов к ScanDialogCoordinator
+    public event Func<IReadOnlyList<string>, Task>? OnMissingPlcTagsDialogRequested
+    {
+        add => _dialogCoordinator.OnMissingPlcTagsDialogRequested += value;
+        remove => _dialogCoordinator.OnMissingPlcTagsDialogRequested -= value;
+    }
+    public event Func<IReadOnlyList<string>, Task>? OnMissingRequiredTagsDialogRequested
+    {
+        add => _dialogCoordinator.OnMissingRequiredTagsDialogRequested += value;
+        remove => _dialogCoordinator.OnMissingRequiredTagsDialogRequested -= value;
+    }
+    public event Func<IReadOnlyList<UnknownStepInfo>, Task>? OnUnknownStepsDialogRequested
+    {
+        add => _dialogCoordinator.OnUnknownStepsDialogRequested += value;
+        remove => _dialogCoordinator.OnUnknownStepsDialogRequested -= value;
+    }
+    public event Func<IReadOnlyList<MissingRecipeInfo>, Task>? OnMissingRecipesDialogRequested
+    {
+        add => _dialogCoordinator.OnMissingRecipesDialogRequested += value;
+        remove => _dialogCoordinator.OnMissingRecipesDialogRequested -= value;
+    }
+    public event Func<IReadOnlyList<RecipeWriteErrorInfo>, Task>? OnRecipeWriteErrorDialogRequested
+    {
+        add => _dialogCoordinator.OnRecipeWriteErrorDialogRequested += value;
+        remove => _dialogCoordinator.OnRecipeWriteErrorDialogRequested -= value;
+    }
+    public event Func<string, Func<string, string, Task<ReworkSubmitResult>>, Task<ReworkFlowResult>>? OnReworkDialogRequested
+    {
+        add => _dialogCoordinator.OnReworkDialogRequested += value;
+        remove => _dialogCoordinator.OnReworkDialogRequested -= value;
+    }
 
     public ScanStepManager(
         ScanSessionManager sessionManager,
-        ScanInputStateManager inputStateManager,
+        ScanStateManager scanStateManager,
+        ScanModeController modeController,
+        ScanDialogCoordinator dialogCoordinator,
         PreExecutionCoordinator preExecutionCoordinator,
-        ScanErrorHandler errorHandler,
-        OperatorState operatorState,
-        AutoReadySubscription autoReady,
-        MessageService messageService,
-        ExecutionMessageState executionMessageState,
         TestExecutionCoordinator coordinator,
-        ITestStepLogger testStepLogger,
-        StepStatusReporter statusReporter,
-        IPreExecutionStepRegistry stepRegistry,
-        IEnumerable<IPreExecutionStep> preExecutionSteps,
         ILogger<ScanStepManager> logger)
     {
         _sessionManager = sessionManager;
-        _inputStateManager = inputStateManager;
+        _scanStateManager = scanStateManager;
+        _modeController = modeController;
+        _dialogCoordinator = dialogCoordinator;
         _preExecutionCoordinator = preExecutionCoordinator;
-        _errorHandler = errorHandler;
-        _operatorState = operatorState;
-        _autoReady = autoReady;
-        _messageService = messageService;
-        _executionMessageState = executionMessageState;
         _coordinator = coordinator;
-        _testStepLogger = testStepLogger;
-        _statusReporter = statusReporter;
-        _stepRegistry = stepRegistry;
         _logger = logger;
-        ConfigureReworkCallback(preExecutionSteps);
-        SubscribeToEvents();
-        UpdateScanModeState();
-    }
-
-    private void ConfigureReworkCallback(IEnumerable<IPreExecutionStep> steps)
-    {
-        var mesStep = steps.OfType<ScanBarcodeMesStep>().FirstOrDefault();
-        mesStep?.OnReworkRequired = HandleReworkDialogAsync;
-    }
-
-    private async Task<ReworkFlowResult> HandleReworkDialogAsync(
-        string errorMessage,
-        Func<string, string, Task<ReworkSubmitResult>> executeRework)
-    {
-        if (OnReworkDialogRequested == null)
-        {
-            return ReworkFlowResult.Cancelled();
-        }
-        return await OnReworkDialogRequested(errorMessage, executeRework);
-    }
-
-    private void SubscribeToEvents()
-    {
-        _operatorState.OnChange += UpdateScanModeState;
-        _autoReady.OnChange += UpdateScanModeState;
-        _messageProviderKey = _messageService.RegisterProvider(MessagePriority, GetScanMessage);
         _coordinator.OnSequenceCompleted += HandleSequenceCompleted;
-    }
-
-    private string? GetScanMessage()
-    {
-        return IsScanModeEnabled ? ScanPromptMessage : null;
-    }
-
-    private void UpdateScanModeState()
-    {
-        if (IsScanModeEnabled)
-        {
-            ActivateScanMode();
-        }
-        else
-        {
-            DeactivateScanMode();
-        }
-        _messageService.NotifyChanged();
-    }
-
-    private void ActivateScanMode()
-    {
-        _inputStateManager.SetProcessing(false);
-        _sessionManager.AcquireSession(HandleBarcodeScanned);
-        _testStepLogger.StartNewSession();
-        AddScanStepToGrid();
-    }
-
-    private void AddScanStepToGrid()
-    {
-        if (_activeScanStepId.HasValue)
-        {
-            return;
-        }
-        var scanStep = _stepRegistry.GetOrderedSteps().FirstOrDefault();
-        if (scanStep == null)
-        {
-            return;
-        }
-        _activeScanStepId = _statusReporter.ReportStepStarted(scanStep);
-    }
-
-    private void DeactivateScanMode()
-    {
-        _sessionManager.ReleaseSession();
-        _activeScanStepId = null;
+        _modeController.Initialize(HandleBarcodeScanned);
     }
 
     private async void HandleBarcodeScanned(string barcode)
     {
-        if (_disposed)
+        try
         {
-            return;
+            if (_disposed)
+            {
+                return;
+            }
+            await ProcessBarcodeWithLoggingAsync(barcode);
         }
-        await ProcessBarcodeWithLoggingAsync(barcode);
+        catch (Exception)
+        {
+            // ignored
+        }
     }
 
     private async Task ProcessBarcodeWithLoggingAsync(string barcode)
@@ -186,7 +139,7 @@ public class ScanStepManager : IDisposable
 
     public async Task ProcessBarcodeAsync(string barcode)
     {
-        if (!_inputStateManager.TryAcquireProcessLock())
+        if (!_scanStateManager.TryAcquireProcessLock())
         {
             return;
         }
@@ -196,30 +149,34 @@ public class ScanStepManager : IDisposable
         }
         finally
         {
-            _inputStateManager.ReleaseProcessLock();
+            _scanStateManager.ReleaseProcessLock();
         }
     }
 
     private async Task ExecuteBarcodeProcessing(string barcode)
     {
-        _currentBarcode = barcode;
-        BlockInput();
+        _scanStateManager.SetBarcode(barcode);
+        TransitionToProcessing();
         var status = await ProcessBarcodeWithErrorHandlingAsync(barcode);
-        UnblockInputIfNotRunning(status);
+        HandlePostProcessingTransition(status);
     }
 
-    private void UnblockInputIfNotRunning(PreExecutionStatus status)
+    private void TransitionToProcessing()
     {
-        if (IsTestRunning(status))
+        _scanStateManager.TryTransitionTo(ScanState.Processing, () =>
         {
+            _sessionManager.ReleaseSession();
+        });
+    }
+
+    private void HandlePostProcessingTransition(PreExecutionStatus status)
+    {
+        if (status == PreExecutionStatus.TestStarted)
+        {
+            _scanStateManager.TryTransitionTo(ScanState.TestRunning);
             return;
         }
-        UnblockInput();
-    }
-
-    private static bool IsTestRunning(PreExecutionStatus status)
-    {
-        return status == PreExecutionStatus.TestStarted;
+        _modeController.TransitionToReady();
     }
 
     private async Task<PreExecutionStatus> ProcessBarcodeWithErrorHandlingAsync(string barcode)
@@ -237,7 +194,8 @@ public class ScanStepManager : IDisposable
 
     private async Task<PreExecutionStatus> ProcessPreExecutionAsync(string barcode)
     {
-        var result = await _preExecutionCoordinator.ExecuteAsync(barcode, _activeScanStepId, CancellationToken.None);
+        var scanStepId = _scanStateManager.ActiveScanStepId;
+        var result = await _preExecutionCoordinator.ExecuteAsync(barcode, scanStepId, CancellationToken.None);
         await HandlePreExecutionResultAsync(result);
         return result.Status;
     }
@@ -251,7 +209,7 @@ public class ScanStepManager : IDisposable
                 return;
             case PreExecutionStatus.Failed:
             case PreExecutionStatus.Cancelled:
-                await HandlePreExecutionError(result);
+                await _dialogCoordinator.HandlePreExecutionErrorAsync(result);
                 return;
             default:
                 throw new InvalidOperationException($"Неизвестный статус PreExecution: {result.Status}");
@@ -261,52 +219,15 @@ public class ScanStepManager : IDisposable
     private void HandleCriticalError(Exception ex)
     {
         _logger.LogError(ex, "Критическая ошибка при запуске теста");
-        _errorHandler.ShowError("Критическая ошибка", ex.Message);
-    }
-
-    private async Task HandlePreExecutionError(PreExecutionResult result)
-    {
-        _errorHandler.ShowError("Ошибка", result.ErrorMessage ?? "Неизвестная ошибка");
-        await RaiseDetailedErrorDialogAsync(result);
-    }
-
-    private async Task RaiseDetailedErrorDialogAsync(PreExecutionResult result)
-    {
-        var task = result.ErrorDetails switch
-        {
-            MissingPlcTagsDetails details => OnMissingPlcTagsDialogRequested?.Invoke(details.Tags),
-            MissingRequiredTagsDetails details => OnMissingRequiredTagsDialogRequested?.Invoke(details.Tags),
-            UnknownStepsDetails details => OnUnknownStepsDialogRequested?.Invoke(details.Steps),
-            MissingRecipesDetails details => OnMissingRecipesDialogRequested?.Invoke(details.Recipes),
-            RecipeWriteErrorDetails details => OnRecipeWriteErrorDialogRequested?.Invoke(details.Errors),
-            _ => null
-        };
-        await (task ?? Task.CompletedTask);
-    }
-
-    private void BlockInput()
-    {
-        _sessionManager.ReleaseSession();
-        _inputStateManager.SetProcessing(true);
-    }
-
-    private void UnblockInput()
-    {
-        _executionMessageState.Clear();
-        _inputStateManager.SetProcessing(false);
-        if (IsScanModeEnabled)
-        {
-            _sessionManager.AcquireSession(HandleBarcodeScanned);
-        }
     }
 
     private void HandleSequenceCompleted()
     {
         LogSequenceCompleted();
-        _activeScanStepId = null;
-        _currentBarcode = null;
-        UnblockInput();
-        ShowSequenceCompletionNotification();
+        _scanStateManager.SetActiveScanStepId(null);
+        _scanStateManager.ClearBarcode();
+        _modeController.TransitionToReady();
+        _dialogCoordinator.ShowCompletionNotification(_coordinator.HasErrors);
     }
 
     private void LogSequenceCompleted()
@@ -314,32 +235,11 @@ public class ScanStepManager : IDisposable
         _logger.LogInformation("Последовательность завершена. Ошибки: {HasErrors}", _coordinator.HasErrors);
     }
 
-    private void ShowSequenceCompletionNotification()
-    {
-        if (_coordinator.HasErrors)
-        {
-            _errorHandler.ShowError("Тест завершён", "Выполнение прервано из-за ошибки");
-            return;
-        }
-        _errorHandler.ShowSuccess("Тест завершён", "Все шаги выполнены успешно");
-    }
-
     public void Dispose()
     {
         _disposed = true;
         _sessionManager.ReleaseSession();
-        UnsubscribeFromEvents();
-    }
-
-    private void UnsubscribeFromEvents()
-    {
-        _operatorState.OnChange -= UpdateScanModeState;
-        _autoReady.OnChange -= UpdateScanModeState;
         _coordinator.OnSequenceCompleted -= HandleSequenceCompleted;
-        if (_messageProviderKey != null)
-        {
-            _messageService.UnregisterProvider(_messageProviderKey);
-        }
+        _modeController.Dispose();
     }
 }
- 

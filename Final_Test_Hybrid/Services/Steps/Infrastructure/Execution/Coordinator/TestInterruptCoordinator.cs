@@ -5,7 +5,7 @@ using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Microsoft.Extensions.Logging;
 
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 
 /// <summary>
 /// Handles test execution interrupts (PLC connection loss, auto mode disabled, timeouts).
@@ -78,7 +78,7 @@ public class TestInterruptCoordinator : IDisposable
     private void SubscribeToEvents()
     {
         _connectionState.ConnectionStateChanged += HandleConnectionChanged;
-        _autoReady.OnChange += HandleAutoReadyChanged;
+        _autoReady.OnStateChanged += HandleAutoReadyChanged;
     }
 
     private void HandleConnectionChanged(bool isConnected)
@@ -199,7 +199,13 @@ public class TestInterruptCoordinator : IDisposable
         };
         await task;
 
-        Task PauseAction() { _pauseToken.Pause(); return Task.CompletedTask; }
+        return;
+
+        Task PauseAction()
+        {
+            _pauseToken.Pause();
+            return Task.CompletedTask;
+        }
     }
 
     private static string GetInterruptDetails(InterruptBehavior behavior)
@@ -235,7 +241,7 @@ public class TestInterruptCoordinator : IDisposable
     {
         _disposed = true;
         _connectionState.ConnectionStateChanged -= HandleConnectionChanged;
-        _autoReady.OnChange -= HandleAutoReadyChanged;
+        _autoReady.OnStateChanged -= HandleAutoReadyChanged;
         _interruptLock.Dispose();
     }
 }
