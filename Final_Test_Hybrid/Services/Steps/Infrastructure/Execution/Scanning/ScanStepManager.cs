@@ -38,6 +38,7 @@ public class ScanStepManager : IDisposable
     private bool _disposed;
 
     public bool IsProcessing => _inputStateManager.IsProcessing;
+    public bool CanAcceptInput => IsScanModeEnabled && !IsProcessing;
     public string? CurrentBarcode => _currentBarcode;
 
     public void ClearBarcode() => _currentBarcode = null;
@@ -293,7 +294,10 @@ public class ScanStepManager : IDisposable
     {
         _executionMessageState.Clear();
         _inputStateManager.SetProcessing(false);
-        _sessionManager.AcquireSession(HandleBarcodeScanned);
+        if (IsScanModeEnabled)
+        {
+            _sessionManager.AcquireSession(HandleBarcodeScanned);
+        }
     }
 
     private void HandleSequenceCompleted()

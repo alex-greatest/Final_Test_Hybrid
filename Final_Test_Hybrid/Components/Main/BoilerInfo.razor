@@ -37,7 +37,7 @@
     private const string PlaceholderText = "Отсканируйте или введите";
 
     private bool IsOnActiveScanStep => TestSequenseService.IsOnActiveScanStep;
-    private bool IsFieldReadOnly => ScanStepManager.IsProcessing || !IsOnActiveScanStep;
+    private bool IsFieldReadOnly => !ScanStepManager.CanAcceptInput || !IsOnActiveScanStep;
     private string Placeholder => IsOnActiveScanStep ? PlaceholderText : "";
 
     protected override void OnInitialized()
