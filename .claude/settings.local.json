@@ -28,7 +28,13 @@
       "Bash(unzip:*)",
       "Bash(dotnet restore:*)",
       "mcp__context7__resolve-library-id",
-      "mcp__context7__query-docs"
+      "mcp__context7__query-docs",
+      "mcp__serena__initial_instructions",
+      "mcp__serena__check_onboarding_performed",
+      "mcp__serena__think_about_collected_information",
+      "Bash(grep:*)",
+      "mcp__serena__list_memories",
+      "mcp__serena__search_for_pattern"
     ]
   }
 }

@@ -19,10 +19,17 @@ public class AccessLevelManager(
     private const uint StandKey = 0xD7F8_DB56;
     private const uint ResetKey = 0x0000_0000;
 
+    private readonly object _lock = new();
+    private AccessLevel _currentLevel = AccessLevel.Normal;
+
     /// <summary>
     /// Текущий уровень доступа.
     /// </summary>
-    public AccessLevel CurrentLevel { get; private set; } = AccessLevel.Normal;
+    public AccessLevel CurrentLevel
+    {
+        get { lock (_lock) return _currentLevel; }
+        private set { lock (_lock) _currentLevel = value; }
+    }
 
     /// <summary>
     /// Событие изменения уровня доступа.

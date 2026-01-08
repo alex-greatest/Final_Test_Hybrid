@@ -6,13 +6,18 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Connection;
 /// </summary>
 public class DiagnosticConnectionState
 {
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private TaskCompletionSource _connectionTcs = new();
+    private bool _isConnected;
 
     /// <summary>
     /// Флаг подключения к устройству.
     /// </summary>
-    public bool IsConnected { get; private set; }
+    public bool IsConnected
+    {
+        get { lock (_lock) return _isConnected; }
+        private set { lock (_lock) _isConnected = value; }
+    }
 
     /// <summary>
     /// Событие изменения состояния подключения.

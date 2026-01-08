@@ -62,8 +62,7 @@ public class RegisterReader(
         {
             var registers = await modbusClient.ReadHoldingRegistersAsync(addressHi, 2, ct).ConfigureAwait(false);
             var value = ((uint)registers[0] << 16) | registers[1];
-
-            return DiagnosticReadResult<uint>.Ok(addressHi, value);
+            return DiagnosticCodes.IsUInt32ErrorCode(value) ? DiagnosticReadResult<uint>.Fail(addressHi, DiagnosticCodes.GetUInt32ErrorDescription(value)!) : DiagnosticReadResult<uint>.Ok(addressHi, value);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -81,27 +80,18 @@ public class RegisterReader(
         {
             var registers = await modbusClient.ReadHoldingRegistersAsync(addressHi, 2, ct).ConfigureAwait(false);
             var bytes = new byte[4];
-
             // Big Endian: Hi word first
             bytes[0] = (byte)(registers[0] >> 8);
             bytes[1] = (byte)(registers[0] & 0xFF);
             bytes[2] = (byte)(registers[1] >> 8);
             bytes[3] = (byte)(registers[1] & 0xFF);
-
             // Convert to Little Endian for BitConverter
             if (BitConverter.IsLittleEndian)
             {
                 Array.Reverse(bytes);
             }
-
             var value = BitConverter.ToSingle(bytes, 0);
-
-            if (float.IsNaN(value))
-            {
-                return DiagnosticReadResult<float>.Fail(addressHi, "Значение NaN - общая ошибка");
-            }
-
-            return DiagnosticReadResult<float>.Ok(addressHi, value);
+            return DiagnosticCodes.IsFloatErrorCode(value, out var errorType) ? DiagnosticReadResult<float>.Fail(addressHi, errorType!) : DiagnosticReadResult<float>.Ok(addressHi, value);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -119,19 +109,16 @@ public class RegisterReader(
         {
             var registerCount = (ushort)((maxLength + 1) / 2);
             var registers = await modbusClient.ReadHoldingRegistersAsync(address, registerCount, ct).ConfigureAwait(false);
-
             var sb = new StringBuilder();
             foreach (var reg in registers)
             {
                 var highByte = (char)(reg >> 8);
                 var lowByte = (char)(reg & 0xFF);
-
                 if (highByte == '\0')
                 {
                     break;
                 }
                 sb.Append(highByte);
-
                 if (lowByte == '\0')
                 {
                     break;
@@ -159,7 +146,6 @@ public class RegisterReader(
         try
         {
             var registers = await modbusClient.ReadHoldingRegistersAsync(startAddress, count, ct).ConfigureAwait(false);
-
             for (var i = 0; i < count; i++)
             {
                 var address = (ushort)(startAddress + i);
@@ -180,7 +166,6 @@ public class RegisterReader(
                 results[address] = DiagnosticReadResult<ushort>.Fail(address, ex.Message);
             }
         }
-
         return results;
     }
 }

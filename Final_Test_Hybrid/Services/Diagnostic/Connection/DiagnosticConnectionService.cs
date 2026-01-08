@@ -16,8 +16,7 @@ public class DiagnosticConnectionService(
     IOptions<DiagnosticSettings> settingsOptions,
     DiagnosticConnectionState connectionState,
     PollingPauseCoordinator pauseCoordinator,
-    ILogger<DiagnosticConnectionService> logger,
-    IModbusMaster? modbusMaster)
+    ILogger<DiagnosticConnectionService> logger)
     : IAsyncDisposable
 {
     private readonly DiagnosticSettings _settings = settingsOptions.Value;
@@ -47,7 +46,7 @@ public class DiagnosticConnectionService(
     /// <summary>
     /// ModBus master для выполнения операций.
     /// </summary>
-    internal IModbusMaster? ModbusMaster { get; private set; } = modbusMaster;
+    internal IModbusMaster? ModbusMaster { get; private set; }
 
     /// <summary>
     /// Адрес ведомого устройства (Slave ID).
@@ -94,15 +93,11 @@ public class DiagnosticConnectionService(
     {
         // Сначала отменяем reconnect БЕЗ семафора чтобы избежать deadlock
         await CancelReconnectAsync().ConfigureAwait(false);
-
         // Теперь безопасно захватываем семафор
         await using var _ = await AsyncLock.AcquireAsync(_semaphore).ConfigureAwait(false);
-
         await NotifyDisconnectingAsync().ConfigureAwait(false);
-
         CloseConnection();
         connectionState.SetConnected(false);
-
         logger.LogInformation("Отключено от {Port}", _settings.PortName);
     }
 
@@ -112,7 +107,6 @@ public class DiagnosticConnectionService(
         {
             return;
         }
-
         _disposed = true;
         await DisconnectAsync().ConfigureAwait(false);
         _semaphore.Dispose();
@@ -130,10 +124,8 @@ public class DiagnosticConnectionService(
             {
                 return;
             }
-
             await WaitBeforeRetryAsync(ct).ConfigureAwait(false);
         }
-
         ct.ThrowIfCancellationRequested();
     }
 
@@ -214,10 +206,8 @@ public class DiagnosticConnectionService(
         {
             _serialPort.Close();
         }
-
         _serialPortAdapter?.Dispose();
         _serialPortAdapter = null;
-
         _serialPort?.Dispose();
         _serialPort = null;
     }
@@ -249,7 +239,6 @@ public class DiagnosticConnectionService(
         {
             _reconnectCts = new CancellationTokenSource();
         }
-
         try
         {
             await ReconnectWithLoggingAsync().ConfigureAwait(false);
@@ -266,7 +255,6 @@ public class DiagnosticConnectionService(
 
         await ConnectWithRetryAsync(_reconnectCts!.Token).ConfigureAwait(false);
         connectionState.SetConnected(true);
-
         logger.LogInformation("Переподключение к {Port} выполнено успешно", _settings.PortName);
     }
 
@@ -274,7 +262,6 @@ public class DiagnosticConnectionService(
     {
         _isReconnecting = false;
         pauseCoordinator.Resume();
-
         lock (_reconnectLock)
         {
             _reconnectCts?.Dispose();
@@ -293,7 +280,6 @@ public class DiagnosticConnectionService(
         {
             return;
         }
-
         try
         {
             await handler.Invoke().ConfigureAwait(false);
@@ -318,6 +304,5 @@ public class DiagnosticConnectionService(
             // НЕ dispose здесь - это сделает FinalizeReconnect после завершения reconnect task
         }
     }
-
     #endregion
 }
