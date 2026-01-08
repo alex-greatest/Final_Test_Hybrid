@@ -1,46 +1,30 @@
-using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
-using System.Text;
+using Final_Test_Hybrid.Services.Scanner.RawInput.Processing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using static Final_Test_Hybrid.Services.Scanner.RawInput.RawInputInterop;
 
 namespace Final_Test_Hybrid.Services.Scanner.RawInput;
 
-internal sealed class ScanSession : IDisposable
-{
-    private readonly Action _onDispose;
-    private bool _disposed;
-
-    internal ScanSession(Action onDispose) => _onDispose = onDispose;
-
-    public void Dispose()
-    {
-        if (_disposed)
-        {
-            return;
-        }
-        _disposed = true;
-        _onDispose();
-    }
-}
-
-public class RawInputService : IDisposable
+/// <summary>
+/// Coordinates barcode scanning via Windows Raw Input API.
+/// Delegates to specialized components for device detection, buffer management, and input mapping.
+/// </summary>
+public sealed class RawInputService : IDisposable
 {
     public event Action<string>? BarcodeScanned;
-    private readonly string _targetVid;
-    private readonly string _targetPid;
-    private readonly ILogger<RawInputService> _logger;
+
+    private readonly ScannerDeviceDetector _deviceDetector;
+    private readonly BarcodeBuffer _buffer;
+    private readonly ScanSessionHandler _sessionHandler;
+    private readonly KeyboardInputMapper _inputMapper;
     private readonly ScannerConnectionState _connectionState;
-    private readonly ConcurrentDictionary<IntPtr, string> _deviceNameCache = new();
-    private readonly StringBuilder _buffer = new();
-    private readonly Lock _lock = new();
-    private readonly Lock _handlerLock = new();
-    private Action<string>? _activeHandler;
-    private IntPtr _scannerDevice = IntPtr.Zero;
+    private readonly RawInputDataReader _dataReader;
+    private readonly KeyboardInputProcessor _inputProcessor;
+    private readonly BarcodeDispatcher _dispatcher;
+    private readonly ILogger<RawInputService> _logger;
     private volatile bool _isRegistered;
     private volatile bool _disposed;
-    private volatile bool _shiftPressed;
 
     public RawInputService(
         IConfiguration configuration,
@@ -49,25 +33,18 @@ public class RawInputService : IDisposable
     {
         _logger = logger;
         _connectionState = connectionState;
-        _targetVid = configuration["Scanner:VendorId"] ?? "0000";
-        _targetPid = configuration["Scanner:ProductId"] ?? "0000";
+        _buffer = new BarcodeBuffer();
+        _sessionHandler = new ScanSessionHandler(_buffer);
+        _inputMapper = new KeyboardInputMapper();
+        _deviceDetector = new ScannerDeviceDetector(configuration, logger);
+        _dataReader = new RawInputDataReader();
+        _inputProcessor = new KeyboardInputProcessor(_deviceDetector, _inputMapper);
+        _dispatcher = new BarcodeDispatcher(_sessionHandler, logger);
         _connectionState.ConnectionStateChanged += OnScannerConnectionChanged;
-        _logger.LogInformation("RawInputService инициализирован (VID={Vid}, PID={Pid})", _targetVid, _targetPid);
-    }
-
-    private void OnScannerConnectionChanged(bool connected)
-    {
-        if (_disposed || connected)
-        {
-            return;
-        }
-        lock (_lock)
-        {
-            _scannerDevice = IntPtr.Zero;
-            _buffer.Clear();
-        }
-        _deviceNameCache.Clear();
-        _logger.LogInformation("Кэш устройства сканера сброшен (отключение)");
+        _logger.LogInformation(
+            "RawInputService initialized (VID={Vid}, PID={Pid})",
+            _deviceDetector.TargetVid,
+            _deviceDetector.TargetPid);
     }
 
     public bool Register(IntPtr hwnd)
@@ -76,34 +53,7 @@ public class RawInputService : IDisposable
         {
             return _isRegistered;
         }
-        try
-        {
-            var device = new RawInputDevice
-            {
-                UsagePage = HID_USAGE_PAGE_GENERIC,
-                Usage = HID_USAGE_GENERIC_KEYBOARD,
-                Flags = RIDEV_INPUTSINK,
-                Target = hwnd
-            };
-            var result = RegisterRawInputDevices(
-                [device],
-                1,
-                (uint)Marshal.SizeOf<RawInputDevice>());
-            if (!result)
-            {
-                var error = Marshal.GetLastWin32Error();
-                _logger.LogError("Ошибка регистрации Raw Input: {Error}", error);
-                return false;
-            }
-            _isRegistered = true;
-            _logger.LogInformation("Raw Input зарегистрирован успешно");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Исключение при регистрации Raw Input");
-            return false;
-        }
+        return TryRegisterRawInput(hwnd);
     }
 
     public void Unregister()
@@ -112,45 +62,10 @@ public class RawInputService : IDisposable
         {
             return;
         }
-        try
-        {
-            var device = new RawInputDevice
-            {
-                UsagePage = HID_USAGE_PAGE_GENERIC,
-                Usage = HID_USAGE_GENERIC_KEYBOARD,
-                Flags = RIDEV_REMOVE,
-                Target = IntPtr.Zero
-            };
-            RegisterRawInputDevices(
-                [device],
-                1,
-                (uint)Marshal.SizeOf<RawInputDevice>());
-            _isRegistered = false;
-            _logger.LogInformation("Raw Input отменён");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Ошибка отмены регистрации Raw Input");
-        }
+        TryUnregisterRawInput();
     }
 
-    public IDisposable RequestScan(Action<string> handler)
-    {
-        lock (_handlerLock)
-        {
-            _activeHandler = handler;
-        }
-        return new ScanSession(() =>
-        {
-            lock (_handlerLock)
-            {
-                if (_activeHandler == handler)
-                {
-                    _activeHandler = null;
-                }
-            }
-        });
-    }
+    public IDisposable RequestScan(Action<string> handler) => _sessionHandler.Acquire(handler);
 
     public void ProcessRawInput(IntPtr lParam)
     {
@@ -160,11 +75,7 @@ public class RawInputService : IDisposable
         }
         try
         {
-            var raw = ReadRawInput(lParam);
-            if (raw.HasValue && !_disposed)
-            {
-                ProcessKeyboardInput(raw.Value);
-            }
+            ProcessRawInputSafe(lParam);
         }
         catch (ObjectDisposedException)
         {
@@ -172,161 +83,139 @@ public class RawInputService : IDisposable
         }
         catch (Exception ex)
         {
-            if (!_disposed)
-            {
-                _logger.LogError(ex, "Ошибка обработки Raw Input");
-            }
+            LogErrorIfNotDisposed(ex);
         }
     }
 
-    private RawInput? ReadRawInput(IntPtr lParam)
+    public void Dispose()
     {
-        uint size = 0;
-        GetRawInputData(
-            lParam,
-            RID_INPUT,
-            IntPtr.Zero,
-            ref size,
-            (uint)Marshal.SizeOf<RawInputHeader>());
-        if (size == 0)
+        if (_disposed)
         {
-            return null;
+            return;
         }
-        var buffer = Marshal.AllocHGlobal((int)size);
+        _disposed = true;
+        _buffer.Clear();
+        _deviceDetector.ClearCache();
+        Unregister();
+        _connectionState.ConnectionStateChanged -= OnScannerConnectionChanged;
+        BarcodeScanned = null;
+        _logger.LogInformation("RawInputService disposed");
+    }
+
+    private void ProcessRawInputSafe(IntPtr lParam)
+    {
+        var raw = _dataReader.Read(lParam);
+        if (raw.HasValue && !_disposed)
+        {
+            HandleKeyboardInput(raw.Value);
+        }
+    }
+
+    private void HandleKeyboardInput(RawInput raw)
+    {
+        var result = _inputProcessor.Process(raw, _sessionHandler.HasActiveHandler);
+        ExecuteAction(result);
+    }
+
+    private void ExecuteAction(KeyboardProcessResult result)
+    {
+        switch (result.Action)
+        {
+            case KeyboardAction.AppendCharacter:
+                AppendCharacter(result.VKey);
+                break;
+            case KeyboardAction.CompleteBarcode:
+                CompleteBarcode();
+                break;
+            case KeyboardAction.Ignore:
+            default:
+                throw new ArgumentOutOfRangeException(nameof(result));
+        }
+    }
+
+    private void LogErrorIfNotDisposed(Exception ex)
+    {
+        if (!_disposed)
+        {
+            _logger.LogError(ex, "Error processing Raw Input");
+        }
+    }
+
+    private void OnScannerConnectionChanged(bool connected)
+    {
+        if (_disposed || connected)
+        {
+            return;
+        }
+        _buffer.Clear();
+        _deviceDetector.ClearCache();
+        _logger.LogInformation("Scanner cache reset (disconnected)");
+    }
+
+    private bool TryRegisterRawInput(IntPtr hwnd)
+    {
         try
         {
-            var result = GetRawInputData(
-                lParam,
-                RID_INPUT,
-                buffer,
-                ref size,
-                (uint)Marshal.SizeOf<RawInputHeader>());
-            if (result == unchecked((uint)-1))
-            {
-                return null;
-            }
-            return Marshal.PtrToStructure<RawInput>(buffer);
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(buffer);
-        }
-    }
-
-    private void ProcessKeyboardInput(RawInput raw)
-    {
-        if (_disposed || raw.Header.Type != RIM_TYPEKEYBOARD)
-        {
-            return;
-        }
-        if (!IsTargetDevice(raw.Header.Device))
-        {
-            return;
-        }
-        var vKey = raw.Keyboard.VKey;
-        var isKeyUp = (raw.Keyboard.Flags & 1) != 0;
-        if (vKey is VK_SHIFT or 0xA0 or 0xA1)
-        {
-            _shiftPressed = !isKeyUp;
-            return;
-        }
-        if (isKeyUp)
-        {
-            return;
-        }
-        if (vKey == 0x0D)
-        {
-            CompleteBarcode();
-            return;
-        }
-        var ch = VKeyToChar(vKey, _shiftPressed);
-        if (ch.HasValue)
-        {
-            lock (_lock)
-            {
-                if (!_disposed)
-                {
-                    _buffer.Append(ch.Value);
-                }
-            }
-        }
-    }
-
-    private bool IsTargetDevice(IntPtr hDevice)
-    {
-        IntPtr cached;
-        lock (_lock)
-        {
-            cached = _scannerDevice;
-        }
-        if (cached != IntPtr.Zero)
-        {
-            return cached == hDevice;
-        }
-        var deviceName = GetDeviceName(hDevice);
-        if (string.IsNullOrEmpty(deviceName))
-        {
-            return false;
-        }
-        var isTarget = deviceName.Contains($"VID_{_targetVid}", StringComparison.OrdinalIgnoreCase) &&
-                       deviceName.Contains($"PID_{_targetPid}", StringComparison.OrdinalIgnoreCase);
-        if (isTarget)
-        {
-            lock (_lock)
-            {
-                if (_scannerDevice == IntPtr.Zero)
-                {
-                    _scannerDevice = hDevice;
-                    _logger.LogInformation("Сканер обнаружен: {DeviceName}", deviceName);
-                }
-            }
-        }
-        return isTarget;
-    }
-
-    private string? GetDeviceName(IntPtr hDevice)
-    {
-        if (_deviceNameCache.TryGetValue(hDevice, out var cached))
-        {
-            return cached;
-        }
-        try
-        {
-            var deviceName = ReadDeviceName(hDevice);
-            if (!string.IsNullOrEmpty(deviceName))
-            {
-                _deviceNameCache.TryAdd(hDevice, deviceName);
-            }
-            return deviceName;
+            return RegisterRawInputDevice(hwnd);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Ошибка получения имени устройства");
-            return null;
+            _logger.LogError(ex, "Exception during Raw Input registration");
+            return false;
         }
     }
 
-    private static string? ReadDeviceName(IntPtr hDevice)
+    private bool RegisterRawInputDevice(IntPtr hwnd)
     {
-        uint size = 0;
-        GetRawInputDeviceInfoW(hDevice, RIDI_DEVICENAME, IntPtr.Zero, ref size);
-        if (size == 0)
+        var device = CreateKeyboardDevice(hwnd, RIDEV_INPUTSINK);
+        var result = RegisterRawInputDevices([device], 1, (uint)Marshal.SizeOf<RawInputDevice>());
+        if (!result)
         {
-            return null;
+            _logger.LogError("Raw Input registration failed: {Error}", Marshal.GetLastWin32Error());
+            return false;
         }
-        var buffer = Marshal.AllocHGlobal((int)(size * 2));
+        _isRegistered = true;
+        _logger.LogInformation("Raw Input registered successfully");
+        return true;
+    }
+
+    private void TryUnregisterRawInput()
+    {
         try
         {
-            var result = GetRawInputDeviceInfoW(hDevice, RIDI_DEVICENAME, buffer, ref size);
-            if (result == unchecked((uint)-1))
-            {
-                return null;
-            }
-            return Marshal.PtrToStringUni(buffer);
+            UnregisterRawInputDevice();
         }
-        finally
+        catch (Exception ex)
         {
-            Marshal.FreeHGlobal(buffer);
+            _logger.LogWarning(ex, "Error during Raw Input unregistration");
+        }
+    }
+
+    private void UnregisterRawInputDevice()
+    {
+        var device = CreateKeyboardDevice(IntPtr.Zero, RIDEV_REMOVE);
+        RegisterRawInputDevices([device], 1, (uint)Marshal.SizeOf<RawInputDevice>());
+        _isRegistered = false;
+        _logger.LogInformation("Raw Input unregistered");
+    }
+
+    private static RawInputDevice CreateKeyboardDevice(IntPtr hwnd, uint flags)
+    {
+        return new RawInputDevice
+        {
+            UsagePage = HID_USAGE_PAGE_GENERIC,
+            Usage = HID_USAGE_GENERIC_KEYBOARD,
+            Flags = flags,
+            Target = hwnd
+        };
+    }
+
+    private void AppendCharacter(ushort vKey)
+    {
+        var ch = _inputMapper.MapToChar(vKey);
+        if (ch.HasValue && !_disposed)
+        {
+            _buffer.Append(ch.Value);
         }
     }
 
@@ -336,80 +225,18 @@ public class RawInputService : IDisposable
         {
             return;
         }
-        string barcode;
-        lock (_lock)
-        {
-            barcode = _buffer.ToString();
-            _buffer.Clear();
-        }
+        var barcode = _buffer.CompleteAndClear();
         if (string.IsNullOrEmpty(barcode))
         {
             return;
         }
-        _logger.LogInformation("Штрих-код получен: {Barcode}", barcode);
-        Action<string>? handler;
-        lock (_handlerLock)
-        {
-            handler = _activeHandler;
-        }
-        try
-        {
-            if (handler != null)
-            {
-                handler(barcode);
-                return;
-            }
-            BarcodeScanned?.Invoke(barcode);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка в обработчике BarcodeScanned");
-        }
+        _logger.LogInformation("Barcode received: {Barcode}", barcode);
+        DispatchBarcode(barcode);
     }
 
-    private static char? VKeyToChar(ushort vKey, bool shiftPressed)
+    private void DispatchBarcode(string barcode)
     {
-        if (vKey is >= 0x30 and <= 0x39)
-        {
-            return (char)vKey;
-        }
-        if (vKey is >= 0x41 and <= 0x5A)
-        {
-            return shiftPressed ? (char)vKey : (char)(vKey + 32);
-        }
-        return vKey switch
-        {
-            0xBD => '-',
-            0xBB => '+',
-            0xBC => ',',
-            0xBE => '.',
-            0xBF => '/',
-            0x20 => ' ',
-            _ => null
-        };
-    }
-
-    public void Dispose()
-    {
-        if (_disposed)
-        {
-            return;
-        }
-        lock (_lock)
-        {
-            if (_disposed)
-            {
-                return;
-            }
-            _disposed = true;
-            _buffer.Clear();
-            _scannerDevice = IntPtr.Zero;
-        }
-        Unregister();
-        _connectionState.ConnectionStateChanged -= OnScannerConnectionChanged;
-        _deviceNameCache.Clear();
-        BarcodeScanned = null;
-        _logger.LogInformation("RawInputService disposed");
-        GC.SuppressFinalize(this);
+        _dispatcher.SetFallbackHandler(BarcodeScanned);
+        _dispatcher.Dispatch(barcode);
     }
 }

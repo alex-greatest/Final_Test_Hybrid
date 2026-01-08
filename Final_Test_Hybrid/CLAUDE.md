@@ -1,515 +1,156 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working with this repository.
+
+> **См. также:** [ARCHITECTURE.md](ARCHITECTURE.md), [MessageServiceDescription.md](MessageServiceDescription.md)
 
 ## Project Overview
 
-**Final_Test_Hybrid** is a hybrid WinForms + Blazor desktop application for managing industrial test sequences.
+**Final_Test_Hybrid** — hybrid WinForms + Blazor desktop application for industrial test sequences.
 
-> **См. также:**
-> - [ARCHITECTURE.md](ARCHITECTURE.md) — детальная архитектура системы выполнения тестов (PreExecution, TestExecution, передача данных между шагами)
-> - [MessageServiceDescription.md](MessageServiceDescription.md) — система управления сообщениями (приоритеты, состояния, прерывания)
-
-It runs on .NET 10 with a Windows Forms host containing a BlazorWebView control that renders the UI using Radzen Blazor components.
-
-**Architecture:** WinForms acts as the container and dependency injection host, while Blazor components provide the interactive UI. This hybrid approach combines desktop stability with modern web UI patterns.
-
-## Key Technologies
-
-- **.NET 10.0-windows** with Windows Forms hosting
-- **Blazor** (component-based UI framework) via `Microsoft.AspNetCore.Components.WebView.WindowsForms`
-- **Radzen Blazor 8.3.2** (UI component library)
-- **EPPlus 8.3.1** (Excel file I/O for test sequences)
-- **OPCFoundation.NetStandard.Opc.Ua.Client 1.5.377.22** (planned OPC UA integration, currently commented out)
-- **Serilog** (structured logging to file)
-
-## Build and Run Commands
+- **.NET 10.0-windows**, Blazor via `Microsoft.AspNetCore.Components.WebView.WindowsForms`
+- **Radzen Blazor 8.3.2**, **EPPlus 8.3.1**, **Serilog**
+- **Architecture:** WinForms (DI host) → BlazorWebView → Radzen UI
 
 ```bash
-# Build the project
-dotnet build
-
-# Run the application
-dotnet run
-
-# Build for release
+dotnet build          # Build
+dotnet run            # Run
 dotnet build -c Release
-
-# Clean build artifacts
-dotnet clean
 ```
 
-## Architecture and Structure
+## Clean Code Philosophy
 
-### Application Entry Point
+Следуем принципам **Clean Code** (Robert C. Martin) и **Refactoring** (Martin Fowler):
 
-**Flow:** `Program.cs` → `Form1.cs` (WinForms host) → `MyComponent.razor` (Blazor root)
+- **Читаемость > Краткость** — код читают чаще, чем пишут
+- **Маленькие методы** — одна задача, один уровень абстракции
+- **Говорящие имена** — код как документация
+- **Без дублирования** (DRY)
+- **Без магических чисел** — константы с именами
+- **Принцип скаута** — оставь код чище, чем нашёл
 
-- `Program.cs` - Standard WinForms application entry point
-- `Form1.cs` - Initializes BlazorWebView, configures DI container, loads `appsettings.json`, registers services
-- `MyComponent.razor` - Root Blazor component containing tabbed interface (947KB - main application container)
+**Но без фанатизма:** Прагматизм важнее догмы. Не создавай абстракции ради абстракций.
 
-### Dependency Injection Setup (Form1.cs)
+## Coding Standards
 
-**Ключевые сервисы:**
-```csharp
-// UI Dispatching (SINGLETON - важно для hybrid!)
-services.AddSingleton<BlazorDispatcherAccessor>();
-services.AddSingleton<IUiDispatcher, BlazorUiDispatcher>();
-services.AddSingleton<INotificationService, NotificationServiceWrapper>();
-services.AddSingleton<Radzen.NotificationService>();  // Override Radzen's scoped!
-
-// Scoped сервисы
-services.AddScoped<IFilePickerService, WinFormsFilePickerService>();
-services.AddScoped<ISequenceExcelService, SequenceExcelService>();
-services.AddScoped<TestSequenceService>();
-
-// Radzen components (scoped by default)
-services.AddRadzenComponents();
-```
-
-**⚠️ ВАЖНО:** В hybrid-приложении `Radzen.NotificationService` должен быть **Singleton**, иначе singleton-сервисы (ScanErrorHandler) получат другой экземпляр, чем UI компоненты.
-
-### Component Organization
-
-**Blazor Components:**
-- `Components/Base/` - Base classes like `GridInplaceEditorBase<TItem>` for reusable editor patterns
-- `Components/Engineer/` - Engineering UI (MainEngineering menu, test sequence editor)
-- `Components/Engineer/Sequence/` - Test sequence editor with partial classes for code organization
-- `Components/Overview/` - Dashboard indicators and panels (LampIndicator, ValueIndicator, PanelBox)
-
-**Partial Class Pattern (TestSequenceEditor):**
-```
-TestSequenceEditor.razor           # UI markup
-TestSequenceEditor.razor.cs        # Component lifecycle, properties, initialization
-TestSequenceEditor.Grid.cs         # Grid rendering and animations
-TestSequenceEditor.File.cs         # File creation and opening operations
-TestSequenceEditor.Save.cs         # Save operations
-TestSequenceEditor.Actions.cs      # Context menu and row actions
-```
-
-**StandDatabase Components (`Components/Engineer/StandDatabase/`):**
-```
-StandDatabaseDialog.razor          # Главный диалог с табами
-BoilerTypesGrid.razor              # Типы котлов (CRUD)
-Recipe/RecipesGrid.razor           # Рецепты (CRUD + Copy)
-Recipe/RecipesGrid.Copy.cs         # Логика копирования рецептов
-ResultSettings/ResultSettingsTab   # Настройки результатов (3 вкладки + Copy)
-StepFinalTestsGrid.razor           # Шаги финального теста
-ErrorSettingsTemplatesGrid.razor   # Шаблоны ошибок
-Modals/                            # Диалоги копирования и ошибок
-```
-
-### Service Layer
-
-**Core Services:**
-- `TestSequenceService` - Manages test sequence data, row operations, file I/O coordination, path configuration
-- `SequenceExcelService` - Low-level Excel operations using EPPlus
-- `WinFormsFilePickerService` - Provides Windows file dialogs with security constraints (enforces selection within authorized root path)
-- `NotificationServiceWrapper` - Thread-safe Radzen notification wrapper with message deduplication
-- `IndicatorHelper` - Utility for status indicator image paths
-
-**Database Services (`Services/Database/`):**
-- `BoilerTypeService` - CRUD для типов котлов
-- `RecipeService` - CRUD + копирование рецептов между типами котлов
-- `ResultSettingsService` - CRUD + копирование настроек результатов
-- `StepFinalTestService` - CRUD для шагов финального теста
-- `ErrorSettingsTemplateService` - CRUD для шаблонов ошибок
-- `DatabaseConnectionService` - Управление подключением к SQLite
-
-**Test Execution Services (`Services/Steps/Infrastructure/Execution/`):**
-
-Архитектура обновления грида (SRP):
-```
-ColumnExecutor ─────────┐
-ScanErrorHandler ───────┼──► StepStatusReporter ──► TestSequenseService
-BarcodeProcessingPipeline ──┘   (единственный        (CRUD хранилище,
-                                 фасад для            НЕ вызывать
-                                 обновлений)          напрямую!)
-```
-
-**ВАЖНО: Единая точка входа**
-- `StepStatusReporter` — **единственный** класс для обновления грида тестов
-- `TestSequenseService` — внутреннее хранилище, **НИКОГДА** не вызывать напрямую из других сервисов
-- UI компоненты (TestSequenseGrid, BoilerInfo) могут читать данные и подписываться на события
-
-Сервисы:
-- `StepStatusReporter` - Фасад для обновления грида (ReportStepStarted, ReportSuccess, ReportError, ClearAll)
-- `TestSequenseService` - CRUD хранилище данных грида (внутренний, не использовать напрямую)
-- `ColumnExecutor` - Выполнение шагов в колонке (4 параллельных executor'а)
-- `TestExecutionCoordinator` - Координация выполнения тестов
-- `ExecutionStateManager` - State machine состояния выполнения
-
-Error Handling (`ErrorHandling/`):
-- `ErrorPlcMonitor` - OPC UA подписки на сигналы ошибок (Retry, Skip)
-- `StepErrorHandler` - Бизнес-логика обработки ошибок
-
-Scanning (`Scanning/`):
-```
-ScanStepManager (координатор)
-├── ScanModeController     - вкл/выкл режима, MessageService, сессия
-├── ScanDialogCoordinator  - 6 событий диалогов, rework callback
-├── ScanStateManager       - state machine (Disabled→Ready→Processing→TestRunning)
-└── ScanSessionManager     - управление RawInput сессией сканера
-```
-
-### Configuration (appsettings.json)
-
-**Configuration Sections:**
-```json
-"Paths" - Test step and sequence directories
-"Logging" - Serilog file logging configuration
-"ConnectionPrinter" - Printer device connection
-"ConnectionWeigher" - Weigher device connection
-"OpcUa" - OPC UA server connection (planned, services commented out)
-```
-
-**Accessing Configuration:**
-```csharp
-public MyService(IConfiguration configuration) {
-    var path = configuration["Paths:PathToTestsSequence"];
-}
-```
-
-### Data Models
-
-**SequenceRow** (`Models/SequenceRow.cs`):
-- Core data model for test sequence grid
-- Properties: `Id` (Guid), `Columns` (List<string>), `CssClass` (for animations)
-- Variable column count initialized in constructor
-
-**Enumerations:**
-- `SequenceContextAction` - Grid operations (InsertStep, InsertRowBefore, DeleteRow)
-
-## Coding Standards (from .cursorrules)
-
-### Method Complexity Rules
-
-**ONE control flow statement per method:**
-- One `if` per method
-- One `for` per method
-- One `while` per method
-- One `switch` per method
-- Use early return guards instead of nested conditions
+### Method Complexity (один на метод)
+- Один `if` / `for` / `while` / `switch` / `try` на метод
+- Early return (guard clauses) вместо вложенности
+- Исключение: guard clauses в начале метода не считаются
 
 ### Code Style
-
-- Always use `var` for type inference
-- Braces `{}` mandatory for all blocks (even single-line)
-- Prefer LINQ for collection operations
-- Use `async/await` for asynchronous operations
-- Avoid nested blocks
-- Write small, focused methods
-
-### State Management Pattern
-
-**Используй enum вместо булевых флагов** для представления состояний:
-
-```csharp
-// ❌ ПЛОХО: путаница с комбинациями флагов
-public class Result
-{
-    public bool Success { get; init; }
-    public bool ShouldStop { get; init; }
-}
-// Success=true, ShouldStop=true — что это значит?
-
-// ✅ ХОРОШО: явные состояния
-public enum ResultStatus { Continue, Completed, Cancelled, Failed }
-
-public class Result
-{
-    public ResultStatus Status { get; init; }
-}
-```
-
-**Когда применять:**
-- Результат операции имеет более 2 возможных исходов
-- Комбинации булевых флагов создают неочевидные состояния
-- Нужен switch для обработки разных случаев
+- `var` для всех типов
+- `{}` обязательны для всех блоков
+- `async/await` для асинхронности
+- LINQ для коллекций (не строго)
 
 ### File Organization
+- **Max 300 строк** на файл → partial classes
+- Удалять неиспользуемые using/поля/свойства
+- **Порядок:** Properties → Fields → (blank) → Methods
 
-**Max 300 lines per file** - Break into partial classes if needed
-**Remove unused:** usings, namespaces, properties, fields
-
-**Class order:**
-1. Properties (no blank lines between)
-2. Fields (no blank lines between)
-3. (single blank line)
-4. Methods (one blank line between methods, no blank lines within methods)
-
-### Naming Conventions
-
+### Naming
 - **PascalCase:** Classes, methods, properties
-- **camelCase:** Local variables, parameters
+- **camelCase:** locals, parameters
 
-### Blazor-Specific Rules
+## P/Invoke Rules
 
-**CSS:**
-- NEVER use `<style>` tags in `.razor` files
-- Always use separate `.razor.css` files
-- Use `::deep` selector to override Radzen component styles
-
-**Rework Dialogs (RouteErrorDialog, ReworkReasonDialog, AdminAuthDialog):**
-- Текст кнопки "Отмена" должен быть **чёрным** (`color: black`), не серым
-- Размер кнопок: `padding: 12px 24px`, `font-size: 18px`
-- Общие стили определены в `wwwroot/css/app.css` (секция REWORK DIALOGS COMMON STYLES)
-
-**Components:**
-- Minimal markup in `.razor` files
-- Logic in `@code` blocks or partial classes
-- JS Interop in dedicated methods with `RegisterX`/`UnregisterX` pattern
-- Always implement `IAsyncDisposable` for cleanup
-
-**Error Handling:**
+### CA1806: Всегда проверять результат P/Invoke
 ```csharp
-try {
-    // Operation
-}
+// ❌ ПЛОХО: результат игнорируется
+GetRawInputData(lParam, RID_INPUT, IntPtr.Zero, ref size, headerSize);
+if (size == 0) return null;
+
+// ✅ ХОРОШО: результат проверяется
+var result = GetRawInputData(lParam, RID_INPUT, IntPtr.Zero, ref size, headerSize);
+if (result == unchecked((uint)-1) || size == 0) return null;
+```
+
+## Blazor Rules
+
+### CSS
+- **НЕ** использовать `<style>` в `.razor`
+- Стили в `.razor.css`, `::deep` для Radzen
+
+### Components
+- Минимум разметки в `.razor`, логика в `@code` или partial
+- JS Interop: `RegisterX`/`UnregisterX` паттерн
+- Всегда `IAsyncDisposable` для cleanup
+
+### Error Handling
+```csharp
 catch (Exception ex) {
-    Logger.LogError(ex, "Technical details for logging");
-    NotificationService.ShowError("User-friendly message");
-}
-```
-- Log technical details with `Logger.LogError(ex, ...)`
-- Show user-friendly messages with `NotificationService.ShowError(...)`
-- Use specific messages when possible: "Файл занят. Закройте его в Excel"
-- Use generic messages as fallback: "Не удалось сохранить файл"
-
-### Test Step Logging (ITestStepLogger)
-
-**ВАЖНО:** Все шаги тестирования (`ITestStep`, `IPreExecutionStep`, `IScanBarcodeStep`) должны использовать `ITestStepLogger` для логирования.
-
-`ITestStepLogger` — это человекочитаемый лог, привязанный к тесту. Он отображается пользователю и сохраняется в историю теста.
-
-```csharp
-public class MyTestStep(
-    ILogger<MyTestStep> logger,           // Технический лог (файл/консоль)
-    ITestStepLogger testStepLogger)       // Человекочитаемый лог теста
-{
-    private void LogInfo(string message, params object?[] args)
-    {
-        logger.LogInformation(message, args);       // Файл
-        testStepLogger.LogInformation(message, args); // Лог теста
-    }
-
-    private BarcodeStepResult Fail(string error)
-    {
-        testStepLogger.LogError(null, "{Error}", error); // ОБЯЗАТЕЛЬНО!
-        return BarcodeStepResult.Fail(error);
-    }
+    Logger.LogError(ex, "Technical details");     // В лог
+    NotificationService.ShowError("User message"); // Пользователю
 }
 ```
 
-**Правила:**
-- Всегда дублировать логи в `ITestStepLogger` и `ILogger`
-- При ошибке ВСЕГДА логировать в `testStepLogger.LogError()`
-- Использовать `testStepLogger.LogStepStart(Name)` в начале шага
-- Использовать `testStepLogger.LogStepEnd(Name)` при успешном завершении
-- Сообщения должны быть на русском языке (для пользователя)
+## Important Patterns
 
-## Common Patterns
-
-### Modal Dialog Pattern
-
+### Enum вместо bool флагов
 ```csharp
-await DialogService.OpenAsync<ComponentName>("Dialog Title",
-    new Dictionary<string, object> { /* parameters */ },
-    new DialogOptions {
-        Width = "95vw",
-        Height = "95vh",
-        Resizable = true,
-        Draggable = true,
-        CloseDialogOnOverlayClick = false
-    });
+// ❌ bool Success + bool ShouldStop — неочевидные комбинации
+// ✅ enum ResultStatus { Continue, Completed, Cancelled, Failed }
 ```
 
-### In-Place Grid Editor Pattern
-
-Components that need editable cells inherit from `GridInplaceEditorBase<TItem>`:
-- Manages cell edit state
-- Handles outside-click detection via JS interop
-- Auto-commits changes when clicking outside
-
-### File Picker with Security
-
-`WinFormsFilePickerService` enforces file selection within authorized directories:
+### UI Dispatching (hybrid)
 ```csharp
-await FilePickerService.PickFileRelative(rootPath); // Validates selection is within rootPath
-```
-
-### Row Animation Pattern
-
-```csharp
-row.CssClass = "fade-in";
-StateHasChanged();
-await Task.Delay(500);
-row.CssClass = "";
-```
-
-### Tab Refresh Pattern (HashSet)
-
-Независимое обновление табов при изменении данных в другом табе:
-```csharp
-private readonly HashSet<int> _tabsNeedingRefresh = [];
-
-private void MarkDependentTabsForRefresh()
-{
-    _tabsNeedingRefresh.Add(RecipesTabIndex);
-    _tabsNeedingRefresh.Add(ResultSettingsTabIndex);
-}
-
-private async Task OnTabChanged(int tabIndex)
-{
-    if (!_tabsNeedingRefresh.Remove(tabIndex)) return;
-    await RefreshTabContent(tabIndex);
-}
-```
-
-### UI Dispatching (BlazorDispatcherAccessor)
-
-**Проблема:** В hybrid-приложении WinForms UI thread ≠ Blazor renderer context. Вызов Radzen сервисов из background потоков (RawInputService, OPC UA callbacks) требует маршрутизации в Blazor context.
-
-**Решение:**
-```csharp
-// Services/Common/UI/BlazorDispatcherAccessor.cs
-public class BlazorDispatcherAccessor
-{
-    private Func<Action, Task>? _invokeAsync;
-    private Action? _stateHasChanged;
-
-    public void Initialize(Func<Action, Task> invokeAsync, Action stateHasChanged)
-    {
-        _invokeAsync = invokeAsync;
-        _stateHasChanged = stateHasChanged;
-    }
-
-    public Task InvokeAsync(Action action)
-    {
-        if (_invokeAsync == null) { action(); return Task.CompletedTask; }
-        return _invokeAsync(() => { action(); _stateHasChanged?.Invoke(); });
-    }
-}
-
-// MyComponent.razor (root component)
-protected override void OnInitialized()
-{
-    BlazorDispatcherAccessor.Initialize(
-        action => InvokeAsync(action),
-        StateHasChanged);
-}
-```
-
-**Использование в сервисах:**
-```csharp
+// Background thread → Blazor context
 public class BlazorUiDispatcher(BlazorDispatcherAccessor accessor) : IUiDispatcher
 {
     public void Dispatch(Action action) => _ = accessor.InvokeAsync(action);
 }
 ```
 
+### Test Step Logging
+```csharp
+// ВСЕГДА дублировать в оба логгера
+logger.LogInformation(message);        // Файл
+testStepLogger.LogInformation(message); // UI теста
+```
+
 ## Accepted Patterns (NOT bugs)
 
-При code review НЕ флагать следующие паттерны как проблемы:
+- `CancellationToken.None` в коротких операциях (1-2 сек)
+- Fire-and-forget в singleton сервисах (с `.ContinueWith` для ошибок)
+- Event subscriptions Singleton→Singleton без unsubscribe
+- SemaphoreSlim защита от Dispose (когда класс IDisposable)
 
-### CancellationToken.None в коротких операциях
+## Architecture
+
+### Entry Point
+`Program.cs` → `Form1.cs` (DI) → `MyComponent.razor` (root)
+
+### DI (Form1.cs)
 ```csharp
-await _preExecutionCoordinator.ExecuteAsync(barcode, CancellationToken.None);
+// SINGLETON для hybrid!
+services.AddSingleton<BlazorDispatcherAccessor>();
+services.AddSingleton<Radzen.NotificationService>(); // Override scoped!
 ```
-- Pre-execution занимает 1-2 секунды
-- Пользователь не будет делать dispose в этот момент
-- Добавление токенов везде — overengineering
 
-### Fire-and-forget в singleton сервисах
-```csharp
-_ = HandleInterruptAsync(reason).ContinueWith(t => LogError(t), TaskContinuationOptions.OnlyOnFaulted);
+### Service Layer
 ```
-- Singleton сервисы живут всё время работы приложения
-- Dispose вызывается только при закрытии приложения
-- Ошибки логируются через ContinueWith
-- Tracking задач не нужен
-
-### Event subscriptions в Singleton → Singleton
-```csharp
-// В конструкторе singleton сервиса
-appSettings.UseMesChanged += _ => Clear();
+ColumnExecutor ─────────┐
+ScanErrorHandler ───────┼──► StepStatusReporter ──► TestSequenseService
+BarcodeProcessingPipeline──┘   (единственный фасад)   (НЕ вызывать напрямую)
 ```
-- Оба сервиса singleton с одинаковым lifetime
-- Unsubscribe не нужен — GC не соберёт ни один из них
 
-### SemaphoreSlim в IDisposable классах
-```csharp
-// Паттерн защиты SemaphoreSlim от Dispose во время ожидания
-private async Task<bool> TryAcquireLockAsync(CancellationToken ct = default)
-{
-    try
-    {
-        await _semaphore.WaitAsync(ct);
-        return !_disposed;
-    }
-    catch (ObjectDisposedException)
-    {
-        return false;
-    }
-}
-
-private void ReleaseLockIfNotDisposed()
-{
-    if (!_disposed) { _semaphore.Release(); }
-}
+### Scanning
 ```
-- **Когда применять:** Класс реализует IDisposable и SemaphoreSlim.Dispose() вызывается в Dispose()
-- **Когда НЕ применять (overengineering):** Singleton сервисы, краткоживущие операции где Dispose невозможен во время WaitAsync
-
-### Когда ЭТО проблема:
-- Scoped/Transient сервис подписывается на Singleton — нужен unsubscribe
-- Короткоживущий объект подписывается на долгоживущий — утечка памяти
-- Fire-and-forget без обработки ошибок — исключения теряются
-
-## Important Implementation Notes
-
-### Current State
-
-**Implemented:**
-- WinForms + Blazor hybrid architecture
-- Test sequence editor with Excel I/O
-- Radzen-based UI components (tabs, grids, dialogs, notifications)
-- File picker with security constraints
-- Serilog file logging
-- Configuration management
-
-**Planned (folders/config present but not active):**
-- OPC UA services (services commented out in Form1.cs, configuration in appsettings.json)
-- Additional engineering tools (Hand Program, IO Editor, AI/RTD Correction)
-- Test log viewer
-- Gas & DHW charts
-
-### Recent Changes
-
-- **ScanStepManager:** Рефакторинг — выделены `ScanModeController` (режим сканирования) и `ScanDialogCoordinator` (диалоги ошибок)
-- **TestInterruptCoordinator:** Рефакторинг + исправление SemaphoreSlim race condition при Dispose
-- **UI Dispatching:** Добавлен `BlazorDispatcherAccessor` для маршрутизации вызовов из background потоков в Blazor context
-- **Notifications:** `Radzen.NotificationService` и `INotificationService` теперь Singleton (исправлен scope mismatch)
-- **ITestStepLogger:** Все шаги теперь логируют ошибки в человекочитаемый тестовый лог
-- **OPC UA:** Полная интеграция с PLC (подписки, чтение/запись тегов, обработка прерываний)
-- **MES Integration:** `ScanBarcodeMesStep` для работы с MES сервером (рецепты, rework flow)
-- Database сервисы для SQLite (BoilerType, Recipe, ResultSettings, StepFinalTest, ErrorSettingsTemplate)
-- StandDatabase компоненты для управления данными стенда
-- Система паузы/прерываний (`TestInterruptCoordinator`, `PauseTokenSource`)
-
-### Known Issues
-
-- `MyComponent.razor` — 947KB, рассмотреть разбиение на компоненты
+ScanStepManager
+├── ScanModeController     - режим, MessageService
+├── ScanDialogCoordinator  - диалоги ошибок
+├── ScanStateManager       - state machine
+└── ScanSessionManager     - RawInput сессия
+```
 
 ## File Locations
 
-**Entry points:** `Program.cs`, `Form1.cs`
-**Root component:** `MyComponent.razor`
-**Main features:** `Components/Engineer/MainEngineering.razor`, `Components/Engineer/Sequence/TestSequenceEditor.*`
-**Stand database:** `Components/Engineer/StandDatabase/`
-**Core services:** `Services/Sequence/`, `Services/Common/`
-**Database services:** `Services/Database/`
-**Configuration:** `appsettings.json`
-**Static assets:** `wwwroot/css/`, `wwwroot/images/`
-**Coding standards:** `.cursorrules`
+| Category | Path |
+|----------|------|
+| Entry | `Program.cs`, `Form1.cs` |
+| Root | `MyComponent.razor` |
+| Components | `Components/Engineer/`, `Components/Overview/` |
+| Services | `Services/Sequence/`, `Services/Database/` |
+| Config | `appsettings.json` |
+| Styles | `wwwroot/css/` |

@@ -20,7 +20,11 @@
       "Bash(PGPASSWORD=ManLiv123 \"/c/Program Files/PostgreSQL/17/bin/psql.exe\":*)",
       "Bash(PGPASSWORD=ManLiv123 \"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h localhost -U postgres -d final_test -c \"UPDATE \"\"TB_RECIPE\"\" SET \"\"ADDRESS\"\" = ''ns=3;s=\"\"DB_Recipe\"\".\"\"Time\"\".\"\"DHWCheckTankMode\"\"'', \"\"IS_PLC\"\" = true WHERE \"\"TAG_NAME\"\" = ''DHW.DHWCheckTankMode'' AND \"\"BOILER_TYPE_ID\"\" = 22;\")",
       "mcp__serena__activate_project",
-      "mcp__serena__list_dir"
+      "mcp__serena__list_dir",
+      "mcp__serena__get_symbols_overview",
+      "mcp__serena__find_symbol",
+      "mcp__sequential-thinking__sequentialthinking",
+      "Bash(rm:*)"
     ]
   }
 }
