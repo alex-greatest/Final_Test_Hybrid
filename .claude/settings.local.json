@@ -24,7 +24,8 @@
       "mcp__serena__get_symbols_overview",
       "mcp__serena__find_symbol",
       "mcp__sequential-thinking__sequentialthinking",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(unzip:*)"
     ]
   }
 }

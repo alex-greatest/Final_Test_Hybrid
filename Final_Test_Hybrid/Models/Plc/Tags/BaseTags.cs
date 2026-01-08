@@ -10,4 +10,5 @@ public static class BaseTags
     // Error handling tags - placeholders
     public const string ErrorRetry = "ns=3;s=\"DB_Station\".\"Test\".\"Req_Repeat\"";
     public const string ErrorSkip = "ns=3;s=\"DB_Station\".\"Test\".\"EndStep\"";
+    
 }
