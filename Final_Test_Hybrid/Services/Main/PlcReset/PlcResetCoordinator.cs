@@ -1,0 +1,231 @@
+namespace Final_Test_Hybrid.Services.Main.PlcReset;
+
+using Models.Plc.Tags;
+using OpcUa;
+using Steps.Infrastructure.Execution;
+using Microsoft.Extensions.Logging;
+
+/// <summary>
+/// Координатор сброса теста по сигналу PLC.
+/// Обрабатывает Req_Reset, отправляет данные, ждёт Ask_End.
+/// </summary>
+public sealed class PlcResetCoordinator : IAsyncDisposable
+{
+    private readonly ResetSubscription _resetSubscription;
+    private readonly ResetMessageState _resetMessage;
+    private readonly ErrorCoordinator _errorCoordinator;
+    private readonly PausableTagWaiter _tagWaiter;
+    private readonly PausableOpcUaTagService _plcService;
+    private readonly ILogger<PlcResetCoordinator> _logger;
+    private readonly CancellationTokenSource _disposeCts = new();
+    private CancellationTokenSource? _currentResetCts;
+    private int _isHandlingReset;
+    private volatile bool _disposed;
+
+    private static readonly TimeSpan AskEndTimeout = TimeSpan.FromSeconds(60);
+
+    public event Action? OnForceStop;
+
+    public PlcResetCoordinator(
+        ResetSubscription resetSubscription,
+        ResetMessageState resetMessage,
+        ErrorCoordinator errorCoordinator,
+        PausableTagWaiter tagWaiter,
+        PausableOpcUaTagService plcService,
+        ILogger<PlcResetCoordinator> logger)
+    {
+        _resetSubscription = resetSubscription;
+        _resetMessage = resetMessage;
+        _errorCoordinator = errorCoordinator;
+        _tagWaiter = tagWaiter;
+        _plcService = plcService;
+        _logger = logger;
+
+        _resetSubscription.OnStateChanged += HandleResetSignal;
+    }
+
+    #region Signal Handling
+
+    private void HandleResetSignal()
+    {
+        if (_disposed) { return; }
+
+        _ = HandleResetAsync().ContinueWith(
+            t => _logger.LogError(t.Exception, "Ошибка обработки PLC reset"),
+            TaskContinuationOptions.OnlyOnFaulted);
+    }
+
+    private async Task HandleResetAsync()
+    {
+        if (!TryAcquireResetFlag())
+        {
+            _logger.LogWarning("PLC Reset проигнорирован — уже обрабатывается");
+            return;
+        }
+
+        _currentResetCts = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token);
+
+        try
+        {
+            await ExecuteResetStepsAsync(_currentResetCts.Token);
+        }
+        catch (Exception ex)
+        {
+            HandleResetException(ex);
+        }
+        finally
+        {
+            Cleanup();
+        }
+    }
+
+    private async Task ExecuteResetStepsAsync(CancellationToken ct)
+    {
+        _logger.LogWarning("═══ СБРОС ПО СИГНАЛУ PLC ═══");
+
+        SignalForceStop();
+        await SendDataToMesAsync(ct);
+        await SendResetAndWaitAckAsync(ct);
+
+        _errorCoordinator.ForceStop();
+        _logger.LogInformation("PLC Reset завершён успешно");
+    }
+
+    private void HandleResetException(Exception ex)
+    {
+        switch (ex)
+        {
+            case OperationCanceledException when _disposed:
+                _logger.LogInformation("PLC Reset отменён — disposal");
+                break;
+
+            case OperationCanceledException:
+                _logger.LogInformation("PLC Reset отменён");
+                break;
+
+            case TimeoutException:
+                _logger.LogWarning("Таймаут Ask_End ({Timeout} сек) — полный сброс", AskEndTimeout.TotalSeconds);
+                _errorCoordinator.Reset();
+                break;
+
+            default:
+                _logger.LogError(ex, "Неожиданная ошибка PLC Reset — полный сброс");
+                _errorCoordinator.Reset();
+                break;
+        }
+    }
+
+    #endregion
+
+    #region Reset Steps
+
+    private void SignalForceStop()
+    {
+        _resetMessage.SetMessage("Остановка теста...");
+        InvokeEventSafe(OnForceStop);
+    }
+
+    private async Task SendDataToMesAsync(CancellationToken ct)
+    {
+        _resetMessage.SetMessage("Передача данных...");
+        _logger.LogInformation("MES/DB отправка (заглушка)");
+        await Task.Delay(100, ct);  // TODO: реальная отправка
+    }
+
+    private async Task SendResetAndWaitAckAsync(CancellationToken ct)
+    {
+        _resetMessage.SetMessage("Сброс теста...");
+
+        try
+        {
+            await _plcService.WriteAsync(BaseTags.Reset, true, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка записи Reset в PLC — продолжаем");
+        }
+
+        await _tagWaiter.WaitAnyAsync(
+            _tagWaiter.CreateWaitGroup<bool>()
+                .WaitForTrue(BaseTags.AskEnd, () => true, "AskEnd")
+                .WithTimeout(AskEndTimeout),
+            ct);
+    }
+
+    private void InvokeEventSafe(Action? handler)
+    {
+        try
+        {
+            handler?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка в обработчике события");
+        }
+    }
+
+    #endregion
+
+    #region Synchronization
+
+    private bool TryAcquireResetFlag()
+        => Interlocked.CompareExchange(ref _isHandlingReset, 1, 0) == 0;
+
+    private void ReleaseResetFlag()
+        => Interlocked.Exchange(ref _isHandlingReset, 0);
+
+    private void Cleanup()
+    {
+        _resetMessage.Clear();
+        var cts = Interlocked.Exchange(ref _currentResetCts, null);
+        cts?.Dispose();
+        ReleaseResetFlag();
+    }
+
+    #endregion
+
+    #region Public API
+
+    public void CancelCurrentReset()
+    {
+        var cts = _currentResetCts;
+        try
+        {
+            cts?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Expected if disposed during race
+        }
+    }
+
+    #endregion
+
+    #region Disposal
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) { return; }
+        _disposed = true;
+
+        try { _disposeCts.Cancel(); }
+        catch (ObjectDisposedException) { }
+
+        _resetSubscription.OnStateChanged -= HandleResetSignal;
+        OnForceStop = null;
+
+        // Ждём завершения текущей операции
+        var spinWait = new SpinWait();
+        var timeout = DateTime.UtcNow.AddSeconds(5);
+        while (_isHandlingReset == 1 && DateTime.UtcNow < timeout)
+        {
+            spinWait.SpinOnce();
+            await Task.Yield();
+        }
+
+        _currentResetCts?.Dispose();
+        _disposeCts.Dispose();
+    }
+
+    #endregion
+}

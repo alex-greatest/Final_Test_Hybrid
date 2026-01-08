@@ -32,6 +32,7 @@ using Final_Test_Hybrid.Services.Diagnostic.Polling;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol;
 using Final_Test_Hybrid.Settings.Spring.Shift;
 using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Base;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
@@ -101,6 +102,9 @@ namespace Final_Test_Hybrid
             services.AddSingleton<ExecutionActivityTracker>();
             services.AddSingleton<ExecutionMessageState>();
             services.AddSingleton<InterruptMessageState>();
+            services.AddSingleton<ResetMessageState>();
+            services.AddSingleton<ResetSubscription>();
+            services.AddSingleton<PlcResetCoordinator>();
             services.AddSingleton<TestSequenseService>();
             services.AddSingleton<BoilerState>();
             services.AddSingleton<SettingsAccessStateManager>();
@@ -336,12 +340,22 @@ namespace Final_Test_Hybrid
             var messageService = serviceProvider.GetRequiredService<MessageService>();
             var executionState = serviceProvider.GetRequiredService<ExecutionMessageState>();
             var interruptState = serviceProvider.GetRequiredService<InterruptMessageState>();
+            var resetState = serviceProvider.GetRequiredService<ResetMessageState>();
 
             messageService.RegisterProvider(110, executionState.GetMessage);
             messageService.RegisterProvider(120, interruptState.GetMessage);
+            messageService.RegisterProvider(130, resetState.GetMessage);
 
             executionState.OnChange += messageService.NotifyChanged;
             interruptState.OnChange += messageService.NotifyChanged;
+            resetState.OnChange += messageService.NotifyChanged;
+
+            // Инициализация ResetSubscription
+            var resetSubscription = serviceProvider.GetRequiredService<ResetSubscription>();
+            await resetSubscription.SubscribeAsync();
+
+            // Создаём PlcResetCoordinator (подписка в конструкторе)
+            _ = serviceProvider.GetRequiredService<PlcResetCoordinator>();
         }
 
         private void StartSpringBootHealthCheck(ServiceProvider serviceProvider)
@@ -386,6 +400,21 @@ namespace Final_Test_Hybrid
                 _springBootHealthService?.Stop();
                 _shiftService?.Stop();
                 _databaseConnectionService?.Stop();
+
+                // Dispose PLC Reset components before OPC UA disconnection
+                var plcResetCoordinator = _serviceProvider?.GetService<PlcResetCoordinator>();
+                if (plcResetCoordinator != null)
+                {
+                    plcResetCoordinator.CancelCurrentReset();
+                    await plcResetCoordinator.DisposeAsync();
+                }
+
+                var resetSubscription = _serviceProvider?.GetService<ResetSubscription>();
+                if (resetSubscription != null)
+                {
+                    await resetSubscription.DisposeAsync();
+                }
+
                 if (_opcUaService != null)
                 {
                     await _opcUaService.DisconnectAsync();

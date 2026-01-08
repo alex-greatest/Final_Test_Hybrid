@@ -11,4 +11,9 @@ public static class BaseTags
     public const string ErrorRetry = "ns=3;s=\"DB_Station\".\"Test\".\"Req_Repeat\"";
     public const string ErrorSkip = "ns=3;s=\"DB_Station\".\"Test\".\"End\"";
     public const string AskRepeat = "ns=3;s=\"DB_Station\".\"Test\".\"Ask_Repeat\"";
+
+    // Reset handling tags
+    public const string ReqReset = "ns=3;s=\"DB_Station\".\"Test\".\"Req_Reset\"";
+    public const string Reset = "ns=3;s=\"DB_Station\".\"Test\".\"Reset\"";
+    public const string AskEnd = "ns=3;s=\"DB_Station\".\"Test\".\"Ask_End\"";
 }

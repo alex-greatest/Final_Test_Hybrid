@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
@@ -18,6 +19,7 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly PausableOpcUaTagService _plcService;
     private readonly PauseTokenSource _pauseToken;
     private readonly ExecutionActivityTracker _activityTracker;
+    private readonly PlcResetCoordinator _plcResetCoordinator;
     private readonly Lock _stateLock = new();
     private readonly object _enqueueLock = new();
     private readonly Action _onExecutorStateChanged;
@@ -48,7 +50,8 @@ public partial class TestExecutionCoordinator : IDisposable
         ErrorCoordinator errorCoordinator,
         PausableOpcUaTagService plcService,
         PauseTokenSource pauseToken,
-        ExecutionActivityTracker activityTracker)
+        ExecutionActivityTracker activityTracker,
+        PlcResetCoordinator plcResetCoordinator)
     {
         _logger = logger;
         _testLogger = testLogger;
@@ -57,9 +60,17 @@ public partial class TestExecutionCoordinator : IDisposable
         _plcService = plcService;
         _pauseToken = pauseToken;
         _activityTracker = activityTracker;
+        _plcResetCoordinator = plcResetCoordinator;
         _onExecutorStateChanged = HandleExecutorStateChanged;
         _executors = CreateAllExecutors(opcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider);
         SubscribeToExecutorEvents();
+        _plcResetCoordinator.OnForceStop += HandleForceStop;
+    }
+
+    private void HandleForceStop()
+    {
+        _logger.LogInformation("Принудительная остановка по сигналу PLC");
+        Stop();
     }
 
     private ColumnExecutor[] CreateAllExecutors(
@@ -109,5 +120,6 @@ public partial class TestExecutionCoordinator : IDisposable
         Stop();
         _cts?.Dispose();
         UnsubscribeFromExecutorEvents();
+        _plcResetCoordinator.OnForceStop -= HandleForceStop;
     }
 }
