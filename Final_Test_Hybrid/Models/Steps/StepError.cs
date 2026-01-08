@@ -1,3 +1,5 @@
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
+
 namespace Final_Test_Hybrid.Models.Steps;
 
 /// <summary>
@@ -9,7 +11,8 @@ public record StepError(
     string StepDescription,
     string ErrorMessage,
     DateTime OccurredAt,
-    Guid UiStepId
+    Guid UiStepId,
+    ITestStep? FailedStep
 );
 
 /// <summary>
@@ -19,5 +22,6 @@ public enum ErrorResolution
 {
     None,
     Retry,
-    Skip
+    Skip,
+    Timeout
 }

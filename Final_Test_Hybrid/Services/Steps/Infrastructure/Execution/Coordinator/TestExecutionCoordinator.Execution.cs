@@ -78,21 +78,12 @@ public partial class TestExecutionCoordinator
     private void BeginExecution()
     {
         StateManager.TransitionTo(ExecutionState.Running);
+        StateManager.ClearErrors();
         _activityTracker.SetTestExecutionActive(true);
-        CancelPendingErrorResolution();
         _cts?.Dispose();
         _cts = new CancellationTokenSource();
         _logger.LogInformation("Запуск {Count} Maps", _maps.Count);
         _testLogger.LogInformation("═══ ЗАПУСК ТЕСТИРОВАНИЯ ({Count} блоков) ═══", _maps.Count);
-    }
-
-    private void CancelPendingErrorResolution()
-    {
-        lock (_stateLock)
-        {
-            _errorResolutionTcs?.TrySetCanceled();
-            _errorResolutionTcs = null;
-        }
     }
 
     private async Task RunAllMaps()

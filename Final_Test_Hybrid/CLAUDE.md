@@ -144,6 +144,65 @@ ScanStepManager
 └── ScanSessionManager     - RawInput сессия
 ```
 
+## Test Step Interfaces
+
+Шаги реализуют `ITestStep` и опционально дополнительные интерфейсы:
+
+| Интерфейс | Путь | Назначение |
+|-----------|------|------------|
+| `ITestStep` | `Interaces/Test/` | Базовый: Id, Name, Description, ExecuteAsync |
+| `IRequiresPlcSubscriptions` | `Interaces/Plc/` | Требует PLC подписки (RequiredPlcTags) |
+| `IRequiresRecipes` | `Interaces/Recipe/` | Требует рецепты |
+| `IHasPlcBlock` | `Interaces/Plc/` | Имеет PLC блок (PlcBlockPath для Selected/Error/End) |
+| `IScanBarcodeStep` | `Interaces/` | Обработка баркодов |
+| `IPreExecutionStep` | `Interaces/PreExecution/` | Пред-выполнение |
+
+### Иерархия интерфейсов
+```
+ITestStep (базовый, обязательный)
+├── IRequiresPlcSubscriptions : ITestStep
+├── IRequiresRecipes : ITestStep
+└── IHasPlcBlock : ITestStep
+
+IScanBarcodeStep (отдельный)
+IPreExecutionStep (отдельный)
+```
+
+### Пример реализации шага
+```csharp
+public class BoilerAdapterStep : ITestStep, IRequiresPlcSubscriptions, IHasPlcBlock
+{
+    public string Id => "boiler_adapter";
+    public string Name => "Boiler Adapter";
+    public string Description => "...";
+
+    // IRequiresPlcSubscriptions
+    public IReadOnlyList<string> RequiredPlcTags => ["ns=3;s=..."];
+
+    // IHasPlcBlock
+    public string PlcBlockPath => "DB_VI.Block_Boiler_Adapter";
+
+    public async Task<TestStepResult> ExecuteAsync(...) { ... }
+}
+```
+
+## WaitGroupBuilder для PLC сигналов
+
+Используй `WaitGroupBuilder` когда нужно ждать один из нескольких сигналов ("первый побеждает"):
+
+```csharp
+var result = await tagWaiter.WaitAnyAsync(
+    tagWaiter.CreateWaitGroup<ErrorResolution>()
+        .WaitForTrue(BaseTags.ErrorRetry, () => ErrorResolution.Retry)
+        .WaitForTrue(BaseTags.ErrorSkip, () => ErrorResolution.Skip),
+    ct);
+```
+
+Преимущества:
+- Автоматическая отписка после срабатывания
+- Встроенный timeout (`.WithTimeout()`)
+- Чистый async/await вместо event-driven
+
 ## File Locations
 
 | Category | Path |

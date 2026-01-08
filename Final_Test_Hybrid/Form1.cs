@@ -26,6 +26,10 @@ using Final_Test_Hybrid.Settings.OpcUa;
 using Final_Test_Hybrid.Settings.Spring;
 using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.Scanner.RawInput;
+using Final_Test_Hybrid.Services.Diagnostic.Access;
+using Final_Test_Hybrid.Services.Diagnostic.Connection;
+using Final_Test_Hybrid.Services.Diagnostic.Polling;
+using Final_Test_Hybrid.Services.Diagnostic.Protocol;
 using Final_Test_Hybrid.Settings.Spring.Shift;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
@@ -83,6 +87,7 @@ namespace Final_Test_Hybrid
             RegisterShiftServices(services);
             RegisterScannerServices(services);
             RegisterDatabaseServices(services);
+            RegisterDiagnosticServices(services);
             services.AddSingleton<RecipeTagValidator>();
             services.AddSingleton<RequiredTagValidator>();
             services.AddSingleton<RecipeValidator>();
@@ -113,10 +118,9 @@ namespace Final_Test_Hybrid
             services.AddSingleton<ExecutionStateManager>();
             services.AddSingleton<StepStatusReporter>();
             services.AddSingleton<ErrorPlcMonitor>();
-            services.AddSingleton<StepErrorHandler>();
             services.AddSingleton<PauseTokenSource>();
+            services.AddSingleton<ErrorCoordinator>();
             services.AddSingleton<TestExecutionCoordinator>();
-            services.AddSingleton<TestInterruptCoordinator>();
             services.AddSingleton<IPreExecutionStepRegistry, PreExecutionStepRegistry>();
             services.AddSingleton<IPreExecutionStep, ScanBarcodeStep>();
             services.AddSingleton<IPreExecutionStep, ScanBarcodeMesStep>();
@@ -142,6 +146,7 @@ namespace Final_Test_Hybrid
             StartRawInputService(_serviceProvider);
             StartDatabaseService(_serviceProvider);
             StartMessageService(_serviceProvider);
+            ConfigureDiagnosticEvents(_serviceProvider);
             _ = _serviceProvider.GetRequiredService<ScanStepManager>();
             blazorWebView1.RootComponents.Add<MyComponent>("#app");
         }
@@ -294,10 +299,31 @@ namespace Final_Test_Hybrid
             services.AddScoped<ErrorSettingsTemplateService>();
         }
 
+        private void RegisterDiagnosticServices(ServiceCollection services)
+        {
+            services.Configure<DiagnosticSettings>(_config!.GetSection("Diagnostic"));
+            services.AddSingleton<DiagnosticConnectionState>();
+            services.AddSingleton<DiagnosticConnectionService>();
+            services.AddSingleton<PollingPauseCoordinator>();
+            services.AddSingleton<ModbusClient>();
+            services.AddSingleton<RegisterReader>();
+            services.AddSingleton<RegisterWriter>();
+            services.AddSingleton<AccessLevelManager>();
+            services.AddSingleton<PollingService>();
+        }
+
         private void StartDatabaseService(ServiceProvider serviceProvider)
         {
             _databaseConnectionService = serviceProvider.GetRequiredService<DatabaseConnectionService>();
             _databaseConnectionService.Start();
+        }
+
+        private static void ConfigureDiagnosticEvents(ServiceProvider serviceProvider)
+        {
+            var connectionService = serviceProvider.GetRequiredService<DiagnosticConnectionService>();
+            var pollingService = serviceProvider.GetRequiredService<PollingService>();
+
+            connectionService.Disconnecting += () => pollingService.StopAllTasksAsync();
         }
 
         // async void намеренно: исключения должны попадать в Application.ThreadException
@@ -338,9 +364,9 @@ namespace Final_Test_Hybrid
             _opcUaService.ValidateSettings();
             await _opcUaService.ConnectAsync();
 
-            // Подписка на теги ошибок — если не удастся, приложение упадёт
+            // Проверка тегов обработки ошибок — если не удастся, приложение упадёт
             var errorPlcMonitor = serviceProvider.GetRequiredService<ErrorPlcMonitor>();
-            await errorPlcMonitor.InitializeAsync();
+            await errorPlcMonitor.ValidateTagsAsync();
 
             // Подписка на теги всех шагов — если не удастся, приложение упадёт
             var subscriptionInitializer = serviceProvider.GetRequiredService<PlcSubscriptionInitializer>();

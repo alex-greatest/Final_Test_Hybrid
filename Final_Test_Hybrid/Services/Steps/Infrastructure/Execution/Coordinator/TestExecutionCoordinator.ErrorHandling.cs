@@ -1,4 +1,6 @@
 using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Plc;
+using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 
@@ -6,114 +8,130 @@ public partial class TestExecutionCoordinator
 {
     private void HandleExecutorStateChanged()
     {
-        UpdateHasErrorsState();
         OnStateChanged?.Invoke();
-        CheckForErrors();
+        EnqueueFailedExecutors();
     }
 
-    private void UpdateHasErrorsState()
+    private void EnqueueFailedExecutors()
     {
-        StateManager.SetHasErrors(_executors.Any(e => e.HasFailed));
-    }
-
-    private void CheckForErrors()
-    {
-        var failedExecutor = GetFirstFailedExecutorIfRunning();
-        if (failedExecutor == null)
+        if (StateManager.State != ExecutionState.Running)
         {
             return;
         }
-        ReportError(failedExecutor);
+
+        lock (_enqueueLock)
+        {
+            foreach (var executor in _executors.Where(e => e.HasFailed))
+            {
+                var error = CreateErrorFromExecutor(executor);
+                StateManager.EnqueueError(error);
+            }
+        }
     }
 
-    private ColumnExecutor? GetFirstFailedExecutorIfRunning()
+    private static StepError CreateErrorFromExecutor(ColumnExecutor executor)
     {
-        return StateManager.State != ExecutionState.Running ? null : _executors.FirstOrDefault(e => e.HasFailed);
-    }
-
-    private void ReportError(ColumnExecutor executor)
-    {
-        var error = new StepError(
+        return new StepError(
             executor.ColumnIndex,
             executor.CurrentStepName ?? "Неизвестный шаг",
             executor.CurrentStepDescription ?? "",
             executor.ErrorMessage ?? "Неизвестная ошибка",
             DateTime.Now,
-            Guid.Empty);
-        StateManager.TransitionTo(ExecutionState.PausedOnError, error);
-        lock (_stateLock)
-        {
-            _errorResolutionTcs = new TaskCompletionSource<ErrorResolution>();
-        }
-        OnErrorOccurred?.Invoke(error);
-    }
-
-    private void HandleErrorResolution(ErrorResolution resolution)
-    {
-        lock (_stateLock)
-        {
-            _errorResolutionTcs?.TrySetResult(resolution);
-        }
+            Guid.Empty,
+            executor.FailedStep);
     }
 
     private async Task HandleErrorsIfAny()
     {
-        while (ShouldContinueErrorHandling())
+        if (_cts == null)
         {
-            var resolution = await WaitForErrorResolution();
-            await ProcessErrorResolution(resolution);
+            _logger.LogWarning("HandleErrorsIfAny вызван без активного CancellationTokenSource");
+            return;
         }
-    }
 
-    private bool ShouldContinueErrorHandling()
-    {
-        return HasErrors && !IsCancellationRequested;
-    }
+        while (StateManager.HasPendingErrors && !IsCancellationRequested)
+        {
+            var error = StateManager.CurrentError!;
+            StateManager.TransitionTo(ExecutionState.PausedOnError);
 
-    private async Task<ErrorResolution> WaitForErrorResolution()
-    {
-        Task<ErrorResolution>? taskToAwait;
-        lock (_stateLock)
-        {
-            taskToAwait = _errorResolutionTcs?.Task;
-        }
-        if (taskToAwait == null)
-        {
-            return ErrorResolution.None;
-        }
-        return await taskToAwait;
-    }
+            await SetSelectedAsync(error, true);
+            OnErrorOccurred?.Invoke(error);
 
-    private async Task ProcessErrorResolution(ErrorResolution resolution)
-    {
-        switch (resolution)
-        {
-            case ErrorResolution.Retry:
-                await RetryFailedSteps();
+            ErrorResolution resolution;
+            try
+            {
+                resolution = await _errorCoordinator.WaitForResolutionAsync(_cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                await SetSelectedAsync(error, false);
                 break;
-            case ErrorResolution.Skip:
-                SkipFailedSteps();
+            }
+
+            if (resolution == ErrorResolution.Timeout)
+            {
+                await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout, _cts.Token);
                 break;
-            case ErrorResolution.None:
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(resolution), resolution, null);
+            }
+
+            await ProcessErrorResolution(error, resolution, _cts.Token);
+            await SetSelectedAsync(error, false);
         }
-    }
 
-    private async Task RetryFailedSteps()
-    {
-        var failedExecutors = _executors.Where(e => e.HasFailed).ToList();
-        var retryTasks = failedExecutors.Select(e => e.RetryLastFailedStepAsync(_cts!.Token));
-        await Task.WhenAll(retryTasks);
-    }
-
-    private void SkipFailedSteps()
-    {
-        foreach (var executor in _executors.Where(e => e.HasFailed))
+        if (!IsCancellationRequested)
         {
-            executor.ClearFailedState();
+            StateManager.TransitionTo(ExecutionState.Running);
         }
-        StateManager.TransitionTo(ExecutionState.Running);
+    }
+
+    private async Task SetSelectedAsync(StepError error, bool value)
+    {
+        if (error.FailedStep is not IHasPlcBlock plcStep)
+        {
+            return;
+        }
+        var selectedTag = $"ns=3;s=\"{plcStep.PlcBlockPath}\".\"Selected\"";
+        _logger.LogDebug("Установка Selected={Value} для {BlockPath}", value, plcStep.PlcBlockPath);
+
+        var result = await _plcService.WriteAsync(selectedTag, value);
+        if (result.Error != null)
+        {
+            _logger.LogWarning("Ошибка записи Selected: {Error}", result.Error);
+        }
+    }
+
+    private async Task ProcessErrorResolution(StepError error, ErrorResolution resolution, CancellationToken ct)
+    {
+        ColumnExecutor executor;
+        lock (_enqueueLock)
+        {
+            executor = _executors[error.ColumnIndex];
+        }
+
+        if (resolution == ErrorResolution.Retry)
+        {
+            await ProcessRetryAsync(executor, ct);
+        }
+        else
+        {
+            ProcessSkip(executor);
+        }
+    }
+
+    private async Task ProcessRetryAsync(ColumnExecutor executor, CancellationToken ct)
+    {
+        await _errorCoordinator.SendAskRepeatAsync(ct);
+        await executor.RetryLastFailedStepAsync(ct);
+        if (!executor.HasFailed)
+        {
+            StateManager.DequeueError();
+        }
+        // Если снова ошибка — останется в очереди, покажем снова
+    }
+
+    private void ProcessSkip(ColumnExecutor executor)
+    {
+        executor.ClearFailedState();
+        StateManager.DequeueError();
     }
 }

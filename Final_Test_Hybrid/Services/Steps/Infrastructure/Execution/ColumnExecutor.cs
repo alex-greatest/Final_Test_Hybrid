@@ -35,7 +35,7 @@ public class ColumnExecutor(
     public string? ResultValue => _state.ResultValue;
     public bool HasFailed => _state.HasFailed;
     public bool IsVisible => _state.Status != null;
-
+    public ITestStep? FailedStep => _state.FailedStep;
     public event Action? OnStateChanged;
 
     public async Task ExecuteMapAsync(TestMap map, CancellationToken ct)

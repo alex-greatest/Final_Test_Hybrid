@@ -37,7 +37,7 @@ public partial class TestExecutionCoordinator
         {
             executor.Reset();
         }
-        StateManager.SetHasErrors(false);
+        StateManager.ClearErrors();
     }
 
     private void LogMapsLoaded(int count)

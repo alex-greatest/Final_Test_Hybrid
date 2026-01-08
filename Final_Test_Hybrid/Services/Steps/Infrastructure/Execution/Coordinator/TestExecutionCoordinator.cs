@@ -2,7 +2,6 @@ using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.OpcUa;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorHandling;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Logging;
@@ -15,14 +14,16 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly ColumnExecutor[] _executors;
     private readonly ILogger<TestExecutionCoordinator> _logger;
     private readonly ITestStepLogger _testLogger;
-    private readonly StepErrorHandler _errorHandler;
+    private readonly ErrorCoordinator _errorCoordinator;
+    private readonly PausableOpcUaTagService _plcService;
     private readonly PauseTokenSource _pauseToken;
     private readonly ExecutionActivityTracker _activityTracker;
     private readonly Lock _stateLock = new();
+    private readonly object _enqueueLock = new();
     private readonly Action _onExecutorStateChanged;
     private List<TestMap> _maps = [];
     private CancellationTokenSource? _cts;
-    private TaskCompletionSource<ErrorResolution>? _errorResolutionTcs;
+
     public event Action? OnStateChanged;
     public event Action? OnSequenceCompleted;
     public event Action<StepError>? OnErrorOccurred;
@@ -30,7 +31,7 @@ public partial class TestExecutionCoordinator : IDisposable
     public int CurrentMapIndex { get; private set; }
     public int TotalMaps => _maps.Count;
     public bool IsRunning => StateManager.State == ExecutionState.Running;
-    public bool HasErrors => StateManager.HasErrors;
+    public bool HasErrors => StateManager.HasPendingErrors;
     public ExecutionStateManager StateManager { get; }
 
     private bool ShouldStop => IsCancellationRequested;
@@ -44,20 +45,21 @@ public partial class TestExecutionCoordinator : IDisposable
         StepStatusReporter statusReporter,
         IRecipeProvider recipeProvider,
         ExecutionStateManager stateManager,
-        StepErrorHandler errorHandler,
+        ErrorCoordinator errorCoordinator,
+        PausableOpcUaTagService plcService,
         PauseTokenSource pauseToken,
         ExecutionActivityTracker activityTracker)
     {
         _logger = logger;
         _testLogger = testLogger;
         StateManager = stateManager;
-        _errorHandler = errorHandler;
+        _errorCoordinator = errorCoordinator;
+        _plcService = plcService;
         _pauseToken = pauseToken;
         _activityTracker = activityTracker;
         _onExecutorStateChanged = HandleExecutorStateChanged;
         _executors = CreateAllExecutors(opcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider);
         SubscribeToExecutorEvents();
-        SubscribeToErrorHandler();
     }
 
     private ColumnExecutor[] CreateAllExecutors(
@@ -102,22 +104,10 @@ public partial class TestExecutionCoordinator : IDisposable
         }
     }
 
-    private void SubscribeToErrorHandler()
-    {
-        _errorHandler.OnResolutionReceived += HandleErrorResolution;
-    }
-
-    private void UnsubscribeFromErrorHandler()
-    {
-        _errorHandler.OnResolutionReceived -= HandleErrorResolution;
-    }
-
     public void Dispose()
     {
-        _errorResolutionTcs?.TrySetCanceled();
         Stop();
         _cts?.Dispose();
         UnsubscribeFromExecutorEvents();
-        UnsubscribeFromErrorHandler();
     }
 }

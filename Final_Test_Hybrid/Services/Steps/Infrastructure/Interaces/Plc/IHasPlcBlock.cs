@@ -1,0 +1,15 @@
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
+
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Plc;
+
+/// <summary>
+/// Интерфейс для шагов, у которых есть собственный блок в PLC.
+/// Используется для тегов Selected/Error/End на уровне блока.
+/// </summary>
+public interface IHasPlcBlock : ITestStep
+{
+    /// <summary>
+    /// Путь к блоку в PLC (например, "DB_VI.Block_Boiler_Adapter").
+    /// </summary>
+    string PlcBlockPath { get; }
+}

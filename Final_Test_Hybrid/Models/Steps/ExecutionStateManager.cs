@@ -12,27 +12,72 @@ public enum ExecutionState
 
 public class ExecutionStateManager
 {
-    public ExecutionState State { get; private set; } = ExecutionState.Idle;
-    public StepError? CurrentError { get; private set; }
-    public bool HasErrors { get; private set; }
+    private readonly Queue<StepError> _errorQueue = new();
+    private readonly Lock _queueLock = new();
+    public bool HasPendingErrors => ErrorCount > 0;
     public bool CanProcessSignals => State == ExecutionState.PausedOnError;
     public bool IsActive => State is ExecutionState.Running or ExecutionState.Processing;
     public event Action<ExecutionState>? OnStateChanged;
 
-    public void TransitionTo(ExecutionState newState, StepError? error = null)
+    public ExecutionState State { get; private set; } = ExecutionState.Idle;
+
+    public StepError? CurrentError
+    {
+        get
+        {
+            lock (_queueLock)
+            {
+                return _errorQueue.TryPeek(out var e) ? e : null;
+            }
+        }
+    }
+
+    public int ErrorCount
+    {
+        get
+        {
+            lock (_queueLock)
+            {
+                return _errorQueue.Count;
+            }
+        }
+    }
+    
+    public void TransitionTo(ExecutionState newState)
     {
         State = newState;
-        CurrentError = error;
         OnStateChanged?.Invoke(newState);
     }
 
-    public void SetHasErrors(bool value)
+    public void EnqueueError(StepError error)
     {
-        if (HasErrors == value)
+        lock (_queueLock)
         {
-            return;
+            if (_errorQueue.All(e => e.ColumnIndex != error.ColumnIndex))
+            {
+                _errorQueue.Enqueue(error);
+            }
         }
-        HasErrors = value;
+        OnStateChanged?.Invoke(State);
+    }
+
+    public StepError? DequeueError()
+    {
+        StepError? result;
+        lock (_queueLock)
+        {
+            result = _errorQueue.TryDequeue(out var e) ? e : null;
+        }
+        OnStateChanged?.Invoke(State);
+        return result;
+    }
+
+    public void ClearErrors()
+    {
+        lock (_queueLock)
+        {
+            _errorQueue.Clear();
+        }
         OnStateChanged?.Invoke(State);
     }
 }
