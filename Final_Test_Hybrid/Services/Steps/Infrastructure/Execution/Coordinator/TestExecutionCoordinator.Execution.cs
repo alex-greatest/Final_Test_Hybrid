@@ -117,11 +117,18 @@ public partial class TestExecutionCoordinator
 
     private void Complete()
     {
-        var finalState = HasErrors ? ExecutionState.Failed : ExecutionState.Completed;
+        var finalState = StateManager.State == ExecutionState.Failed || HasErrors
+            ? ExecutionState.Failed
+            : ExecutionState.Completed;
         StateManager.TransitionTo(finalState);
         _activityTracker.SetTestExecutionActive(false);
         LogExecutionCompleted();
         OnSequenceCompleted?.Invoke();
+        lock (_stateLock)
+        {
+            _cts?.Dispose();
+            _cts = null;
+        }
     }
 
     private void LogExecutionCompleted()
@@ -131,24 +138,24 @@ public partial class TestExecutionCoordinator
         _testLogger.LogInformation("═══ ТЕСТИРОВАНИЕ ЗАВЕРШЕНО: {Result} ═══", result);
     }
 
-    public void Stop()
+    public void Stop(string reason = "оператором")
     {
         CancellationTokenSource? ctsToCancel;
         lock (_stateLock)
         {
-            if (!IsRunning)
+            ctsToCancel = _cts;
+            if (ctsToCancel == null || ctsToCancel.IsCancellationRequested)
             {
                 return;
             }
-            LogStopRequested();
-            ctsToCancel = _cts;
+            LogStopRequested(reason);
         }
         ctsToCancel?.Cancel();
     }
 
-    private void LogStopRequested()
+    private void LogStopRequested(string reason)
     {
-        _logger.LogInformation("Остановка");
-        _testLogger.LogWarning("Тестирование остановлено оператором");
+        _logger.LogInformation("Остановка: {Reason}", reason);
+        _testLogger.LogWarning("Тестирование остановлено {Reason}", reason);
     }
 }

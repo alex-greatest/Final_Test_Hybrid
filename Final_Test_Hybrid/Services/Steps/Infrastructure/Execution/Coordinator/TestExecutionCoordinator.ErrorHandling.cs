@@ -51,12 +51,14 @@ public partial class TestExecutionCoordinator
 
         while (StateManager.HasPendingErrors && !IsCancellationRequested)
         {
-            var error = StateManager.CurrentError!;
+            var error = StateManager.CurrentError;
+            if (error == null)
+            {
+                break;
+            }
             StateManager.TransitionTo(ExecutionState.PausedOnError);
-
             await SetSelectedAsync(error, true);
             OnErrorOccurred?.Invoke(error);
-
             ErrorResolution resolution;
             try
             {
@@ -70,10 +72,10 @@ public partial class TestExecutionCoordinator
 
             if (resolution == ErrorResolution.Timeout)
             {
-                await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout, _cts.Token);
+                await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout);
+                await _cts?.CancelAsync()!;
                 break;
             }
-
             await ProcessErrorResolution(error, resolution, _cts.Token);
             await SetSelectedAsync(error, false);
         }

@@ -9,7 +9,7 @@ public partial class TestExecutionCoordinator
     {
         lock (_stateLock)
         {
-            if (IsRunning)
+            if (StateManager.IsActive)
             {
                 LogCannotLoadMapsWhileRunning();
                 return;

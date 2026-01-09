@@ -65,12 +65,17 @@ public partial class TestExecutionCoordinator : IDisposable
         _executors = CreateAllExecutors(pausableOpcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider);
         SubscribeToExecutorEvents();
         _plcResetCoordinator.OnForceStop += HandleForceStop;
+        _errorCoordinator.OnReset += HandleReset;
     }
 
     private void HandleForceStop()
     {
-        _logger.LogInformation("Принудительная остановка по сигналу PLC");
-        Stop();
+        Stop("по сигналу PLC");
+    }
+
+    private void HandleReset()
+    {
+        Stop("из-за полного сброса");
     }
 
     private ColumnExecutor[] CreateAllExecutors(
@@ -121,5 +126,6 @@ public partial class TestExecutionCoordinator : IDisposable
         _cts?.Dispose();
         UnsubscribeFromExecutorEvents();
         _plcResetCoordinator.OnForceStop -= HandleForceStop;
+        _errorCoordinator.OnReset -= HandleReset;
     }
 }

@@ -1,0 +1,19 @@
+﻿/* ===== PARAMETER GRID ===== */
+.header-grid-parameter {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 280px));
+    column-gap: 0;
+    align-items: flex-start;
+}
+
+.header-block-parameter {
+    display: grid;
+    row-gap: 5px;
+}
+
+.field-row-parameter {
+    display: grid;
+    grid-template-columns: minmax(0, 90px) minmax(0, 100px);
+    column-gap: 35px;
+    align-items: center;
+}

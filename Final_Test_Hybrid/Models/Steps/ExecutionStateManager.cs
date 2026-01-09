@@ -16,7 +16,7 @@ public class ExecutionStateManager
     private readonly Lock _queueLock = new();
     public bool HasPendingErrors => ErrorCount > 0;
     public bool CanProcessSignals => State == ExecutionState.PausedOnError;
-    public bool IsActive => State is ExecutionState.Running or ExecutionState.Processing;
+    public bool IsActive => State is ExecutionState.Running or ExecutionState.Processing or ExecutionState.PausedOnError;
     public event Action<ExecutionState>? OnStateChanged;
 
     public ExecutionState State { get; private set; } = ExecutionState.Idle;
