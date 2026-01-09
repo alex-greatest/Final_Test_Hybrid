@@ -1,0 +1,72 @@
+.errors-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 16px;
+}
+
+.errors-section {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.section-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: black;
+    margin: 0 0 8px 0;
+}
+
+::deep .rz-data-grid {
+    flex: 1;
+    min-height: 0;
+}
+
+/* Заголовки колонок */
+::deep .rz-data-grid .rz-column-title {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+/* Ячейки таблицы */
+::deep .rz-data-grid .rz-cell-data {
+    font-size: 19px;
+    color: black !important;
+    white-space: nowrap;
+}
+
+/* Скролл для всей таблицы */
+::deep .rz-data-grid .rz-data-grid-data {
+    overflow-x: auto;
+}
+
+::deep .rz-grid-table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: collapse;
+}
+
+::deep .rz-data-grid th,
+::deep .rz-data-grid td {
+    border: 1px solid #ccc !important;
+}
+
+/* Заголовки */
+::deep .rz-data-grid th {
+    padding: 10px 8px !important;
+    overflow: visible !important;
+    line-height: 1.2 !important;
+    height: auto !important;
+}
+
+::deep .rz-data-grid th .rz-cell-data,
+::deep .rz-data-grid th .rz-column-title-content,
+::deep .rz-data-grid th .rz-sortable-column,
+::deep .rz-data-grid .rz-column-title {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    height: auto !important;
+}
