@@ -1,8 +1,13 @@
 ﻿/* ===== PARAMETER GRID ===== */
+:root {
+    --label-width: 90px;
+    --label-gap: 35px;
+    --input-width: 100px;
+}
+
 .header-grid-parameter {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 280px));
-    column-gap: 0;
+    display: flex;
+    gap: 0;
     align-items: flex-start;
 }
 
@@ -13,7 +18,28 @@
 
 .field-row-parameter {
     display: grid;
-    grid-template-columns: minmax(0, 90px) minmax(0, 100px);
-    column-gap: 35px;
+    grid-template-columns: var(--label-width, 90px) var(--input-width, 100px);
+    column-gap: var(--label-gap, 35px);
     align-items: center;
 }
+
+.field-row-parameter .rz-label {
+    white-space: nowrap;
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.field-row-parameter .rz-textbox {
+    width: 100%;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: black;
+}
+
+/* ===== PARAMETER BLOCKS - индивидуальные настройки ===== */
+.param-gas       { --label-width: 100px; --label-gap: 35px; --input-width: 120px; margin-right: 70px; }
+.param-delta     { --label-width: 120px; --label-gap: 35px; --input-width: 120px;  margin-right: 70px; }
+.param-dhw       { --label-width: 85px;  --label-gap: 35px; --input-width: 120px;  margin-right: 70px; }
+.param-ch        { --label-width: 80px;  --label-gap: 35px; --input-width: 120px;  margin-right: 70px;}
+.param-emissions { --label-width: 70px;  --label-gap: 35px; --input-width: 120px;  margin-right: 70px; }
+.param-gasp      { --label-width: 40px;  --label-gap: 35px; --input-width: 120px;  margin-right: 70px; }

@@ -192,27 +192,6 @@ svg {
     color: black;
 }
 
-/* ===== FIELD ROWS PARAMETER ===== */
-.field-row-parameter {
-    display: grid;
-    grid-template-columns: minmax(0, 90px) minmax(0, 100px);
-    column-gap: 35px;
-    align-items: center;
-}
-
-.field-row-parameter .rz-label {
-    white-space: nowrap;
-    font-size: 1.3rem;
-    font-weight: 700;
-}
-
-.field-row-parameter .rz-textbox {
-    width: 100%;
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: black;
-}
-
 /* ===== MES SWITCH ===== */
 .rz-switch.rz-switch-checked .rz-switch-circle {
     background-color: #1565c0 !important;
