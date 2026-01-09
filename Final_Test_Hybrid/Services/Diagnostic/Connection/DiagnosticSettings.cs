@@ -51,4 +51,13 @@ public class DiagnosticSettings
     /// Интервал автопереподключения в миллисекундах.
     /// </summary>
     public int ReconnectIntervalMs { get; set; } = 5000;
+
+    /// <summary>
+    /// Смещение базового адреса регистров.
+    /// </summary>
+    /// <remarks>
+    /// Адреса из документации (BaseAddress=1) уменьшаются на это значение при обращении к Modbus.
+    /// По умолчанию 1 (адрес 1005 в документации → 1004 в Modbus).
+    /// </remarks>
+    public ushort BaseAddressOffset { get; set; } = 1;
 }

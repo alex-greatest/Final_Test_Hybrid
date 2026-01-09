@@ -1,0 +1,28 @@
+using Final_Test_Hybrid.Services.OpcUa;
+using Final_Test_Hybrid.Services.OpcUa.Connection;
+using Final_Test_Hybrid.Services.OpcUa.Subscription;
+using Final_Test_Hybrid.Settings.OpcUa;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Final_Test_Hybrid.Services.DependencyInjection;
+
+public static class OpcUaServiceExtensions
+{
+    public static IServiceCollection AddOpcUaServices(
+        this IServiceCollection services,
+        IConfiguration config)
+    {
+        services.Configure<OpcUaSettings>(config.GetSection("OpcUa"));
+        services.AddSingleton<OpcUaConnectionState>();
+        services.AddSingleton<OpcUaSubscription>();
+        services.AddSingleton<OpcUaConnectionService>();
+        services.AddSingleton<OpcUaTagService>();
+        services.AddSingleton<OpcUaBrowseService>();
+        services.AddSingleton<PausableOpcUaTagService>();
+        services.AddSingleton<TagWaiter>();
+        services.AddSingleton<PausableTagWaiter>();
+
+        return services;
+    }
+}

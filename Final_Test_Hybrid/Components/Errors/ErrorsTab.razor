@@ -1,0 +1,132 @@
+@using Final_Test_Hybrid.Localization
+@using Final_Test_Hybrid.Models.Errors
+@using Final_Test_Hybrid.Services.Errors
+
+@inject IActiveErrorsService ActiveErrorsService
+@inject IErrorHistoryService ErrorHistoryService
+
+@implements IDisposable
+
+<div class="errors-container">
+    <div class="errors-section">
+        <h3 class="section-title">Актуальные ошибки</h3>
+        <RadzenDataGrid Data="@_activeErrors" TItem="ActiveError"
+                        AllowFiltering="true" AllowSorting="true"
+                        FilterText="@DataGridRu.Filter"
+                        ApplyFilterText="@DataGridRu.ApplyFilter"
+                        ClearFilterText="@DataGridRu.ClearFilter"
+                        EqualsText="@DataGridRu.Equals"
+                        NotEqualsText="@DataGridRu.NotEquals"
+                        ContainsText="@DataGridRu.Contains"
+                        DoesNotContainText="@DataGridRu.DoesNotContain"
+                        StartsWithText="@DataGridRu.StartsWith"
+                        EndsWithText="@DataGridRu.EndsWith"
+                        GreaterThanText="@DataGridRu.GreaterThan"
+                        GreaterThanOrEqualsText="@DataGridRu.GreaterThanOrEquals"
+                        LessThanText="@DataGridRu.LessThan"
+                        LessThanOrEqualsText="@DataGridRu.LessThanOrEquals"
+                        IsNullText="@DataGridRu.IsNull"
+                        IsNotNullText="@DataGridRu.IsNotNull"
+                        IsEmptyText="@DataGridRu.IsEmpty"
+                        IsNotEmptyText="@DataGridRu.IsNotEmpty"
+                        AndOperatorText="@DataGridRu.And"
+                        OrOperatorText="@DataGridRu.Or"
+                        EmptyText="@DataGridRu.Empty">
+            <Columns>
+                <RadzenDataGridColumn TItem="ActiveError" Property="Time" Title="Время" Width="180px">
+                    <Template Context="item">
+                        @item.Time.ToString("dd.MM.yyyy HH:mm:ss")
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ActiveError" Property="Code" Title="Код" Width="120px" />
+                <RadzenDataGridColumn TItem="ActiveError" Property="Description" Title="Описание" />
+                <RadzenDataGridColumn TItem="ActiveError" Property="TestName" Title="Название теста" Width="250px" />
+            </Columns>
+        </RadzenDataGrid>
+    </div>
+
+    <div class="errors-section">
+        <h3 class="section-title">История ошибок</h3>
+        <RadzenDataGrid Data="@_errorHistory" TItem="ErrorHistoryItem"
+                        AllowFiltering="true" AllowSorting="true"
+                        FilterText="@DataGridRu.Filter"
+                        ApplyFilterText="@DataGridRu.ApplyFilter"
+                        ClearFilterText="@DataGridRu.ClearFilter"
+                        EqualsText="@DataGridRu.Equals"
+                        NotEqualsText="@DataGridRu.NotEquals"
+                        ContainsText="@DataGridRu.Contains"
+                        DoesNotContainText="@DataGridRu.DoesNotContain"
+                        StartsWithText="@DataGridRu.StartsWith"
+                        EndsWithText="@DataGridRu.EndsWith"
+                        GreaterThanText="@DataGridRu.GreaterThan"
+                        GreaterThanOrEqualsText="@DataGridRu.GreaterThanOrEquals"
+                        LessThanText="@DataGridRu.LessThan"
+                        LessThanOrEqualsText="@DataGridRu.LessThanOrEquals"
+                        IsNullText="@DataGridRu.IsNull"
+                        IsNotNullText="@DataGridRu.IsNotNull"
+                        IsEmptyText="@DataGridRu.IsEmpty"
+                        IsNotEmptyText="@DataGridRu.IsNotEmpty"
+                        AndOperatorText="@DataGridRu.And"
+                        OrOperatorText="@DataGridRu.Or"
+                        EmptyText="@DataGridRu.Empty">
+            <Columns>
+                <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="StartTime" Title="Время начала" Width="180px">
+                    <Template Context="item">
+                        @item.StartTime.ToString("dd.MM.yyyy HH:mm:ss")
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="EndTime" Title="Время окончания" Width="180px">
+                    <Template Context="item">
+                        @(item.EndTime?.ToString("dd.MM.yyyy HH:mm:ss") ?? "—")
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="Code" Title="Код" Width="120px" />
+                <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="Description" Title="Описание" />
+                <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="TestName" Title="Название теста" Width="250px" />
+            </Columns>
+        </RadzenDataGrid>
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<ActiveError> _activeErrors = [];
+    private IReadOnlyList<ErrorHistoryItem> _errorHistory = [];
+
+    protected override void OnInitialized()
+    {
+        ActiveErrorsService.OnChanged += OnActiveErrorsChanged;
+        ErrorHistoryService.OnChanged += OnErrorHistoryChanged;
+
+        RefreshData();
+    }
+
+    private void OnActiveErrorsChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            _activeErrors = ActiveErrorsService.GetErrors();
+            StateHasChanged();
+        });
+    }
+
+    private void OnErrorHistoryChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            _errorHistory = ErrorHistoryService.GetHistory();
+            StateHasChanged();
+        });
+    }
+
+    private void RefreshData()
+    {
+        _activeErrors = ActiveErrorsService.GetErrors();
+        _errorHistory = ErrorHistoryService.GetHistory();
+    }
+
+    public void Dispose()
+    {
+        ActiveErrorsService.OnChanged -= OnActiveErrorsChanged;
+        ErrorHistoryService.OnChanged -= OnErrorHistoryChanged;
+    }
+}

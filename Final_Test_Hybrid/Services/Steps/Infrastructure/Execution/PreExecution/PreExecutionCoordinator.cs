@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
-public class PreExecutionCoordinator(
+public partial class PreExecutionCoordinator(
     IPreExecutionStepRegistry stepRegistry,
     TestExecutionCoordinator testCoordinator,
     StepStatusReporter statusReporter,
@@ -18,10 +19,13 @@ public class PreExecutionCoordinator(
     ExecutionActivityTracker activityTracker,
     ExecutionMessageState messageState,
     PauseTokenSource pauseToken,
+    ErrorCoordinator errorCoordinator,
+    PlcResetCoordinator plcResetCoordinator,
     ILogger<PreExecutionCoordinator> logger)
 {
     public async Task<PreExecutionResult> ExecuteAsync(string barcode, Guid? scanStepId, CancellationToken ct)
     {
+        EnsureSubscribed();
         activityTracker.SetPreExecutionActive(true);
         try
         {
@@ -90,7 +94,7 @@ public class PreExecutionCoordinator(
 
     private Guid GetOrCreateStepId(IPreExecutionStep step, PreExecutionContext context)
     {
-        return !context.ScanStepId.HasValue ? CreateNewStepId(step) : ReuseExistingScanStepId(context);
+        return context.ScanStepId.HasValue ? ReuseExistingScanStepId(context) : CreateNewStepId(step);
     }
 
     private Guid CreateNewStepId(IPreExecutionStep step)
@@ -113,6 +117,10 @@ public class PreExecutionCoordinator(
         CancellationToken ct)
     {
         var result = await step.ExecuteAsync(context, ct);
+        if (result.IsRetryable)
+        {
+            return await ExecuteRetryLoopAsync(step, result, context, stepId, ct);
+        }
         ReportStepResult(stepId, result);
         return result;
     }
@@ -123,15 +131,18 @@ public class PreExecutionCoordinator(
         {
             case PreExecutionStatus.Continue:
                 statusReporter.ReportSuccess(stepId, result.SuccessMessage ?? "");
-                return;
+                break;
+
             case PreExecutionStatus.Cancelled:
                 statusReporter.ReportError(stepId, result.ErrorMessage ?? "Операция отменена");
-                return;
+                break;
+
             case PreExecutionStatus.TestStarted:
-                return;
+                break;
+
             case PreExecutionStatus.Failed:
                 statusReporter.ReportError(stepId, result.ErrorMessage!);
-                return;
+                break;
             default:
                 throw new InvalidOperationException($"Неизвестный статус PreExecution: {result.Status}");
         }
