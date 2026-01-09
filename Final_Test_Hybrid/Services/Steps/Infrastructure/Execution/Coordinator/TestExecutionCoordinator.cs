@@ -16,7 +16,7 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly ILogger<TestExecutionCoordinator> _logger;
     private readonly ITestStepLogger _testLogger;
     private readonly ErrorCoordinator _errorCoordinator;
-    private readonly PausableOpcUaTagService _plcService;
+    private readonly OpcUaTagService _plcService;
     private readonly PauseTokenSource _pauseToken;
     private readonly ExecutionActivityTracker _activityTracker;
     private readonly PlcResetCoordinator _plcResetCoordinator;
@@ -40,7 +40,8 @@ public partial class TestExecutionCoordinator : IDisposable
     private bool IsCancellationRequested => _cts?.IsCancellationRequested == true;
 
     public TestExecutionCoordinator(
-        OpcUaTagService opcUaTagService,
+        OpcUaTagService plcService,
+        PausableOpcUaTagService pausableOpcUaTagService,
         ILogger<TestExecutionCoordinator> logger,
         ITestStepLogger testLogger,
         ILoggerFactory loggerFactory,
@@ -48,7 +49,6 @@ public partial class TestExecutionCoordinator : IDisposable
         IRecipeProvider recipeProvider,
         ExecutionStateManager stateManager,
         ErrorCoordinator errorCoordinator,
-        PausableOpcUaTagService plcService,
         PauseTokenSource pauseToken,
         ExecutionActivityTracker activityTracker,
         PlcResetCoordinator plcResetCoordinator)
@@ -62,7 +62,7 @@ public partial class TestExecutionCoordinator : IDisposable
         _activityTracker = activityTracker;
         _plcResetCoordinator = plcResetCoordinator;
         _onExecutorStateChanged = HandleExecutorStateChanged;
-        _executors = CreateAllExecutors(opcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider);
+        _executors = CreateAllExecutors(pausableOpcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider);
         SubscribeToExecutorEvents();
         _plcResetCoordinator.OnForceStop += HandleForceStop;
     }
@@ -74,7 +74,7 @@ public partial class TestExecutionCoordinator : IDisposable
     }
 
     private ColumnExecutor[] CreateAllExecutors(
-        OpcUaTagService opcUaTagService,
+        PausableOpcUaTagService opcUaTagService,
         ITestStepLogger testLogger,
         ILoggerFactory loggerFactory,
         StepStatusReporter statusReporter,
@@ -87,7 +87,7 @@ public partial class TestExecutionCoordinator : IDisposable
 
     private static ColumnExecutor CreateExecutor(
         int index,
-        OpcUaTagService opcUa,
+        PausableOpcUaTagService opcUa,
         ITestStepLogger testLogger,
         ILoggerFactory loggerFactory,
         StepStatusReporter statusReporter,

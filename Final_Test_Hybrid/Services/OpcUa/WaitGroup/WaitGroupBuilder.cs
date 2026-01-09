@@ -6,7 +6,7 @@ public class WaitGroupBuilder
     private readonly List<Func<object?, Task>?> _callbacks = [];
     internal IReadOnlyList<TagWaitCondition> Conditions => _conditions;
     internal IReadOnlyList<Func<object?, Task>?> Callbacks => _callbacks;
-    internal TimeSpan? Timeout { get; private set; }
+    private TimeSpan? Timeout { get; set; }
 
     public WaitGroupBuilder WithTimeout(TimeSpan timeout)
     {
@@ -92,5 +92,19 @@ public class WaitGroupBuilder
             return null;
         }
         return _ => action();
+    }
+
+    internal WaitGroupBuilder<object?> ToGeneric()
+    {
+        var generic = new WaitGroupBuilder<object?>();
+        foreach (var condition in _conditions)
+        {
+            generic.AddCondition(condition, v => v);
+        }
+        if (Timeout.HasValue)
+        {
+            generic.WithTimeout(Timeout.Value);
+        }
+        return generic;
     }
 }

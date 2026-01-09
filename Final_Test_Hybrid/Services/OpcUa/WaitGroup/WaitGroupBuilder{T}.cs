@@ -39,4 +39,13 @@ public class WaitGroupBuilder<TResult>
     {
         return WaitFor<bool>(nodeId, v => !v, _ => onTriggered(), name);
     }
+
+    internal WaitGroupBuilder<TResult> AddCondition(
+        TagWaitCondition condition,
+        Func<object?, TResult> resultCallback)
+    {
+        _conditions.Add(condition);
+        _resultCallbacks.Add(resultCallback);
+        return this;
+    }
 }

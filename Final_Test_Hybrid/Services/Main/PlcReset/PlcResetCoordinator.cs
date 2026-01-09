@@ -14,8 +14,8 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
     private readonly ResetSubscription _resetSubscription;
     private readonly ResetMessageState _resetMessage;
     private readonly ErrorCoordinator _errorCoordinator;
-    private readonly PausableTagWaiter _tagWaiter;
-    private readonly PausableOpcUaTagService _plcService;
+    private readonly TagWaiter _tagWaiter;
+    private readonly OpcUaTagService _plcService;
     private readonly ILogger<PlcResetCoordinator> _logger;
     private readonly CancellationTokenSource _disposeCts = new();
     private CancellationTokenSource? _currentResetCts;
@@ -30,8 +30,8 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
         ResetSubscription resetSubscription,
         ResetMessageState resetMessage,
         ErrorCoordinator errorCoordinator,
-        PausableTagWaiter tagWaiter,
-        PausableOpcUaTagService plcService,
+        TagWaiter tagWaiter,
+        OpcUaTagService plcService,
         ILogger<PlcResetCoordinator> logger)
     {
         _resetSubscription = resetSubscription;
@@ -135,7 +135,12 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
     private async Task SendResetAndWaitAckAsync(CancellationToken ct)
     {
         _resetMessage.SetMessage("Сброс теста...");
+        await TrySendResetSignalAsync(ct);
+        await WaitForAskEndAsync(ct);
+    }
 
+    private async Task TrySendResetSignalAsync(CancellationToken ct)
+    {
         try
         {
             await _plcService.WriteAsync(BaseTags.Reset, true, ct);
@@ -144,7 +149,10 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
         {
             _logger.LogError(ex, "Ошибка записи Reset в PLC — продолжаем");
         }
+    }
 
+    private async Task WaitForAskEndAsync(CancellationToken ct)
+    {
         await _tagWaiter.WaitAnyAsync(
             _tagWaiter.CreateWaitGroup<bool>()
                 .WaitForTrue(BaseTags.AskEnd, () => true, "AskEnd")
@@ -207,14 +215,26 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
     {
         if (_disposed) { return; }
         _disposed = true;
+        CancelDisposeCts();
+        UnsubscribeEvents();
+        await WaitForCurrentOperationAsync();
+        DisposeResources();
+    }
 
+    private void CancelDisposeCts()
+    {
         try { _disposeCts.Cancel(); }
         catch (ObjectDisposedException) { }
+    }
 
+    private void UnsubscribeEvents()
+    {
         _resetSubscription.OnStateChanged -= HandleResetSignal;
         OnForceStop = null;
+    }
 
-        // Ждём завершения текущей операции
+    private async Task WaitForCurrentOperationAsync()
+    {
         var spinWait = new SpinWait();
         var timeout = DateTime.UtcNow.AddSeconds(5);
         while (_isHandlingReset == 1 && DateTime.UtcNow < timeout)
@@ -222,7 +242,10 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
             spinWait.SpinOnce();
             await Task.Yield();
         }
+    }
 
+    private void DisposeResources()
+    {
         _currentResetCts?.Dispose();
         _disposeCts.Dispose();
     }

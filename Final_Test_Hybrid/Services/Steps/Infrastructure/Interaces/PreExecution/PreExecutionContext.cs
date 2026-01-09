@@ -9,7 +9,7 @@ public class PreExecutionContext
 {
     public required string Barcode { get; init; }
     public required BoilerState BoilerState { get; init; }
-    public required OpcUaTagService OpcUa { get; init; }
+    public required PausableOpcUaTagService OpcUa { get; init; }
     public required ITestStepLogger TestStepLogger { get; init; }
 
     public Guid? ScanStepId { get; set; }

@@ -6,12 +6,12 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
 public class TestStepContext(
     int columnIndex,
-    OpcUaTagService opcUa,
+    PausableOpcUaTagService opcUa,
     ILogger logger,
     IRecipeProvider recipeProvider)
 {
     public int ColumnIndex { get; } = columnIndex;
-    public OpcUaTagService OpcUa { get; } = opcUa;
+    public PausableOpcUaTagService OpcUa { get; } = opcUa;
     public ILogger Logger { get; } = logger;
     public IRecipeProvider RecipeProvider { get; } = recipeProvider;
     public Dictionary<string, object> Variables { get; } = [];

@@ -59,10 +59,55 @@ dotnet build -c Release
 3. Решение проще проблемы
 ```
 
+### Избегай защитного программирования
+
+**Доверяй системе типов, DI-контейнеру и upstream-коду.**
+
+```csharp
+// ❌ ПЛОХО: параноидальные проверки
+public void Process(IService service)
+{
+    if (service == null) throw new ArgumentNullException(nameof(service));
+    var result = service.GetData();
+    if (result is not ExpectedType typed) throw new InvalidCastException();
+    // ...
+}
+
+// ✅ ХОРОШО: доверяем DI и типам
+public void Process(IService service)
+{
+    var result = (ExpectedType)service.GetData();
+    // ...
+}
+```
+
+**НЕ проверяй:**
+- `null` для DI-зависимостей — контейнер гарантирует
+- `null` после `FirstOrDefault()` если коллекция гарантированно не пуста
+- Типы после `is`/`as`/pattern matching — уже проверено
+- Границы массива если индекс вычислен корректно
+- Enum на валидность если значение из своего кода
+- Строки на `IsNullOrEmpty` если источник гарантирует непустоту
+
+**НЕ делай:**
+- Defensive copy коллекций внутри класса
+- `?.` (null-conditional) когда null невозможен
+- `?? throw` когда левая часть не может быть null
+- Try-catch вокруг кода который не бросает исключений
+- Валидацию параметров в private методах
+
+**Где проверки НУЖНЫ:**
+- Границы системы (public API, HTTP endpoints)
+- Внешний ввод (пользователь, файлы, сеть)
+- Десериализация (JSON, XML, БД)
+- P/Invoke и unmanaged код
+
+**Принцип:** Код внутри модуля доверяет другому коду внутри модуля. Валидация — на границах.
+
 ## Coding Standards
 
 ### Method Complexity (один на метод)
-- Один `if` / `for` / `while` / `switch` / `try` на метод
+- Один `if` / `for` / `while` / `switch` / `try` / `await` на метод
 - Early return (guard clauses) вместо вложенности
 - Исключение: guard clauses в начале метода не считаются
 

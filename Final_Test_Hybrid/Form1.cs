@@ -249,6 +249,7 @@ namespace Final_Test_Hybrid
             services.AddSingleton<OpcUaTagService>();
             services.AddSingleton<OpcUaBrowseService>();
             services.AddSingleton<PausableOpcUaTagService>();
+            services.AddSingleton<TagWaiter>();
             services.AddSingleton<PausableTagWaiter>();
         }
 

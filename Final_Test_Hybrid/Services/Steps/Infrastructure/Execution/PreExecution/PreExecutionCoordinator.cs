@@ -13,7 +13,7 @@ public class PreExecutionCoordinator(
     TestExecutionCoordinator testCoordinator,
     StepStatusReporter statusReporter,
     BoilerState boilerState,
-    OpcUaTagService opcUa,
+    PausableOpcUaTagService opcUa,
     ITestStepLogger testStepLogger,
     ExecutionActivityTracker activityTracker,
     ExecutionMessageState messageState,

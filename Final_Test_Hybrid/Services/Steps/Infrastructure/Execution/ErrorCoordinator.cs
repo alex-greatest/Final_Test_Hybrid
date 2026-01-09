@@ -19,8 +19,8 @@ public partial class ErrorCoordinator : IAsyncDisposable
     private readonly OpcUaConnectionState _connectionState;
     private readonly AutoReadySubscription _autoReady;
     private readonly PauseTokenSource _pauseToken;
-    private readonly PausableTagWaiter _tagWaiter;
-    private readonly PausableOpcUaTagService _plcService;
+    private readonly TagWaiter _tagWaiter;
+    private readonly OpcUaTagService _plcService;
     private readonly ExecutionStateManager _stateManager;
     private readonly StepStatusReporter _statusReporter;
     private readonly BoilerState _boilerState;
@@ -64,8 +64,8 @@ public partial class ErrorCoordinator : IAsyncDisposable
         OpcUaConnectionState connectionState,
         AutoReadySubscription autoReady,
         PauseTokenSource pauseToken,
-        PausableTagWaiter tagWaiter,
-        PausableOpcUaTagService plcService,
+        TagWaiter tagWaiter,
+        OpcUaTagService plcService,
         ExecutionStateManager stateManager,
         StepStatusReporter statusReporter,
         BoilerState boilerState,

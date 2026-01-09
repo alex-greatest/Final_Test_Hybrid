@@ -31,23 +31,29 @@ public partial class ErrorCoordinator
     private async Task<bool> TryAcquireLockAsync(CancellationToken ct)
     {
         if (_disposed) { return false; }
+        return await TryAcquireLockCoreAsync(ct);
+    }
 
-        try
+    private async Task<bool> TryAcquireLockCoreAsync(CancellationToken ct)
+    {
+        try { return await AcquireAndValidateAsync(ct); }
+        catch (Exception) when (ct.IsCancellationRequested || _disposed) { return false; }
+    }
+
+    private async Task<bool> AcquireAndValidateAsync(CancellationToken ct)
+    {
+        await _operationLock.WaitAsync(ct);
+        return ValidateOrRelease();
+    }
+
+    private bool ValidateOrRelease()
+    {
+        if (!_disposed)
         {
-            await _operationLock.WaitAsync(ct);
-
-            if (_disposed)
-            {
-                _operationLock.Release();
-                return false;
-            }
-
             return true;
         }
-        catch (Exception) when (ct.IsCancellationRequested || _disposed)
-        {
-            return false;
-        }
+        _operationLock.Release(); 
+        return false;
     }
 
     private void ReleaseLockSafe()
@@ -87,14 +93,13 @@ public partial class ErrorCoordinator
     {
         if (_disposed) { return false; }
         if (!TryAcquireInterruptFlag(reason)) { return false; }
-
-        if (!await TryAcquireLockAsync(ct))
+        if (await TryAcquireLockAsync(ct))
         {
-            ReleaseInterruptFlag();
-            return false;
+            return true;
         }
+        ReleaseInterruptFlag();
+        return false;
 
-        return true;
     }
 
     private void ReleaseResources()
@@ -110,7 +115,6 @@ public partial class ErrorCoordinator
             _logger.LogError("Неизвестная причина прерывания: {Reason}", reason);
             return;
         }
-
         LogInterrupt(reason, behavior);
         NotifyInterrupt(behavior);
         await ExecuteInterruptActionAsync(behavior, ct);
@@ -166,14 +170,12 @@ public partial class ErrorCoordinator
     }
 
     #endregion
-
     #region Error Resolution
 
     public async Task<ErrorResolution> WaitForResolutionAsync(CancellationToken ct)
     {
         _logger.LogInformation("Ожидание решения оператора (таймаут {Timeout} сек)...",
             ResolutionTimeout.TotalSeconds);
-
         try
         {
             return await WaitForOperatorSignalAsync(ct);
@@ -186,18 +188,25 @@ public partial class ErrorCoordinator
 
     private ErrorResolution HandleResolutionException(Exception ex)
     {
-        if (ex is TimeoutException)
+        return ex switch
         {
-            return HandleResolutionTimeout();
-        }
+            TimeoutException => HandleResolutionTimeout(),
+            OperationCanceledException => LogAndRethrow(ex),
+            _ => Rethrow(ex)
+        };
+    }
 
-        if (ex is OperationCanceledException)
-        {
-            _logger.LogInformation("Ожидание решения отменено");
-        }
-
+    private ErrorResolution LogAndRethrow(Exception ex)
+    {
+        _logger.LogInformation("Ожидание решения отменено");
         System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
-        return default; // Unreachable
+        return default;
+    }
+
+    private static ErrorResolution Rethrow(Exception ex)
+    {
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
+        return default;
     }
 
     private async Task<ErrorResolution> WaitForOperatorSignalAsync(CancellationToken ct)

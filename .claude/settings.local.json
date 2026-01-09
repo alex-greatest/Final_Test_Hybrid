@@ -34,7 +34,9 @@
       "mcp__serena__think_about_collected_information",
       "Bash(grep:*)",
       "mcp__serena__list_memories",
-      "mcp__serena__search_for_pattern"
+      "mcp__serena__search_for_pattern",
+      "mcp__serena__get_current_config",
+      "mcp__serena__find_file"
     ]
   }
 }

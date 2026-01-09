@@ -3,6 +3,7 @@
 @using Final_Test_Hybrid.Components.Main
 @using Final_Test_Hybrid.Components.Overview
 @using Final_Test_Hybrid.Components.Loading
+@using Final_Test_Hybrid.Components.Parameters
 @using Final_Test_Hybrid.Services.OpcUa
 @using Final_Test_Hybrid.Services.OpcUa.Connection
 @using Final_Test_Hybrid.Services.Common.UI
@@ -52,63 +53,12 @@
                                 <RadzenCard Class="header-card">
                                     <ChildContent>
                                         <div class="header-grid-parameter">
-                                            @* Блок 1: четыре поля *@
-                                            <div class="header-block-parameter">
-                                                <div class="field-row-parameter">
-                                                    <RadzenLabel Text="Q-GAS (G20)"/>
-                                                    <RadzenTextBox Style="width:100%"/>
-                                                </div>
-                                                <div class="field-row-parameter">
-                                                    <RadzenLabel Text="Q-GAS (LGP)"/>
-                                                    <RadzenTextBox Style="width:100%"/>
-                                                </div>
-                                                <div class="field-row-parameter">
-                                                    <RadzenLabel Text="P-GAS"/>
-                                                    <RadzenTextBox Style="width:100%"/>
-                                                </div>
-                                                <div class="field-row-parameter">
-                                                    <RadzenLabel Text="P-BURNER"/>
-                                                    <RadzenTextBox Style="width:100%"/>
-                                                </div>
-                                            </div>
-
-                                            <div class="header-block-parameter">
-                                                <div class="field-row-parameter">
-                                                    <RadzenLabel Text="T-GAS"/>
-                                                    <RadzenTextBox Style="width:100%"/>
-                                                </div>
-                                                <div class="field-row-parameter">
-                                                    <RadzenLabel Text="DeltaTemp"/>
-                                                    <RadzenTextBox Style="width:100%"/>
-                                                </div>
-                                                <div class="field-row-parameter">
-                                                    <RadzenLabel Text="DeltaTemp"/>
-                                                    <RadzenTextBox Style="width:100%"/>
-                                                </div>
-                                            </div>
-
-                                            <div class="header-block-parameter">
-                                                <div class="field-row-parameter">
-                                                    <RadzenLabel Text="T-GAS"/>
-                                                    <RadzenTextBox Style="width:100%"/>
-                                                </div>
-                                                <div class="field-row-parameter">
-                                                    <RadzenLabel Text="DeltaTemp"/>
-                                                    <RadzenTextBox Style="width:100%"/>
-                                                </div>
-                                                <div class="field-row-parameter">
-                                                    <RadzenLabel Text="DeltaTemp"/>
-                                                    <RadzenTextBox Style="width:100%"/>
-                                                </div>
-                                                <div class="field-row-parameter">
-                                                    <RadzenLabel Text="DeltaTemp"/>
-                                                    <RadzenTextBox Style="width:100%"/>
-                                                </div>
-                                                <div class="field-row-parameter">
-                                                    <RadzenLabel Text="DeltaTemp"/>
-                                                    <RadzenTextBox Style="width:100%"/>
-                                                </div>
-                                            </div>
+                                            <GasFlowParameters />
+                                            <TemperatureParameters />
+                                            <DhwParameters />
+                                            <ChParameters />
+                                            <EmissionsParameters />
+                                            <GasPressureParameter />
                                         </div>
                                     </ChildContent>
                                 </RadzenCard>
