@@ -1,19 +1,17 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Errors;
+using Final_Test_Hybrid.Services.Results;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Scanner;
-using Final_Test_Hybrid.Services.Steps;
-using Final_Test_Hybrid.Services.Steps.Infrastructure;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Base;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorHandling;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
@@ -81,8 +79,11 @@ public static class StepsServiceExtensions
         services.AddSingleton<TestExecutionCoordinator>();
 
         // Errors
-        services.AddSingleton<IActiveErrorsService, ActiveErrorsService>();
-        services.AddSingleton<IErrorHistoryService, ErrorHistoryService>();
+        services.AddSingleton<IErrorService, ErrorService>();
+        services.AddSingleton<IPlcErrorMonitorService, PlcErrorMonitorService>();
+
+        // Results
+        services.AddSingleton<ITestResultsService, TestResultsService>();
 
         // Test step registry
         services.AddSingleton<ITestStepRegistry, TestStepRegistry>();

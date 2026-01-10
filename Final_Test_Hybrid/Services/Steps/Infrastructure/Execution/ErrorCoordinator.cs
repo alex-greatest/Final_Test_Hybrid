@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.UI;
+using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
@@ -27,6 +28,7 @@ public partial class ErrorCoordinator : IAsyncDisposable
     private readonly ExecutionActivityTracker _activityTracker;
     private readonly InterruptMessageState _interruptMessage;
     private readonly INotificationService _notifications;
+    private readonly IErrorService _errorService;
     private readonly ILogger<ErrorCoordinator> _logger;
 
     // === Synchronization ===
@@ -72,6 +74,7 @@ public partial class ErrorCoordinator : IAsyncDisposable
         ExecutionActivityTracker activityTracker,
         InterruptMessageState interruptMessage,
         INotificationService notifications,
+        IErrorService errorService,
         ILogger<ErrorCoordinator> logger)
     {
         _connectionState = connectionState;
@@ -85,6 +88,7 @@ public partial class ErrorCoordinator : IAsyncDisposable
         _activityTracker = activityTracker;
         _interruptMessage = interruptMessage;
         _notifications = notifications;
+        _errorService = errorService;
         _logger = logger;
 
         SubscribeToEvents();

@@ -1,5 +1,6 @@
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
@@ -21,6 +22,7 @@ public partial class PreExecutionCoordinator(
     PauseTokenSource pauseToken,
     ErrorCoordinator errorCoordinator,
     PlcResetCoordinator plcResetCoordinator,
+    IErrorService errorService,
     ILogger<PreExecutionCoordinator> logger)
 {
     public async Task<PreExecutionResult> ExecuteAsync(string barcode, Guid? scanStepId, CancellationToken ct)

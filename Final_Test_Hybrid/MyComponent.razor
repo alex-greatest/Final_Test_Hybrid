@@ -1,6 +1,7 @@
 @using Final_Test_Hybrid.Components.Engineer
 @using Final_Test_Hybrid.Components.Errors
 @using Final_Test_Hybrid.Components.Indicators
+@using Final_Test_Hybrid.Components.Results
 @using Final_Test_Hybrid.Components.Main
 @using Final_Test_Hybrid.Components.Overview
 @using Final_Test_Hybrid.Components.Loading
@@ -9333,6 +9334,11 @@
                         <ErrorsTab/>
                     </div>
                 </RadzenTabsItem>
+                <RadzenTabsItem Text="Результаты">
+                    <div style="height: 100%; padding: 0 20px;">
+                        <TestResultsTab/>
+                    </div>
+                </RadzenTabsItem>
             </Tabs>
         </RadzenTabs>
     </div>
@@ -9340,8 +9346,7 @@
         <!-- Левая часть: занимает всё место слева, контент прижат влево -->
         <div
             style="flex: 1; display: flex; align-items: center; min-width: 0; justify-content: flex-start; height: 100%;">
-            <RadzenButton Style="height: 56px; min-width: 250px; font-size: 1.5rem; font-weight: 900; color: white"
-                          Text="Success" ButtonStyle="ButtonStyle.Success"/>
+            <ErrorResetButton />
 
             <div class="app-bottom-10-content" style="margin-left: 100px">
                 <AirOnIndicator />

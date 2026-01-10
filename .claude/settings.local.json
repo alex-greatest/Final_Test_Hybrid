@@ -36,7 +36,9 @@
       "mcp__serena__list_memories",
       "mcp__serena__search_for_pattern",
       "mcp__serena__get_current_config",
-      "mcp__serena__find_file"
+      "mcp__serena__find_file",
+      "Bash(del:*)",
+      "Bash(Remove-Item -Path \"D:\\\\projects\\\\Final_Test_Hybrid\\\\Final_Test_Hybrid\\\\Services\\\\Errors\\\\IActiveErrorsService.cs\", \"D:\\\\projects\\\\Final_Test_Hybrid\\\\Final_Test_Hybrid\\\\Services\\\\Errors\\\\ActiveErrorsService.cs\", \"D:\\\\projects\\\\Final_Test_Hybrid\\\\Final_Test_Hybrid\\\\Services\\\\Errors\\\\IErrorHistoryService.cs\", \"D:\\\\projects\\\\Final_Test_Hybrid\\\\Final_Test_Hybrid\\\\Services\\\\Errors\\\\ErrorHistoryService.cs\" -Force)"
     ]
   }
 }

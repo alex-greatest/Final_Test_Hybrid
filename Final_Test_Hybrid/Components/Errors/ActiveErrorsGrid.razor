@@ -1,0 +1,80 @@
+@using Final_Test_Hybrid.Models.Errors
+@using Final_Test_Hybrid.Services.Errors
+
+@inject IErrorService ErrorService
+
+@implements IAsyncDisposable
+
+<RadzenDataGrid Data="@_activeErrors" TItem="ActiveError"
+                AllowFiltering="true" AllowSorting="true"
+                FilterText="@DataGridRu.Filter"
+                ApplyFilterText="@DataGridRu.ApplyFilter"
+                ClearFilterText="@DataGridRu.ClearFilter"
+                EqualsText="@DataGridRu.Equals"
+                NotEqualsText="@DataGridRu.NotEquals"
+                ContainsText="@DataGridRu.Contains"
+                DoesNotContainText="@DataGridRu.DoesNotContain"
+                StartsWithText="@DataGridRu.StartsWith"
+                EndsWithText="@DataGridRu.EndsWith"
+                GreaterThanText="@DataGridRu.GreaterThan"
+                GreaterThanOrEqualsText="@DataGridRu.GreaterThanOrEquals"
+                LessThanText="@DataGridRu.LessThan"
+                LessThanOrEqualsText="@DataGridRu.LessThanOrEquals"
+                IsNullText="@DataGridRu.IsNull"
+                IsNotNullText="@DataGridRu.IsNotNull"
+                IsEmptyText="@DataGridRu.IsEmpty"
+                IsNotEmptyText="@DataGridRu.IsNotEmpty"
+                AndOperatorText="@DataGridRu.And"
+                OrOperatorText="@DataGridRu.Or"
+                EmptyText=" ">
+    <Columns>
+        <RadzenDataGridColumn TItem="ActiveError" Property="Time" Title="Время" Width="100px">
+            <Template Context="item">
+                @item.Time.ToString("HH:mm:ss")
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ActiveError" Property="Code" Title="Код" Width="80px" />
+        <RadzenDataGridColumn TItem="ActiveError" Property="Description" Title="Описание" />
+        <RadzenDataGridColumn TItem="ActiveError" Property="StepName" Title="Шаг" Width="200px">
+            <Template Context="item">
+                @(item.StepName ?? "-")
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ActiveError" Property="Source" Title="Источник" Width="100px">
+            <Template Context="item">
+                @(item.Source == ErrorSource.Plc ? "ПЛК" : "Приложение")
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    private bool _disposed;
+    private IReadOnlyList<ActiveError> _activeErrors = [];
+
+    protected override void OnInitialized()
+    {
+        ErrorService.OnActiveErrorsChanged += OnErrorsChanged;
+        _activeErrors = ErrorService.GetActiveErrors();
+    }
+
+    private void OnErrorsChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            _activeErrors = ErrorService.GetActiveErrors();
+            StateHasChanged();
+        });
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        ErrorService.OnActiveErrorsChanged -= OnErrorsChanged;
+        return ValueTask.CompletedTask;
+    }
+}

@@ -1,0 +1,101 @@
+@using Final_Test_Hybrid.Models.Errors
+@using Final_Test_Hybrid.Services.Errors
+
+@inject IErrorService ErrorService
+
+@implements IAsyncDisposable
+
+<RadzenDataGrid Data="@_history" TItem="ErrorHistoryItem"
+                AllowFiltering="true" AllowSorting="true"
+                FilterText="@DataGridRu.Filter"
+                ApplyFilterText="@DataGridRu.ApplyFilter"
+                ClearFilterText="@DataGridRu.ClearFilter"
+                EqualsText="@DataGridRu.Equals"
+                NotEqualsText="@DataGridRu.NotEquals"
+                ContainsText="@DataGridRu.Contains"
+                DoesNotContainText="@DataGridRu.DoesNotContain"
+                StartsWithText="@DataGridRu.StartsWith"
+                EndsWithText="@DataGridRu.EndsWith"
+                GreaterThanText="@DataGridRu.GreaterThan"
+                GreaterThanOrEqualsText="@DataGridRu.GreaterThanOrEquals"
+                LessThanText="@DataGridRu.LessThan"
+                LessThanOrEqualsText="@DataGridRu.LessThanOrEquals"
+                IsNullText="@DataGridRu.IsNull"
+                IsNotNullText="@DataGridRu.IsNotNull"
+                IsEmptyText="@DataGridRu.IsEmpty"
+                IsNotEmptyText="@DataGridRu.IsNotEmpty"
+                AndOperatorText="@DataGridRu.And"
+                OrOperatorText="@DataGridRu.Or"
+                EmptyText=" ">
+    <Columns>
+        <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="StartTime" Title="Начало" Width="100px">
+            <Template Context="item">
+                @item.StartTime.ToString("HH:mm:ss")
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="EndTime" Title="Конец" Width="100px">
+            <Template Context="item">
+                @if (item.EndTime.HasValue)
+                {
+                    @item.EndTime.Value.ToString("HH:mm:ss")
+                }
+                else
+                {
+                    <span style="color: red; font-weight: bold;">активна</span>
+                }
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ErrorHistoryItem" Title="Длительность" Width="100px" Sortable="false" Filterable="false">
+            <Template Context="item">
+                @FormatDuration(item)
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="Code" Title="Код" Width="80px" />
+        <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="Description" Title="Описание" />
+        <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="StepName" Title="Шаг" Width="200px">
+            <Template Context="item">
+                @(item.StepName ?? "-")
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    private bool _disposed;
+    private IReadOnlyList<ErrorHistoryItem> _history = [];
+
+    protected override void OnInitialized()
+    {
+        ErrorService.OnHistoryChanged += OnHistoryChanged;
+        _history = ErrorService.GetHistory();
+    }
+
+    private void OnHistoryChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            _history = ErrorService.GetHistory();
+            StateHasChanged();
+        });
+    }
+
+    private static string FormatDuration(ErrorHistoryItem item)
+    {
+        var endTime = item.EndTime ?? DateTime.Now;
+        var duration = endTime - item.StartTime;
+        return duration.TotalHours >= 1
+            ? duration.ToString(@"hh\:mm\:ss")
+            : duration.ToString(@"mm\:ss");
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        ErrorService.OnHistoryChanged -= OnHistoryChanged;
+        return ValueTask.CompletedTask;
+    }
+}

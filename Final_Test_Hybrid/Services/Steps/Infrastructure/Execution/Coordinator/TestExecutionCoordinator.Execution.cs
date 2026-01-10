@@ -131,6 +131,7 @@ public partial class TestExecutionCoordinator
             : ExecutionState.Completed;
         StateManager.TransitionTo(finalState);
         _activityTracker.SetTestExecutionActive(false);
+        _errorService.ClearActiveApplicationErrors();
         LogExecutionCompleted();
         OnSequenceCompleted?.Invoke();
         lock (_stateLock)

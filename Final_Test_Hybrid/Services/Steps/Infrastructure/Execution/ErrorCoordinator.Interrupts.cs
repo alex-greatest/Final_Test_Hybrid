@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Models.Plc.Tags;
 using Final_Test_Hybrid.Models.Steps;
 using Microsoft.Extensions.Logging;
@@ -116,8 +117,23 @@ public partial class ErrorCoordinator
             return;
         }
         LogInterrupt(reason, behavior);
+        RaiseErrorForInterrupt(reason);
         NotifyInterrupt(behavior);
         await ExecuteInterruptActionAsync(behavior, ct);
+    }
+
+    private void RaiseErrorForInterrupt(InterruptReason reason)
+    {
+        var error = reason switch
+        {
+            InterruptReason.PlcConnectionLost => ErrorDefinitions.OpcConnectionLost,
+            InterruptReason.TagTimeout => ErrorDefinitions.TagReadTimeout,
+            _ => null
+        };
+        if (error != null)
+        {
+            _errorService.Raise(error);
+        }
     }
 
     private void LogInterrupt(InterruptReason reason, InterruptBehavior behavior)

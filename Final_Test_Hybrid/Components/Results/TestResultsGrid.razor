@@ -1,0 +1,91 @@
+@using Final_Test_Hybrid.Models.Results
+@using Final_Test_Hybrid.Services.Results
+
+@inject ITestResultsService TestResultsService
+
+@implements IDisposable
+
+@if (_isLoading)
+{
+    <div class="loading-container">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large" />
+    </div>
+}
+else
+{
+    <RadzenDataGrid Data="@_results" TItem="TestResultItem"
+                    AllowFiltering="true" AllowSorting="true"
+                    FilterText="@DataGridRu.Filter"
+                    ApplyFilterText="@DataGridRu.ApplyFilter"
+                    ClearFilterText="@DataGridRu.ClearFilter"
+                    EqualsText="@DataGridRu.Equals"
+                    NotEqualsText="@DataGridRu.NotEquals"
+                    ContainsText="@DataGridRu.Contains"
+                    DoesNotContainText="@DataGridRu.DoesNotContain"
+                    StartsWithText="@DataGridRu.StartsWith"
+                    EndsWithText="@DataGridRu.EndsWith"
+                    GreaterThanText="@DataGridRu.GreaterThan"
+                    GreaterThanOrEqualsText="@DataGridRu.GreaterThanOrEquals"
+                    LessThanText="@DataGridRu.LessThan"
+                    LessThanOrEqualsText="@DataGridRu.LessThanOrEquals"
+                    IsNullText="@DataGridRu.IsNull"
+                    IsNotNullText="@DataGridRu.IsNotNull"
+                    IsEmptyText="@DataGridRu.IsEmpty"
+                    IsNotEmptyText="@DataGridRu.IsNotEmpty"
+                    AndOperatorText="@DataGridRu.And"
+                    OrOperatorText="@DataGridRu.Or"
+                    EmptyText=" ">
+        <Columns>
+            <RadzenDataGridColumn TItem="TestResultItem" Property="Time" Title="Время" Width="180px">
+                <Template Context="item">
+                    @item.Time.ToString("dd.MM.yyyy HH:mm:ss")
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="TestResultItem" Property="ParameterName" Title="Параметр" />
+            <RadzenDataGridColumn TItem="TestResultItem" Property="Value" Title="Значение" Width="150px" />
+            <RadzenDataGridColumn TItem="TestResultItem" Property="Tolerances" Title="Допуски" Width="150px" />
+            <RadzenDataGridColumn TItem="TestResultItem" Property="Unit" Title="Ед. изм." Width="100px" />
+        </Columns>
+    </RadzenDataGrid>
+}
+
+@code {
+    private bool _isLoading = true;
+    private bool _disposed;
+    private IReadOnlyList<TestResultItem> _results = [];
+
+    protected override void OnInitialized()
+    {
+        TestResultsService.OnChanged += OnResultsChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Delay(50);
+            _results = TestResultsService.GetResults();
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnResultsChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            _results = TestResultsService.GetResults();
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        TestResultsService.OnChanged -= OnResultsChanged;
+    }
+}

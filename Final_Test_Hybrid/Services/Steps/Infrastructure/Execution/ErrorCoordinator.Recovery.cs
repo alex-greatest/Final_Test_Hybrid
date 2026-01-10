@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Models.Steps;
 using Microsoft.Extensions.Logging;
 
@@ -29,6 +30,7 @@ public partial class ErrorCoordinator
         _stateManager.TransitionTo(ExecutionState.Failed);
         _statusReporter.ClearAll();
         _boilerState.Clear();
+        _errorService.ClearActiveApplicationErrors();
     }
 
     #endregion
@@ -51,6 +53,7 @@ public partial class ErrorCoordinator
         _pauseToken.Resume();
         _stateManager.ClearErrors();
         _stateManager.TransitionTo(ExecutionState.Idle);
+        _errorService.ClearActiveApplicationErrors();
         // НЕ очищаем: _statusReporter, _boilerState
     }
 
@@ -82,8 +85,15 @@ public partial class ErrorCoordinator
     {
         _interruptMessage.Clear();
         _pauseToken.Resume();
+        ClearConnectionErrors();
         _notifications.ShowSuccess("Автомат восстановлен", "Тест продолжается");
         InvokeEventSafe(OnRecovered, "OnRecovered");
+    }
+
+    private void ClearConnectionErrors()
+    {
+        _errorService.Clear(ErrorDefinitions.OpcConnectionLost.Code);
+        _errorService.Clear(ErrorDefinitions.TagReadTimeout.Code);
     }
 
     #endregion

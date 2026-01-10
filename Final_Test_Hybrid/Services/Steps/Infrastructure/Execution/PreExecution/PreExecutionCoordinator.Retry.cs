@@ -28,10 +28,16 @@ public partial class PreExecutionCoordinator
     }
 
     private void HandleSoftStop()
-        => _externalSignal?.TrySetResult(PreExecutionResolution.SoftStop);
+    {
+        errorService.ClearActiveApplicationErrors();
+        _externalSignal?.TrySetResult(PreExecutionResolution.SoftStop);
+    }
 
     private void HandleHardReset()
-        => _externalSignal?.TrySetResult(PreExecutionResolution.HardReset);
+    {
+        errorService.ClearActiveApplicationErrors();
+        _externalSignal?.TrySetResult(PreExecutionResolution.HardReset);
+    }
 
     #endregion
 

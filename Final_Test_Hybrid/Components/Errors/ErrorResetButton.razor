@@ -1,0 +1,59 @@
+@using Final_Test_Hybrid.Services.Errors
+
+@inject IErrorService ErrorService
+
+@implements IAsyncDisposable
+
+@if (_hasResettableErrors)
+{
+    <RadzenButton Style="height: 56px; min-width: 250px; font-size: 1.5rem; font-weight: 900; color: white"
+                  Text="Сброс ошибки" ButtonStyle="ButtonStyle.Danger"
+                  Click="@OnResetClick" />
+}
+else
+{
+    <RadzenButton Style="height: 56px; min-width: 250px; font-size: 1.5rem; font-weight: 900; color: white"
+                  Text="Нет ошибок" ButtonStyle="ButtonStyle.Success"
+                  Disabled="true" />
+}
+
+@code {
+    private bool _disposed;
+    private bool _hasResettableErrors;
+
+    protected override void OnInitialized()
+    {
+        ErrorService.OnActiveErrorsChanged += OnErrorsChanged;
+        UpdateState();
+    }
+
+    private void OnErrorsChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            UpdateState();
+            StateHasChanged();
+        });
+    }
+
+    private void UpdateState()
+    {
+        _hasResettableErrors = ErrorService.HasResettableErrors;
+    }
+
+    private void OnResetClick()
+    {
+        ErrorService.ClearAllActiveErrors();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        ErrorService.OnActiveErrorsChanged -= OnErrorsChanged;
+        return ValueTask.CompletedTask;
+    }
+}

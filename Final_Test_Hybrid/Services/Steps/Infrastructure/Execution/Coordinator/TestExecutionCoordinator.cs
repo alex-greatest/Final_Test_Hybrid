@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Recipe;
@@ -20,12 +21,12 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly PauseTokenSource _pauseToken;
     private readonly ExecutionActivityTracker _activityTracker;
     private readonly PlcResetCoordinator _plcResetCoordinator;
+    private readonly IErrorService _errorService;
     private readonly Lock _stateLock = new();
     private readonly object _enqueueLock = new();
     private readonly Action _onExecutorStateChanged;
     private List<TestMap> _maps = [];
     private CancellationTokenSource? _cts;
-
     public event Action? OnStateChanged;
     public event Action? OnSequenceCompleted;
     public event Action<StepError>? OnErrorOccurred;
@@ -51,7 +52,8 @@ public partial class TestExecutionCoordinator : IDisposable
         ErrorCoordinator errorCoordinator,
         PauseTokenSource pauseToken,
         ExecutionActivityTracker activityTracker,
-        PlcResetCoordinator plcResetCoordinator)
+        PlcResetCoordinator plcResetCoordinator,
+        IErrorService errorService)
     {
         _logger = logger;
         _testLogger = testLogger;
@@ -61,6 +63,7 @@ public partial class TestExecutionCoordinator : IDisposable
         _pauseToken = pauseToken;
         _activityTracker = activityTracker;
         _plcResetCoordinator = plcResetCoordinator;
+        _errorService = errorService;
         _onExecutorStateChanged = HandleExecutorStateChanged;
         _executors = CreateAllExecutors(pausableOpcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider);
         SubscribeToExecutorEvents();
