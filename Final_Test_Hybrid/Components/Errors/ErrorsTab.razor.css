@@ -1,22 +1,16 @@
-.errors-container {
+.tab-content {
     display: flex;
     flex-direction: column;
     height: 100%;
-    gap: 16px;
+    padding: 8px;
+    gap: 8px;
 }
 
-.errors-section {
+.loading-container {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     flex: 1;
-    min-height: 0;
-}
-
-.section-title {
-    font-size: 22px;
-    font-weight: 600;
-    color: black;
-    margin: 0 0 8px 0;
 }
 
 ::deep .rz-data-grid {

@@ -1,4 +1,5 @@
 @using Final_Test_Hybrid.Components.Engineer
+@using Final_Test_Hybrid.Components.Errors
 @using Final_Test_Hybrid.Components.Indicators
 @using Final_Test_Hybrid.Components.Main
 @using Final_Test_Hybrid.Components.Overview
@@ -9325,6 +9326,11 @@
                 <RadzenTabsItem Text="Главный экран">
                     <div style="height: 100%; padding: 0 20px;">
                         <MainEngineering/>
+                    </div>
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Ошибки">
+                    <div style="height: 100%; padding: 0 20px;">
+                        <ErrorsTab/>
                     </div>
                 </RadzenTabsItem>
             </Tabs>

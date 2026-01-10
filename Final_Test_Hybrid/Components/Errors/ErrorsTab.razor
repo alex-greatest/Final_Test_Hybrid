@@ -7,9 +7,15 @@
 
 @implements IDisposable
 
-<div class="errors-container">
-    <div class="errors-section">
-        <h3 class="section-title">Актуальные ошибки</h3>
+<div class="tab-content">
+    @if (_isLoading)
+    {
+        <div class="loading-container">
+            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large" />
+        </div>
+    }
+    else
+    {
         <RadzenDataGrid Data="@_activeErrors" TItem="ActiveError"
                         AllowFiltering="true" AllowSorting="true"
                         FilterText="@DataGridRu.Filter"
@@ -31,7 +37,7 @@
                         IsNotEmptyText="@DataGridRu.IsNotEmpty"
                         AndOperatorText="@DataGridRu.And"
                         OrOperatorText="@DataGridRu.Or"
-                        EmptyText="@DataGridRu.Empty">
+                        EmptyText=" ">
             <Columns>
                 <RadzenDataGridColumn TItem="ActiveError" Property="Time" Title="Время" Width="180px">
                     <Template Context="item">
@@ -43,52 +49,11 @@
                 <RadzenDataGridColumn TItem="ActiveError" Property="TestName" Title="Название теста" Width="250px" />
             </Columns>
         </RadzenDataGrid>
-    </div>
-
-    <div class="errors-section">
-        <h3 class="section-title">История ошибок</h3>
-        <RadzenDataGrid Data="@_errorHistory" TItem="ErrorHistoryItem"
-                        AllowFiltering="true" AllowSorting="true"
-                        FilterText="@DataGridRu.Filter"
-                        ApplyFilterText="@DataGridRu.ApplyFilter"
-                        ClearFilterText="@DataGridRu.ClearFilter"
-                        EqualsText="@DataGridRu.Equals"
-                        NotEqualsText="@DataGridRu.NotEquals"
-                        ContainsText="@DataGridRu.Contains"
-                        DoesNotContainText="@DataGridRu.DoesNotContain"
-                        StartsWithText="@DataGridRu.StartsWith"
-                        EndsWithText="@DataGridRu.EndsWith"
-                        GreaterThanText="@DataGridRu.GreaterThan"
-                        GreaterThanOrEqualsText="@DataGridRu.GreaterThanOrEquals"
-                        LessThanText="@DataGridRu.LessThan"
-                        LessThanOrEqualsText="@DataGridRu.LessThanOrEquals"
-                        IsNullText="@DataGridRu.IsNull"
-                        IsNotNullText="@DataGridRu.IsNotNull"
-                        IsEmptyText="@DataGridRu.IsEmpty"
-                        IsNotEmptyText="@DataGridRu.IsNotEmpty"
-                        AndOperatorText="@DataGridRu.And"
-                        OrOperatorText="@DataGridRu.Or"
-                        EmptyText="@DataGridRu.Empty">
-            <Columns>
-                <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="StartTime" Title="Время начала" Width="180px">
-                    <Template Context="item">
-                        @item.StartTime.ToString("dd.MM.yyyy HH:mm:ss")
-                    </Template>
-                </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="EndTime" Title="Время окончания" Width="180px">
-                    <Template Context="item">
-                        @(item.EndTime?.ToString("dd.MM.yyyy HH:mm:ss") ?? "—")
-                    </Template>
-                </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="Code" Title="Код" Width="120px" />
-                <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="Description" Title="Описание" />
-                <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="TestName" Title="Название теста" Width="250px" />
-            </Columns>
-        </RadzenDataGrid>
-    </div>
+    }
 </div>
 
 @code {
+    private bool _isLoading = true;
     private IReadOnlyList<ActiveError> _activeErrors = [];
     private IReadOnlyList<ErrorHistoryItem> _errorHistory = [];
 
@@ -96,8 +61,17 @@
     {
         ActiveErrorsService.OnChanged += OnActiveErrorsChanged;
         ErrorHistoryService.OnChanged += OnErrorHistoryChanged;
+    }
 
-        RefreshData();
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Delay(50);
+            RefreshData();
+            _isLoading = false;
+            StateHasChanged();
+        }
     }
 
     private void OnActiveErrorsChanged()
