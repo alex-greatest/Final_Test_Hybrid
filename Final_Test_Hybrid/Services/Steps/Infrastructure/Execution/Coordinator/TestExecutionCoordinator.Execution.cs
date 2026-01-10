@@ -140,17 +140,15 @@ public partial class TestExecutionCoordinator
 
     public void Stop(string reason = "оператором")
     {
-        CancellationTokenSource? ctsToCancel;
         lock (_stateLock)
         {
-            ctsToCancel = _cts;
-            if (ctsToCancel == null || ctsToCancel.IsCancellationRequested)
+            if (_cts == null || _cts.IsCancellationRequested)
             {
                 return;
             }
             LogStopRequested(reason);
+            _cts.Cancel();
         }
-        ctsToCancel?.Cancel();
     }
 
     private void LogStopRequested(string reason)

@@ -1,5 +1,4 @@
 using Final_Test_Hybrid.Models.Steps;
-using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
@@ -91,10 +90,15 @@ public partial class PreExecutionCoordinator
     private async Task<PreExecutionResolution> WaitForResolutionAsync(CancellationToken ct)
     {
         var signal = _externalSignal = new TaskCompletionSource<PreExecutionResolution>();
-
-        var completedTask = await WaitForFirstSignalAsync(signal, ct);
-
-        return await ExtractResolutionAsync(completedTask, signal);
+        try
+        {
+            var completedTask = await WaitForFirstSignalAsync(signal, ct);
+            return await ExtractResolutionAsync(completedTask, signal);
+        }
+        finally
+        {
+            _externalSignal = null;
+        }
     }
 
     private Task<Task> WaitForFirstSignalAsync(
