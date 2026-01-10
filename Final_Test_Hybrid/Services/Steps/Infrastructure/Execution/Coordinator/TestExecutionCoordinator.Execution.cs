@@ -88,18 +88,19 @@ public partial class TestExecutionCoordinator
 
     private async Task RunAllMaps()
     {
+        var token = GetCancellationToken();
         var maps = _maps;
         var totalMaps = maps.Count;
         for (CurrentMapIndex = 0; CurrentMapIndex < totalMaps && !ShouldStop; CurrentMapIndex++)
         {
-            await RunCurrentMap(maps[CurrentMapIndex], totalMaps);
+            await RunCurrentMap(maps[CurrentMapIndex], totalMaps, token);
         }
     }
 
-    private async Task RunCurrentMap(TestMap map, int totalMaps)
+    private async Task RunCurrentMap(TestMap map, int totalMaps, CancellationToken token)
     {
         LogMapStart(totalMaps);
-        await ExecuteMapOnAllColumns(map);
+        await ExecuteMapOnAllColumns(map, token);
     }
 
     private void LogMapStart(int totalMaps)
@@ -108,9 +109,17 @@ public partial class TestExecutionCoordinator
         _testLogger.LogInformation("─── Блок {Index} из {Total} ───", CurrentMapIndex + 1, totalMaps);
     }
 
-    private async Task ExecuteMapOnAllColumns(TestMap map)
+    private CancellationToken GetCancellationToken()
     {
-        var executionTasks = _executors.Select(executor => executor.ExecuteMapAsync(map, _cts!.Token));
+        lock (_stateLock)
+        {
+            return _cts?.Token ?? CancellationToken.None;
+        }
+    }
+
+    private async Task ExecuteMapOnAllColumns(TestMap map, CancellationToken token)
+    {
+        var executionTasks = _executors.Select(executor => executor.ExecuteMapAsync(map, token));
         await Task.WhenAll(executionTasks);
         await HandleErrorsIfAny();
     }
