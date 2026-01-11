@@ -223,12 +223,12 @@ ScanStepManager
 
 | Интерфейс | Путь | Назначение |
 |-----------|------|------------|
-| `ITestStep` | `Interaces/Test/` | Базовый: Id, Name, Description, ExecuteAsync |
-| `IRequiresPlcSubscriptions` | `Interaces/Plc/` | Требует PLC подписки (RequiredPlcTags) |
-| `IRequiresRecipes` | `Interaces/Recipe/` | Требует рецепты |
-| `IHasPlcBlock` | `Interaces/Plc/` | Имеет PLC блок (PlcBlockPath для Selected/Error/End) |
-| `IScanBarcodeStep` | `Interaces/` | Обработка баркодов |
-| `IPreExecutionStep` | `Interaces/PreExecution/` | Пред-выполнение |
+| `ITestStep` | `Interfaces/Test/` | Базовый: Id, Name, Description, ExecuteAsync |
+| `IRequiresPlcSubscriptions` | `Interfaces/Plc/` | Требует PLC подписки (RequiredPlcTags) |
+| `IRequiresRecipes` | `Interfaces/Recipe/` | Требует рецепты |
+| `IHasPlcBlock` | `Interfaces/Plc/` | Имеет PLC блок (PlcBlockPath для Selected/Error/End) |
+| `IScanBarcodeStep` | `Interfaces/` | Обработка баркодов |
+| `IPreExecutionStep` | `Interfaces/PreExecution/` | Пред-выполнение |
 
 ### Иерархия интерфейсов
 ```

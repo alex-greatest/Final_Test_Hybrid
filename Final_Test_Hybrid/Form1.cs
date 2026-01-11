@@ -10,9 +10,7 @@ using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Final_Test_Hybrid.Services.SpringBoot.Health;
 using Final_Test_Hybrid.Services.SpringBoot.Shift;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorHandling;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
-using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -177,13 +175,9 @@ public partial class Form1 : Form
         _opcUaService.ValidateSettings();
         await _opcUaService.ConnectAsync();
 
-        // Проверка тегов обработки ошибок — если не удастся, приложение упадёт
-        var errorPlcMonitor = serviceProvider.GetRequiredService<ErrorPlcMonitor>();
-        await errorPlcMonitor.ValidateTagsAsync();
-
-        // Подписка на теги всех шагов — если не удастся, приложение упадёт
-        var subscriptionInitializer = serviceProvider.GetRequiredService<PlcSubscriptionInitializer>();
-        await subscriptionInitializer.InitializeAsync();
+        // Координатор выполняет всю инициализацию PLC — если ошибка, приложение упадёт
+        var coordinator = serviceProvider.GetRequiredService<PlcInitializationCoordinator>();
+        await coordinator.InitializeAllAsync();
     }
 
     protected override async void OnFormClosing(FormClosingEventArgs e)

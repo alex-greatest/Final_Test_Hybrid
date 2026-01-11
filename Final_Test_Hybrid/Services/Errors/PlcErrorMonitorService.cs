@@ -9,38 +9,25 @@ public sealed class PlcErrorMonitorService(
     IErrorService errorService,
     ILogger<PlcErrorMonitorService> logger) : IPlcErrorMonitorService
 {
-    private (string? StepId, string? StepName) _currentStep;
+    private int _isStarted;
 
     public async Task StartMonitoringAsync(CancellationToken ct = default)
     {
+        if (Interlocked.Exchange(ref _isStarted, 1) == 1)
+        {
+            return;
+        }
+
         foreach (var errorDef in ErrorDefinitions.PlcErrors)
         {
             await SubscribeToErrorTagAsync(errorDef, ct);
         }
     }
 
-    public void SetCurrentStep(string? stepId, string? stepName)
-        => _currentStep = (stepId, stepName);
-
-    public void ClearCurrentStep()
-        => _currentStep = (null, null);
-
     private async Task SubscribeToErrorTagAsync(ErrorDefinition errorDef, CancellationToken ct)
     {
-        if (errorDef.PlcTag is null)
-        {
-            return;
-        }
-
-        try
-        {
-            await subscription.SubscribeAsync(errorDef.PlcTag, value => OnTagChanged(errorDef, value), ct);
-            logger.LogDebug("Подписка на PLC ошибку {Code}: {Tag}", errorDef.Code, errorDef.PlcTag);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Не удалось подписаться на PLC ошибку {Code}: {Tag}", errorDef.Code, errorDef.PlcTag);
-        }
+        await subscription.SubscribeAsync(errorDef.PlcTag!, value => OnTagChanged(errorDef, value), ct);
+        logger.LogDebug("Подписка на PLC ошибку {Code}: {Tag}", errorDef.Code, errorDef.PlcTag);
     }
 
     private Task OnTagChanged(ErrorDefinition error, object? value)
@@ -49,20 +36,16 @@ public sealed class PlcErrorMonitorService(
         {
             return Task.CompletedTask;
         }
-        var (stepId, stepName) = GetStepContextIfApplicable(error);
+
         if (isActive)
         {
-            errorService.RaisePlc(error, stepId, stepName);
+            errorService.RaisePlc(error, error.RelatedStepId, error.RelatedStepName);
         }
         else
         {
             errorService.ClearPlc(error.Code);
         }
-        return Task.CompletedTask;
-    }
 
-    private (string?, string?) GetStepContextIfApplicable(ErrorDefinition error)
-    {
-        return error.IsGlobal ? (null, null) : _currentStep;
+        return Task.CompletedTask;
     }
 }

@@ -33,6 +33,7 @@ public static class StepsServiceExtensions
         services.AddSingleton<PlcSubscriptionValidator>();
         services.AddSingleton<PlcSubscriptionState>();
         services.AddSingleton<PlcSubscriptionInitializer>();
+        services.AddSingleton<PlcInitializationCoordinator>();
 
         // Recipe
         services.AddSingleton<IRecipeProvider, RecipeProvider>();
