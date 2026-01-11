@@ -4,7 +4,7 @@
 
 @implements IAsyncDisposable
 
-<div class="tab-content">
+<div class="errors-container">
     @if (_isLoading)
     {
         <div class="loading-container">
@@ -13,16 +13,7 @@
     }
     else
     {
-        <RadzenTabs>
-            <Tabs>
-                <RadzenTabsItem Text="Активные ошибки">
-                    <ActiveErrorsGrid />
-                </RadzenTabsItem>
-                <RadzenTabsItem Text="История ошибок">
-                    <ErrorHistoryGrid />
-                </RadzenTabsItem>
-            </Tabs>
-        </RadzenTabs>
+        <ActiveErrorsGrid />
     }
 </div>
 

@@ -1,12 +1,20 @@
 @using Final_Test_Hybrid.Components.Errors
 
-<div class="results-container">
-    <div class="grid-section">
-        <h3>Результаты тестов</h3>
-        <TestResultsGrid />
-    </div>
-    <div class="grid-section">
-        <h3>История ошибок</h3>
-        <ErrorHistoryGrid />
-    </div>
+<div class="results-tabs-shell">
+    <RadzenTabs RenderMode="TabRenderMode.Client"
+                Style="height: 100%; width: 100%"
+                class="results-tabs">
+        <Tabs>
+            <RadzenTabsItem Text="Результаты тестов">
+                <div class="grid-container">
+                    <TestResultsGrid />
+                </div>
+            </RadzenTabsItem>
+            <RadzenTabsItem Text="История ошибок">
+                <div class="grid-container">
+                    <ErrorHistoryGrid />
+                </div>
+            </RadzenTabsItem>
+        </Tabs>
+    </RadzenTabs>
 </div>

@@ -5,7 +5,8 @@
 
 @implements IAsyncDisposable
 
-<RadzenDataGrid Data="@_activeErrors" TItem="ActiveError"
+<div class="errors-grid-wrapper">
+    <RadzenDataGrid Data="@_activeErrors" TItem="ActiveError"
                 AllowFiltering="true" AllowSorting="true"
                 FilterText="@DataGridRu.Filter"
                 ApplyFilterText="@DataGridRu.ApplyFilter"
@@ -26,27 +27,28 @@
                 IsNotEmptyText="@DataGridRu.IsNotEmpty"
                 AndOperatorText="@DataGridRu.And"
                 OrOperatorText="@DataGridRu.Or"
-                EmptyText=" ">
+                EmptyText="Нет данных">
     <Columns>
+        <RadzenDataGridColumn TItem="ActiveError" Property="Code" Title="Код" Width="80px" />
         <RadzenDataGridColumn TItem="ActiveError" Property="Time" Title="Время" Width="100px">
             <Template Context="item">
                 @item.Time.ToString("HH:mm:ss")
             </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="ActiveError" Property="Code" Title="Код" Width="80px" />
-        <RadzenDataGridColumn TItem="ActiveError" Property="Description" Title="Описание" />
         <RadzenDataGridColumn TItem="ActiveError" Property="StepName" Title="Шаг" Width="200px">
             <Template Context="item">
                 @(item.StepName ?? "-")
             </Template>
         </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ActiveError" Property="Description" Title="Описание"/>
         <RadzenDataGridColumn TItem="ActiveError" Property="Source" Title="Источник" Width="100px">
             <Template Context="item">
                 @(item.Source == ErrorSource.Plc ? "ПЛК" : "Приложение")
             </Template>
         </RadzenDataGridColumn>
-    </Columns>
-</RadzenDataGrid>
+        </Columns>
+    </RadzenDataGrid>
+</div>
 
 @code {
     private bool _disposed;
