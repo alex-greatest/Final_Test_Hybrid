@@ -1,3 +1,5 @@
+using Final_Test_Hybrid.Models.Errors;
+
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
 
 public enum PreExecutionStatus
@@ -17,6 +19,7 @@ public class PreExecutionResult
     public IPreExecutionErrorDetails? ErrorDetails { get; init; }
     public bool IsRetryable { get; init; }
     public bool CanSkip { get; init; }
+    public List<ErrorDefinition>? Errors { get; init; }
 
     public static PreExecutionResult Continue(string? successMessage = null) =>
         new() { Status = PreExecutionStatus.Continue, SuccessMessage = successMessage };
@@ -27,8 +30,20 @@ public class PreExecutionResult
         new() { Status = PreExecutionStatus.Failed, ErrorMessage = error, UserMessage = userMessage };
     public static PreExecutionResult Fail(string error, IPreExecutionErrorDetails details, string? userMessage = null) =>
         new() { Status = PreExecutionStatus.Failed, ErrorMessage = error, ErrorDetails = details, UserMessage = userMessage };
-    public static PreExecutionResult FailRetryable(string error, bool canSkip = false, string? userMessage = null) =>
-        new() { Status = PreExecutionStatus.Failed, ErrorMessage = error, UserMessage = userMessage, IsRetryable = true, CanSkip = canSkip };
+    public static PreExecutionResult FailRetryable(
+        string error,
+        bool canSkip = false,
+        string? userMessage = null,
+        List<ErrorDefinition>? errors = null) =>
+        new()
+        {
+            Status = PreExecutionStatus.Failed,
+            ErrorMessage = error,
+            UserMessage = userMessage,
+            IsRetryable = true,
+            CanSkip = canSkip,
+            Errors = errors
+        };
 
     public PreExecutionResult AsNonRetryable() => new()
     {
@@ -38,6 +53,7 @@ public class PreExecutionResult
         SuccessMessage = SuccessMessage,
         ErrorDetails = ErrorDetails,
         IsRetryable = false,
-        CanSkip = CanSkip
+        CanSkip = CanSkip,
+        Errors = Errors
     };
 }

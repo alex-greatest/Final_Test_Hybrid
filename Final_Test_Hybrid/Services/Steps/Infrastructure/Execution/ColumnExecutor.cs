@@ -1,6 +1,8 @@
+using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Logging;
@@ -13,8 +15,10 @@ public class ColumnExecutor(
     ITestStepLogger testLogger,
     ILogger logger,
     StepStatusReporter statusReporter,
-    PauseTokenSource pauseToken)
+    PauseTokenSource pauseToken,
+    IErrorService errorService)
 {
+    private List<ErrorDefinition>? _currentErrors;
     private record StepState(
         string? Name,
         string? Description,
@@ -94,10 +98,12 @@ public class ColumnExecutor(
     {
         if (!result.Success)
         {
-            SetErrorState(step, result.Message);
+            SetErrorState(step, result.Message, result.Errors);
             LogError(step, result.Message, null);
             return;
         }
+
+        ClearStepErrors();
         SetSuccessState(step, result);
     }
 
@@ -114,11 +120,37 @@ public class ColumnExecutor(
         OnStateChanged?.Invoke();
     }
 
-    private void SetErrorState(ITestStep step, string message)
+    private void SetErrorState(ITestStep step, string message, List<ErrorDefinition>? errors = null)
     {
         statusReporter.ReportError(_state.UiStepId, message);
+
+        if (errors is { Count: > 0 })
+        {
+            foreach (var error in errors)
+            {
+                errorService.RaiseInStep(error, step.Id, step.Name);
+            }
+
+            _currentErrors = errors;
+        }
+
         _state = _state with { Status = "Ошибка", ErrorMessage = message, HasFailed = true, FailedStep = step };
         OnStateChanged?.Invoke();
+    }
+
+    private void ClearStepErrors()
+    {
+        if (_currentErrors == null)
+        {
+            return;
+        }
+
+        foreach (var error in _currentErrors)
+        {
+            errorService.Clear(error.Code);
+        }
+
+        _currentErrors = null;
     }
 
     private void LogError(ITestStep step, string message, Exception? ex)
@@ -139,6 +171,7 @@ public class ColumnExecutor(
 
     public void Reset()
     {
+        ClearStepErrors();
         _state = EmptyState;
         context.Variables.Clear();
     }
@@ -149,6 +182,8 @@ public class ColumnExecutor(
         {
             return;
         }
+
+        ClearStepErrors();
         _state = _state with { HasFailed = false, FailedStep = null, Status = null };
         OnStateChanged?.Invoke();
     }

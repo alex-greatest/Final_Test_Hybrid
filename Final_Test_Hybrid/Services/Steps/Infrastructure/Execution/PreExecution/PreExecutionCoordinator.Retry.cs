@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
@@ -50,17 +51,25 @@ public partial class PreExecutionCoordinator
         Guid stepId,
         CancellationToken ct)
     {
+        using var errorScope = new ErrorScope(errorService);
         var currentResult = initialResult;
 
         while (currentResult.IsRetryable)
         {
+            errorScope.Raise(currentResult.Errors, step.Id, step.Name);
             statusReporter.ReportError(stepId, currentResult.ErrorMessage!);
 
             var resolution = await WaitForResolutionAsync(ct);
 
-            currentResult = resolution == PreExecutionResolution.Retry
-                ? await RetryStepAsync(step, context, stepId, ct)
-                : CreateExitResult(resolution, currentResult);
+            if (resolution == PreExecutionResolution.Retry)
+            {
+                errorScope.Clear();
+                currentResult = await RetryStepAsync(step, context, stepId, ct);
+            }
+            else
+            {
+                return CreateExitResult(resolution, currentResult);
+            }
         }
 
         return currentResult;

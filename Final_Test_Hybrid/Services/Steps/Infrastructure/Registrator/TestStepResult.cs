@@ -1,3 +1,5 @@
+using Final_Test_Hybrid.Models.Errors;
+
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
 public class TestStepResult
@@ -6,6 +8,7 @@ public class TestStepResult
     public bool Skipped { get; init; }
     public string Message { get; init; } = "";
     public Dictionary<string, object>? OutputData { get; init; }
+    public List<ErrorDefinition>? Errors { get; init; }
 
     public static TestStepResult Pass(string value = "", string? limits = null)
     {
@@ -17,13 +20,14 @@ public class TestStepResult
         };
     }
 
-    public static TestStepResult Fail(string value, string? limits = null)
+    public static TestStepResult Fail(string value, string? limits = null, List<ErrorDefinition>? errors = null)
     {
         return new TestStepResult
         {
             Success = false,
             Message = value,
-            OutputData = CreateLimitsData(limits)
+            OutputData = CreateLimitsData(limits),
+            Errors = errors
         };
     }
 

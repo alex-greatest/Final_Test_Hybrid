@@ -89,7 +89,7 @@ public partial class TestExecutionCoordinator : IDisposable
         IRecipeProvider recipeProvider)
     {
         return Enumerable.Range(0, ColumnCount)
-            .Select(index => CreateExecutor(index, opcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider, _pauseToken))
+            .Select(index => CreateExecutor(index, opcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider, _pauseToken, _errorService))
             .ToArray();
     }
 
@@ -100,11 +100,12 @@ public partial class TestExecutionCoordinator : IDisposable
         ILoggerFactory loggerFactory,
         StepStatusReporter statusReporter,
         IRecipeProvider recipeProvider,
-        PauseTokenSource pauseToken)
+        PauseTokenSource pauseToken,
+        IErrorService errorService)
     {
         var context = new TestStepContext(index, opcUa, loggerFactory.CreateLogger($"Column{index}"), recipeProvider);
         var executorLogger = loggerFactory.CreateLogger<ColumnExecutor>();
-        return new ColumnExecutor(index, context, testLogger, executorLogger, statusReporter, pauseToken);
+        return new ColumnExecutor(index, context, testLogger, executorLogger, statusReporter, pauseToken, errorService);
     }
 
     private void SubscribeToExecutorEvents()
