@@ -1,6 +1,6 @@
 using Final_Test_Hybrid.Models.Errors;
 
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 
 public enum PreExecutionStatus
 {
@@ -10,7 +10,7 @@ public enum PreExecutionStatus
     Failed
 }
 
-public class PreExecutionResult
+public record PreExecutionResult
 {
     public PreExecutionStatus Status { get; init; }
     public string? ErrorMessage { get; init; }
@@ -23,13 +23,18 @@ public class PreExecutionResult
 
     public static PreExecutionResult Continue(string? successMessage = null) =>
         new() { Status = PreExecutionStatus.Continue, SuccessMessage = successMessage };
+
     public static PreExecutionResult TestStarted() => new() { Status = PreExecutionStatus.TestStarted };
+
     public static PreExecutionResult Cancelled(string? errorMessage = null) =>
         new() { Status = PreExecutionStatus.Cancelled, ErrorMessage = errorMessage };
+
     public static PreExecutionResult Fail(string error, string? userMessage = null) =>
         new() { Status = PreExecutionStatus.Failed, ErrorMessage = error, UserMessage = userMessage };
+
     public static PreExecutionResult Fail(string error, IPreExecutionErrorDetails details, string? userMessage = null) =>
         new() { Status = PreExecutionStatus.Failed, ErrorMessage = error, ErrorDetails = details, UserMessage = userMessage };
+
     public static PreExecutionResult FailRetryable(
         string error,
         bool canSkip = false,
@@ -44,16 +49,4 @@ public class PreExecutionResult
             CanSkip = canSkip,
             Errors = errors
         };
-
-    public PreExecutionResult AsNonRetryable() => new()
-    {
-        Status = Status,
-        ErrorMessage = ErrorMessage,
-        UserMessage = UserMessage,
-        SuccessMessage = SuccessMessage,
-        ErrorDetails = ErrorDetails,
-        IsRetryable = false,
-        CanSkip = CanSkip,
-        Errors = Errors
-    };
 }

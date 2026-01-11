@@ -1,6 +1,6 @@
 using Final_Test_Hybrid.Services.Common.Settings;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;

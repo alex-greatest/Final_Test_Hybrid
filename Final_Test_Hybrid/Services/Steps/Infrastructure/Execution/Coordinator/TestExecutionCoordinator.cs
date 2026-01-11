@@ -4,7 +4,7 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Recipe;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Logging;
 

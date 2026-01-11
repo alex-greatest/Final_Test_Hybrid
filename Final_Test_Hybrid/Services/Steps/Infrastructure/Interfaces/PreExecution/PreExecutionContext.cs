@@ -3,7 +3,7 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.OpcUa;
 
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 
 public class PreExecutionContext
 {

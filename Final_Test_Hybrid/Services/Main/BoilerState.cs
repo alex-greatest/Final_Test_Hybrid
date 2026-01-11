@@ -1,7 +1,7 @@
 using Final_Test_Hybrid.Models.Database;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Recipe;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 
 namespace Final_Test_Hybrid.Services.Main;
 

@@ -1,5 +1,5 @@
 using Final_Test_Hybrid.Services.OpcUa.Connection;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.Extensions.Logging;
 

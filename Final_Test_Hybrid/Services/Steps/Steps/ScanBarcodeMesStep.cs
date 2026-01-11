@@ -7,9 +7,9 @@ using Final_Test_Hybrid.Services.SpringBoot.Operation;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Logging;
 

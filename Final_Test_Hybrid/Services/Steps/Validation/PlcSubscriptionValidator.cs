@@ -1,7 +1,7 @@
 using Final_Test_Hybrid.Models.Plc.Subcription;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Plc;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Validation;

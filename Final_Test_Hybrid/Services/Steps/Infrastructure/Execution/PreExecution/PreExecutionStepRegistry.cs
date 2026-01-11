@@ -1,5 +1,5 @@
 using Final_Test_Hybrid.Services.Common.Settings;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 

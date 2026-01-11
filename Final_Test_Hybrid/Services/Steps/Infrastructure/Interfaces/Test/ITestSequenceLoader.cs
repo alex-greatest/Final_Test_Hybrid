@@ -1,4 +1,4 @@
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 
 public record SequenceLoadResult(List<string?[]>? RawData, string? Error)
 {

@@ -1,7 +1,7 @@
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Recipe;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Validation;

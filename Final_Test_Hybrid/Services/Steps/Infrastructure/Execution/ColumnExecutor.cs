@@ -3,7 +3,7 @@ using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Errors;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Logging;
 
@@ -18,7 +18,8 @@ public class ColumnExecutor(
     PauseTokenSource pauseToken,
     IErrorService errorService)
 {
-    private List<ErrorDefinition>? _currentErrors;
+    private ErrorScope? _errorScope;
+
     private record StepState(
         string? Name,
         string? Description,
@@ -31,6 +32,7 @@ public class ColumnExecutor(
 
     private static readonly StepState EmptyState = new(null, null, null, null, null, false, Guid.Empty, null);
     private StepState _state = EmptyState;
+
     public int ColumnIndex { get; } = columnIndex;
     public string? CurrentStepName => _state.Name;
     public string? CurrentStepDescription => _state.Description;
@@ -48,17 +50,24 @@ public class ColumnExecutor(
             .TakeWhile(_ => !ct.IsCancellationRequested && !_state.HasFailed)
             .Select(row => row.Steps[ColumnIndex])
             .Where(step => step != null);
+
         foreach (var step in stepsToExecute)
         {
             await pauseToken.WaitWhilePausedAsync(ct);
             await ExecuteStep(step!, ct);
         }
+
         ClearStatusIfNotFailed();
     }
 
     private async Task ExecuteStep(ITestStep step, CancellationToken ct)
     {
         StartNewStep(step);
+        await ExecuteStepCoreAsync(step, ct);
+    }
+
+    private async Task ExecuteStepCoreAsync(ITestStep step, CancellationToken ct)
+    {
         try
         {
             var result = await step.ExecuteAsync(context, ct);
@@ -113,10 +122,12 @@ public class ColumnExecutor(
         statusReporter.ReportSuccess(_state.UiStepId, result.Message);
         _state = _state with { Status = statusText, ResultValue = result.Message, FailedStep = null };
         testLogger.LogStepEnd(step.Name);
+
         if (!string.IsNullOrEmpty(result.Message))
         {
             testLogger.LogInformation("  Результат: {Message}", result.Message);
         }
+
         OnStateChanged?.Invoke();
     }
 
@@ -124,15 +135,9 @@ public class ColumnExecutor(
     {
         statusReporter.ReportError(_state.UiStepId, message);
 
-        if (errors is { Count: > 0 })
-        {
-            foreach (var error in errors)
-            {
-                errorService.RaiseInStep(error, step.Id, step.Name);
-            }
-
-            _currentErrors = errors;
-        }
+        ClearStepErrors();
+        _errorScope = new ErrorScope(errorService);
+        _errorScope.Raise(errors, step.Id, step.Name);
 
         _state = _state with { Status = "Ошибка", ErrorMessage = message, HasFailed = true, FailedStep = step };
         OnStateChanged?.Invoke();
@@ -140,17 +145,8 @@ public class ColumnExecutor(
 
     private void ClearStepErrors()
     {
-        if (_currentErrors == null)
-        {
-            return;
-        }
-
-        foreach (var error in _currentErrors)
-        {
-            errorService.Clear(error.Code);
-        }
-
-        _currentErrors = null;
+        _errorScope?.Clear();
+        _errorScope = null;
     }
 
     private void LogError(ITestStep step, string message, Exception? ex)
@@ -165,6 +161,7 @@ public class ColumnExecutor(
         {
             return;
         }
+
         _state = _state with { Status = null };
         OnStateChanged?.Invoke();
     }
@@ -194,21 +191,8 @@ public class ColumnExecutor(
         {
             return;
         }
-        var step = _state.FailedStep;
+
         RestartFailedStep();
-        try
-        {
-            var result = await step.ExecuteAsync(context, ct);
-            ProcessStepResult(step, result);
-        }
-        catch (OperationCanceledException)
-        {
-            ClearStatusIfNotFailed();
-        }
-        catch (Exception ex)
-        {
-            SetErrorState(step, ex.Message);
-            LogError(step, ex.Message, ex);
-        }
+        await ExecuteStepCoreAsync(_state.FailedStep, ct);
     }
 }

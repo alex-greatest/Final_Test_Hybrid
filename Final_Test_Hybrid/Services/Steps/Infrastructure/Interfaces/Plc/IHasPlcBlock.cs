@@ -1,6 +1,6 @@
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Plc;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 
 /// <summary>
 /// Интерфейс для шагов, у которых есть собственный блок в PLC.

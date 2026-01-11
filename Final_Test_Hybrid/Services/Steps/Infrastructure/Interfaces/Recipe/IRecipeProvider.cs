@@ -1,6 +1,6 @@
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
 
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Recipe;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 
 public interface IRecipeProvider
 {

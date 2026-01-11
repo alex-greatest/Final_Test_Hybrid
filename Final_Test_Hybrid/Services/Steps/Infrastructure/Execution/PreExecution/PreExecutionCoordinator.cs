@@ -5,7 +5,7 @@ using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;

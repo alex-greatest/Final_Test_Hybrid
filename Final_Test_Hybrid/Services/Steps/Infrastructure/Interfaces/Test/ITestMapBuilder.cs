@@ -1,6 +1,6 @@
 using Final_Test_Hybrid.Models.Steps;
 
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 
 public record RawMapBuildResult(
     List<RawTestMap>? Maps,

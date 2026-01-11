@@ -1,7 +1,7 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Steps.Validation;
 
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 
 public interface IPreExecutionErrorDetails;
 

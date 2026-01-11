@@ -1,5 +1,5 @@
 using Final_Test_Hybrid.Models.Steps;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Plc;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;

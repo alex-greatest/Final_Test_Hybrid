@@ -1,6 +1,6 @@
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 
 public interface ITestStep
 {

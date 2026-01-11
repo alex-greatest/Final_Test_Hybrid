@@ -1,6 +1,6 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Errors;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
@@ -28,16 +28,13 @@ public partial class PreExecutionCoordinator
         errorCoordinator.OnReset += HandleHardReset;
     }
 
-    private void HandleSoftStop()
-    {
-        errorService.ClearActiveApplicationErrors();
-        _externalSignal?.TrySetResult(PreExecutionResolution.SoftStop);
-    }
+    private void HandleSoftStop() => SignalResolution(PreExecutionResolution.SoftStop);
+    private void HandleHardReset() => SignalResolution(PreExecutionResolution.HardReset);
 
-    private void HandleHardReset()
+    private void SignalResolution(PreExecutionResolution resolution)
     {
         errorService.ClearActiveApplicationErrors();
-        _externalSignal?.TrySetResult(PreExecutionResolution.HardReset);
+        _externalSignal?.TrySetResult(resolution);
     }
 
     #endregion
@@ -51,28 +48,35 @@ public partial class PreExecutionCoordinator
         Guid stepId,
         CancellationToken ct)
     {
-        using var errorScope = new ErrorScope(errorService);
+        var errorScope = new ErrorScope(errorService);
         var currentResult = initialResult;
 
-        while (currentResult.IsRetryable)
+        try
         {
-            errorScope.Raise(currentResult.Errors, step.Id, step.Name);
-            statusReporter.ReportError(stepId, currentResult.ErrorMessage!);
-
-            var resolution = await WaitForResolutionAsync(ct);
-
-            if (resolution == PreExecutionResolution.Retry)
+            while (currentResult.IsRetryable)
             {
-                errorScope.Clear();
-                currentResult = await RetryStepAsync(step, context, stepId, ct);
+                errorScope.Raise(currentResult.Errors, step.Id, step.Name);
+                statusReporter.ReportError(stepId, currentResult.ErrorMessage!);
+
+                var resolution = await WaitForResolutionAsync(ct);
+
+                if (resolution == PreExecutionResolution.Retry)
+                {
+                    errorScope.Clear();
+                    currentResult = await RetryStepAsync(step, context, stepId, ct);
+                }
+                else
+                {
+                    return CreateExitResult(resolution, currentResult);
+                }
             }
-            else
-            {
-                return CreateExitResult(resolution, currentResult);
-            }
+
+            return currentResult;
         }
-
-        return currentResult;
+        finally
+        {
+            errorScope.Clear();
+        }
     }
 
     private static PreExecutionResult CreateExitResult(
@@ -84,7 +88,7 @@ public partial class PreExecutionCoordinator
             PreExecutionResolution.Skip when failedResult.CanSkip => PreExecutionResult.Continue(),
             PreExecutionResolution.SoftStop => PreExecutionResult.Cancelled("Остановлено оператором"),
             PreExecutionResolution.HardReset => PreExecutionResult.Fail("Сброс теста"),
-            _ => failedResult.AsNonRetryable()
+            _ => failedResult with { IsRetryable = false }
         };
     }
 

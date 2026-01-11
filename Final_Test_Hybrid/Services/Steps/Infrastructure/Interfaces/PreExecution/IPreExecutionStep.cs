@@ -1,4 +1,4 @@
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.PreExecution;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 
 public interface IPreExecutionStep
 {

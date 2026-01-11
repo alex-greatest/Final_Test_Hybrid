@@ -1,4 +1,4 @@
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interaces.Test;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 
 namespace Final_Test_Hybrid.Models.Steps;
 
