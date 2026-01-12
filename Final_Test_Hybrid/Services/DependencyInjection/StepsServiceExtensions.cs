@@ -18,6 +18,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Final_Test_Hybrid.Services.Steps.Steps;
+using Final_Test_Hybrid.Services.Steps.Steps.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -96,6 +97,17 @@ public static class StepsServiceExtensions
         services.AddSingleton<IPreExecutionStepRegistry, PreExecutionStepRegistry>();
         services.AddSingleton<IPreExecutionStep, ScanBarcodeStep>();
         services.AddSingleton<IPreExecutionStep, ScanBarcodeMesStep>();
+
+        // Новые скрытые PreExecution шаги
+        services.AddSingleton<IPreExecutionStep, ValidateBarcodeStep>();
+        services.AddSingleton<IPreExecutionStep, FindBoilerTypeStep>();
+        services.AddSingleton<IPreExecutionStep, LoadRecipesStep>();
+        services.AddSingleton<IPreExecutionStep, StartOperationMesStep>();
+        services.AddSingleton<IPreExecutionStep, LoadTestSequenceStep>();
+        services.AddSingleton<IPreExecutionStep, BuildTestMapsStep>();
+        services.AddSingleton<IPreExecutionStep, SaveBoilerStateStep>();
+
+        // Существующие шаги
         services.AddSingleton<IPreExecutionStep, WriteRecipesToPlcStep>();
         services.AddSingleton<IPreExecutionStep, ResolveTestMapsStep>();
         services.AddSingleton<IPreExecutionStep, ValidateRecipesStep>();

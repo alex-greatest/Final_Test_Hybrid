@@ -3,52 +3,68 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
-public class PreExecutionStepRegistry(
-    IEnumerable<IPreExecutionStep> steps,
-    AppSettingsService appSettings) : IPreExecutionStepRegistry
+public class PreExecutionStepRegistry : IPreExecutionStepRegistry
 {
-    private const string ScanBarcodeId = "scan-barcode";
-    private const string ScanBarcodeMesId = "scan-barcode-mes";
-    private const string WriteRecipesId = "write-recipes-to-plc";
-    private const string ResolveTestMapsId = "resolve-test-maps";
-    private const string ValidateRecipesId = "validate-recipes";
-    private const string InitializeDatabaseId = "initialize-database";
-    private const string InitializeRecipeProviderId = "initialize-recipe-provider";
-    private const string BlockBoilerAdapterId = "block-boiler-adapter";
-    private readonly List<IPreExecutionStep> _steps = steps.ToList();
+    private readonly Dictionary<string, IPreExecutionStep> _stepsById;
+    private readonly AppSettingsService _appSettings;
+
+    private static readonly string[] MesStepOrder =
+    [
+        "scan-barcode-mes",
+        "validate-barcode",
+        "start-operation-mes",
+        "load-test-sequence",
+        "build-test-maps",
+        "save-boiler-state",
+        "resolve-test-maps",
+        "validate-recipes",
+        "initialize-database",
+        "write-recipes-to-plc",
+        "initialize-recipe-provider",
+        "block-boiler-adapter"
+    ];
+
+    private static readonly string[] NonMesStepOrder =
+    [
+        "scan-barcode",
+        "validate-barcode",
+        "find-boiler-type",
+        "load-recipes",
+        "load-test-sequence",
+        "build-test-maps",
+        "save-boiler-state",
+        "resolve-test-maps",
+        "validate-recipes",
+        "initialize-database",
+        "write-recipes-to-plc",
+        "initialize-recipe-provider",
+        "block-boiler-adapter"
+    ];
+
+    public PreExecutionStepRegistry(
+        IEnumerable<IPreExecutionStep> steps,
+        AppSettingsService appSettings)
+    {
+        _stepsById = steps.ToDictionary(s => s.Id);
+        _appSettings = appSettings;
+        ValidateRequiredSteps();
+    }
 
     public IReadOnlyList<IPreExecutionStep> GetOrderedSteps()
     {
-        var scanId = appSettings.UseMes ? ScanBarcodeMesId : ScanBarcodeId;
-        var scanStep = GetStep(scanId);
-        var resolveStep = GetStep(ResolveTestMapsId);
-        var validateRecipesStep = GetStep(ValidateRecipesId);
-        var initDbStep = GetStep(InitializeDatabaseId);
-        var writeRecipesStep = GetStep(WriteRecipesId);
-        var initRecipeProviderStep = GetStep(InitializeRecipeProviderId);
-        var blockBoilerAdapterStep = GetStep(BlockBoilerAdapterId);
-        if (!AreAllStepsPresent(scanStep, resolveStep, validateRecipesStep, initDbStep, writeRecipesStep, initRecipeProviderStep, blockBoilerAdapterStep))
+        var stepIds = _appSettings.UseMes ? MesStepOrder : NonMesStepOrder;
+        return stepIds.Select(id => _stepsById[id]).ToList();
+    }
+
+    private void ValidateRequiredSteps()
+    {
+        var requiredIds = _appSettings.UseMes ? MesStepOrder : NonMesStepOrder;
+        var missing = requiredIds.Where(id => !_stepsById.ContainsKey(id)).ToList();
+        if (missing.Count == 0)
         {
-            return [];
+            return;
         }
-        // Порядок: ScanGroup → BlockBoilerAdapter → (тесты из Excel)
-        var scanGroup = new PreExecutionStepGroup(
-            scanStep!,
-            resolveStep!,
-            validateRecipesStep!,
-            initDbStep!,
-            writeRecipesStep!,
-            initRecipeProviderStep!);
-        return [scanGroup, blockBoilerAdapterStep!];
-    }
-
-    private static bool AreAllStepsPresent(params IPreExecutionStep?[] steps)
-    {
-        return steps.All(s => s != null);
-    }
-
-    private IPreExecutionStep? GetStep(string id)
-    {
-        return _steps.FirstOrDefault(s => s.Id == id);
+        throw new InvalidOperationException(
+            $"Не найдены PreExecution шаги: {string.Join(", ", missing)}");
     }
 }

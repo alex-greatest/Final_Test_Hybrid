@@ -1,5 +1,6 @@
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
+using Final_Test_Hybrid.Services.OpcUa.Heartbeat;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Settings.OpcUa;
 using Microsoft.Extensions.Configuration;
@@ -22,6 +23,10 @@ public static class OpcUaServiceExtensions
         services.AddSingleton<PausableOpcUaTagService>();
         services.AddSingleton<TagWaiter>();
         services.AddSingleton<PausableTagWaiter>();
+
+        // HMI Heartbeat - периодическое взведение флага для контроля связи с PLC
+        // Сервис автоматически подписывается на ConnectionStateChanged при создании
+        services.AddSingleton<HmiHeartbeatService>();
 
         return services;
     }

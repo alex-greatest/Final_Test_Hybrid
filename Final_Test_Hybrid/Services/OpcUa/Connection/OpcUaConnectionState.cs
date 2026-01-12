@@ -2,27 +2,43 @@ namespace Final_Test_Hybrid.Services.OpcUa.Connection;
 
 public class OpcUaConnectionState
 {
+    private readonly Lock _lock = new();
     private TaskCompletionSource? _connectionTcs;
-    public bool IsConnected { get; private set; }
+    private volatile bool _isConnected;
+    public bool IsConnected => _isConnected;
     public event Action<bool>? ConnectionStateChanged;
 
     public void SetConnected(bool connected)
     {
-        IsConnected = connected;
-        if (connected)
+        Action<bool>? handler;
+        lock (_lock)
         {
-            _connectionTcs?.TrySetResult();
+            if (_isConnected == connected)
+            {
+                return;
+            }
+            _isConnected = connected;
+            if (connected)
+            {
+                _connectionTcs?.TrySetResult();
+                _connectionTcs = null;
+            }
+            handler = ConnectionStateChanged;
         }
-        ConnectionStateChanged?.Invoke(connected);
+
+        handler?.Invoke(connected);
     }
 
-    public async Task WaitForConnectionAsync(CancellationToken ct = default)
+    public Task WaitForConnectionAsync(CancellationToken ct = default)
     {
-        if (IsConnected)
+        lock (_lock)
         {
-            return;
+            if (_isConnected)
+            {
+                return Task.CompletedTask;
+            }
+            _connectionTcs ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            return _connectionTcs.Task.WaitAsync(ct);
         }
-        _connectionTcs ??= new TaskCompletionSource();
-        await _connectionTcs.Task.WaitAsync(ct).ConfigureAwait(false);
     }
 }

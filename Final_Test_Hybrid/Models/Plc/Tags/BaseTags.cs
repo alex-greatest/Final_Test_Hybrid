@@ -19,4 +19,10 @@ public static class BaseTags
 
     // Error reset (HMI)
     public const string ErrorQuitt = "ns=3;s=\"DB_HMI\".\"Button\".\"Mode\".\"xSB_Quitt\"";
+
+    /// <summary>
+    /// Флаг контроля связи HMI. HMI взводит каждые 2 сек, PLC сбрасывает каждые 5 сек.
+    /// Если не взведён вовремя - PLC выдаёт ошибку связи.
+    /// </summary>
+    public const string HmiHeartbeat = "ns=3;s=\"DB_HMI\".\"PLC_Flag\"";
 }
