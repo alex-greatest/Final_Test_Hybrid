@@ -31,6 +31,7 @@ public static class StepsServiceExtensions
         services.AddSingleton<RequiredTagValidator>();
         services.AddSingleton<RecipeValidator>();
         services.AddSingleton<PlcSubscriptionValidator>();
+        services.AddSingleton<PreExecutionPlcValidator>();
         services.AddSingleton<PlcSubscriptionState>();
         services.AddSingleton<PlcSubscriptionInitializer>();
         services.AddSingleton<PlcInitializationCoordinator>();

@@ -2,7 +2,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 
-public interface IRequiresPlcSubscriptions : ITestStep
+public interface IRequiresPlcSubscriptions : ITestStep, IRequiresPlcTags
 {
-    IReadOnlyList<string> RequiredPlcTags { get; }
+    // RequiredPlcTags наследуется от IRequiresPlcTags
 }

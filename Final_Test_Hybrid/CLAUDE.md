@@ -189,6 +189,31 @@ testStepLogger.LogInformation(message); // UI теста
 - Event subscriptions Singleton→Singleton без unsubscribe
 - SemaphoreSlim защита от Dispose (когда класс IDisposable)
 
+### TestExecutor Infrastructure (проверено, НЕ требует исправлений)
+
+| Файл | "Проблема" | Почему OK |
+|------|------------|-----------|
+| `ExecutionStateManager.cs` | State без Lock | Enum (int) assignment **atomic** в .NET. Stale read допустим для UI |
+| `ResetSubscription.cs` | Race condition disposal | `_disposed` уже **volatile** — visibility гарантирована |
+| `PreExecutionCoordinator.Retry.cs` | `_externalSignal` без синхронизации | `?.TrySetResult()` идемпотентна. Потеря сигнала = метод уже завершился |
+| `ErrorCoordinator.Interrupts.cs` | Flag без try-finally | `TryAcquireLockCoreAsync` ловит исключения. Edge case маловероятен |
+| `SetSelectedAsync` | Warning при ошибке записи | Reset через 5 сек всё равно произойдёт, Selected не критичен |
+
+### Reset() при потере связи (проверено, работает корректно)
+
+При потере связи с PLC → `ErrorCoordinator.Reset()` через 5 сек:
+- `_stateManager.ClearErrors()` — очередь ошибок очищается
+- `_stateManager.TransitionTo(Failed)` — диалоги закрываются (подписаны на `OnStateChanged`)
+- `_errorService.ClearActiveApplicationErrors()` — активные ошибки очищаются
+- `_pauseToken.Resume()` — пауза снимается
+
+**Диалог ошибки шага** (`ErrorHandlingDialog`) закрывается автоматически через `IsDialogClosingState(Failed)`.
+
+**Не добавлять:**
+- Lock для `ExecutionState` — излишняя синхронизация
+- Lock для `_externalSignal` — усложнение без пользы
+- Volatile для `_disposed` в ResetSubscription — уже есть
+
 ## Architecture
 
 ### Entry Point
@@ -275,6 +300,24 @@ var result = await tagWaiter.WaitAnyAsync(
 - Автоматическая отписка после срабатывания
 - Встроенный timeout (`.WithTimeout()`)
 - Чистый async/await вместо event-driven
+
+## Pausable vs Non-Pausable сервисы
+
+| Сервис | С паузой | Без паузы |
+|--------|----------|-----------|
+| Чтение/запись тегов | `PausableOpcUaTagService` | `OpcUaTagService` |
+| Ожидание тегов | `PausableTagWaiter` | `TagWaiter` |
+
+### Когда использовать
+
+**С паузой (`Pausable*`)** — только в тестовых шагах (`ITestStep`):
+- Передаётся через `TestStepContext.OpcUa`
+- Позволяет приостановить выполнение шага
+
+**Без паузы** — системные операции:
+- `PlcResetCoordinator` — сброс должен выполняться независимо от паузы
+- `ErrorCoordinator` — обработка ошибок не должна блокироваться паузой
+- Инициализация, валидация подписок
 
 ## File Locations
 

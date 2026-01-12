@@ -1,6 +1,8 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Errors;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
+using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
@@ -17,7 +19,6 @@ public partial class PreExecutionCoordinator
         {
             return;
         }
-
         _subscribed = true;
         SubscribeToStopSignals();
     }
@@ -50,16 +51,16 @@ public partial class PreExecutionCoordinator
     {
         var errorScope = new ErrorScope(errorService);
         var currentResult = initialResult;
-
         try
         {
             while (currentResult.IsRetryable)
             {
+                await SetSelectedAsync(step);
                 errorScope.Raise(currentResult.Errors, step.Id, step.Name);
                 statusReporter.ReportError(stepId, currentResult.ErrorMessage!);
 
                 var resolution = await WaitForResolutionAsync(ct);
-
+                // PLC сам сбросит Selected — нам не нужно
                 if (resolution == PreExecutionResolution.Retry)
                 {
                     errorScope.Clear();
@@ -155,5 +156,23 @@ public partial class PreExecutionCoordinator
         };
     }
 
+    #endregion
+
+    #region Selected Management
+
+    private async Task SetSelectedAsync(IPreExecutionStep step)
+    {
+        if (step is not IHasPlcBlockPath plcStep)
+        {
+            return;
+        }
+        var selectedTag = $"ns=3;s=\"{plcStep.PlcBlockPath}\".\"Selected\"";
+        logger.LogDebug("Взведение Selected для {BlockPath}", plcStep.PlcBlockPath);
+        var result = await plcService.WriteAsync(selectedTag, true);
+        if (result.Error != null)
+        {
+            logger.LogWarning("Ошибка записи Selected: {Error}", result.Error);
+        }
+    }
     #endregion
 }

@@ -66,7 +66,7 @@ public partial class TestExecutionCoordinator
             }
             catch (OperationCanceledException)
             {
-                await SetSelectedAsync(error, false);
+                // await SetSelectedAsync(error, false);  // PLC сам сбросит
                 break;
             }
 
@@ -77,7 +77,7 @@ public partial class TestExecutionCoordinator
                 break;
             }
             await ProcessErrorResolution(error, resolution, _cts.Token);
-            await SetSelectedAsync(error, false);
+            // await SetSelectedAsync(error, false);  // PLC сам сбросит
         }
 
         if (!IsCancellationRequested)

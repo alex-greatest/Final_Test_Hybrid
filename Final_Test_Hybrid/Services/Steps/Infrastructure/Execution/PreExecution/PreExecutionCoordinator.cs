@@ -16,6 +16,7 @@ public partial class PreExecutionCoordinator(
     StepStatusReporter statusReporter,
     BoilerState boilerState,
     PausableOpcUaTagService opcUa,
+    OpcUaTagService plcService,
     ITestStepLogger testStepLogger,
     ExecutionActivityTracker activityTracker,
     ExecutionMessageState messageState,

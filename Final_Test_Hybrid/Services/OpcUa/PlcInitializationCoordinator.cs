@@ -2,7 +2,9 @@ using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorHandling;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
+using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.OpcUa;
@@ -11,6 +13,8 @@ public class PlcInitializationCoordinator(
     OpcUaConnectionState connectionState,
     ErrorPlcMonitor errorRecoveryMonitor,
     PlcSubscriptionInitializer subscriptionInitializer,
+    PreExecutionPlcValidator preExecutionValidator,
+    IPreExecutionStepRegistry preExecutionStepRegistry,
     IPlcErrorMonitorService plcErrorMonitor,
     PlcSubscriptionState subscriptionState,
     ITestStepRegistry stepRegistry,
@@ -28,14 +32,27 @@ public class PlcInitializationCoordinator(
         // 2. Подписка на теги шагов (IRequiresPlcSubscriptions)
         await subscriptionInitializer.InitializeAsync(ct);
 
-        // 3. Подписка на теги ПЛК-ошибок
+        // 3. Валидация тегов PreExecution шагов (IRequiresPlcTags)
+        await ValidatePreExecutionTagsAsync(ct);
+
+        // 4. Подписка на теги ПЛК-ошибок
         await plcErrorMonitor.StartMonitoringAsync(ct);
 
-        // 4. Валидация связей RelatedStepId
+        // 5. Валидация связей RelatedStepId
         ValidateErrorStepBindings();
 
         logger.LogInformation("PLC инициализация завершена");
         subscriptionState.SetCompleted();
+    }
+
+    private async Task ValidatePreExecutionTagsAsync(CancellationToken ct)
+    {
+        var steps = preExecutionStepRegistry.GetOrderedSteps();
+        var result = await preExecutionValidator.ValidateAsync(steps, ct);
+        if (!result.IsValid)
+        {
+            throw new PlcSubscriptionException(result.FailedSubscriptions);
+        }
     }
 
     private void ValidateErrorStepBindings()

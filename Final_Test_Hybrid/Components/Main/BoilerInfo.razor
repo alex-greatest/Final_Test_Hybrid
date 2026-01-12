@@ -22,13 +22,22 @@
 </div>
 <div class="field-row field-row-middle">
     <RadzenLabel Text="Серийный номер"/>
-    <RadzenTextBox
-        Style="width:100%"
-        Value="@GetDisplayValue()"
-        ReadOnly="@IsFieldReadOnly"
-        @oninput="OnInput"
-        @onkeydown="OnKeyDown"
-        Placeholder="@Placeholder"/>
+    <div style="position: relative; width: 100%;">
+        <RadzenTextBox
+            Style="width: 100%; padding-right: 30px;"
+            Value="@GetDisplayValue()"
+            ReadOnly="@IsFieldReadOnly"
+            @oninput="OnInput"
+            @onkeydown="OnKeyDown"
+            Placeholder="@Placeholder"/>
+        @if (!IsFieldReadOnly && !string.IsNullOrEmpty(GetDisplayValue()))
+        {
+            <RadzenIcon
+                Icon="close"
+                Style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--rz-text-tertiary-color);"
+                @onclick="ClearSerialNumber"/>
+        }
+    </div>
 </div>
 
 @code {
@@ -92,6 +101,13 @@
     private void ClearManualInput()
     {
         _manualInput = "";
+        StateHasChanged();
+    }
+
+    private void ClearSerialNumber()
+    {
+        _manualInput = "";
+        ScanStepManager.ClearBarcode();
         StateHasChanged();
     }
 
