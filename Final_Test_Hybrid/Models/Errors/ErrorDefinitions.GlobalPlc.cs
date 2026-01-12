@@ -29,9 +29,9 @@ public static partial class ErrorDefinitions
         Severity: ErrorSeverity.Critical);
 
     // DB_Common (О-002-xx)
-    public static readonly ErrorDefinition Common_BoilerNotLocked = new(
-        "О-002-00", "Котел не заблокирован",
-        PlcTag: "ns=3;s=\"DB_Common\".\"Al_Not_17K4\"",
+    public static readonly ErrorDefinition Relay17K4Fault = new(
+        "О-002-00", "Реле 17K4 неисправно",
+        PlcTag: "ns=3;s=\"DB_Common\".\"Al_17K4Fault\"",
         Severity: ErrorSeverity.Critical);
 
     public static readonly ErrorDefinition Common_BoilerNotUnlocked = new(
@@ -67,7 +67,7 @@ public static partial class ErrorDefinitions
         Message_ModeSelector,
         Message_ProfibusError,
         Message_NoAirSupply,
-        Common_BoilerNotLocked,
+        Relay17K4Fault,
         Common_BoilerNotUnlocked,
         Coms_NoWaterFlow,
         Coms_IonCurrentOutTol,

@@ -57,7 +57,10 @@ public class PlcInitializationCoordinator(
 
     private void ValidateErrorStepBindings()
     {
-        var stepIds = stepRegistry.Steps.Select(s => s.Id).ToHashSet();
+        var stepIds = stepRegistry.Steps.Select(s => s.Id)
+            .Concat(preExecutionStepRegistry.GetOrderedSteps().Select(s => s.Id))
+            .ToHashSet();
+
         var invalidErrors = ErrorDefinitions.All
             .Where(e => e.RelatedStepId != null && !stepIds.Contains(e.RelatedStepId))
             .ToList();

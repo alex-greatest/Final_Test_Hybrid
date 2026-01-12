@@ -13,9 +13,9 @@ public class BlockBoilerAdapterStep(
     DualLogger<BlockBoilerAdapterStep> logger) : IPreExecutionStep, IHasPlcBlockPath, IRequiresPlcTags
 {
     private const string BlockPath = "DB_VI.Block_Boiler_Adapter";
-    private const string StartTag = $"ns=3;s=\"{BlockPath}\".\"Start\"";
-    private const string EndTag = $"ns=3;s=\"{BlockPath}\".\"End\"";
-    private const string ErrorTag = $"ns=3;s=\"{BlockPath}\".\"Error\"";
+    private const string StartTag = "ns=3;s=\"DB_VI\".\"Block_Boiler_Adapter\".\"Start\"";
+    private const string EndTag = "ns=3;s=\"DB_VI\".\"Block_Boiler_Adapter\".\"End\"";
+    private const string ErrorTag = "ns=3;s=\"DB_VI\".\"Block_Boiler_Adapter\".\"Error\"";
 
     public string Id => "block-boiler-adapter";
     public string Name => "Block boiler adapter";
