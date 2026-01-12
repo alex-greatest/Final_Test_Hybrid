@@ -126,17 +126,14 @@ public class ColumnExecutor(
     {
         var duration = DateTime.Now - _state.StartTime;
         stepTimingService.Record(step.Name, step.Description, duration);
-
         var statusText = result.Skipped ? "Пропуск" : "Готово";
         statusReporter.ReportSuccess(_state.UiStepId, result.Message, limits);
         _state = _state with { Status = statusText, ResultValue = result.Message, FailedStep = null };
         testLogger.LogStepEnd(step.Name);
-
         if (!string.IsNullOrEmpty(result.Message))
         {
             testLogger.LogInformation("  Результат: {Message}", result.Message);
         }
-
         OnStateChanged?.Invoke();
     }
 
@@ -201,7 +198,6 @@ public class ColumnExecutor(
         {
             return;
         }
-
         RestartFailedStep();
         await ExecuteStepCoreAsync(_state.FailedStep, ct);
     }

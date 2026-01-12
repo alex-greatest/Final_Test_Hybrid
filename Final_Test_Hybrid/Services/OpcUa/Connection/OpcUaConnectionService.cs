@@ -71,7 +71,6 @@ public class OpcUaConnectionService(
         {
             logger.LogInformation("Создание подписки OPC UA...");
             await subscription.CreateAsync(Session!, cancellationToken).ConfigureAwait(false);
-            logger.LogInformation("Подписка OPC UA создана");
         }
         catch (Exception ex)
         {

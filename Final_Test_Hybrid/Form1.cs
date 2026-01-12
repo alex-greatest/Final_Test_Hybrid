@@ -8,6 +8,7 @@ using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
+using Final_Test_Hybrid.Services.OpcUa.Heartbeat;
 using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Final_Test_Hybrid.Services.SpringBoot.Health;
 using Final_Test_Hybrid.Services.SpringBoot.Shift;
@@ -179,6 +180,9 @@ public partial class Form1 : Form
         _opcUaService = serviceProvider.GetRequiredService<OpcUaConnectionService>();
         _opcUaService.ValidateSettings();
         await _opcUaService.ConnectAsync();
+
+        // HMI Heartbeat — автоматически запустится после подключения
+        _ = serviceProvider.GetRequiredService<HmiHeartbeatService>();
 
         // Координатор выполняет всю инициализацию PLC — если ошибка, приложение упадёт
         var coordinator = serviceProvider.GetRequiredService<PlcInitializationCoordinator>();
