@@ -15,9 +15,6 @@ public static class LoggingServiceExtensions
     {
         ConfigureSerilog(config);
 
-        services.AddSingleton<ISubscriptionLogger, SubscriptionLogger>();
-        services.AddSingleton<IDatabaseLogger, DatabaseLogger>();
-        services.AddSingleton<ISpringBootLogger, SpringBootLogger>();
         services.AddSingleton<ITestStepLogger, TestStepLogger>();
         services.AddTransient(typeof(DualLogger<>));
 

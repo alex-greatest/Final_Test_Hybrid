@@ -4,7 +4,6 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.SpringBoot.Shift;
 using Final_Test_Hybrid.Settings.Spring;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.SpringBoot.Operator;
 
@@ -13,8 +12,7 @@ public class OperatorAuthService(
     AppSettingsService appSettingsService,
     OperatorState operatorState,
     ShiftState shiftState,
-    ILogger<OperatorAuthService> logger,
-    ISpringBootLogger sbLogger)
+    DualLogger<OperatorAuthService> logger)
 {
     private const string AuthEndpoint = "/api/operator/auth";
     private const string QrAuthEndpoint = "/api/operator/auth/Qr";
@@ -23,19 +21,19 @@ public class OperatorAuthService(
     public Task<OperatorAuthResult> AuthenticateAsync(string login, string password, CancellationToken ct = default)
     {
         var request = CreateRequest(login, password);
-        return ExecuteAsync(() => SendRequestAsync(request, ct), "Authentication", login, ct);
+        return ExecuteAsync(() => SendRequestAsync(request, ct), "Аутентификация", login, ct);
     }
 
     public Task<OperatorAuthResult> AuthenticateByQrAsync(string qrCode, CancellationToken ct = default)
     {
         var request = CreateQrRequest(qrCode);
-        return ExecuteAsync(() => SendQrRequestAsync(request, ct), "QR authentication", null, ct);
+        return ExecuteAsync(() => SendQrRequestAsync(request, ct), "QR-аутентификация", null, ct);
     }
 
     public Task<OperatorAuthResult> LogoutAsync(CancellationToken ct = default)
     {
         var request = CreateLogoutRequest();
-        return ExecuteAsync(() => SendLogoutRequestAsync(request, ct), "Logout", request.Username, ct);
+        return ExecuteAsync(() => SendLogoutRequestAsync(request, ct), "Выход", request.Username, ct);
     }
 
     private async Task<OperatorAuthResult> ExecuteAsync(
@@ -65,9 +63,8 @@ public class OperatorAuthService(
 
     private void LogError(Exception ex, string operation, string? context)
     {
-        var contextPart = context != null ? $" for {context}" : "";
-        logger.LogError(ex, "{Operation} request failed{Context}", operation, contextPart);
-        sbLogger.LogError(ex, "Ошибка запроса {Operation}{Context}", operation, contextPart);
+        var contextPart = context != null ? $" для {context}" : "";
+        logger.LogError(ex, "Ошибка запроса {Operation}{Context}", operation, contextPart);
     }
 
     private OperatorAuthRequest CreateRequest(string login, string password) => new()
@@ -95,8 +92,8 @@ public class OperatorAuthService(
         return response.StatusCode switch
         {
             HttpStatusCode.OK => await HandleSuccessAsync(response, ct),
-            HttpStatusCode.NotFound => await HandleNotFoundAsync(response, "Authentication", request.Login, ct),
-            _ => HandleUnexpectedStatus(response.StatusCode, "authentication")
+            HttpStatusCode.NotFound => await HandleNotFoundAsync(response, "Аутентификация", request.Login, ct),
+            _ => HandleUnexpectedStatus(response.StatusCode, "аутентификации")
         };
     }
 
@@ -106,8 +103,8 @@ public class OperatorAuthService(
         return response.StatusCode switch
         {
             HttpStatusCode.OK => await HandleSuccessAsync(response, ct),
-            HttpStatusCode.NotFound => await HandleNotFoundAsync(response, "QR authentication", null, ct),
-            _ => HandleUnexpectedStatus(response.StatusCode, "authentication")
+            HttpStatusCode.NotFound => await HandleNotFoundAsync(response, "QR-аутентификация", null, ct),
+            _ => HandleUnexpectedStatus(response.StatusCode, "аутентификации")
         };
     }
 
@@ -117,8 +114,8 @@ public class OperatorAuthService(
         return response.StatusCode switch
         {
             HttpStatusCode.OK => HandleLogoutSuccess(),
-            HttpStatusCode.NotFound => await HandleNotFoundAsync(response, "Logout", request.Username, ct),
-            _ => HandleUnexpectedStatus(response.StatusCode, "logout")
+            HttpStatusCode.NotFound => await HandleNotFoundAsync(response, "Выход", request.Username, ct),
+            _ => HandleUnexpectedStatus(response.StatusCode, "выхода")
         };
     }
 
@@ -147,16 +144,14 @@ public class OperatorAuthService(
     {
         var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>(ct);
         var message = errorResponse?.Message ?? "Неизвестная ошибка";
-        var contextPart = context != null ? $" for {context}" : "";
-        logger.LogWarning("{Operation} failed{Context}: {Message}", operation, contextPart, message);
-        sbLogger.LogWarning("{Operation} не удалась{Context}: {Message}", operation, contextPart, message);
+        var contextPart = context != null ? $" для {context}" : "";
+        logger.LogWarning("{Operation} не удалась{Context}: {Message}", operation, contextPart, message);
         return OperatorAuthResult.Fail(message, isKnownError: true);
     }
 
     private OperatorAuthResult HandleUnexpectedStatus(HttpStatusCode statusCode, string operation)
     {
-        logger.LogError("Unexpected status code {StatusCode} for {Operation}", statusCode, operation);
-        sbLogger.LogError(null, "Неожиданный код статуса {StatusCode} при {Operation}", statusCode, operation);
+        logger.LogError("Неожиданный код статуса {StatusCode} при {Operation}", statusCode, operation);
         return OperatorAuthResult.Fail("Неизвестная ошибка", isKnownError: false);
     }
 

@@ -45,7 +45,11 @@
       "Bash(powershell:*)",
       "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\bin\\\\psql.exe\" \"postgresql://postgres:ManLiv123@localhost:5432/traceability_boiler\" -c \"\\\\dt\")",
       "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\bin\\\\psql.exe\" \"postgresql://postgres:ManLiv123@localhost:5432/traceability_boiler\" -c \"SELECT * FROM tb_error LIMIT 20\")",
-      "Bash(node check_reverse.js:*)"
+      "Bash(node check_reverse.js:*)",
+      "Bash(npx -y xlsx-cli \"Alarm_PLC_FT_V3 \\(1\\).xlsx\")",
+      "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\bin\\\\psql.exe\" \"postgresql://postgres:ManLiv123@localhost:5432/traceability_boiler\" -f \"C:\\\\Users\\\\Alexander\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--projects-Final-Test-Hybrid\\\\7c80d87f-4e83-4339-91db-0ab257c1aec8\\\\scratchpad\\\\insert_errors.sql\")",
+      "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\bin\\\\psql.exe\" \"postgresql://postgres:ManLiv123@localhost:5432/traceability_boiler\" -c \"SELECT setval\\(''tb_error_settings_template_id_seq'', 132, false\\);\")",
+      "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\bin\\\\psql.exe\" \"postgresql://postgres:ManLiv123@localhost:5432/traceability_boiler\" -c \"SELECT column_name, column_default FROM information_schema.columns WHERE table_name = ''tb_error_settings_template'' AND column_name = ''id'';\")"
     ]
   }
 }

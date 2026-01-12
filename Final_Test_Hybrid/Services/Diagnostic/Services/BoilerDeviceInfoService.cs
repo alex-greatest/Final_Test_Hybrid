@@ -1,6 +1,8 @@
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Final_Test_Hybrid.Services.Diagnostic.Services;
@@ -10,8 +12,11 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Services;
 /// </summary>
 public class BoilerDeviceInfoService(
     RegisterReader reader,
-    IOptions<DiagnosticSettings> settings)
+    IOptions<DiagnosticSettings> settings,
+    ILogger<BoilerDeviceInfoService> logger,
+    ITestStepLogger testStepLogger)
 {
+    private readonly DualLogger<BoilerDeviceInfoService> _logger = new(logger, testStepLogger);
     #region Register Addresses
 
     private const ushort RegisterFirmwareMajor = 1055;
@@ -57,6 +62,7 @@ public class BoilerDeviceInfoService(
 
         if (!majorResult.Success)
         {
+            _logger.LogError("Ошибка чтения версии прошивки (Major): {Error}", majorResult.Error!);
             return DiagnosticReadResult<(ushort, ushort)>.Fail(addressMajor, majorResult.Error!);
         }
 
@@ -65,9 +71,11 @@ public class BoilerDeviceInfoService(
 
         if (!minorResult.Success)
         {
+            _logger.LogError("Ошибка чтения версии прошивки (Minor): {Error}", minorResult.Error!);
             return DiagnosticReadResult<(ushort, ushort)>.Fail(addressMinor, minorResult.Error!);
         }
 
+        _logger.LogDebug("Версия прошивки: {Major}.{Minor}", majorResult.Value, minorResult.Value);
         return DiagnosticReadResult<(ushort, ushort)>.Ok(addressMajor, (majorResult.Value, minorResult.Value));
     }
 
@@ -96,7 +104,18 @@ public class BoilerDeviceInfoService(
     public async Task<DiagnosticReadResult<uint>> ReadSupplierCodeAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterSupplierCode - _settings.BaseAddressOffset);
-        return await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Код поставщика: {Value}", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения кода поставщика: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -110,7 +129,18 @@ public class BoilerDeviceInfoService(
     public async Task<DiagnosticReadResult<string>> ReadManufactureDateAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterManufactureDate - _settings.BaseAddressOffset);
-        return await reader.ReadStringAsync(address, ManufactureDateLength, ct).ConfigureAwait(false);
+        var result = await reader.ReadStringAsync(address, ManufactureDateLength, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Дата производства: {Value}", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения даты производства: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -124,7 +154,18 @@ public class BoilerDeviceInfoService(
     public async Task<DiagnosticReadResult<uint>> ReadSerialNumberAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterSerialNumber - _settings.BaseAddressOffset);
-        return await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Серийный номер: {Value}", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения серийного номера: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -138,7 +179,18 @@ public class BoilerDeviceInfoService(
     public async Task<DiagnosticReadResult<string>> ReadArticleNumberAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterArticleNumber - _settings.BaseAddressOffset);
-        return await reader.ReadStringAsync(address, ArticleNumberLength, ct).ConfigureAwait(false);
+        var result = await reader.ReadStringAsync(address, ArticleNumberLength, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Артикул изделия: {Value}", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения артикула изделия: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -152,7 +204,18 @@ public class BoilerDeviceInfoService(
     public async Task<DiagnosticReadResult<string>> ReadBoilerArticleAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterBoilerArticle - _settings.BaseAddressOffset);
-        return await reader.ReadStringAsync(address, ArticleNumberLength, ct).ConfigureAwait(false);
+        var result = await reader.ReadStringAsync(address, ArticleNumberLength, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Артикул котла: {Value}", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения артикула котла: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -166,7 +229,18 @@ public class BoilerDeviceInfoService(
     public async Task<DiagnosticReadResult<string>> ReadItelmaArticleAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterItelmaArticle - _settings.BaseAddressOffset);
-        return await reader.ReadStringAsync(address, ArticleNumberLength, ct).ConfigureAwait(false);
+        var result = await reader.ReadStringAsync(address, ArticleNumberLength, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Артикул Ителма: {Value}", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения артикула Ителма: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     #endregion
@@ -189,10 +263,12 @@ public class BoilerDeviceInfoService(
 
         if (!result.Success)
         {
+            _logger.LogError("Ошибка чтения последней ошибки котла: {Error}", result.Error!);
             return DiagnosticReadResult<BoilerErrorInfo>.Fail(address, result.Error!);
         }
 
         var errorInfo = BoilerErrors.Get(result.Value);
+        _logger.LogDebug("Последняя ошибка котла: {ErrorCode} - {Description}", errorInfo.DisplayCode, errorInfo.Description);
         return DiagnosticReadResult<BoilerErrorInfo>.Ok(address, errorInfo);
     }
 

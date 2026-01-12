@@ -1,0 +1,71 @@
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@using Final_Test_Hybrid.Services.Common.Logging
+
+@inject ITestStepLogger TestStepLogger
+
+<div class="log-viewer-container">
+    <div class="log-toolbar">
+        <RadzenButton Icon="refresh" Text="Обновить" Click="@LoadLogAsync" />
+        <RadzenButton Icon="delete" Text="Очистить" Click="@ClearLog" />
+        <span class="log-info">Строк: @_lines.Count</span>
+    </div>
+    <div class="log-content">
+        @if (_lines.Count == 0)
+        {
+            <span class="log-empty">Лог пуст</span>
+        }
+        else
+        {
+            <Virtualize Items="_lines" Context="line" ItemSize="20">
+                <div class="log-line @GetLogLevelClass(line)">@line</div>
+            </Virtualize>
+        }
+    </div>
+</div>
+
+@code {
+    private const int MaxLines = 50_000;
+    private List<string> _lines = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLogAsync();
+    }
+
+    private async Task LoadLogAsync()
+    {
+        var path = TestStepLogger.GetCurrentLogFilePath();
+        if (string.IsNullOrEmpty(path) || !File.Exists(path))
+        {
+            _lines = new List<string> { "Файл лога не найден" };
+            return;
+        }
+
+        var allLines = await File.ReadAllLinesAsync(path);
+        _lines = allLines.Length > MaxLines
+            ? allLines.TakeLast(MaxLines).ToList()
+            : allLines.ToList();
+    }
+
+    private void ClearLog()
+    {
+        _lines.Clear();
+    }
+
+    private static string GetLogLevelClass(string line)
+    {
+        if (line.Contains("Error"))
+        {
+            return "log-error";
+        }
+        if (line.Contains("Warning"))
+        {
+            return "log-warning";
+        }
+        if (line.Contains("Debug"))
+        {
+            return "log-debug";
+        }
+        return "";
+    }
+}

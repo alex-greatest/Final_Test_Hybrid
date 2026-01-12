@@ -1,6 +1,7 @@
 using System.IO.Ports;
 using AsyncAwaitBestPractices;
 using Final_Test_Hybrid.Services.Common;
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Polling;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,9 +17,11 @@ public class DiagnosticConnectionService(
     IOptions<DiagnosticSettings> settingsOptions,
     DiagnosticConnectionState connectionState,
     PollingPauseCoordinator pauseCoordinator,
-    ILogger<DiagnosticConnectionService> logger)
+    ILogger<DiagnosticConnectionService> logger,
+    ITestStepLogger testStepLogger)
     : IAsyncDisposable
 {
+    private readonly DualLogger<DiagnosticConnectionService> _logger = new(logger, testStepLogger);
     private readonly DiagnosticSettings _settings = settingsOptions.Value;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly Lock _reconnectLock = new();
@@ -83,7 +86,7 @@ public class DiagnosticConnectionService(
     public void StartReconnect()
     {
         ExecuteReconnectAsync().SafeFireAndForget(ex =>
-            logger.LogError(ex, "Ошибка при переподключении к {Port}", _settings.PortName));
+            _logger.LogError(ex, "Ошибка при переподключении к {Port}: {Error}", _settings.PortName, ex.Message));
     }
 
     /// <summary>
@@ -98,7 +101,7 @@ public class DiagnosticConnectionService(
         await NotifyDisconnectingAsync().ConfigureAwait(false);
         CloseConnection();
         connectionState.SetConnected(false);
-        logger.LogInformation("Отключено от {Port}", _settings.PortName);
+        _logger.LogInformation("Отключено от {Port}", _settings.PortName);
     }
 
     public async ValueTask DisposeAsync()
@@ -134,7 +137,7 @@ public class DiagnosticConnectionService(
         try
         {
             OpenConnection();
-            logger.LogInformation("Подключено к ЭБУ котла через {Port}", _settings.PortName);
+            _logger.LogInformation("Подключено к ЭБУ котла через {Port}", _settings.PortName);
             return true;
         }
         catch (OperationCanceledException)
@@ -143,8 +146,8 @@ public class DiagnosticConnectionService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Не удалось подключиться к {Port}. Повтор через {Interval} мс",
-                _settings.PortName, _settings.ReconnectIntervalMs);
+            _logger.LogWarning("Не удалось подключиться к {Port}: {Error}. Повтор через {Interval} мс",
+                _settings.PortName, ex.Message, _settings.ReconnectIntervalMs);
             return false;
         }
     }
@@ -251,11 +254,11 @@ public class DiagnosticConnectionService(
 
     private async Task ReconnectWithLoggingAsync()
     {
-        logger.LogWarning("Соединение с {Port} потеряно. Запуск переподключения...", _settings.PortName);
+        _logger.LogWarning("Соединение с {Port} потеряно. Запуск переподключения...", _settings.PortName);
 
         await ConnectWithRetryAsync(_reconnectCts!.Token).ConfigureAwait(false);
         connectionState.SetConnected(true);
-        logger.LogInformation("Переподключение к {Port} выполнено успешно", _settings.PortName);
+        _logger.LogInformation("Переподключение к {Port} выполнено успешно", _settings.PortName);
     }
 
     private void FinalizeReconnect()
@@ -286,7 +289,7 @@ public class DiagnosticConnectionService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка в обработчике события Disconnecting");
+            _logger.LogError(ex, "Ошибка в обработчике события Disconnecting: {Error}", ex.Message);
         }
     }
 

@@ -5,7 +5,6 @@ using System.Text.Json.Serialization;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Settings.Spring;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.SpringBoot.ResultSettings;
 
@@ -25,8 +24,7 @@ public class ResultSettingsDownloadResult
 public class ResultSettingsDownloadService(
     SpringBootHttpClient httpClient,
     AppSettingsService appSettingsService,
-    ILogger<ResultSettingsDownloadService> logger,
-    ISpringBootLogger sbLogger)
+    DualLogger<ResultSettingsDownloadService> logger)
 {
     private const string Endpoint = "/api/result-settings";
 
@@ -39,8 +37,7 @@ public class ResultSettingsDownloadService(
     public async Task<ResultSettingsDownloadResult> DownloadAsync(string article, CancellationToken ct = default)
     {
         var url = BuildRequestUrl(article);
-        logger.LogInformation("Downloading result settings from {Url}", url);
-        sbLogger.LogInformation("Загрузка настроек результата из {Url}", url);
+        logger.LogInformation("Загрузка настроек результата из {Url}", url);
         return await ExecuteDownloadAsync(url, article, ct);
     }
 
@@ -75,29 +72,25 @@ public class ResultSettingsDownloadService(
 
     private ResultSettingsDownloadResult HandleCancellation()
     {
-        logger.LogInformation("Result settings download cancelled");
-        sbLogger.LogInformation("Загрузка настроек результата отменена");
+        logger.LogInformation("Загрузка настроек результата отменена");
         return ResultSettingsDownloadResult.Fail("Операция отменена");
     }
 
     private ResultSettingsDownloadResult HandleTimeout(string article)
     {
-        logger.LogWarning("Result settings download timed out for article {Article}", article);
-        sbLogger.LogWarning("Таймаут загрузки настроек результата для артикула {Article}", article);
+        logger.LogWarning("Таймаут загрузки настроек результата для артикула {Article}", article);
         return ResultSettingsDownloadResult.Fail("Нет ответа от сервера");
     }
 
     private ResultSettingsDownloadResult HandleConnectionError(HttpRequestException ex, string article)
     {
-        logger.LogError(ex, "No connection to server for article {Article}", article);
-        sbLogger.LogError(ex, "Нет соединения с сервером для артикула {Article}", article);
+        logger.LogError(ex, "Нет соединения с сервером для артикула {Article}", article);
         return ResultSettingsDownloadResult.Fail("Нет соединения с сервером");
     }
 
     private ResultSettingsDownloadResult HandleUnexpectedError(Exception ex, string article)
     {
-        logger.LogError(ex, "Result settings download failed for article {Article}", article);
-        sbLogger.LogError(ex, "Ошибка загрузки настроек результата для артикула {Article}", article);
+        logger.LogError(ex, "Ошибка загрузки настроек результата для артикула {Article}", article);
         return ResultSettingsDownloadResult.Fail("Ошибка на стороне сервера");
     }
 
@@ -120,16 +113,14 @@ public class ResultSettingsDownloadService(
     private async Task<ResultSettingsDownloadResult> HandleSuccessAsync(HttpResponseMessage response, CancellationToken ct)
     {
         var items = await response.Content.ReadFromJsonAsync<List<ResultSettingsResponseDto>>(JsonOptions, ct) ?? [];
-        logger.LogInformation("Downloaded {Count} result settings", items.Count);
-        sbLogger.LogInformation("Загружено {Count} настроек результата", items.Count);
+        logger.LogInformation("Загружено {Count} настроек результата", items.Count);
         return ResultSettingsDownloadResult.Success(items);
     }
 
     private async Task<ResultSettingsDownloadResult> HandleNotFoundAsync(HttpResponseMessage response, CancellationToken ct)
     {
         var errorMessage = await TryParseErrorMessageAsync(response, ct);
-        logger.LogWarning("Result settings download 404: {Message}", errorMessage);
-        sbLogger.LogWarning("Настройки результата не найдены: {Message}", errorMessage);
+        logger.LogWarning("Настройки результата не найдены: {Message}", errorMessage);
         return ResultSettingsDownloadResult.Fail(errorMessage);
     }
 
@@ -148,7 +139,7 @@ public class ResultSettingsDownloadService(
 
     private ResultSettingsDownloadResult HandleUnexpectedStatus(HttpStatusCode statusCode)
     {
-        logger.LogError("Unexpected status code {StatusCode} for result settings download", statusCode);
+        logger.LogError("Неожиданный код статуса {StatusCode} при загрузке настроек результата", statusCode);
         return ResultSettingsDownloadResult.Fail("Ошибка на стороне сервера");
     }
 }

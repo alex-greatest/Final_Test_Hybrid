@@ -15,6 +15,15 @@ public static partial class ErrorDefinitions
         "G012", "Таймаут чтения тега ПЛК",
         Severity: ErrorSeverity.Critical);
 
+    public static readonly ErrorDefinition PlcWriteError = new(
+        "О-004-00", "Ошибка записи в ПЛК",
+        Severity: ErrorSeverity.Critical);
+
     internal static IEnumerable<ErrorDefinition> GlobalAppErrors =>
-        [];
+    [
+        OpcConnectionLost,
+        DatabaseError,
+        TagReadTimeout,
+        PlcWriteError
+    ];
 }

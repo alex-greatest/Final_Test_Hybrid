@@ -28,6 +28,7 @@ public class ScanBarcodeStep(
     ILogger<ScanBarcodeStep> logger,
     ITestStepLogger testStepLogger) : ITestStep, IScanBarcodeStep, IPreExecutionStep
 {
+    private readonly DualLogger<ScanBarcodeStep> _logger = new(logger, testStepLogger);
     public string Id => "scan-barcode";
     public string Name => "Сканирование штрихкода";
     public string Description => "Сканирует штрихкод с продукта";
@@ -150,14 +151,13 @@ public class ScanBarcodeStep(
 
     private BarcodeStepResult Fail(string error)
     {
-        testStepLogger.LogError(null, "{Error}", error);
+        _logger.LogError("{Error}", error);
         return BarcodeStepResult.Fail(error);
     }
 
     private void LogInfo(string message, params object?[] args)
     {
-        logger.LogInformation(message, args);
-        testStepLogger.LogInformation(message, args);
+        _logger.LogInformation(message, args);
     }
 
     async Task<PreExecutionResult> IPreExecutionStep.ExecuteAsync(PreExecutionContext context, CancellationToken ct)

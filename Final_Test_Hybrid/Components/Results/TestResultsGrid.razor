@@ -43,7 +43,19 @@ else
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestResultItem" Property="ParameterName" Title="Параметр" />
             <RadzenDataGridColumn TItem="TestResultItem" Property="Value" Title="Значение" Width="150px" />
-            <RadzenDataGridColumn TItem="TestResultItem" Property="Tolerances" Title="Допуски" Width="150px" />
+            <RadzenDataGridColumn TItem="TestResultItem" Property="Min" Title="Мин" Width="100px" />
+            <RadzenDataGridColumn TItem="TestResultItem" Property="Max" Title="Макс" Width="100px" />
+            <RadzenDataGridColumn TItem="TestResultItem" Property="IsRanged" Title="Тип" Width="120px">
+                <Template Context="item">
+                    @(item.IsRanged ? "с диапазоном" : "без диапазона")
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="TestResultItem" Property="Status" Title="Статус" Width="80px">
+                <Template Context="item">
+                    <RadzenBadge BadgeStyle="@(item.Status == 1 ? BadgeStyle.Success : BadgeStyle.Danger)"
+                                 Text="@(item.Status == 1 ? "OK" : "NOK")" />
+                </Template>
+            </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestResultItem" Property="Unit" Title="Ед. изм." Width="100px" />
         </Columns>
     </RadzenDataGrid>

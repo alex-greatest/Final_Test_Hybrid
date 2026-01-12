@@ -1,7 +1,9 @@
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Final_Test_Hybrid.Services.Diagnostic.Models.Enums;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Final_Test_Hybrid.Services.Diagnostic.Services;
@@ -11,8 +13,11 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Services;
 /// </summary>
 public partial class BoilerStatusService(
     RegisterReader reader,
-    IOptions<DiagnosticSettings> settings)
+    IOptions<DiagnosticSettings> settings,
+    ILogger<BoilerStatusService> logger,
+    ITestStepLogger testStepLogger)
 {
+    private readonly DualLogger<BoilerStatusService> _logger = new(logger, testStepLogger);
     #region Register Addresses
 
     private const ushort RegisterStatus = 1005;
@@ -44,10 +49,13 @@ public partial class BoilerStatusService(
 
         if (!result.Success)
         {
+            _logger.LogError("Ошибка чтения статуса котла: {Error}", result.Error!);
             return DiagnosticReadResult<BoilerStatus>.Fail(address, result.Error!);
         }
 
-        return DiagnosticReadResult<BoilerStatus>.Ok(address, (BoilerStatus)result.Value);
+        var status = (BoilerStatus)result.Value;
+        _logger.LogDebug("Статус котла: {Status}", status);
+        return DiagnosticReadResult<BoilerStatus>.Ok(address, status);
     }
 
     #endregion
@@ -69,10 +77,13 @@ public partial class BoilerStatusService(
 
         if (!result.Success)
         {
+            _logger.LogError("Ошибка чтения типа мощности котла: {Error}", result.Error!);
             return DiagnosticReadResult<BoilerPowerType>.Fail(address, result.Error!);
         }
 
-        return DiagnosticReadResult<BoilerPowerType>.Ok(address, (BoilerPowerType)result.Value);
+        var powerType = (BoilerPowerType)result.Value;
+        _logger.LogDebug("Тип мощности котла: {PowerType}", powerType);
+        return DiagnosticReadResult<BoilerPowerType>.Ok(address, powerType);
     }
 
     /// <summary>
@@ -90,10 +101,13 @@ public partial class BoilerStatusService(
 
         if (!result.Success)
         {
+            _logger.LogError("Ошибка чтения типа насоса: {Error}", result.Error!);
             return DiagnosticReadResult<PumpType>.Fail(address, result.Error!);
         }
 
-        return DiagnosticReadResult<PumpType>.Ok(address, (PumpType)result.Value);
+        var pumpType = (PumpType)result.Value;
+        _logger.LogDebug("Тип насоса: {PumpType}", pumpType);
+        return DiagnosticReadResult<PumpType>.Ok(address, pumpType);
     }
 
     /// <summary>
@@ -111,10 +125,13 @@ public partial class BoilerStatusService(
 
         if (!result.Success)
         {
+            _logger.LogError("Ошибка чтения типа устройства давления: {Error}", result.Error!);
             return DiagnosticReadResult<PressureDeviceType>.Fail(address, result.Error!);
         }
 
-        return DiagnosticReadResult<PressureDeviceType>.Ok(address, (PressureDeviceType)result.Value);
+        var deviceType = (PressureDeviceType)result.Value;
+        _logger.LogDebug("Тип устройства давления: {DeviceType}", deviceType);
+        return DiagnosticReadResult<PressureDeviceType>.Ok(address, deviceType);
     }
 
     /// <summary>
@@ -132,10 +149,13 @@ public partial class BoilerStatusService(
 
         if (!result.Success)
         {
+            _logger.LogError("Ошибка чтения типа регулятора газа: {Error}", result.Error!);
             return DiagnosticReadResult<GasRegulatorType>.Fail(address, result.Error!);
         }
 
-        return DiagnosticReadResult<GasRegulatorType>.Ok(address, (GasRegulatorType)result.Value);
+        var regulatorType = (GasRegulatorType)result.Value;
+        _logger.LogDebug("Тип регулятора газа: {RegulatorType}", regulatorType);
+        return DiagnosticReadResult<GasRegulatorType>.Ok(address, regulatorType);
     }
 
     #endregion
@@ -157,10 +177,13 @@ public partial class BoilerStatusService(
 
         if (!result.Success)
         {
+            _logger.LogError("Ошибка чтения типа подключения: {Error}", result.Error!);
             return DiagnosticReadResult<ConnectionType>.Fail(address, result.Error!);
         }
 
-        return DiagnosticReadResult<ConnectionType>.Ok(address, (ConnectionType)result.Value);
+        var connectionType = (ConnectionType)result.Value;
+        _logger.LogDebug("Тип подключения: {ConnectionType}", connectionType);
+        return DiagnosticReadResult<ConnectionType>.Ok(address, connectionType);
     }
 
     #endregion

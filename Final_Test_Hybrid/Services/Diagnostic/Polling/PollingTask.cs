@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol;
 using Microsoft.Extensions.Logging;
 
@@ -13,9 +14,11 @@ public class PollingTask(
     Func<Dictionary<ushort, object>, Task> callback,
     RegisterReader reader,
     PollingPauseCoordinator pauseCoordinator,
-    ILogger logger)
+    ILogger<PollingTask> logger,
+    ITestStepLogger testStepLogger)
     : IAsyncDisposable
 {
+    private readonly DualLogger<PollingTask> _logger = new(logger, testStepLogger);
     private readonly object _startLock = new();
 
     private CancellationTokenSource? _cts;
@@ -71,7 +74,7 @@ public class PollingTask(
             _pollingTask = RunPollingLoopAsync(_cts.Token);
         }
 
-        logger.LogInformation("Задача опроса '{Name}' запущена", Name);
+        _logger.LogDebug("Задача опроса '{Name}' запущена", Name);
     }
 
     /// <summary>
@@ -98,7 +101,7 @@ public class PollingTask(
 
         CleanupPollingResources();
 
-        logger.LogInformation("Задача опроса '{Name}' остановлена", Name);
+        _logger.LogDebug("Задача опроса '{Name}' остановлена", Name);
     }
 
     private static async Task CancelPollingAsync(CancellationTokenSource? cts)
@@ -177,7 +180,7 @@ public class PollingTask(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка в задаче опроса '{Name}'", Name);
+            _logger.LogError(ex, "Ошибка в задаче опроса '{Name}': {Error}", Name, ex.Message);
         }
     }
 

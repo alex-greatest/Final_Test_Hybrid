@@ -11,6 +11,7 @@ public class TestStepLogger : ITestStepLogger, IDisposable
     private readonly int _retain;
     private readonly Serilog.Events.LogEventLevel _level;
     private ILogger? _logger;
+    private string? _currentLogPath;
     private bool _disposed;
     public void LogDebug(string message, params object?[] args) => _logger?.Debug(message, args);
     public void LogInformation(string message, params object?[] args) => _logger?.Information(message, args);
@@ -29,12 +30,15 @@ public class TestStepLogger : ITestStepLogger, IDisposable
     {
         (_logger as IDisposable)?.Dispose();
         var path = BuildPathWithTimestamp(_basePath);
+        _currentLogPath = path;
         CleanupOldFiles(_basePath, _retain);
         _logger = new LoggerConfiguration()
             .MinimumLevel.Is(_level)
             .WriteTo.File(path)
             .CreateLogger();
     }
+
+    public string? GetCurrentLogFilePath() => _currentLogPath;
 
     public void LogStepStart(string stepName)
     {

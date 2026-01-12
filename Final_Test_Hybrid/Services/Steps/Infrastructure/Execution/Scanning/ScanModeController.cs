@@ -1,4 +1,3 @@
-using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
@@ -20,7 +19,6 @@ public class ScanModeController : IDisposable
     private readonly AutoReadySubscription _autoReady;
     private readonly MessageService _messageService;
     private readonly ExecutionMessageState _executionMessageState;
-    private readonly ITestStepLogger _testStepLogger;
     private readonly StepStatusReporter _statusReporter;
     private readonly IPreExecutionStepRegistry _stepRegistry;
     private Action<string>? _barcodeHandler;
@@ -36,7 +34,6 @@ public class ScanModeController : IDisposable
         AutoReadySubscription autoReady,
         MessageService messageService,
         ExecutionMessageState executionMessageState,
-        ITestStepLogger testStepLogger,
         StepStatusReporter statusReporter,
         IPreExecutionStepRegistry stepRegistry)
     {
@@ -46,7 +43,6 @@ public class ScanModeController : IDisposable
         _autoReady = autoReady;
         _messageService = messageService;
         _executionMessageState = executionMessageState;
-        _testStepLogger = testStepLogger;
         _statusReporter = statusReporter;
         _stepRegistry = stepRegistry;
         SubscribeToEvents();
@@ -92,7 +88,6 @@ public class ScanModeController : IDisposable
         _scanStateManager.TryTransitionTo(ScanState.Ready, () =>
         {
             _sessionManager.AcquireSession(_barcodeHandler);
-            _testStepLogger.StartNewSession();
             AddScanStepToGrid();
         });
     }

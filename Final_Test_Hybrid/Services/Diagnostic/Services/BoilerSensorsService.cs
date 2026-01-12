@@ -1,6 +1,8 @@
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Final_Test_Hybrid.Services.Diagnostic.Services;
@@ -10,8 +12,11 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Services;
 /// </summary>
 public class BoilerSensorsService(
     RegisterReader reader,
-    IOptions<DiagnosticSettings> settings)
+    IOptions<DiagnosticSettings> settings,
+    ILogger<BoilerSensorsService> logger,
+    ITestStepLogger testStepLogger)
 {
+    private readonly DualLogger<BoilerSensorsService> _logger = new(logger, testStepLogger);
     #region Register Addresses
 
     private const ushort RegisterFlameIonization = 1014;
@@ -62,10 +67,12 @@ public class BoilerSensorsService(
 
         if (!result.Success)
         {
+            _logger.LogError("Ошибка чтения тока ионизации: {Error}", result.Error!);
             return DiagnosticReadResult<float>.Fail(address, result.Error!);
         }
 
         var valueInMicroAmps = result.Value / IonizationDivisor;
+        _logger.LogDebug("Ток ионизации: {Value} мкА", valueInMicroAmps);
         return DiagnosticReadResult<float>.Ok(address, valueInMicroAmps);
     }
 
@@ -89,10 +96,12 @@ public class BoilerSensorsService(
 
         if (!result.Success)
         {
+            _logger.LogError("Ошибка чтения расхода воды: {Error}", result.Error!);
             return DiagnosticReadResult<float>.Fail(address, result.Error!);
         }
 
         var valueInLitersPerMin = result.Value / FlowAndFrequencyDivisor;
+        _logger.LogDebug("Расход воды: {Value} л/мин", valueInLitersPerMin);
         return DiagnosticReadResult<float>.Ok(address, valueInLitersPerMin);
     }
 
@@ -112,7 +121,18 @@ public class BoilerSensorsService(
     public async Task<DiagnosticReadResult<ushort>> ReadModulatingCoilCurrentAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterModulatingCoilCurrent - _settings.BaseAddressOffset);
-        return await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Ток модулирующей катушки: {Value} мА", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения тока модулирующей катушки: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     #endregion
@@ -135,10 +155,12 @@ public class BoilerSensorsService(
 
         if (!result.Success)
         {
+            _logger.LogError("Ошибка чтения частоты вентилятора: {Error}", result.Error!);
             return DiagnosticReadResult<float>.Fail(address, result.Error!);
         }
 
         var valueInHz = result.Value / FlowAndFrequencyDivisor;
+        _logger.LogDebug("Частота вентилятора: {Value} Гц", valueInHz);
         return DiagnosticReadResult<float>.Ok(address, valueInHz);
     }
 
@@ -154,7 +176,18 @@ public class BoilerSensorsService(
     public async Task<DiagnosticReadResult<ushort>> ReadFanSpeedAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterFanSpeed - _settings.BaseAddressOffset);
-        return await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Скорость вентилятора: {Value} об/мин", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения скорости вентилятора: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -169,7 +202,18 @@ public class BoilerSensorsService(
     public async Task<DiagnosticReadResult<ushort>> ReadFanSpeedSetpointAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterFanSpeedSetpoint - _settings.BaseAddressOffset);
-        return await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Уставка скорости вентилятора: {Value} об/мин", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения уставки скорости вентилятора: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -184,7 +228,18 @@ public class BoilerSensorsService(
     public async Task<DiagnosticReadResult<ushort>> ReadFanFillFactorAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterFanFillFactor - _settings.BaseAddressOffset);
-        return await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Коэффициент заполнения ШИМ вентилятора: {Value}%", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения коэффициента заполнения вентилятора: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     #endregion
@@ -203,7 +258,18 @@ public class BoilerSensorsService(
     public async Task<DiagnosticReadResult<ushort>> ReadEV1CurrentAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterEv1Current - _settings.BaseAddressOffset);
-        return await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Ток клапана EV1: {Value} мА", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения тока клапана EV1: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -218,7 +284,18 @@ public class BoilerSensorsService(
     public async Task<DiagnosticReadResult<ushort>> ReadEV2CurrentAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterEv2Current - _settings.BaseAddressOffset);
-        return await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Ток клапана EV2: {Value} мА", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения тока клапана EV2: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     #endregion
@@ -237,7 +314,18 @@ public class BoilerSensorsService(
     public async Task<DiagnosticReadResult<float>> ReadPressureAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterPressure - _settings.BaseAddressOffset);
-        return await reader.ReadFloatAsync(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadFloatAsync(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Давление воды: {Value} бар", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения давления воды: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     #endregion

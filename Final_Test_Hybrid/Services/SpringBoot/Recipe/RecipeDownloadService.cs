@@ -5,7 +5,6 @@ using System.Text.Json.Serialization;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Settings.Spring;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.SpringBoot.Recipe;
 
@@ -25,8 +24,7 @@ public class RecipeDownloadResult
 public class RecipeDownloadService(
     SpringBootHttpClient httpClient,
     AppSettingsService appSettingsService,
-    ILogger<RecipeDownloadService> logger,
-    ISpringBootLogger sbLogger)
+    DualLogger<RecipeDownloadService> logger)
 {
     private const string Endpoint = "/api/recipes";
 
@@ -39,8 +37,7 @@ public class RecipeDownloadService(
     public async Task<RecipeDownloadResult> DownloadRecipesAsync(string article, CancellationToken ct = default)
     {
         var url = BuildRequestUrl(article);
-        logger.LogInformation("Downloading recipes from {Url}", url);
-        sbLogger.LogInformation("Загрузка рецептов из {Url}", url);
+        logger.LogInformation("Загрузка рецептов из {Url}", url);
         return await ExecuteDownloadAsync(url, article, ct);
     }
 
@@ -75,29 +72,25 @@ public class RecipeDownloadService(
 
     private RecipeDownloadResult HandleCancellation()
     {
-        logger.LogInformation("Recipe download cancelled");
-        sbLogger.LogInformation("Загрузка рецептов отменена");
+        logger.LogInformation("Загрузка рецептов отменена");
         return RecipeDownloadResult.Fail("Операция отменена");
     }
 
     private RecipeDownloadResult HandleTimeout(string article)
     {
-        logger.LogWarning("Recipe download timed out for article {Article}", article);
-        sbLogger.LogWarning("Таймаут загрузки рецептов для артикула {Article}", article);
+        logger.LogWarning("Таймаут загрузки рецептов для артикула {Article}", article);
         return RecipeDownloadResult.Fail("Нет ответа от сервера");
     }
 
     private RecipeDownloadResult HandleConnectionError(HttpRequestException ex, string article)
     {
-        logger.LogError(ex, "No connection to server for article {Article}", article);
-        sbLogger.LogError(ex, "Нет соединения с сервером для артикула {Article}", article);
+        logger.LogError(ex, "Нет соединения с сервером для артикула {Article}", article);
         return RecipeDownloadResult.Fail("Нет соединения с сервером");
     }
 
     private RecipeDownloadResult HandleUnexpectedError(Exception ex, string article)
     {
-        logger.LogError(ex, "Recipe download failed for article {Article}", article);
-        sbLogger.LogError(ex, "Ошибка загрузки рецептов для артикула {Article}", article);
+        logger.LogError(ex, "Ошибка загрузки рецептов для артикула {Article}", article);
         return RecipeDownloadResult.Fail("Ошибка на стороне сервера");
     }
 
@@ -120,16 +113,14 @@ public class RecipeDownloadService(
     private async Task<RecipeDownloadResult> HandleSuccessAsync(HttpResponseMessage response, CancellationToken ct)
     {
         var recipes = await response.Content.ReadFromJsonAsync<List<RecipeResponseDto>>(JsonOptions, ct) ?? [];
-        logger.LogInformation("Downloaded {Count} recipes", recipes.Count);
-        sbLogger.LogInformation("Загружено {Count} рецептов", recipes.Count);
+        logger.LogInformation("Загружено {Count} рецептов", recipes.Count);
         return RecipeDownloadResult.Success(recipes);
     }
 
     private async Task<RecipeDownloadResult> HandleNotFoundAsync(HttpResponseMessage response, CancellationToken ct)
     {
         var errorMessage = await TryParseErrorMessageAsync(response, ct);
-        logger.LogWarning("Recipe download 404: {Message}", errorMessage);
-        sbLogger.LogWarning("Рецепты не найдены: {Message}", errorMessage);
+        logger.LogWarning("Рецепты не найдены: {Message}", errorMessage);
         return RecipeDownloadResult.Fail(errorMessage);
     }
 
@@ -148,8 +139,7 @@ public class RecipeDownloadService(
 
     private RecipeDownloadResult HandleUnexpectedStatus(HttpStatusCode statusCode)
     {
-        logger.LogError("Unexpected status code {StatusCode} for recipe download", statusCode);
-        sbLogger.LogError(null, "Неожиданный код статуса {StatusCode} при загрузке рецептов", statusCode);
+        logger.LogError("Неожиданный код статуса {StatusCode} при загрузке рецептов", statusCode);
         return RecipeDownloadResult.Fail("Ошибка на стороне сервера");
     }
 }

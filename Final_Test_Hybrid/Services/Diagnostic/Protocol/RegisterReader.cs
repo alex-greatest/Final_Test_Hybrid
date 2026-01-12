@@ -1,4 +1,5 @@
 using System.Text;
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Microsoft.Extensions.Logging;
 
@@ -9,8 +10,10 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Protocol;
 /// </summary>
 public class RegisterReader(
     ModbusClient modbusClient,
-    ILogger<RegisterReader> logger)
+    ILogger<RegisterReader> logger,
+    ITestStepLogger testStepLogger)
 {
+    private readonly DualLogger<RegisterReader> _logger = new(logger, testStepLogger);
     /// <summary>
     /// Читает unsigned 16-bit значение.
     /// </summary>
@@ -26,11 +29,12 @@ public class RegisterReader(
                 return DiagnosticReadResult<ushort>.Fail(address, DiagnosticCodes.GetErrorMessage(value));
             }
 
+            _logger.LogDebug("Чтение регистра {Address}: {Value}", address, value);
             return DiagnosticReadResult<ushort>.Ok(address, value);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Ошибка чтения UInt16 по адресу {Address}", address);
+            _logger.LogError(ex, "Ошибка чтения регистра {Address}: {Error}", address, ex.Message);
             return DiagnosticReadResult<ushort>.Fail(address, ex.Message);
         }
     }
@@ -44,11 +48,18 @@ public class RegisterReader(
         {
             var registers = await modbusClient.ReadHoldingRegistersAsync(address, 1, ct).ConfigureAwait(false);
             var value = (short)registers[0];
-            return DiagnosticCodes.IsSignedErrorCode(value) ? DiagnosticReadResult<short>.Fail(address, DiagnosticCodes.GetSignedErrorMessage(value)) : DiagnosticReadResult<short>.Ok(address, value);
+
+            if (DiagnosticCodes.IsSignedErrorCode(value))
+            {
+                return DiagnosticReadResult<short>.Fail(address, DiagnosticCodes.GetSignedErrorMessage(value));
+            }
+
+            _logger.LogDebug("Чтение регистра {Address}: {Value}", address, value);
+            return DiagnosticReadResult<short>.Ok(address, value);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Ошибка чтения Int16 по адресу {Address}", address);
+            _logger.LogError(ex, "Ошибка чтения регистра {Address}: {Error}", address, ex.Message);
             return DiagnosticReadResult<short>.Fail(address, ex.Message);
         }
     }
@@ -62,11 +73,18 @@ public class RegisterReader(
         {
             var registers = await modbusClient.ReadHoldingRegistersAsync(addressHi, 2, ct).ConfigureAwait(false);
             var value = ((uint)registers[0] << 16) | registers[1];
-            return DiagnosticCodes.IsUInt32ErrorCode(value) ? DiagnosticReadResult<uint>.Fail(addressHi, DiagnosticCodes.GetUInt32ErrorDescription(value)!) : DiagnosticReadResult<uint>.Ok(addressHi, value);
+
+            if (DiagnosticCodes.IsUInt32ErrorCode(value))
+            {
+                return DiagnosticReadResult<uint>.Fail(addressHi, DiagnosticCodes.GetUInt32ErrorDescription(value)!);
+            }
+
+            _logger.LogDebug("Чтение регистра {Address}: {Value}", addressHi, value);
+            return DiagnosticReadResult<uint>.Ok(addressHi, value);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Ошибка чтения UInt32 по адресу {Address}", addressHi);
+            _logger.LogError(ex, "Ошибка чтения регистра {Address}: {Error}", addressHi, ex.Message);
             return DiagnosticReadResult<uint>.Fail(addressHi, ex.Message);
         }
     }
@@ -91,11 +109,18 @@ public class RegisterReader(
                 Array.Reverse(bytes);
             }
             var value = BitConverter.ToSingle(bytes, 0);
-            return DiagnosticCodes.IsFloatErrorCode(value, out var errorType) ? DiagnosticReadResult<float>.Fail(addressHi, errorType!) : DiagnosticReadResult<float>.Ok(addressHi, value);
+
+            if (DiagnosticCodes.IsFloatErrorCode(value, out var errorType))
+            {
+                return DiagnosticReadResult<float>.Fail(addressHi, errorType!);
+            }
+
+            _logger.LogDebug("Чтение регистра {Address}: {Value}", addressHi, value);
+            return DiagnosticReadResult<float>.Ok(addressHi, value);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Ошибка чтения Float по адресу {Address}", addressHi);
+            _logger.LogError(ex, "Ошибка чтения регистра {Address}: {Error}", addressHi, ex.Message);
             return DiagnosticReadResult<float>.Fail(addressHi, ex.Message);
         }
     }
@@ -126,11 +151,13 @@ public class RegisterReader(
                 sb.Append(lowByte);
             }
 
-            return DiagnosticReadResult<string>.Ok(address, sb.ToString());
+            var value = sb.ToString();
+            _logger.LogDebug("Чтение строки по адресу {Address}: {Value}", address, value);
+            return DiagnosticReadResult<string>.Ok(address, value);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Ошибка чтения String по адресу {Address}", address);
+            _logger.LogError(ex, "Ошибка чтения строки по адресу {Address}: {Error}", address, ex.Message);
             return DiagnosticReadResult<string>.Fail(address, ex.Message);
         }
     }
@@ -158,7 +185,7 @@ public class RegisterReader(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Ошибка чтения нескольких UInt16 с адреса {Address}", startAddress);
+            _logger.LogError(ex, "Ошибка чтения нескольких регистров с адреса {Address}: {Error}", startAddress, ex.Message);
 
             for (var i = 0; i < count; i++)
             {

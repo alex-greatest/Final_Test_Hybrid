@@ -10,6 +10,12 @@ public class DualLogger<TCategoryName>(
     ILogger<TCategoryName> logger,
     ITestStepLogger testStepLogger)
 {
+    public void LogDebug(string message, params object?[] args)
+    {
+        logger.LogDebug(message, args);
+        testStepLogger.LogDebug(message, args);
+    }
+
     public void LogInformation(string message, params object?[] args)
     {
         logger.LogInformation(message, args);

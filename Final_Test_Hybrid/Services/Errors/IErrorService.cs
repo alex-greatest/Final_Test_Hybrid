@@ -18,4 +18,5 @@ public interface IErrorService
     void ClearHistory();
     bool HasResettableErrors { get; }
     bool HasActiveErrors { get; }
+    bool IsHistoryEnabled { get; set; }
 }

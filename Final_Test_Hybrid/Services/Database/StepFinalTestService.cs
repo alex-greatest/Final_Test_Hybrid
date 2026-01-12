@@ -2,14 +2,12 @@ using Final_Test_Hybrid.Models.Database;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Database.Config;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Database;
 
 public class StepFinalTestService(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    ILogger<StepFinalTestService> logger,
-    IDatabaseLogger dbLogger)
+    DualLogger<StepFinalTestService> logger)
 {
     public async Task<List<StepFinalTest>> GetAllAsync()
     {
@@ -44,15 +42,13 @@ public class StepFinalTestService(
             dbContext.StepFinalTestHistories.Add(history);
             await dbContext.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
-            logger.LogInformation("Created StepFinalTest '{Name}' with Id {Id}", name, step.Id);
-            dbLogger.LogInformation("Создан шаг финального теста '{Name}' с Id {Id}", name, step.Id);
+            logger.LogInformation("Создан шаг финального теста '{Name}' с Id {Id}", name, step.Id);
             return step;
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(ct);
-            logger.LogError(ex, "Failed to create StepFinalTest '{Name}'", name);
-            dbLogger.LogError(ex, "Ошибка создания шага финального теста '{Name}'", name);
+            logger.LogError(ex, "Ошибка создания шага финального теста '{Name}'", name);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -69,15 +65,13 @@ public class StepFinalTestService(
             dbContext.StepFinalTestHistories.Add(history);
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
-            logger.LogInformation("Created StepFinalTest {Id} with active history", stepFinalTest.Id);
-            dbLogger.LogInformation("Создан шаг финального теста {Id} с активной историей", stepFinalTest.Id);
+            logger.LogInformation("Создан шаг финального теста {Id} с активной историей", stepFinalTest.Id);
             return stepFinalTest;
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            logger.LogError(ex, "Failed to create StepFinalTest");
-            dbLogger.LogError(ex, "Ошибка создания шага финального теста");
+            logger.LogError(ex, "Ошибка создания шага финального теста");
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -95,8 +89,7 @@ public class StepFinalTestService(
             dbContext.StepFinalTestHistories.Add(newHistory);
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
-            logger.LogInformation("Updated StepFinalTest {Id} with new active history", stepFinalTest.Id);
-            dbLogger.LogInformation("Обновлён шаг финального теста {Id} с новой активной историей", stepFinalTest.Id);
+            logger.LogInformation("Обновлён шаг финального теста {Id} с новой активной историей", stepFinalTest.Id);
         }
         catch (InvalidOperationException)
         {
@@ -105,8 +98,7 @@ public class StepFinalTestService(
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            logger.LogError(ex, "Failed to update StepFinalTest {Id}", stepFinalTest.Id);
-            dbLogger.LogError(ex, "Ошибка обновления шага финального теста {Id}", stepFinalTest.Id);
+            logger.LogError(ex, "Ошибка обновления шага финального теста {Id}", stepFinalTest.Id);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -126,14 +118,12 @@ public class StepFinalTestService(
             dbContext.StepFinalTests.Remove(stepFinalTest);
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
-            logger.LogInformation("Deleted StepFinalTest {Id}", id);
-            dbLogger.LogInformation("Удалён шаг финального теста {Id}", id);
+            logger.LogInformation("Удалён шаг финального теста {Id}", id);
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            logger.LogError(ex, "Failed to delete StepFinalTest {Id}", id);
-            dbLogger.LogError(ex, "Ошибка удаления шага финального теста {Id}", id);
+            logger.LogError(ex, "Ошибка удаления шага финального теста {Id}", id);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -149,14 +139,12 @@ public class StepFinalTestService(
                 .ExecuteUpdateAsync(s => s.SetProperty(h => h.IsActive, false), ct);
             await dbContext.StepFinalTests.ExecuteDeleteAsync(ct);
             await transaction.CommitAsync(ct);
-            logger.LogInformation("Deleted all StepFinalTests");
-            dbLogger.LogInformation("Удалены все шаги финального теста");
+            logger.LogInformation("Удалены все шаги финального теста");
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(ct);
-            logger.LogError(ex, "Failed to delete all StepFinalTests");
-            dbLogger.LogError(ex, "Ошибка удаления всех шагов финального теста");
+            logger.LogError(ex, "Ошибка удаления всех шагов финального теста");
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -170,14 +158,12 @@ public class StepFinalTestService(
             await DeleteAllWithHistoryAsync(dbContext, ct);
             await AddAllWithHistoryAsync(dbContext, items, ct);
             await transaction.CommitAsync(ct);
-            logger.LogInformation("Replaced all StepFinalTests with {Count} new items", items.Count);
-            dbLogger.LogInformation("Заменены все шаги финального теста на {Count} новых элементов", items.Count);
+            logger.LogInformation("Заменены все шаги финального теста на {Count} новых элементов", items.Count);
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(ct);
-            logger.LogError(ex, "Failed to replace all StepFinalTests");
-            dbLogger.LogError(ex, "Ошибка замены всех шагов финального теста");
+            logger.LogError(ex, "Ошибка замены всех шагов финального теста");
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }

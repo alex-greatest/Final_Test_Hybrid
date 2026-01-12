@@ -16,6 +16,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Final_Test_Hybrid.Services.Steps.Steps;
 using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.Extensions.DependencyInjection;
@@ -79,6 +80,7 @@ public static class StepsServiceExtensions
         services.AddSingleton<PauseTokenSource>();
         services.AddSingleton<ErrorCoordinator>();
         services.AddSingleton<TestExecutionCoordinator>();
+        services.AddSingleton<IStepTimingService, StepTimingService>();
 
         // Errors
         services.AddSingleton<IErrorService, ErrorService>();
@@ -99,6 +101,7 @@ public static class StepsServiceExtensions
         services.AddSingleton<IPreExecutionStep, ValidateRecipesStep>();
         services.AddSingleton<IPreExecutionStep, InitializeDatabaseStep>();
         services.AddSingleton<IPreExecutionStep, InitializeRecipeProviderStep>();
+        services.AddSingleton<IPreExecutionStep, BlockBoilerAdapterStep>();
         services.AddSingleton<PreExecutionCoordinator>();
 
         return services;

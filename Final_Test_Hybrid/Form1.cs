@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Database;
 using Final_Test_Hybrid.Services.Database.Config;
 using Final_Test_Hybrid.Services.DependencyInjection;
@@ -53,6 +54,10 @@ public partial class Form1 : Form
 
         var logger = _serviceProvider.GetRequiredService<ILogger<Form1>>();
         HandleException(logger);
+
+        // Инициализация TestStepLogger при запуске приложения
+        var testStepLogger = _serviceProvider.GetRequiredService<ITestStepLogger>();
+        testStepLogger.StartNewSession();
 
         blazorWebView1.Services = _serviceProvider;
         StartServices(_serviceProvider);

@@ -14,6 +14,7 @@ public class PreExecutionStepRegistry(
     private const string ValidateRecipesId = "validate-recipes";
     private const string InitializeDatabaseId = "initialize-database";
     private const string InitializeRecipeProviderId = "initialize-recipe-provider";
+    private const string BlockBoilerAdapterId = "block-boiler-adapter";
     private readonly List<IPreExecutionStep> _steps = steps.ToList();
 
     public IReadOnlyList<IPreExecutionStep> GetOrderedSteps()
@@ -25,11 +26,12 @@ public class PreExecutionStepRegistry(
         var initDbStep = GetStep(InitializeDatabaseId);
         var writeRecipesStep = GetStep(WriteRecipesId);
         var initRecipeProviderStep = GetStep(InitializeRecipeProviderId);
-        if (!AreAllStepsPresent(scanStep, resolveStep, validateRecipesStep, initDbStep, writeRecipesStep, initRecipeProviderStep))
+        var blockBoilerAdapterStep = GetStep(BlockBoilerAdapterId);
+        if (!AreAllStepsPresent(scanStep, resolveStep, validateRecipesStep, initDbStep, writeRecipesStep, initRecipeProviderStep, blockBoilerAdapterStep))
         {
             return [];
         }
-        // Порядок: Scan → Resolve → ValidateRecipes → InitDb → WriteRecipes → InitRecipeProvider
+        // Порядок: ScanGroup → BlockBoilerAdapter → (тесты из Excel)
         var scanGroup = new PreExecutionStepGroup(
             scanStep!,
             resolveStep!,
@@ -37,7 +39,7 @@ public class PreExecutionStepRegistry(
             initDbStep!,
             writeRecipesStep!,
             initRecipeProviderStep!);
-        return [scanGroup];
+        return [scanGroup, blockBoilerAdapterStep!];
     }
 
     private static bool AreAllStepsPresent(params IPreExecutionStep?[] steps)

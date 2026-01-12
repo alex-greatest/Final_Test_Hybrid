@@ -3,7 +3,6 @@ using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Settings.OpcUa;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Opc.Ua;
 using Opc.Ua.Client;
@@ -14,8 +13,7 @@ public class OpcUaConnectionService(
     IOptions<OpcUaSettings> settingsOptions,
     OpcUaSubscription subscription,
     OpcUaConnectionState connectionState,
-    ILogger<OpcUaConnectionService> logger,
-    ISubscriptionLogger subscriptionLogger)
+    DualLogger<OpcUaConnectionService> logger)
 {
     private readonly OpcUaSettings _settings = settingsOptions.Value;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
@@ -50,7 +48,6 @@ public class OpcUaConnectionService(
                 Session = await AppConfigurator.CreateSessionAsync(_appConfig!, _settings, endpoint, OnKeepAlive, cancellationToken)
                     .ConfigureAwait(false);
                 logger.LogInformation("Подключено к OPC UA серверу: {Endpoint}", _settings.EndpointUrl);
-                subscriptionLogger.LogInformation("Подключено к OPC UA серверу: {Endpoint}", _settings.EndpointUrl);
                 return;
             }
             catch (OperationCanceledException)
@@ -59,8 +56,8 @@ public class OpcUaConnectionService(
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Не удалось подключиться к OPC UA серверу. Повтор через {Interval} мс", _settings.ReconnectIntervalMs);
-                subscriptionLogger.LogWarning("Не удалось подключиться к OPC UA серверу. Повтор через {Interval} мс. Ошибка: {Error}", _settings.ReconnectIntervalMs, ex.Message);
+                logger.LogWarning("Не удалось подключиться к OPC UA серверу. Повтор через {Interval} мс. Ошибка: {Error}",
+                    _settings.ReconnectIntervalMs, ex.Message);
                 await Task.Delay(_settings.ReconnectIntervalMs, cancellationToken)
                     .ConfigureAwait(false);
             }
@@ -73,15 +70,12 @@ public class OpcUaConnectionService(
         try
         {
             logger.LogInformation("Создание подписки OPC UA...");
-            subscriptionLogger.LogInformation("Создание подписки OPC UA...");
             await subscription.CreateAsync(Session!, cancellationToken).ConfigureAwait(false);
             logger.LogInformation("Подписка OPC UA создана");
-            subscriptionLogger.LogInformation("Подписка OPC UA создана");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Не удалось создать подписку OPC UA");
-            subscriptionLogger.LogError(ex, "Не удалось создать подписку OPC UA");
             throw;
         }
     }
@@ -92,8 +86,7 @@ public class OpcUaConnectionService(
         {
             return;
         }
-        logger.LogWarning("OPC UA KeepAlive failed: {Status}. Запуск переподключения...", e.Status);
-        subscriptionLogger.LogWarning("OPC UA KeepAlive failed: {Status}. Запуск переподключения...", e.Status);
+        logger.LogWarning("OPC UA KeepAlive не удался: {Status}. Запуск переподключения...", e.Status);
         connectionState.SetConnected(false);
         StartReconnect(session);
     }
@@ -101,10 +94,7 @@ public class OpcUaConnectionService(
     private void StartReconnect(ISession session)
     {
         StartReconnectSafe(session).SafeFireAndForget(ex =>
-        {
-            logger.LogError(ex, "Ошибка при запуске переподключения к OPC UA серверу");
-            subscriptionLogger.LogError(ex, "Ошибка при запуске переподключения к OPC UA серверу");
-        });
+            logger.LogError(ex, "Ошибка при запуске переподключения к OPC UA серверу"));
     }
 
     private async Task StartReconnectSafe(ISession session)
@@ -118,14 +108,11 @@ public class OpcUaConnectionService(
         _reconnectHandler = new SessionReconnectHandler(reconnectAbort: false);
         _reconnectHandler.BeginReconnect(session, _settings.ReconnectIntervalMs, OnReconnectComplete);
     }
-    
+
     private void OnReconnectComplete(object? sender, EventArgs e)
     {
         OnReconnectCompleteSafe().SafeFireAndForget(ex =>
-        {
-            logger.LogError(ex, "Ошибка при завершении переподключения к OPC UA серверу");
-            subscriptionLogger.LogError(ex, "Ошибка при завершении переподключения к OPC UA серверу");
-        });
+            logger.LogError(ex, "Ошибка при завершении переподключения к OPC UA серверу"));
     }
 
     private async Task OnReconnectCompleteSafe()
@@ -139,12 +126,11 @@ public class OpcUaConnectionService(
         Session = newSession;
         newSession.KeepAlive += OnKeepAlive;
         logger.LogInformation("Переподключение к OPC UA серверу выполнено успешно");
-        subscriptionLogger.LogInformation("Переподключение к OPC UA серверу выполнено успешно");
         connectionState.SetConnected(true);
         _reconnectHandler?.Dispose();
         _reconnectHandler = null;
     }
-    
+
     public async Task DisconnectAsync()
     {
         await using var _ = await AsyncLock.AcquireAsync(_semaphore)
@@ -157,7 +143,7 @@ public class OpcUaConnectionService(
         }
         await CloseSessionAsync().ConfigureAwait(false);
     }
-    
+
     private async Task CloseSessionAsync()
     {
         try
@@ -166,12 +152,10 @@ public class OpcUaConnectionService(
             await Session.CloseAsync(CancellationToken.None)
                 .ConfigureAwait(false);
             logger.LogInformation("Отключено от OPC UA сервера");
-            subscriptionLogger.LogInformation("Отключено от OPC UA сервера");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при отключении от OPC UA сервера");
-            subscriptionLogger.LogError(ex, "Ошибка при отключении от OPC UA сервера");
         }
         finally
         {

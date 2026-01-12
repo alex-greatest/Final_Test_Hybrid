@@ -1,6 +1,8 @@
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Final_Test_Hybrid.Services.Diagnostic.Services;
@@ -10,8 +12,11 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Services;
 /// </summary>
 public class BoilerTemperatureService(
     RegisterReader reader,
-    IOptions<DiagnosticSettings> settings)
+    IOptions<DiagnosticSettings> settings,
+    ILogger<BoilerTemperatureService> logger,
+    ITestStepLogger testStepLogger)
 {
+    private readonly DualLogger<BoilerTemperatureService> _logger = new(logger, testStepLogger);
     #region Register Addresses - Temperatures
 
     private const ushort RegisterSupplyLineTemperature = 1006;
@@ -45,7 +50,18 @@ public class BoilerTemperatureService(
     public async Task<DiagnosticReadResult<short>> ReadSupplyLineTemperatureAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterSupplyLineTemperature - _settings.BaseAddressOffset);
-        return await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Температура подающей линии: {Value} C", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения температуры подающей линии: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -59,7 +75,18 @@ public class BoilerTemperatureService(
     public async Task<DiagnosticReadResult<short>> ReadDHWTemperatureAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterDhwTemperature - _settings.BaseAddressOffset);
-        return await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Температура ГВС: {Value} C", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения температуры ГВС: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -73,7 +100,18 @@ public class BoilerTemperatureService(
     public async Task<DiagnosticReadResult<short>> ReadBoilerTemperatureAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterBoilerTemperature - _settings.BaseAddressOffset);
-        return await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Температура бойлера: {Value} C", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения температуры бойлера: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -87,7 +125,18 @@ public class BoilerTemperatureService(
     public async Task<DiagnosticReadResult<short>> ReadOutdoorTemperatureAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterOutdoorTemperature - _settings.BaseAddressOffset);
-        return await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Наружная температура: {Value} C", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения наружной температуры: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     #endregion
@@ -105,7 +154,18 @@ public class BoilerTemperatureService(
     public async Task<DiagnosticReadResult<uint>> ReadSupplyLineResistanceAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterSupplyLineResistance - _settings.BaseAddressOffset);
-        return await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Сопротивление датчика подающей линии: {Value} Ом", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения сопротивления датчика подающей линии: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -119,7 +179,18 @@ public class BoilerTemperatureService(
     public async Task<DiagnosticReadResult<uint>> ReadDHWResistanceAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterDhwResistance - _settings.BaseAddressOffset);
-        return await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Сопротивление датчика ГВС: {Value} Ом", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения сопротивления датчика ГВС: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -133,7 +204,18 @@ public class BoilerTemperatureService(
     public async Task<DiagnosticReadResult<uint>> ReadBoilerResistanceAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterBoilerResistance - _settings.BaseAddressOffset);
-        return await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Сопротивление датчика бойлера: {Value} Ом", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения сопротивления датчика бойлера: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -147,7 +229,18 @@ public class BoilerTemperatureService(
     public async Task<DiagnosticReadResult<uint>> ReadOutdoorResistanceAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterOutdoorResistance - _settings.BaseAddressOffset);
-        return await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Сопротивление датчика наружной температуры: {Value} Ом", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения сопротивления датчика наружной температуры: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     #endregion

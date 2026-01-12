@@ -1,7 +1,9 @@
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Final_Test_Hybrid.Services.Diagnostic.Models.Enums;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Final_Test_Hybrid.Services.Diagnostic.Services;
@@ -15,8 +17,11 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Services;
 public class BoilerSettingsService(
     RegisterReader reader,
     RegisterWriter writer,
-    IOptions<DiagnosticSettings> settings)
+    IOptions<DiagnosticSettings> settings,
+    ILogger<BoilerSettingsService> logger,
+    ITestStepLogger testStepLogger)
 {
+    private readonly DualLogger<BoilerSettingsService> _logger = new(logger, testStepLogger);
     #region Register Addresses
 
     private const ushort RegisterGasType = 1065;
@@ -57,10 +62,13 @@ public class BoilerSettingsService(
 
         if (!result.Success)
         {
+            _logger.LogError("Ошибка чтения типа газа: {Error}", result.Error!);
             return DiagnosticReadResult<GasType>.Fail(address, result.Error!);
         }
 
-        return DiagnosticReadResult<GasType>.Ok(address, (GasType)result.Value);
+        var gasType = (GasType)result.Value;
+        _logger.LogDebug("Тип газа: {GasType}", gasType);
+        return DiagnosticReadResult<GasType>.Ok(address, gasType);
     }
 
     /// <summary>
@@ -75,7 +83,18 @@ public class BoilerSettingsService(
     public async Task<DiagnosticWriteResult> WriteGasTypeAsync(GasType value, CancellationToken ct = default)
     {
         var address = (ushort)(RegisterGasType - _settings.BaseAddressOffset);
-        return await writer.WriteUInt16Async(address, (ushort)value, ct).ConfigureAwait(false);
+        var result = await writer.WriteUInt16Async(address, (ushort)value, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogInformation("Записан тип газа: {GasType}", value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка записи типа газа: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     #endregion
@@ -93,7 +112,18 @@ public class BoilerSettingsService(
     public async Task<DiagnosticReadResult<ushort>> ReadDHWSetpointAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterDhwSetpoint - _settings.BaseAddressOffset);
-        return await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Уставка ГВС: {Value} C", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения уставки ГВС: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -109,7 +139,18 @@ public class BoilerSettingsService(
     public async Task<DiagnosticWriteResult> WriteDHWSetpointAsync(ushort value, CancellationToken ct = default)
     {
         var address = (ushort)(RegisterDhwSetpoint - _settings.BaseAddressOffset);
-        return await writer.WriteUInt16Async(address, value, ct).ConfigureAwait(false);
+        var result = await writer.WriteUInt16Async(address, value, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogInformation("Записана уставка ГВС: {Value} C", value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка записи уставки ГВС: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     #endregion
@@ -127,7 +168,18 @@ public class BoilerSettingsService(
     public async Task<DiagnosticReadResult<ushort>> ReadMaxDHWTemperatureAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterMaxDhwTemperature - _settings.BaseAddressOffset);
-        return await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Максимальная температура ГВС: {Value} C", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения макс. температуры ГВС: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -142,7 +194,18 @@ public class BoilerSettingsService(
     public async Task<DiagnosticWriteResult> WriteMaxDHWTemperatureAsync(ushort value, CancellationToken ct = default)
     {
         var address = (ushort)(RegisterMaxDhwTemperature - _settings.BaseAddressOffset);
-        return await writer.WriteUInt16Async(address, value, ct).ConfigureAwait(false);
+        var result = await writer.WriteUInt16Async(address, value, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogInformation("Записана макс. температура ГВС: {Value} C", value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка записи макс. температуры ГВС: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     #endregion
@@ -161,7 +224,16 @@ public class BoilerSettingsService(
     {
         var address = (ushort)(RegisterTestingLineMode - _settings.BaseAddressOffset);
         var result = await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
-        return !result.Success ? DiagnosticReadResult<TestingLineMode>.Fail(address, result.Error!) : DiagnosticReadResult<TestingLineMode>.Ok(address, (TestingLineMode)result.Value);
+
+        if (!result.Success)
+        {
+            _logger.LogError("Ошибка чтения режима тестирования на линии: {Error}", result.Error!);
+            return DiagnosticReadResult<TestingLineMode>.Fail(address, result.Error!);
+        }
+
+        var mode = (TestingLineMode)result.Value;
+        _logger.LogDebug("Режим тестирования на линии: {Mode}", mode);
+        return DiagnosticReadResult<TestingLineMode>.Ok(address, mode);
     }
 
     /// <summary>
@@ -177,7 +249,18 @@ public class BoilerSettingsService(
     public async Task<DiagnosticWriteResult> WriteTestingLineModeAsync(TestingLineMode mode, CancellationToken ct = default)
     {
         var address = (ushort)(RegisterTestingLineMode - _settings.BaseAddressOffset);
-        return await writer.WriteUInt16Async(address, (ushort)mode, ct).ConfigureAwait(false);
+        var result = await writer.WriteUInt16Async(address, (ushort)mode, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogInformation("Записан режим тестирования на линии: {Mode}", mode);
+        }
+        else
+        {
+            _logger.LogError("Ошибка записи режима тестирования на линии: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     #endregion
@@ -196,7 +279,18 @@ public class BoilerSettingsService(
     public async Task<DiagnosticWriteResult> ResetToFactoryDefaultsAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterFactoryReset - _settings.BaseAddressOffset);
-        return await writer.WriteUInt16Async(address, CommandExecute, ct).ConfigureAwait(false);
+        var result = await writer.WriteUInt16Async(address, CommandExecute, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogInformation("Выполнен сброс к заводским настройкам");
+        }
+        else
+        {
+            _logger.LogError("Ошибка сброса к заводским настройкам: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -211,7 +305,18 @@ public class BoilerSettingsService(
     public async Task<DiagnosticWriteResult> ClearBlockageAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterClearBlockage - _settings.BaseAddressOffset);
-        return await writer.WriteUInt16Async(address, CommandExecute, ct).ConfigureAwait(false);
+        var result = await writer.WriteUInt16Async(address, CommandExecute, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogInformation("Выполнен сброс блокировки котла");
+        }
+        else
+        {
+            _logger.LogError("Ошибка сброса блокировки котла: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -225,7 +330,18 @@ public class BoilerSettingsService(
     public async Task<DiagnosticWriteResult> ClearErrorLogAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterClearErrorLog - _settings.BaseAddressOffset);
-        return await writer.WriteUInt16Async(address, CommandExecute, ct).ConfigureAwait(false);
+        var result = await writer.WriteUInt16Async(address, CommandExecute, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogInformation("Выполнена очистка журнала ошибок");
+        }
+        else
+        {
+            _logger.LogError("Ошибка очистки журнала ошибок: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     #endregion

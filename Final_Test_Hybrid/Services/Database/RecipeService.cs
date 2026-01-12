@@ -2,14 +2,12 @@ using Final_Test_Hybrid.Models.Database;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Database.Config;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Database;
 
 public class RecipeService(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    ILogger<RecipeService> logger,
-    IDatabaseLogger dbLogger)
+    DualLogger<RecipeService> logger)
 {
     public async Task<List<Recipe>> GetAllAsync()
     {
@@ -32,8 +30,7 @@ public class RecipeService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get recipes by BoilerTypeId {BoilerTypeId}", boilerTypeId);
-            dbLogger.LogError(ex, "Ошибка получения рецептов по типу котла {BoilerTypeId}", boilerTypeId);
+            logger.LogError(ex, "Ошибка получения рецептов по типу котла {BoilerTypeId}", boilerTypeId);
             throw new InvalidOperationException("Ошибка БД", ex);
         }
     }
@@ -45,14 +42,12 @@ public class RecipeService(
         {
             dbContext.Recipes.Add(recipe);
             await dbContext.SaveChangesAsync();
-            logger.LogInformation("Created Recipe {Id} for BoilerType {BoilerTypeId}", recipe.Id, recipe.BoilerTypeId);
-            dbLogger.LogInformation("Создан рецепт {Id} для типа котла {BoilerTypeId}", recipe.Id, recipe.BoilerTypeId);
+            logger.LogInformation("Создан рецепт {Id} для типа котла {BoilerTypeId}", recipe.Id, recipe.BoilerTypeId);
             return recipe;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to create Recipe");
-            dbLogger.LogError(ex, "Ошибка создания рецепта");
+            logger.LogError(ex, "Ошибка создания рецепта");
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -76,8 +71,7 @@ public class RecipeService(
             existing.Description = recipe.Description;
             existing.Unit = recipe.Unit;
             await dbContext.SaveChangesAsync();
-            logger.LogInformation("Updated Recipe {Id}", recipe.Id);
-            dbLogger.LogInformation("Обновлён рецепт {Id}", recipe.Id);
+            logger.LogInformation("Обновлён рецепт {Id}", recipe.Id);
         }
         catch (InvalidOperationException)
         {
@@ -85,8 +79,7 @@ public class RecipeService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to update Recipe {Id}", recipe.Id);
-            dbLogger.LogError(ex, "Ошибка обновления рецепта {Id}", recipe.Id);
+            logger.LogError(ex, "Ошибка обновления рецепта {Id}", recipe.Id);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -99,14 +92,12 @@ public class RecipeService(
             var deleted = await dbContext.Recipes.Where(r => r.Id == id).ExecuteDeleteAsync();
             if (deleted > 0)
             {
-                logger.LogInformation("Deleted Recipe {Id}", id);
-                dbLogger.LogInformation("Удалён рецепт {Id}", id);
+                logger.LogInformation("Удалён рецепт {Id}", id);
             }
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to delete Recipe {Id}", id);
-            dbLogger.LogError(ex, "Ошибка удаления рецепта {Id}", id);
+            logger.LogError(ex, "Ошибка удаления рецепта {Id}", id);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -119,13 +110,11 @@ public class RecipeService(
             await dbContext.Recipes
                 .Where(r => r.BoilerTypeId == boilerTypeId)
                 .ExecuteDeleteAsync(ct);
-            logger.LogInformation("Deleted all Recipes for BoilerType {Id}", boilerTypeId);
-            dbLogger.LogInformation("Удалены все рецепты для типа котла {Id}", boilerTypeId);
+            logger.LogInformation("Удалены все рецепты для типа котла {Id}", boilerTypeId);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to delete all Recipes for BoilerType {Id}", boilerTypeId);
-            dbLogger.LogError(ex, "Ошибка удаления всех рецептов для типа котла {Id}", boilerTypeId);
+            logger.LogError(ex, "Ошибка удаления всех рецептов для типа котла {Id}", boilerTypeId);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -142,8 +131,7 @@ public class RecipeService(
             var deleted = await dbContext.Recipes
                 .Where(r => r.BoilerTypeId == boilerTypeId)
                 .ExecuteDeleteAsync(ct);
-            logger.LogInformation("Deleted {Count} recipes for BoilerType {BoilerTypeId}", deleted, boilerTypeId);
-            dbLogger.LogInformation("Удалено {Count} рецептов для типа котла {BoilerTypeId}", deleted, boilerTypeId);
+            logger.LogInformation("Удалено {Count} рецептов для типа котла {BoilerTypeId}", deleted, boilerTypeId);
             foreach (var recipe in recipes)
             {
                 recipe.BoilerTypeId = boilerTypeId;
@@ -151,8 +139,7 @@ public class RecipeService(
             }
             await dbContext.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
-            logger.LogInformation("Added {Count} recipes for BoilerType {BoilerTypeId}", recipes.Count, boilerTypeId);
-            dbLogger.LogInformation("Добавлено {Count} рецептов для типа котла {BoilerTypeId}", recipes.Count, boilerTypeId);
+            logger.LogInformation("Добавлено {Count} рецептов для типа котла {BoilerTypeId}", recipes.Count, boilerTypeId);
         }
         catch (OperationCanceledException)
         {
@@ -162,8 +149,7 @@ public class RecipeService(
         catch (Exception ex)
         {
             await transaction.RollbackAsync(CancellationToken.None);
-            logger.LogError(ex, "Failed to replace recipes for BoilerType {BoilerTypeId}", boilerTypeId);
-            dbLogger.LogError(ex, "Ошибка замены рецептов для типа котла {BoilerTypeId}", boilerTypeId);
+            logger.LogError(ex, "Ошибка замены рецептов для типа котла {BoilerTypeId}", boilerTypeId);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -191,13 +177,11 @@ public class RecipeService(
                 };
                 dbContext.Recipes.Add(copy);
                 await dbContext.SaveChangesAsync();
-                logger.LogInformation("Copied Recipe {TagName} to BoilerType {BoilerTypeId}", recipe.TagName, targetBoilerTypeId);
-                dbLogger.LogInformation("Скопирован рецепт {TagName} в тип котла {BoilerTypeId}", recipe.TagName, targetBoilerTypeId);
+                logger.LogInformation("Скопирован рецепт {TagName} в тип котла {BoilerTypeId}", recipe.TagName, targetBoilerTypeId);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Failed to copy Recipe {TagName} to BoilerType {BoilerTypeId}", recipe.TagName, targetBoilerTypeId);
-                dbLogger.LogError(ex, "Ошибка копирования рецепта {TagName} в тип котла {BoilerTypeId}", recipe.TagName, targetBoilerTypeId);
+                logger.LogError(ex, "Ошибка копирования рецепта {TagName} в тип котла {BoilerTypeId}", recipe.TagName, targetBoilerTypeId);
                 failedRecipes.Add(recipe.TagName);
             }
         }

@@ -30,6 +30,22 @@
                 EmptyText="Нет данных">
     <Columns>
         <RadzenDataGridColumn TItem="ActiveError" Property="Code" Title="Код" Width="80px" />
+        <RadzenDataGridColumn TItem="ActiveError" Property="Severity" Title="Тип" Width="120px">
+            <Template Context="item">
+                @switch (item.Severity)
+                {
+                    case ErrorSeverity.Critical:
+                        <span style="color: red; font-weight: bold;">Критическая</span>
+                        break;
+                    case ErrorSeverity.Warning:
+                        <span style="color: orange;">Предупреждение</span>
+                        break;
+                    case ErrorSeverity.Info:
+                        <span style="color: gray;">Инфо</span>
+                        break;
+                }
+            </Template>
+        </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ActiveError" Property="Time" Title="Время" Width="100px">
             <Template Context="item">
                 @item.Time.ToString("HH:mm:ss")

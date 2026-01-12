@@ -1,7 +1,6 @@
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
-using Microsoft.Extensions.Logging;
 using Opc.Ua;
 using Opc.Ua.Client;
 
@@ -14,8 +13,7 @@ public record BrowseResult(IReadOnlyList<string> Addresses, string? Error)
 
 public class OpcUaBrowseService(
     OpcUaConnectionService connectionService,
-    ILogger<OpcUaBrowseService> logger,
-    ISubscriptionLogger subscriptionLogger)
+    DualLogger<OpcUaBrowseService> logger)
 {
     private ISession? Session => connectionService.Session;
 
@@ -28,7 +26,7 @@ public class OpcUaBrowseService(
         try
         {
             var addresses = await BrowseNodeAsync(parentNodeId, ct);
-            LogInfo("Browse завершён: {Count} тегов из {NodeId}", addresses.Count, parentNodeId);
+            logger.LogInformation("Browse завершён: {Count} тегов из {NodeId}", addresses.Count, parentNodeId);
             return new BrowseResult(addresses, null);
         }
         catch (Exception ex)
@@ -47,7 +45,7 @@ public class OpcUaBrowseService(
         {
             var addresses = new List<string>();
             await BrowseNodeRecursiveAsync(parentNodeId, addresses, ct);
-            LogInfo("Browse рекурсивный завершён: {Count} тегов из {NodeId}", addresses.Count, parentNodeId);
+            logger.LogInformation("Browse рекурсивный завершён: {Count} тегов из {NodeId}", addresses.Count, parentNodeId);
             return new BrowseResult(addresses, null);
         }
         catch (Exception ex)
@@ -139,7 +137,7 @@ public class OpcUaBrowseService(
     private BrowseResult CreateNotConnectedError()
     {
         const string error = "PLC не подключен";
-        LogError(error);
+        logger.LogError(error);
         return new BrowseResult([], error);
     }
 
@@ -205,30 +203,12 @@ public class OpcUaBrowseService(
         var error = ex is ServiceResultException sre
             ? OpcUaErrorMapper.ToHumanReadable(sre.StatusCode)
             : $"Ошибка browse: {ex.Message}";
-        LogError(ex, "Ошибка browse {NodeId}: {Error}", parentNodeId, error);
+        logger.LogError(ex, "Ошибка browse {NodeId}: {Error}", parentNodeId, error);
         return new BrowseResult([], error);
     }
 
     private static string ExtractAddress(ReferenceDescription reference)
     {
         return reference.NodeId.ToString();
-    }
-
-    private void LogInfo(string message, params object?[] args)
-    {
-        logger.LogInformation(message, args);
-        subscriptionLogger.LogInformation(message, args);
-    }
-
-    private void LogError(string message, params object?[] args)
-    {
-        logger.LogError(message, args);
-        subscriptionLogger.LogError(null, message, args);
-    }
-
-    private void LogError(Exception ex, string message, params object?[] args)
-    {
-        logger.LogError(ex, message, args);
-        subscriptionLogger.LogError(ex, message, args);
     }
 }

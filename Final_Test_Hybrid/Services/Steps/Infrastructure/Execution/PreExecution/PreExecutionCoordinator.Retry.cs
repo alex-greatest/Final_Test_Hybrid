@@ -100,7 +100,7 @@ public partial class PreExecutionCoordinator
         CancellationToken ct)
     {
         statusReporter.ReportRetry(stepId);
-        return await step.ExecuteAsync(context, ct);
+        return await ExecuteAndRecordAsync(step, context, ct);
     }
 
     #endregion

@@ -1,6 +1,8 @@
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Final_Test_Hybrid.Services.Diagnostic.Services;
@@ -10,8 +12,11 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Services;
 /// </summary>
 public class BoilerCountersService(
     RegisterReader reader,
-    IOptions<DiagnosticSettings> settings)
+    IOptions<DiagnosticSettings> settings,
+    ILogger<BoilerCountersService> logger,
+    ITestStepLogger testStepLogger)
 {
+    private readonly DualLogger<BoilerCountersService> _logger = new(logger, testStepLogger);
     #region Register Addresses
 
     private const ushort RegisterBurnerStartsOs = 1072;
@@ -36,7 +41,18 @@ public class BoilerCountersService(
     public async Task<DiagnosticReadResult<uint>> ReadBurnerStartsOSAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterBurnerStartsOs - _settings.BaseAddressOffset);
-        return await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Запусков горелки ОС: {Value}", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения запусков горелки ОС: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -50,7 +66,18 @@ public class BoilerCountersService(
     public async Task<DiagnosticReadResult<uint>> ReadBurnerStartsDHWAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterBurnerStartsDhw - _settings.BaseAddressOffset);
-        return await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _logger.LogDebug("Запусков горелки ГВС: {Value}", result.Value);
+        }
+        else
+        {
+            _logger.LogError("Ошибка чтения запусков горелки ГВС: {Error}", result.Error!);
+        }
+
+        return result;
     }
 
     #endregion
@@ -72,10 +99,12 @@ public class BoilerCountersService(
 
         if (!result.Success)
         {
+            _logger.LogError("Ошибка чтения времени работы горелки ОС: {Error}", result.Error!);
             return DiagnosticReadResult<TimeSpan>.Fail(address, result.Error!);
         }
 
         var timeSpan = TimeSpan.FromSeconds(result.Value);
+        _logger.LogDebug("Время работы горелки ОС: {Value}", timeSpan);
         return DiagnosticReadResult<TimeSpan>.Ok(address, timeSpan);
     }
 
@@ -94,10 +123,12 @@ public class BoilerCountersService(
 
         if (!result.Success)
         {
+            _logger.LogError("Ошибка чтения времени работы горелки ГВС: {Error}", result.Error!);
             return DiagnosticReadResult<TimeSpan>.Fail(address, result.Error!);
         }
 
         var timeSpan = TimeSpan.FromSeconds(result.Value);
+        _logger.LogDebug("Время работы горелки ГВС: {Value}", timeSpan);
         return DiagnosticReadResult<TimeSpan>.Ok(address, timeSpan);
     }
 

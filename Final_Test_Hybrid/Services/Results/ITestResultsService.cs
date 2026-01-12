@@ -6,6 +6,6 @@ public interface ITestResultsService
 {
     event Action? OnChanged;
     IReadOnlyList<TestResultItem> GetResults();
-    void Add(string parameterName, string value, string tolerances, string unit);
+    void Add(string parameterName, string value, string min, string max, int status, bool isRanged, string unit);
     void Clear();
 }

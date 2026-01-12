@@ -2,14 +2,12 @@ using Final_Test_Hybrid.Models.Database;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Database.Config;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Database;
 
 public class BoilerTypeService(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    ILogger<BoilerTypeService> logger,
-    IDatabaseLogger dbLogger)
+    DualLogger<BoilerTypeService> logger)
 {
     public async Task<List<BoilerType>> GetAllAsync()
     {
@@ -28,8 +26,7 @@ public class BoilerTypeService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to find active BoilerTypeCycle by article {Article}", article);
-            dbLogger.LogError(ex, "Ошибка поиска активного типа котла по артикулу {Article}", article);
+            logger.LogError(ex, "Ошибка поиска активного типа котла по артикулу {Article}", article);
             throw new InvalidOperationException("Ошибка БД", ex);
         }
     }
@@ -52,15 +49,13 @@ public class BoilerTypeService(
             dbContext.BoilerTypeCycles.Add(cycle);
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
-            logger.LogInformation("Created BoilerType {Id} with active cycle", boilerType.Id);
-            dbLogger.LogInformation("Создан тип котла {Id} с активным циклом", boilerType.Id);
+            logger.LogInformation("Создан тип котла {Id} с активным циклом", boilerType.Id);
             return boilerType;
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            logger.LogError(ex, "Failed to create BoilerType");
-            dbLogger.LogError(ex, "Ошибка создания типа котла");
+            logger.LogError(ex, "Ошибка создания типа котла");
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -91,8 +86,7 @@ public class BoilerTypeService(
             dbContext.BoilerTypeCycles.Add(newCycle);
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
-            logger.LogInformation("Updated BoilerType {Id} with new active cycle", boilerType.Id);
-            dbLogger.LogInformation("Обновлён тип котла {Id} с новым активным циклом", boilerType.Id);
+            logger.LogInformation("Обновлён тип котла {Id} с новым активным циклом", boilerType.Id);
         }
         catch (InvalidOperationException)
         {
@@ -101,8 +95,7 @@ public class BoilerTypeService(
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            logger.LogError(ex, "Failed to update BoilerType {Id}", boilerType.Id);
-            dbLogger.LogError(ex, "Ошибка обновления типа котла {Id}", boilerType.Id);
+            logger.LogError(ex, "Ошибка обновления типа котла {Id}", boilerType.Id);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -124,14 +117,12 @@ public class BoilerTypeService(
             dbContext.BoilerTypes.Remove(boilerType);
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
-            logger.LogInformation("Deleted BoilerType {Id}", id);
-            dbLogger.LogInformation("Удалён тип котла {Id}", id);
+            logger.LogInformation("Удалён тип котла {Id}", id);
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            logger.LogError(ex, "Failed to delete BoilerType {Id}", id);
-            dbLogger.LogError(ex, "Ошибка удаления типа котла {Id}", id);
+            logger.LogError(ex, "Ошибка удаления типа котла {Id}", id);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -147,14 +138,12 @@ public class BoilerTypeService(
                 .ExecuteUpdateAsync(s => s.SetProperty(c => c.IsActive, false), ct);
             await dbContext.BoilerTypes.ExecuteDeleteAsync(ct);
             await transaction.CommitAsync(ct);
-            logger.LogInformation("Deleted all BoilerTypes");
-            dbLogger.LogInformation("Удалены все типы котлов");
+            logger.LogInformation("Удалены все типы котлов");
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(ct);
-            logger.LogError(ex, "Failed to delete all BoilerTypes");
-            dbLogger.LogError(ex, "Ошибка удаления всех типов котлов");
+            logger.LogError(ex, "Ошибка удаления всех типов котлов");
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }

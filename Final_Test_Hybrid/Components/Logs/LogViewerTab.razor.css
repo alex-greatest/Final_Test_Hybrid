@@ -1,0 +1,58 @@
+.log-viewer-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+}
+
+.log-toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.log-info {
+    margin-left: auto;
+    color: #666;
+    font-size: 14px;
+}
+
+.log-content {
+    flex: 1;
+    overflow-y: auto;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 14px;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.log-line {
+    height: 20px;
+    line-height: 20px;
+    white-space: nowrap;
+    padding: 0 5px;
+}
+
+.log-line:hover {
+    background: #2d2d2d;
+}
+
+.log-error {
+    color: #f44336;
+}
+
+.log-warning {
+    color: #ff9800;
+}
+
+.log-debug {
+    color: #9e9e9e;
+}
+
+.log-empty {
+    color: #666;
+    font-style: italic;
+}

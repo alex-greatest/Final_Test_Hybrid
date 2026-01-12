@@ -12,6 +12,7 @@ public class InitializeRecipeProviderStep(
     ILogger<InitializeRecipeProviderStep> logger,
     ITestStepLogger testStepLogger) : IPreExecutionStep
 {
+    private readonly DualLogger<InitializeRecipeProviderStep> _logger = new(logger, testStepLogger);
     public string Id => "initialize-recipe-provider";
     public string Name => "Инициализация рецептов";
     public string Description => "Загружает рецепты в провайдер";
@@ -36,13 +37,11 @@ public class InitializeRecipeProviderStep(
 
     private void LogInfo(string message, params object?[] args)
     {
-        logger.LogInformation(message, args);
-        testStepLogger.LogInformation(message, args);
+        _logger.LogInformation(message, args);
     }
 
     private void LogError(Exception ex, string message, params object?[] args)
     {
-        logger.LogError(ex, message, args);
-        testStepLogger.LogError(ex, message, args);
+        _logger.LogError(ex, message, args);
     }
 }

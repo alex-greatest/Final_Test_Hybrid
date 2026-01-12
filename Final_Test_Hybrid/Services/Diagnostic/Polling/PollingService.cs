@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using AsyncAwaitBestPractices;
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol;
 using Microsoft.Extensions.Logging;
 
@@ -12,9 +13,11 @@ public class PollingService(
     RegisterReader reader,
     PollingPauseCoordinator pauseCoordinator,
     ILoggerFactory loggerFactory,
-    ILogger<PollingService> logger)
+    ILogger<PollingService> logger,
+    ITestStepLogger testStepLogger)
     : IAsyncDisposable
 {
+    private readonly DualLogger<PollingService> _logger = new(logger, testStepLogger);
     private readonly ConcurrentDictionary<string, PollingTask> _tasks = new();
 
     private bool _disposed;
@@ -44,7 +47,7 @@ public class PollingService(
 
         RegisterTask(name, task);
 
-        logger.LogInformation("Создана задача опроса '{Name}' с интервалом {Interval}", name, interval);
+        _logger.LogDebug("Создана задача опроса '{Name}' с интервалом {Interval}", name, interval);
         return task;
     }
 
@@ -61,7 +64,8 @@ public class PollingService(
             callback,
             reader,
             pauseCoordinator,
-            loggerFactory.CreateLogger<PollingTask>());
+            loggerFactory.CreateLogger<PollingTask>(),
+            testStepLogger);
     }
 
     private void RegisterTask(string name, PollingTask task)
@@ -78,7 +82,7 @@ public class PollingService(
     private void DisposeTaskSafe(PollingTask task)
     {
         task.DisposeAsync().AsTask().SafeFireAndForget(ex =>
-            logger.LogWarning(ex, "Ошибка при dispose дублирующейся задачи опроса"));
+            _logger.LogWarning("Ошибка при dispose дублирующейся задачи опроса: {Error}", ex.Message));
     }
 
     #endregion
@@ -116,7 +120,7 @@ public class PollingService(
     /// </summary>
     public async Task StopAllTasksAsync()
     {
-        logger.LogInformation("Остановка всех задач опроса");
+        _logger.LogDebug("Остановка всех задач опроса");
 
         var stopTasks = _tasks.Values.Select(task => task.StopAsync());
         await Task.WhenAll(stopTasks).ConfigureAwait(false);
@@ -129,7 +133,7 @@ public class PollingService(
             return task;
         }
 
-        logger.LogWarning("Задача опроса '{Name}' не найдена", name);
+        _logger.LogWarning("Задача опроса '{Name}' не найдена", name);
         return null;
     }
 
@@ -148,7 +152,7 @@ public class PollingService(
         }
 
         await task.DisposeAsync().ConfigureAwait(false);
-        logger.LogInformation("Удалена задача опроса '{Name}'", name);
+        _logger.LogDebug("Удалена задача опроса '{Name}'", name);
     }
 
     /// <summary>

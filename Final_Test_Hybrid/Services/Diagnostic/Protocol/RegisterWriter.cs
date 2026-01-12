@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Microsoft.Extensions.Logging;
 
@@ -8,8 +9,10 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Protocol;
 /// </summary>
 public class RegisterWriter(
     ModbusClient modbusClient,
-    ILogger<RegisterWriter> logger)
+    ILogger<RegisterWriter> logger,
+    ITestStepLogger testStepLogger)
 {
+    private readonly DualLogger<RegisterWriter> _logger = new(logger, testStepLogger);
     /// <summary>
     /// Записывает unsigned 16-bit значение.
     /// </summary>
@@ -18,11 +21,12 @@ public class RegisterWriter(
         try
         {
             await modbusClient.WriteSingleRegisterAsync(address, value, ct).ConfigureAwait(false);
+            _logger.LogDebug("Запись в регистр {Address}: {Value}", address, value);
             return DiagnosticWriteResult.Ok(address);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Ошибка записи UInt16 по адресу {Address}", address);
+            _logger.LogError(ex, "Ошибка записи в регистр {Address}: {Error}", address, ex.Message);
             return DiagnosticWriteResult.Fail(address, ex.Message);
         }
     }
@@ -35,11 +39,12 @@ public class RegisterWriter(
         try
         {
             await modbusClient.WriteSingleRegisterAsync(address, (ushort)value, ct).ConfigureAwait(false);
+            _logger.LogDebug("Запись в регистр {Address}: {Value}", address, value);
             return DiagnosticWriteResult.Ok(address);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Ошибка записи Int16 по адресу {Address}", address);
+            _logger.LogError(ex, "Ошибка записи в регистр {Address}: {Error}", address, ex.Message);
             return DiagnosticWriteResult.Fail(address, ex.Message);
         }
     }
@@ -58,11 +63,12 @@ public class RegisterWriter(
             };
 
             await modbusClient.WriteMultipleRegistersAsync(addressHi, registers, ct).ConfigureAwait(false);
+            _logger.LogDebug("Запись в регистр {Address}: {Value}", addressHi, value);
             return DiagnosticWriteResult.Ok(addressHi);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Ошибка записи UInt32 по адресу {Address}", addressHi);
+            _logger.LogError(ex, "Ошибка записи в регистр {Address}: {Error}", addressHi, ex.Message);
             return DiagnosticWriteResult.Fail(addressHi, ex.Message);
         }
     }
@@ -89,11 +95,12 @@ public class RegisterWriter(
             };
 
             await modbusClient.WriteMultipleRegistersAsync(addressHi, registers, ct).ConfigureAwait(false);
+            _logger.LogDebug("Запись в регистр {Address}: {Value}", addressHi, value);
             return DiagnosticWriteResult.Ok(addressHi);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Ошибка записи Float по адресу {Address}", addressHi);
+            _logger.LogError(ex, "Ошибка записи в регистр {Address}: {Error}", addressHi, ex.Message);
             return DiagnosticWriteResult.Fail(addressHi, ex.Message);
         }
     }

@@ -17,7 +17,7 @@ public sealed class TestResultsService : ITestResultsService
         }
     }
 
-    public void Add(string parameterName, string value, string tolerances, string unit)
+    public void Add(string parameterName, string value, string min, string max, int status, bool isRanged, string unit)
     {
         lock (_lock)
         {
@@ -26,7 +26,10 @@ public sealed class TestResultsService : ITestResultsService
                 Time = DateTime.Now,
                 ParameterName = parameterName,
                 Value = value,
-                Tolerances = tolerances,
+                Min = min,
+                Max = max,
+                Status = status,
+                IsRanged = isRanged,
                 Unit = unit
             };
             _results.Add(item);

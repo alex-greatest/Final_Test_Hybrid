@@ -6,6 +6,7 @@ using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
@@ -24,6 +25,7 @@ public partial class PreExecutionCoordinator(
     ErrorCoordinator errorCoordinator,
     PlcResetCoordinator plcResetCoordinator,
     IErrorService errorService,
+    IStepTimingService stepTimingService,
     ILogger<PreExecutionCoordinator> logger)
 {
     public async Task<PreExecutionResult> ExecuteAsync(string barcode, Guid? scanStepId, CancellationToken ct)
@@ -119,12 +121,23 @@ public partial class PreExecutionCoordinator(
         PreExecutionContext context,
         CancellationToken ct)
     {
-        var result = await step.ExecuteAsync(context, ct);
+        var result = await ExecuteAndRecordAsync(step, context, ct);
         if (result.IsRetryable)
         {
             return await ExecuteRetryLoopAsync(step, result, context, stepId, ct);
         }
         ReportStepResult(stepId, result);
+        return result;
+    }
+
+    private async Task<PreExecutionResult> ExecuteAndRecordAsync(
+        IPreExecutionStep step,
+        PreExecutionContext context,
+        CancellationToken ct)
+    {
+        var startTime = DateTime.Now;
+        var result = await step.ExecuteAsync(context, ct);
+        stepTimingService.Record(step.Name, step.Description, DateTime.Now - startTime);
         return result;
     }
 

@@ -2,14 +2,12 @@ using Final_Test_Hybrid.Models.Database;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Database.Config;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Database;
 
 public class ErrorSettingsTemplateService(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    ILogger<ErrorSettingsTemplateService> logger,
-    IDatabaseLogger dbLogger)
+    DualLogger<ErrorSettingsTemplateService> logger)
 {
     public async Task<List<ErrorSettingsTemplate>> GetAllAsync()
     {
@@ -31,15 +29,13 @@ public class ErrorSettingsTemplateService(
             AddActiveHistory(dbContext, template);
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
-            logger.LogInformation("Created ErrorSettingsTemplate {Id} with active history", template.Id);
-            dbLogger.LogInformation("Создан шаблон настроек ошибок {Id} с активной историей", template.Id);
+            logger.LogInformation("Создан шаблон настроек ошибок {Id} с активной историей", template.Id);
             return template;
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            logger.LogError(ex, "Failed to create ErrorSettingsTemplate");
-            dbLogger.LogError(ex, "Ошибка создания шаблона настроек ошибок");
+            logger.LogError(ex, "Ошибка создания шаблона настроек ошибок");
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -56,8 +52,7 @@ public class ErrorSettingsTemplateService(
             AddActiveHistory(dbContext, template);
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
-            logger.LogInformation("Updated ErrorSettingsTemplate {Id} with new active history", template.Id);
-            dbLogger.LogInformation("Обновлён шаблон настроек ошибок {Id} с новой активной историей", template.Id);
+            logger.LogInformation("Обновлён шаблон настроек ошибок {Id} с новой активной историей", template.Id);
         }
         catch (InvalidOperationException)
         {
@@ -67,8 +62,7 @@ public class ErrorSettingsTemplateService(
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            logger.LogError(ex, "Failed to update ErrorSettingsTemplate {Id}", template.Id);
-            dbLogger.LogError(ex, "Ошибка обновления шаблона настроек ошибок {Id}", template.Id);
+            logger.LogError(ex, "Ошибка обновления шаблона настроек ошибок {Id}", template.Id);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -88,14 +82,12 @@ public class ErrorSettingsTemplateService(
             dbContext.ErrorSettingsTemplates.Remove(template);
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
-            logger.LogInformation("Deleted ErrorSettingsTemplate {Id}", id);
-            dbLogger.LogInformation("Удалён шаблон настроек ошибок {Id}", id);
+            logger.LogInformation("Удалён шаблон настроек ошибок {Id}", id);
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            logger.LogError(ex, "Failed to delete ErrorSettingsTemplate {Id}", id);
-            dbLogger.LogError(ex, "Ошибка удаления шаблона настроек ошибок {Id}", id);
+            logger.LogError(ex, "Ошибка удаления шаблона настроек ошибок {Id}", id);
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -109,14 +101,12 @@ public class ErrorSettingsTemplateService(
             await DeleteAllWithHistoryAsync(dbContext, ct);
             await AddAllWithHistoryAsync(dbContext, items, ct);
             await transaction.CommitAsync(ct);
-            logger.LogInformation("Replaced all ErrorSettingsTemplates with {Count} new items", items.Count);
-            dbLogger.LogInformation("Заменены все шаблоны настроек ошибок на {Count} новых элементов", items.Count);
+            logger.LogInformation("Заменены все шаблоны настроек ошибок на {Count} новых элементов", items.Count);
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(ct);
-            logger.LogError(ex, "Failed to replace ErrorSettingsTemplates");
-            dbLogger.LogError(ex, "Ошибка замены шаблонов настроек ошибок");
+            logger.LogError(ex, "Ошибка замены шаблонов настроек ошибок");
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }
@@ -129,14 +119,12 @@ public class ErrorSettingsTemplateService(
         {
             await DeleteAllWithHistoryAsync(dbContext, ct);
             await transaction.CommitAsync(ct);
-            logger.LogInformation("Deleted all ErrorSettingsTemplates");
-            dbLogger.LogInformation("Удалены все шаблоны настроек ошибок");
+            logger.LogInformation("Удалены все шаблоны настроек ошибок");
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(ct);
-            logger.LogError(ex, "Failed to delete all ErrorSettingsTemplates");
-            dbLogger.LogError(ex, "Ошибка удаления всех шаблонов настроек ошибок");
+            logger.LogError(ex, "Ошибка удаления всех шаблонов настроек ошибок");
             throw new InvalidOperationException(DbConstraintErrorHandler.GetUserFriendlyMessage(ex), ex);
         }
     }

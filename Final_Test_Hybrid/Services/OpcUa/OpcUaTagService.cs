@@ -2,7 +2,6 @@ using Final_Test_Hybrid.Models.Plc.Subcription;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
-using Microsoft.Extensions.Logging;
 using Opc.Ua;
 using Opc.Ua.Client;
 
@@ -10,11 +9,10 @@ namespace Final_Test_Hybrid.Services.OpcUa;
 
 public class OpcUaTagService(
     OpcUaConnectionService connectionService,
-    ILogger<OpcUaTagService> logger,
-    ISubscriptionLogger subscriptionLogger)
+    DualLogger<OpcUaTagService> logger)
 {
     private ISession Session => connectionService.Session
-        ?? throw new InvalidOperationException("Not connected to OPC UA server");
+        ?? throw new InvalidOperationException("Нет подключения к OPC UA серверу");
 
     public async Task<ReadResult<T>> ReadAsync<T>(string nodeId, CancellationToken ct = default)
     {
@@ -36,20 +34,18 @@ public class OpcUaTagService(
         catch (ServiceResultException ex)
         {
             logger.LogError(ex, "Ошибка чтения тега {NodeId}", nodeId);
-            subscriptionLogger.LogError(ex, "Ошибка чтения тега {NodeId}", nodeId);
             return new ReadResult<T>(nodeId, default, OpcUaErrorMapper.ToHumanReadable(ex.StatusCode));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка чтения тега {NodeId}", nodeId);
-            subscriptionLogger.LogError(ex, "Ошибка чтения тега {NodeId}", nodeId);
             return new ReadResult<T>(nodeId, default, $"Ошибка чтения: {ex.Message}");
         }
     }
 
     public async Task<WriteResult> WriteAsync<T>(string nodeId, T value, CancellationToken ct = default)
     {
-        logger.LogInformation("Writing to NodeId: [{NodeId}], Value: {Value}", nodeId, value);
+        logger.LogInformation("Запись в NodeId: [{NodeId}], значение: {Value}", nodeId, value);
         try
         {
             var nodesToWrite = new WriteValueCollection
@@ -69,13 +65,11 @@ public class OpcUaTagService(
         catch (ServiceResultException ex)
         {
             logger.LogError(ex, "Ошибка записи тега {NodeId}", nodeId);
-            subscriptionLogger.LogError(ex, "Ошибка записи тега {NodeId}", nodeId);
             return new WriteResult(nodeId, OpcUaErrorMapper.ToHumanReadable(ex.StatusCode));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка записи тега {NodeId}", nodeId);
-            subscriptionLogger.LogError(ex, "Ошибка записи тега {NodeId}", nodeId);
             return new WriteResult(nodeId, $"Ошибка записи: {ex.Message}");
         }
     }

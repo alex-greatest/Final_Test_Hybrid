@@ -5,15 +5,13 @@ using System.Text.Json.Serialization;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Settings.Spring;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.SpringBoot.Operation;
 
 public class OperationStartService(
     SpringBootHttpClient httpClient,
     AppSettingsService appSettingsService,
-    ILogger<OperationStartService> logger,
-    ISpringBootLogger sbLogger)
+    DualLogger<OperationStartService> logger)
 {
     private const string StartEndpoint = "/api/operation/start";
     private const string ReworkEndpoint = "/api/operation/rework";
@@ -31,8 +29,7 @@ public class OperationStartService(
         CancellationToken ct = default)
     {
         var request = BuildRequest(serialNumber, operatorName, admin);
-        logger.LogInformation("Starting operation for {SerialNumber}", serialNumber);
-        sbLogger.LogInformation("Старт операции для {SerialNumber}", serialNumber);
+        logger.LogInformation("Старт операции для {SerialNumber}", serialNumber);
         return await ExecuteStartAsync(request, ct);
     }
 
@@ -44,8 +41,7 @@ public class OperationStartService(
         CancellationToken ct = default)
     {
         var request = BuildRequest(serialNumber, operatorName, admin, comment);
-        logger.LogInformation("Rework request for {SerialNumber} by admin {Admin}", serialNumber, admin);
-        sbLogger.LogInformation("Запрос на доработку для {SerialNumber} от админа {Admin}", serialNumber, admin);
+        logger.LogInformation("Запрос на доработку для {SerialNumber} от админа {Admin}", serialNumber, admin);
         return await ExecuteReworkAsync(request, ct);
     }
 
@@ -95,8 +91,7 @@ public class OperationStartService(
     {
         using var response = await httpClient.PostWithResponseAsync(ReworkEndpoint, request, ct);
         if (response.StatusCode != HttpStatusCode.OK) return await HandleErrorResponseAsync(response, ct);
-        logger.LogInformation("Rework approved for {SerialNumber}", request.SerialNumber);
-        sbLogger.LogInformation("Доработка одобрена для {SerialNumber}", request.SerialNumber);
+        logger.LogInformation("Доработка одобрена для {SerialNumber}", request.SerialNumber);
         return OperationStartResult.Success(new OperationStartResponse());
     }
 
@@ -118,36 +113,28 @@ public class OperationStartService(
         {
             return OperationStartResult.Fail("Пустой ответ от сервера");
         }
-        logger.LogInformation("Operation started successfully, {RecipeCount} recipes loaded",
-            data.Recipes.Count);
-        sbLogger.LogInformation("Операция запущена успешно, загружено {RecipeCount} рецептов",
-            data.Recipes.Count);
+        logger.LogInformation("Операция запущена успешно, загружено {RecipeCount} рецептов", data.Recipes.Count);
         return OperationStartResult.Success(data);
     }
 
     private async Task<OperationStartResult> HandleForbiddenAsync(HttpResponseMessage response, CancellationToken ct)
     {
         var errorMessage = await TryParseErrorAsync(response, ct);
-        logger.LogWarning("Operation forbidden: {Error}", errorMessage);
-        sbLogger.LogWarning("Операция запрещена: {Error}", errorMessage);
+        logger.LogWarning("Операция запрещена: {Error}", errorMessage);
         return OperationStartResult.NeedRework(errorMessage);
     }
 
     private async Task<OperationStartResult> HandleNotFoundAsync(HttpResponseMessage response, CancellationToken ct)
     {
         var errorMessage = await TryParseErrorAsync(response, ct);
-        logger.LogWarning("Operation not found: {Error}", errorMessage);
-        sbLogger.LogWarning("Операция не найдена: {Error}", errorMessage);
+        logger.LogWarning("Операция не найдена: {Error}", errorMessage);
         return OperationStartResult.Fail(errorMessage);
     }
 
     private async Task<OperationStartResult> HandleErrorResponseAsync(HttpResponseMessage response, CancellationToken ct)
     {
         var errorMessage = await TryParseErrorAsync(response, ct);
-        logger.LogError("Operation failed with status {StatusCode}: {Error}",
-            response.StatusCode, errorMessage);
-        sbLogger.LogError(null, "Ошибка операции со статусом {StatusCode}: {Error}",
-            response.StatusCode, errorMessage);
+        logger.LogError("Ошибка операции со статусом {StatusCode}: {Error}", response.StatusCode, errorMessage);
         return OperationStartResult.Fail(errorMessage);
     }
 
@@ -181,29 +168,25 @@ public class OperationStartService(
 
     private OperationStartResult HandleCancellation()
     {
-        logger.LogInformation("Operation cancelled");
-        sbLogger.LogInformation("Операция отменена");
+        logger.LogInformation("Операция отменена");
         return OperationStartResult.Fail("Операция отменена");
     }
 
     private OperationStartResult HandleTimeout(string serialNumber)
     {
-        logger.LogWarning("Operation timed out for {SerialNumber}", serialNumber);
-        sbLogger.LogWarning("Таймаут операции для {SerialNumber}", serialNumber);
+        logger.LogWarning("Таймаут операции для {SerialNumber}", serialNumber);
         return OperationStartResult.Fail("Нет ответа от сервера");
     }
 
     private OperationStartResult HandleConnectionError(HttpRequestException ex, string serialNumber)
     {
-        logger.LogError(ex, "No connection to server for {SerialNumber}", serialNumber);
-        sbLogger.LogError(ex, "Нет соединения с сервером для {SerialNumber}", serialNumber);
+        logger.LogError(ex, "Нет соединения с сервером для {SerialNumber}", serialNumber);
         return OperationStartResult.Fail("Нет соединения с сервером");
     }
 
     private OperationStartResult HandleUnexpectedError(Exception ex, string serialNumber)
     {
-        logger.LogError(ex, "Operation failed for {SerialNumber}", serialNumber);
-        sbLogger.LogError(ex, "Ошибка операции для {SerialNumber}", serialNumber);
+        logger.LogError(ex, "Ошибка операции для {SerialNumber}", serialNumber);
         return OperationStartResult.Fail("Ошибка на стороне сервера");
     }
 }

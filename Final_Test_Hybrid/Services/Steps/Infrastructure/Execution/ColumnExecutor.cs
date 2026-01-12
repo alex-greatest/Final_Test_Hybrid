@@ -5,6 +5,7 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
@@ -16,7 +17,8 @@ public class ColumnExecutor(
     ILogger logger,
     StepStatusReporter statusReporter,
     PauseTokenSource pauseToken,
-    IErrorService errorService)
+    IErrorService errorService,
+    IStepTimingService stepTimingService)
 {
     private ErrorScope? _errorScope;
 
@@ -28,9 +30,10 @@ public class ColumnExecutor(
         string? ResultValue,
         bool HasFailed,
         Guid UiStepId,
-        ITestStep? FailedStep);
+        ITestStep? FailedStep,
+        DateTime StartTime);
 
-    private static readonly StepState EmptyState = new(null, null, null, null, null, false, Guid.Empty, null);
+    private static readonly StepState EmptyState = new(null, null, null, null, null, false, Guid.Empty, null, default);
     private StepState _state = EmptyState;
 
     public int ColumnIndex { get; } = columnIndex;
@@ -98,7 +101,7 @@ public class ColumnExecutor(
 
     private void ApplyRunningState(ITestStep step, Guid uiId)
     {
-        _state = new StepState(step.Name, step.Description, "Выполняется", null, null, false, uiId, null);
+        _state = new StepState(step.Name, step.Description, "Выполняется", null, null, false, uiId, null, DateTime.Now);
         testLogger.LogStepStart(step.Name);
         OnStateChanged?.Invoke();
     }
@@ -118,6 +121,9 @@ public class ColumnExecutor(
 
     private void SetSuccessState(ITestStep step, TestStepResult result)
     {
+        var duration = DateTime.Now - _state.StartTime;
+        stepTimingService.Record(step.Name, step.Description, duration);
+
         var statusText = result.Skipped ? "Пропуск" : "Готово";
         statusReporter.ReportSuccess(_state.UiStepId, result.Message);
         _state = _state with { Status = statusText, ResultValue = result.Message, FailedStep = null };
@@ -133,6 +139,9 @@ public class ColumnExecutor(
 
     private void SetErrorState(ITestStep step, string message, List<ErrorDefinition>? errors = null)
     {
+        var duration = DateTime.Now - _state.StartTime;
+        stepTimingService.Record(step.Name, step.Description, duration);
+
         statusReporter.ReportError(_state.UiStepId, message);
 
         ClearStepErrors();

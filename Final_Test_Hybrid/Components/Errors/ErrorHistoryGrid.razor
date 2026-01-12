@@ -51,6 +51,22 @@
             </Template>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="Code" Title="Код" Width="80px" />
+        <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="Severity" Title="Тип" Width="120px">
+            <Template Context="item">
+                @switch (item.Severity)
+                {
+                    case ErrorSeverity.Critical:
+                        <span style="color: red; font-weight: bold;">Критическая</span>
+                        break;
+                    case ErrorSeverity.Warning:
+                        <span style="color: orange;">Предупреждение</span>
+                        break;
+                    case ErrorSeverity.Info:
+                        <span style="color: gray;">Инфо</span>
+                        break;
+                }
+            </Template>
+        </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="Description" Title="Описание" />
         <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="StepName" Title="Шаг" Width="200px">
             <Template Context="item">

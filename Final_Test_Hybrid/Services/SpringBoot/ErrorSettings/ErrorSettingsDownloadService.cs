@@ -5,15 +5,13 @@ using System.Text.Json.Serialization;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Settings.Spring;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.SpringBoot.ErrorSettings;
 
 public class ErrorSettingsDownloadService(
     SpringBootHttpClient httpClient,
     AppSettingsService appSettingsService,
-    ILogger<ErrorSettingsDownloadService> logger,
-    ISpringBootLogger sbLogger)
+    DualLogger<ErrorSettingsDownloadService> logger)
 {
     private const string Endpoint = "/api/error-settings";
 
@@ -26,8 +24,7 @@ public class ErrorSettingsDownloadService(
     public async Task<ErrorSettingsDownloadResult> DownloadAsync(CancellationToken ct = default)
     {
         var url = BuildRequestUrl();
-        logger.LogInformation("Downloading error settings from {Url}", url);
-        sbLogger.LogInformation("Загрузка настроек ошибок из {Url}", url);
+        logger.LogInformation("Загрузка настроек ошибок из {Url}", url);
         return await ExecuteDownloadAsync(url, ct);
     }
 
@@ -62,29 +59,25 @@ public class ErrorSettingsDownloadService(
 
     private ErrorSettingsDownloadResult HandleCancellation()
     {
-        logger.LogInformation("Error settings download cancelled");
-        sbLogger.LogInformation("Загрузка настроек ошибок отменена");
+        logger.LogInformation("Загрузка настроек ошибок отменена");
         return ErrorSettingsDownloadResult.Fail("Операция отменена");
     }
 
     private ErrorSettingsDownloadResult HandleTimeout()
     {
-        logger.LogWarning("Error settings download timed out");
-        sbLogger.LogWarning("Таймаут загрузки настроек ошибок");
+        logger.LogWarning("Таймаут загрузки настроек ошибок");
         return ErrorSettingsDownloadResult.Fail("Нет ответа от сервера");
     }
 
     private ErrorSettingsDownloadResult HandleConnectionError(HttpRequestException ex)
     {
-        logger.LogError(ex, "No connection to server for error settings");
-        sbLogger.LogError(ex, "Нет соединения с сервером для настроек ошибок");
+        logger.LogError(ex, "Нет соединения с сервером для настроек ошибок");
         return ErrorSettingsDownloadResult.Fail("Нет соединения с сервером");
     }
 
     private ErrorSettingsDownloadResult HandleUnexpectedError(Exception ex)
     {
-        logger.LogError(ex, "Error settings download failed");
-        sbLogger.LogError(ex, "Ошибка загрузки настроек ошибок");
+        logger.LogError(ex, "Ошибка загрузки настроек ошибок");
         return ErrorSettingsDownloadResult.Fail("Ошибка на стороне сервера");
     }
 
@@ -107,16 +100,14 @@ public class ErrorSettingsDownloadService(
     private async Task<ErrorSettingsDownloadResult> HandleSuccessAsync(HttpResponseMessage response, CancellationToken ct)
     {
         var items = await response.Content.ReadFromJsonAsync<List<ErrorSettingsResponseDto>>(JsonOptions, ct) ?? [];
-        logger.LogInformation("Downloaded {Count} error settings", items.Count);
-        sbLogger.LogInformation("Загружено {Count} настроек ошибок", items.Count);
+        logger.LogInformation("Загружено {Count} настроек ошибок", items.Count);
         return ErrorSettingsDownloadResult.Success(items);
     }
 
     private async Task<ErrorSettingsDownloadResult> HandleNotFoundAsync(HttpResponseMessage response, CancellationToken ct)
     {
         var errorMessage = await TryParseErrorMessageAsync(response, ct);
-        logger.LogWarning("Error settings download 404: {Message}", errorMessage);
-        sbLogger.LogWarning("Настройки ошибок не найдены: {Message}", errorMessage);
+        logger.LogWarning("Настройки ошибок не найдены: {Message}", errorMessage);
         return ErrorSettingsDownloadResult.Fail(errorMessage);
     }
 
@@ -135,8 +126,7 @@ public class ErrorSettingsDownloadService(
 
     private ErrorSettingsDownloadResult HandleUnexpectedStatus(HttpStatusCode statusCode)
     {
-        logger.LogError("Unexpected status code {StatusCode} for error settings download", statusCode);
-        sbLogger.LogError(null, "Неожиданный код статуса {StatusCode} при загрузке настроек ошибок", statusCode);
+        logger.LogError("Неожиданный код статуса {StatusCode} при загрузке настроек ошибок", statusCode);
         return ErrorSettingsDownloadResult.Fail("Ошибка на стороне сервера");
     }
 }
