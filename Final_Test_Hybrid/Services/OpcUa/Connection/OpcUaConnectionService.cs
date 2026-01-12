@@ -56,7 +56,7 @@ public class OpcUaConnectionService(
             }
             catch (Exception ex)
             {
-                logger.LogWarning("Не удалось подключиться к OPC UA серверу. Повтор через {Interval} мс. Ошибка: {Error}",
+                logger.LogError("Не удалось подключиться к OPC UA серверу. Повтор через {Interval} мс. Ошибка: {Error}",
                     _settings.ReconnectIntervalMs, ex.Message);
                 await Task.Delay(_settings.ReconnectIntervalMs, cancellationToken)
                     .ConfigureAwait(false);
@@ -86,7 +86,7 @@ public class OpcUaConnectionService(
         {
             return;
         }
-        logger.LogWarning("OPC UA KeepAlive не удался: {Status}. Запуск переподключения...", e.Status);
+        logger.LogError("OPC UA KeepAlive не удался: {Status}. Запуск переподключения...", e.Status);
         connectionState.SetConnected(false);
         StartReconnect(session);
     }

@@ -12,6 +12,11 @@
     margin-bottom: 10px;
 }
 
+.log-toolbar ::deep .rz-button {
+    font-size: 16px;
+    padding: 10px 20px;
+}
+
 .log-info {
     margin-left: auto;
     color: #666;
@@ -24,14 +29,14 @@
     background: #1e1e1e;
     color: #d4d4d4;
     font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 14px;
+    font-size: 16px;
     padding: 10px;
     border-radius: 4px;
 }
 
 .log-line {
-    height: 20px;
-    line-height: 20px;
+    height: 24px;
+    line-height: 24px;
     white-space: nowrap;
     padding: 0 5px;
 }

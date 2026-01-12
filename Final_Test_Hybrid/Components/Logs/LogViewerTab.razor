@@ -1,5 +1,6 @@
 @using Microsoft.AspNetCore.Components.Web.Virtualization
 @using Final_Test_Hybrid.Services.Common.Logging
+@implements IDisposable
 
 @inject ITestStepLogger TestStepLogger
 
@@ -16,7 +17,7 @@
         }
         else
         {
-            <Virtualize Items="_lines" Context="line" ItemSize="20">
+            <Virtualize Items="_lines" Context="line" ItemSize="24">
                 <div class="log-line @GetLogLevelClass(line)">@line</div>
             </Virtualize>
         }
@@ -25,11 +26,27 @@
 
 @code {
     private const int MaxLines = 50_000;
-    private List<string> _lines = new();
+    private const int RefreshIntervalMs = 3000;
+
+    private List<string> _lines = [];
+    private System.Threading.Timer? _refreshTimer;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadLogAsync();
+        StartAutoRefresh();
+    }
+
+    private void StartAutoRefresh()
+    {
+        _refreshTimer = new System.Threading.Timer(_ =>
+        {
+            InvokeAsync(async () =>
+            {
+                await LoadLogAsync();
+                StateHasChanged();
+            });
+        }, null, RefreshIntervalMs, RefreshIntervalMs);
     }
 
     private async Task LoadLogAsync()
@@ -37,11 +54,14 @@
         var path = TestStepLogger.GetCurrentLogFilePath();
         if (string.IsNullOrEmpty(path) || !File.Exists(path))
         {
-            _lines = new List<string> { "Файл лога не найден" };
+            _lines = ["Файл лога не найден"];
             return;
         }
 
-        var allLines = await File.ReadAllLinesAsync(path);
+        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var reader = new StreamReader(stream);
+        var content = await reader.ReadToEndAsync();
+        var allLines = content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
         _lines = allLines.Length > MaxLines
             ? allLines.TakeLast(MaxLines).ToList()
             : allLines.ToList();
@@ -54,18 +74,19 @@
 
     private static string GetLogLevelClass(string line)
     {
-        if (line.Contains("Error"))
+        if (line.Contains("[ERR]"))
         {
             return "log-error";
         }
-        if (line.Contains("Warning"))
+        if (line.Contains("[WRN]"))
         {
             return "log-warning";
         }
-        if (line.Contains("Debug"))
-        {
-            return "log-debug";
-        }
-        return "";
+        return line.Contains("[DBG]") ? "log-debug" : "";
+    }
+
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
     }
 }

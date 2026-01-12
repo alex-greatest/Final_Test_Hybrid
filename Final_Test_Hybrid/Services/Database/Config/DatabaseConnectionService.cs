@@ -14,6 +14,7 @@ public class DatabaseConnectionService(
     private readonly int _intervalMs = options.Value.HealthCheckIntervalMs;
     private PeriodicTimer? _timer;
     private CancellationTokenSource? _cts;
+    private bool _wasConnected;
 
     public void Start()
     {
@@ -50,15 +51,21 @@ public class DatabaseConnectionService(
             await using var dbContext = await dbContextFactory.CreateDbContextAsync().ConfigureAwait(false);
             var canConnect = await dbContext.Database.CanConnectAsync().ConfigureAwait(false);
             connectionState.SetConnected(canConnect);
-            if (!canConnect)
+            if (canConnect && !_wasConnected)
             {
-                logger.LogWarning("База данных не отвечает");
+                logger.LogInformation("Связь с базой данных установлена");
             }
+            else if (!canConnect)
+            {
+                logger.LogError("База данных не отвечает");
+            }
+            _wasConnected = canConnect;
         }
         catch (Exception ex)
         {
             connectionState.SetConnected(false);
-            logger.LogWarning("Проверка подключения к БД не удалась: {Message}", ex.Message);
+            _wasConnected = false;
+            logger.LogError("Проверка подключения к БД не удалась: {Message}", ex.Message);
         }
     }
 

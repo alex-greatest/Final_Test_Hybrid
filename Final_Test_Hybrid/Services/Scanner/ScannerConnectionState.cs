@@ -51,7 +51,7 @@ public class ScannerConnectionState : IDisposable
         }
         catch (ManagementException ex)
         {
-            _logger.LogWarning(ex, "WMI ошибка при проверке сканера");
+            _logger.LogError(ex, "WMI ошибка при проверке сканера");
             UpdateConnectionState(false);
         }
         catch (Exception ex)
@@ -77,7 +77,7 @@ public class ScannerConnectionState : IDisposable
         }
         catch (ManagementException ex)
         {
-            _logger.LogWarning(ex, "WMI ошибка при запуске мониторинга USB");
+            _logger.LogError(ex, "WMI ошибка при запуске мониторинга USB");
         }
         catch (Exception ex)
         {

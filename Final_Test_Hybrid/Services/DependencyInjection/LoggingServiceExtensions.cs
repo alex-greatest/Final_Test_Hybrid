@@ -14,12 +14,9 @@ public static class LoggingServiceExtensions
         IConfiguration config)
     {
         ConfigureSerilog(config);
-
         services.AddSingleton<ITestStepLogger, TestStepLogger>();
         services.AddTransient(typeof(DualLogger<>));
-
         var logLevel = Enum.Parse<LogLevel>(config["Logging:General:LogLevel"] ?? "Warning");
-
         services.AddLogging(logging =>
         {
             logging.SetMinimumLevel(logLevel);
@@ -42,7 +39,7 @@ public static class LoggingServiceExtensions
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Is(level)
-            .WriteTo.File(path, rollingInterval: RollingInterval.Day, retainedFileCountLimit: retain)
+            .WriteTo.File(path, shared: true, rollingInterval: RollingInterval.Day, retainedFileCountLimit: retain)
             .CreateLogger();
     }
 }

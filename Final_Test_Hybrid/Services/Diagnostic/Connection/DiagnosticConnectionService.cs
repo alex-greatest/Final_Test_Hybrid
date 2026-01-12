@@ -146,7 +146,7 @@ public class DiagnosticConnectionService(
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Не удалось подключиться к {Port}: {Error}. Повтор через {Interval} мс",
+            _logger.LogError("Не удалось подключиться к {Port}: {Error}. Повтор через {Interval} мс",
                 _settings.PortName, ex.Message, _settings.ReconnectIntervalMs);
             return false;
         }
@@ -254,7 +254,7 @@ public class DiagnosticConnectionService(
 
     private async Task ReconnectWithLoggingAsync()
     {
-        _logger.LogWarning("Соединение с {Port} потеряно. Запуск переподключения...", _settings.PortName);
+        _logger.LogError("Соединение с {Port} потеряно. Запуск переподключения...", _settings.PortName);
 
         await ConnectWithRetryAsync(_reconnectCts!.Token).ConfigureAwait(false);
         connectionState.SetConnected(true);

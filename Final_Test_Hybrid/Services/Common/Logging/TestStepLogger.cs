@@ -34,7 +34,8 @@ public class TestStepLogger : ITestStepLogger, IDisposable
         CleanupOldFiles(_basePath, _retain);
         _logger = new LoggerConfiguration()
             .MinimumLevel.Is(_level)
-            .WriteTo.File(path)
+            .WriteTo.File(path, shared: true,
+                outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
     }
 
