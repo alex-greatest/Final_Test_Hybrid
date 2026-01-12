@@ -1,6 +1,9 @@
+@using Final_Test_Hybrid.Models.Plc.Tags
 @using Final_Test_Hybrid.Services.Errors
+@using Final_Test_Hybrid.Services.OpcUa
 
 @inject IErrorService ErrorService
+@inject OpcUaTagService OpcUaTagService
 
 @implements IAsyncDisposable
 
@@ -8,7 +11,7 @@
 {
     <RadzenButton Style="height: 56px; min-width: 250px; font-size: 1.5rem; font-weight: 900; color: white"
                   Text="Сброс ошибки" ButtonStyle="ButtonStyle.Danger"
-                  Click="@OnResetClick" />
+                  Click="@OnResetClickAsync" />
 }
 else
 {
@@ -45,9 +48,9 @@ else
         _hasResettableErrors = ErrorService.HasResettableErrors;
     }
 
-    private void OnResetClick()
+    private async Task OnResetClickAsync()
     {
-        ErrorService.ClearAllActiveErrors();
+        await OpcUaTagService.WriteAsync(BaseTags.ErrorQuitt, true);
     }
 
     public ValueTask DisposeAsync()

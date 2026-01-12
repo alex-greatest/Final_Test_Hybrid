@@ -16,4 +16,7 @@ public static class BaseTags
     public const string ReqReset = "ns=3;s=\"DB_Station\".\"Test\".\"Req_Reset\"";
     public const string Reset = "ns=3;s=\"DB_Station\".\"Test\".\"Reset\"";
     public const string AskEnd = "ns=3;s=\"DB_Station\".\"Test\".\"Ask_End\"";
+
+    // Error reset (HMI)
+    public const string ErrorQuitt = "ns=3;s=\"DB_HMI\".\"Button\".\"Mode\".\"xSB_Quitt\"";
 }
