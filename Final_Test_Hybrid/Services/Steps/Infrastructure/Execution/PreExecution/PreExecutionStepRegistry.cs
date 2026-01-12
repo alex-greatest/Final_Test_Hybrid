@@ -1,5 +1,6 @@
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
+using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
@@ -7,6 +8,7 @@ public class PreExecutionStepRegistry : IPreExecutionStepRegistry
 {
     private readonly Dictionary<string, IPreExecutionStep> _stepsById;
     private readonly AppSettingsService _appSettings;
+    private readonly ILogger<PreExecutionStepRegistry> _logger;
 
     private static readonly string[] MesStepOrder =
     [
@@ -43,10 +45,12 @@ public class PreExecutionStepRegistry : IPreExecutionStepRegistry
 
     public PreExecutionStepRegistry(
         IEnumerable<IPreExecutionStep> steps,
-        AppSettingsService appSettings)
+        AppSettingsService appSettings,
+        ILogger<PreExecutionStepRegistry> logger)
     {
         _stepsById = steps.ToDictionary(s => s.Id);
         _appSettings = appSettings;
+        _logger = logger;
         ValidateRequiredSteps();
     }
 
@@ -64,7 +68,8 @@ public class PreExecutionStepRegistry : IPreExecutionStepRegistry
         {
             return;
         }
-        throw new InvalidOperationException(
-            $"Не найдены PreExecution шаги: {string.Join(", ", missing)}");
+        var message = $"Не найдены PreExecution шаги: {string.Join(", ", missing)}";
+        _logger.LogError(message);
+        throw new InvalidOperationException(message);
     }
 }
