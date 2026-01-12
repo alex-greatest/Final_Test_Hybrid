@@ -78,6 +78,7 @@ public class TestSequenseService
             step.Status = "Выполняется";
             step.StepStatus = TestStepStatus.Running;
             step.Result = "";
+            step.Range = "";
             step.StartTime = DateTime.Now;
             step.EndTime = null;
         });

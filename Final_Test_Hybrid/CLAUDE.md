@@ -175,11 +175,40 @@ public class BlazorUiDispatcher(BlazorDispatcherAccessor accessor) : IUiDispatch
 }
 ```
 
-### Test Step Logging
+### Dual Logging (ОБЯЗАТЕЛЬНО)
+
+**Везде использовать `DualLogger<T>`** — он автоматически пишет в оба логгера:
+
 ```csharp
-// ВСЕГДА дублировать в оба логгера
-logger.LogInformation(message);        // Файл
-testStepLogger.LogInformation(message); // UI теста
+// ✅ ПРАВИЛЬНО: один вызов — оба лога
+public class MyService(DualLogger<MyService> logger)
+{
+    logger.LogInformation("Сообщение"); // → файл + UI теста
+}
+
+// ❌ ПЛОХО: ручное дублирование
+logger.LogInformation(message);
+testStepLogger.LogInformation(message);
+```
+
+**Паттерны использования:**
+
+```csharp
+// 1. Через DI (рекомендуется)
+public class MyStep(DualLogger<MyStep> logger) { }
+
+// 2. Через приватное поле (когда нужны оба логгера отдельно)
+public class MyService(
+    ILogger<MyService> logger,
+    ITestStepLogger testStepLogger)
+{
+    private readonly DualLogger<MyService> _logger = new(logger, testStepLogger);
+}
+```
+
+**DualLogger зарегистрирован как Transient:**
+```csharp
+services.AddTransient(typeof(DualLogger<>));
 ```
 
 ## Accepted Patterns (NOT bugs)

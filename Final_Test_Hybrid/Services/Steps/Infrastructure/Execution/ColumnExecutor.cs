@@ -82,7 +82,7 @@ public class ColumnExecutor(
         }
         catch (Exception ex)
         {
-            SetErrorState(step, ex.Message);
+            SetErrorState(step, ex.Message, null);
             LogError(step, ex.Message, ex);
         }
     }
@@ -108,24 +108,27 @@ public class ColumnExecutor(
 
     private void ProcessStepResult(ITestStep step, TestStepResult result)
     {
+        var limits = result.OutputData?.TryGetValue("Limits", out var val) == true
+            ? val.ToString()
+            : null;
         if (!result.Success)
         {
-            SetErrorState(step, result.Message, result.Errors);
+            SetErrorState(step, result.Message, limits, result.Errors);
             LogError(step, result.Message, null);
             return;
         }
 
         ClearStepErrors();
-        SetSuccessState(step, result);
+        SetSuccessState(step, result, limits);
     }
 
-    private void SetSuccessState(ITestStep step, TestStepResult result)
+    private void SetSuccessState(ITestStep step, TestStepResult result, string? limits)
     {
         var duration = DateTime.Now - _state.StartTime;
         stepTimingService.Record(step.Name, step.Description, duration);
 
         var statusText = result.Skipped ? "Пропуск" : "Готово";
-        statusReporter.ReportSuccess(_state.UiStepId, result.Message);
+        statusReporter.ReportSuccess(_state.UiStepId, result.Message, limits);
         _state = _state with { Status = statusText, ResultValue = result.Message, FailedStep = null };
         testLogger.LogStepEnd(step.Name);
 
@@ -137,13 +140,11 @@ public class ColumnExecutor(
         OnStateChanged?.Invoke();
     }
 
-    private void SetErrorState(ITestStep step, string message, List<ErrorDefinition>? errors = null)
+    private void SetErrorState(ITestStep step, string message, string? limits, List<ErrorDefinition>? errors = null)
     {
         var duration = DateTime.Now - _state.StartTime;
         stepTimingService.Record(step.Name, step.Description, duration);
-
-        statusReporter.ReportError(_state.UiStepId, message);
-
+        statusReporter.ReportError(_state.UiStepId, message, limits);
         ClearStepErrors();
         _errorScope = new ErrorScope(errorService);
         _errorScope.Raise(errors, step.Id, step.Name);

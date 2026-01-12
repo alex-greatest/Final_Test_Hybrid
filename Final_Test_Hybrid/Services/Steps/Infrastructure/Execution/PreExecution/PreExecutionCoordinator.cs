@@ -146,18 +146,15 @@ public partial class PreExecutionCoordinator(
         switch (result.Status)
         {
             case PreExecutionStatus.Continue:
-                statusReporter.ReportSuccess(stepId, result.SuccessMessage ?? "");
+                statusReporter.ReportSuccess(stepId, result.SuccessMessage ?? "", result.Limits);
                 break;
-
             case PreExecutionStatus.Cancelled:
-                statusReporter.ReportError(stepId, result.ErrorMessage ?? "Операция отменена");
+                statusReporter.ReportError(stepId, result.ErrorMessage ?? "Операция отменена", result.Limits);
                 break;
-
             case PreExecutionStatus.TestStarted:
                 break;
-
             case PreExecutionStatus.Failed:
-                statusReporter.ReportError(stepId, result.ErrorMessage!);
+                statusReporter.ReportError(stepId, result.ErrorMessage!, result.Limits);
                 break;
             default:
                 throw new InvalidOperationException($"Неизвестный статус PreExecution: {result.Status}");
