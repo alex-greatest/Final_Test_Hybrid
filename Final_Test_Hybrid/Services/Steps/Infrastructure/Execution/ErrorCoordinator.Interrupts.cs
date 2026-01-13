@@ -171,6 +171,10 @@ public partial class ErrorCoordinator
                 await DelayThenResetAsync(behavior.Delay, ct);
                 break;
 
+            case InterruptAction.ResetImmediately:
+                Reset();
+                break;
+
             default:
                 throw new ArgumentOutOfRangeException(nameof(behavior), behavior.Action, "Неизвестное действие");
         }

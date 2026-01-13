@@ -10,5 +10,6 @@ public record InterruptBehavior(
 public enum InterruptAction
 {
     PauseAndWait,
-    ResetAfterDelay
+    ResetAfterDelay,
+    ResetImmediately
 }
