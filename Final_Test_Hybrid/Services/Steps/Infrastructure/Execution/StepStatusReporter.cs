@@ -45,14 +45,7 @@ public class StepStatusReporter
     {
         _sequenseService.SetRunning(id);
     }
-
-    /// <summary>
-    /// Skipped steps retain their error status - no status change needed.
-    /// </summary>
-    public void ReportSkip(Guid id)
-    {
-    }
-
+    
     public void ReportError(Guid id, string message, string? limits = null)
     {
         _sequenseService.SetError(id, message, limits);

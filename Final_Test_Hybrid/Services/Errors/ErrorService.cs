@@ -9,7 +9,6 @@ public sealed class ErrorService : IErrorService
     private readonly Lock _errorsLock = new();
     private readonly List<ActiveError> _activeErrors = [];
     private readonly List<ErrorHistoryItem> _history = [];
-    private bool _isHistoryEnabled = true;
 
     public event Action? OnActiveErrorsChanged;
     public event Action? OnHistoryChanged;
@@ -36,11 +35,7 @@ public sealed class ErrorService : IErrorService
         }
     }
 
-    public bool IsHistoryEnabled
-    {
-        get => _isHistoryEnabled;
-        set => _isHistoryEnabled = value;
-    }
+    public bool IsHistoryEnabled { get; set; } = true;
 
     public IReadOnlyList<ActiveError> GetActiveErrors()
     {
@@ -221,7 +216,7 @@ public sealed class ErrorService : IErrorService
 
     private void AddToHistory(ErrorHistoryItem item)
     {
-        if (!_isHistoryEnabled)
+        if (!IsHistoryEnabled)
         {
             return;
         }

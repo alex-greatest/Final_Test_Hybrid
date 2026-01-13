@@ -1,6 +1,4 @@
 using Final_Test_Hybrid.Models.Errors;
-using Final_Test_Hybrid.Models.Steps;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 
@@ -12,25 +10,14 @@ public partial class ErrorCoordinator
     #region Full Reset
 
     /// <summary>
-    /// Полный сброс — очищает ВСЁ включая BoilerState и Grid.
-    /// Вызывается при таймаутах, критических ошибках.
+    /// Полный сброс — снимает паузу и сигнализирует подписчикам.
+    /// Подписчики решают что очищать.
     /// </summary>
     public void Reset()
     {
         _logger.LogInformation("=== ПОЛНЫЙ СБРОС ===");
-        ClearAllState();
-        InvokeEventSafe(OnReset, "OnReset");
-    }
-
-    private void ClearAllState()
-    {
-        _interruptMessage.Clear();
         _pauseToken.Resume();
-        _stateManager.ClearErrors();
-        _stateManager.TransitionTo(ExecutionState.Failed);
-        _statusReporter.ClearAll();
-        _boilerState.Clear();
-        _errorService.ClearActiveApplicationErrors();
+        InvokeEventSafe(OnReset, "OnReset");
     }
 
     #endregion
@@ -38,23 +25,13 @@ public partial class ErrorCoordinator
     #region Force Stop (Soft Reset)
 
     /// <summary>
-    /// Мягкий сброс — очищает ошибки и сообщения, но СОХРАНЯЕТ BoilerState и Grid.
+    /// Мягкий сброс — снимает паузу.
     /// Используется при успешном PLC reset (Ask_End получен вовремя).
     /// </summary>
     public void ForceStop()
     {
         _logger.LogInformation("=== МЯГКИЙ СБРОС (данные сохранены) ===");
-        ClearErrorsOnly();
-    }
-
-    private void ClearErrorsOnly()
-    {
-        _interruptMessage.Clear();
         _pauseToken.Resume();
-        _stateManager.ClearErrors();
-        _stateManager.TransitionTo(ExecutionState.Idle);
-        _errorService.ClearActiveApplicationErrors();
-        // НЕ очищаем: _statusReporter, _boilerState
     }
 
     #endregion
@@ -93,10 +70,8 @@ public partial class ErrorCoordinator
 
     private void ResumeExecution()
     {
-        _interruptMessage.Clear();
         _pauseToken.Resume();
         ClearConnectionErrors();
-        _notifications.ShowSuccess("Автомат восстановлен", "Тест продолжается");
         InvokeEventSafe(OnRecovered, "OnRecovered");
     }
 

@@ -81,8 +81,10 @@ public partial class ErrorCoordinator
 
     public async Task HandleInterruptAsync(InterruptReason reason, CancellationToken ct = default)
     {
-        if (!await TryAcquireResourcesAsync(reason, ct)) { return; }
-
+        if (!await TryAcquireResourcesAsync(reason, ct))
+        {
+            return; 
+        }
         try
         {
             await ProcessInterruptAsync(reason, ct);

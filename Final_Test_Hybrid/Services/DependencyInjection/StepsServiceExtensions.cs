@@ -18,6 +18,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Final_Test_Hybrid.Services.Steps.Steps;
 using Final_Test_Hybrid.Services.Steps.Validation;
+using Final_Test_Hybrid.Services.Preparation;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Final_Test_Hybrid.Services.DependencyInjection;
@@ -90,6 +91,11 @@ public static class StepsServiceExtensions
 
         // Test step registry
         services.AddSingleton<ITestStepRegistry, TestStepRegistry>();
+
+        // Preparation services
+        services.AddSingleton<IBoilerDataLoader, BoilerDataLoader>();
+        services.AddSingleton<IBoilerDatabaseInitializer, BoilerDatabaseInitializer>();
+        services.AddSingleton<IScanPreparationFacade, ScanPreparationFacade>();
 
         // Pre-execution (упрощённая архитектура: 2 scan-шага + BlockBoilerAdapter)
         services.AddSingleton<ScanBarcodeStep>();
