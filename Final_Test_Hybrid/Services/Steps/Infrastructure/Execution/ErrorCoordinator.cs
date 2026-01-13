@@ -35,6 +35,7 @@ public partial class ErrorCoordinator : IAsyncDisposable
     private readonly SemaphoreSlim _operationLock = new(1, 1);
     private readonly CancellationTokenSource _disposeCts = new();
     private int _isHandlingInterrupt;
+    private int _activeOperations;
     private volatile bool _disposed;
 
     // === Constants ===
@@ -164,7 +165,7 @@ public partial class ErrorCoordinator : IAsyncDisposable
         var spinWait = new SpinWait();
         var timeout = DateTime.UtcNow.AddSeconds(5);
 
-        while (_isHandlingInterrupt == 1 && DateTime.UtcNow < timeout)
+        while (Volatile.Read(ref _activeOperations) > 0 && DateTime.UtcNow < timeout)
         {
             spinWait.SpinOnce();
             await Task.Yield();

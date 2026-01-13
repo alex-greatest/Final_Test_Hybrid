@@ -29,6 +29,9 @@ public partial class ErrorCoordinator
         Interlocked.Exchange(ref _isHandlingInterrupt, 0);
     }
 
+    private void IncrementActiveOperations() => Interlocked.Increment(ref _activeOperations);
+    private void DecrementActiveOperations() => Interlocked.Decrement(ref _activeOperations);
+
     private async Task<bool> TryAcquireLockAsync(CancellationToken ct)
     {
         if (_disposed) { return false; }
@@ -94,18 +97,20 @@ public partial class ErrorCoordinator
     {
         if (_disposed) { return false; }
         if (!TryAcquireInterruptFlag(reason)) { return false; }
-        if (await TryAcquireLockAsync(ct))
-        {
-            return true;
-        }
+
+        IncrementActiveOperations();
+
+        if (await TryAcquireLockAsync(ct)) { return true; }
+
+        DecrementActiveOperations();
         ReleaseInterruptFlag();
         return false;
-
     }
 
     private void ReleaseResources()
     {
         ReleaseLockSafe();
+        DecrementActiveOperations();
         ReleaseInterruptFlag();
     }
 
@@ -116,6 +121,14 @@ public partial class ErrorCoordinator
             _logger.LogError("Неизвестная причина прерывания: {Reason}", reason);
             return;
         }
+
+        // Ранняя проверка: AutoModeDisabled при уже восстановленном автомате — пропуск
+        if (reason == InterruptReason.AutoModeDisabled && _autoReady.IsReady)
+        {
+            _logger.LogInformation("AutoReady восстановлен до обработки прерывания — пропуск");
+            return;
+        }
+
         LogInterrupt(reason, behavior);
         RaiseErrorForInterrupt(reason);
         NotifyInterrupt(behavior);

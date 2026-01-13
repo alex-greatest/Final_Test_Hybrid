@@ -63,15 +63,25 @@ public partial class ErrorCoordinator
 
     private async Task TryResumeFromPauseAsync(CancellationToken ct)
     {
-        if (!await TryAcquireLockAsync(ct)) { return; }
+        if (_disposed) { return; }
 
+        IncrementActiveOperations();
         try
         {
-            ResumeIfPaused();
+            if (!await TryAcquireLockAsync(ct)) { return; }
+
+            try
+            {
+                ResumeIfPaused();
+            }
+            finally
+            {
+                ReleaseLockSafe();
+            }
         }
         finally
         {
-            ReleaseLockSafe();
+            DecrementActiveOperations();
         }
     }
 
