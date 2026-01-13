@@ -107,6 +107,10 @@ public class ScanModeController : IDisposable
 
     private void TryDeactivateScanMode()
     {
+        if (_scanStateManager.State == ScanState.Resetting)
+        {
+            return;
+        }
         _scanStateManager.TryTransitionTo(ScanState.Disabled, () =>
         {
             _sessionManager.ReleaseSession();
@@ -129,6 +133,17 @@ public class ScanModeController : IDisposable
         {
             _executionMessageState.Clear();
             _sessionManager.AcquireSession(_barcodeHandler);
+        });
+    }
+
+    /// <summary>
+    /// Входит в режим сброса — блокирует ввод сканера до завершения сброса.
+    /// </summary>
+    public void EnterResettingMode()
+    {
+        _scanStateManager.TryTransitionTo(ScanState.Resetting, () =>
+        {
+            _sessionManager.ReleaseSession();
         });
     }
 

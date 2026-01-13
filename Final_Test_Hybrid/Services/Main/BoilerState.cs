@@ -20,6 +20,7 @@ public class BoilerState
     private bool _isValid;
     private BoilerTypeCycle? _boilerTypeCycle;
     private IReadOnlyList<RecipeResponseDto>? _recipes;
+    private string? _lastSerialNumber;
 
     public event Action? OnChanged;
 
@@ -78,6 +79,21 @@ public class BoilerState
         }
     }
 
+    /// <summary>
+    /// Серийный номер котла из предыдущего теста.
+    /// Сохраняется при вызове Clear() для возможности отслеживания.
+    /// </summary>
+    public string? LastSerialNumber
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _lastSerialNumber;
+            }
+        }
+    }
+
     public void SetData(
         string serialNumber,
         string article,
@@ -91,6 +107,10 @@ public class BoilerState
 
     public void Clear()
     {
+        lock (_lock)
+        {
+            _lastSerialNumber = _serialNumber;
+        }
         UpdateState(serialNumber: null, article: null, isValid: false, boilerTypeCycle: null, recipes: null);
         _recipeProvider.Clear();
         NotifyChanged();

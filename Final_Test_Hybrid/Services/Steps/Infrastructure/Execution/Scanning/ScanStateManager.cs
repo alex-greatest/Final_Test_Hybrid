@@ -104,36 +104,28 @@ public sealed class ScanStateManager : INotifyStateChanged, IDisposable
     public bool TryTransitionTo(ScanState newState, Action? onTransition = null)
     {
         ScanState oldState;
-
         lock (_lock)
         {
             if (_disposed)
             {
                 return false;
             }
-
             if (!IsTransitionValid(_state, newState))
             {
                 return false;
             }
-
             oldState = _state;
             _state = newState;
-
-            if (newState == ScanState.Disabled || newState == ScanState.Ready)
+            if (newState is ScanState.Disabled or ScanState.Ready or ScanState.Resetting)
             {
                 _currentBarcode = null;
-                _errorMessage = null;
             }
-
             if (newState != ScanState.Error)
             {
                 _errorMessage = null;
             }
-
             onTransition?.Invoke();
         }
-
         NotifyStateChanged(oldState, newState);
         return true;
     }
@@ -145,19 +137,16 @@ public sealed class ScanStateManager : INotifyStateChanged, IDisposable
     public void ForceTransitionTo(ScanState newState, Action? onTransition = null)
     {
         ScanState oldState;
-
         lock (_lock)
         {
             if (_disposed)
             {
                 return;
             }
-
             oldState = _state;
             _state = newState;
             onTransition?.Invoke();
         }
-
         NotifyStateChanged(oldState, newState);
     }
 
@@ -200,19 +189,16 @@ public sealed class ScanStateManager : INotifyStateChanged, IDisposable
     public bool SetError(string message)
     {
         ScanState oldState;
-
         lock (_lock)
         {
             if (_disposed)
             {
                 return false;
             }
-
             oldState = _state;
             _state = ScanState.Error;
             _errorMessage = message;
         }
-
         NotifyStateChanged(oldState, ScanState.Error);
         return true;
     }
@@ -275,6 +261,13 @@ public sealed class ScanStateManager : INotifyStateChanged, IDisposable
             (ScanState.Error, ScanState.Processing) => true, // Retry
             (ScanState.Error, ScanState.Disabled) => true,
 
+            // Вход в Resetting из любого состояния (сброс теста)
+            (_, ScanState.Resetting) => true,
+
+            // Выход из Resetting
+            (ScanState.Resetting, ScanState.Ready) => true,
+            (ScanState.Resetting, ScanState.Disabled) => true,
+
             // Одинаковые состояния
             _ when from == to => false,
 
@@ -289,7 +282,6 @@ public sealed class ScanStateManager : INotifyStateChanged, IDisposable
         {
             return;
         }
-
         OnStateTransition?.Invoke(oldState, newState);
         OnStateChanged?.Invoke();
     }
@@ -300,7 +292,6 @@ public sealed class ScanStateManager : INotifyStateChanged, IDisposable
         {
             return;
         }
-
         _disposed = true;
         _processLock.Dispose();
     }
