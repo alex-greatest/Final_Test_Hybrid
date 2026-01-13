@@ -3,12 +3,27 @@ using Microsoft.Extensions.Logging;
 namespace Final_Test_Hybrid.Services.Common.Logging;
 
 /// <summary>
+/// Не-generic интерфейс для DualLogger.
+/// Используется когда нужен логгер без привязки к конкретному типу категории.
+/// </summary>
+public interface IDualLogger
+{
+    void LogDebug(string message, params object?[] args);
+    void LogInformation(string message, params object?[] args);
+    void LogWarning(string message, params object?[] args);
+    void LogError(string message, params object?[] args);
+    void LogError(Exception? ex, string message, params object?[] args);
+    void LogStepStart(string stepName);
+    void LogStepEnd(string stepName);
+}
+
+/// <summary>
 /// Комбинированный логгер, записывающий одновременно в ILogger и ITestStepLogger.
 /// Устраняет дублирование вызовов logger.LogX + testStepLogger.LogX.
 /// </summary>
 public class DualLogger<TCategoryName>(
     ILogger<TCategoryName> logger,
-    ITestStepLogger testStepLogger)
+    ITestStepLogger testStepLogger) : IDualLogger
 {
     public void LogDebug(string message, params object?[] args)
     {
@@ -38,5 +53,15 @@ public class DualLogger<TCategoryName>(
     {
         logger.LogError(ex, message, args);
         testStepLogger.LogError(ex, message, args);
+    }
+
+    public void LogStepStart(string stepName)
+    {
+        testStepLogger.LogStepStart(stepName);
+    }
+
+    public void LogStepEnd(string stepName)
+    {
+        testStepLogger.LogStepEnd(stepName);
     }
 }

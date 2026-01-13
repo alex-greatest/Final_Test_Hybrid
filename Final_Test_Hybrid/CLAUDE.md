@@ -2,8 +2,6 @@
 
 Guidance for Claude Code when working with this repository.
 
-> **См. также:** [ARCHITECTURE.md](ARCHITECTURE.md), [MessageServiceDescription.md](MessageServiceDescription.md), [ErrorSystemGuide.md](ErrorSystemGuide.md)
-
 ## Project Overview
 
 **Final_Test_Hybrid** — hybrid WinForms + Blazor desktop application for industrial test sequences.

@@ -2,6 +2,7 @@ using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
+using Final_Test_Hybrid.Services.Steps.Steps;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
@@ -43,7 +44,7 @@ public partial class PreExecutionCoordinator
     #region Retry Loop
 
     private async Task<PreExecutionResult> ExecuteRetryLoopAsync(
-        IPreExecutionStep step,
+        BlockBoilerAdapterStep step,
         PreExecutionResult initialResult,
         PreExecutionContext context,
         Guid stepId,
@@ -60,7 +61,6 @@ public partial class PreExecutionCoordinator
                 statusReporter.ReportError(stepId, currentResult.ErrorMessage!);
 
                 var resolution = await WaitForResolutionAsync(ct);
-                // PLC сам сбросит Selected — нам не нужно
                 if (resolution == PreExecutionResolution.Retry)
                 {
                     errorScope.Clear();
@@ -94,13 +94,16 @@ public partial class PreExecutionCoordinator
     }
 
     private async Task<PreExecutionResult> RetryStepAsync(
-        IPreExecutionStep step,
+        BlockBoilerAdapterStep step,
         PreExecutionContext context,
         Guid stepId,
         CancellationToken ct)
     {
         statusReporter.ReportRetry(stepId);
-        return await ExecuteAndRecordAsync(step, context, ct);
+        var startTime = DateTime.Now;
+        var result = await step.ExecuteAsync(context, ct);
+        stepTimingService.Record(step.Name, step.Description, DateTime.Now - startTime);
+        return result;
     }
 
     #endregion
@@ -160,7 +163,7 @@ public partial class PreExecutionCoordinator
 
     #region Selected Management
 
-    private async Task SetSelectedAsync(IPreExecutionStep step)
+    private async Task SetSelectedAsync(BlockBoilerAdapterStep step)
     {
         if (step is not IHasPlcBlockPath plcStep)
         {
@@ -174,5 +177,6 @@ public partial class PreExecutionCoordinator
             logger.LogWarning("Ошибка записи Selected: {Error}", result.Error);
         }
     }
+
     #endregion
 }

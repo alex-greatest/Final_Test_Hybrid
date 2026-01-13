@@ -1,7 +1,7 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.SpringBoot.Operation;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
-using Final_Test_Hybrid.Services.Steps.Steps.PreExecution;
+using Final_Test_Hybrid.Services.Steps.Steps;
 using Final_Test_Hybrid.Services.Steps.Validation;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
@@ -23,16 +23,10 @@ public class ScanDialogCoordinator
 
     public ScanDialogCoordinator(
         ScanErrorHandler errorHandler,
-        IEnumerable<IPreExecutionStep> preExecutionSteps)
+        ScanBarcodeMesStep scanBarcodeMesStep)
     {
         _errorHandler = errorHandler;
-        ConfigureReworkCallback(preExecutionSteps);
-    }
-
-    private void ConfigureReworkCallback(IEnumerable<IPreExecutionStep> steps)
-    {
-        var mesStep = steps.OfType<StartOperationMesStep>().FirstOrDefault();
-        mesStep?.OnReworkRequired = HandleReworkDialogAsync;
+        scanBarcodeMesStep.OnReworkRequired = HandleReworkDialogAsync;
     }
 
     private async Task<ReworkFlowResult> HandleReworkDialogAsync(

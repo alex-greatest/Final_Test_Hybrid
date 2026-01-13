@@ -1,5 +1,6 @@
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.PlcReset;
@@ -7,12 +8,20 @@ using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
+using Final_Test_Hybrid.Services.Steps.Steps;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
+/// <summary>
+/// Упрощённый координатор PreExecution.
+/// Выполняет только два шага: ScanStep (вся подготовка) и BlockBoilerAdapterStep.
+/// </summary>
 public partial class PreExecutionCoordinator(
-    IPreExecutionStepRegistry stepRegistry,
+    AppSettingsService appSettings,
+    ScanBarcodeStep scanBarcodeStep,
+    ScanBarcodeMesStep scanBarcodeMesStep,
+    BlockBoilerAdapterStep blockBoilerAdapterStep,
     TestExecutionCoordinator testCoordinator,
     StepStatusReporter statusReporter,
     BoilerState boilerState,
@@ -48,63 +57,92 @@ public partial class PreExecutionCoordinator(
         CancellationToken ct)
     {
         var context = CreateContext(barcode, scanStepId);
-        var stepsResult = await ExecuteAllStepsAsync(context, ct);
-        if (stepsResult.Status != PreExecutionStatus.Continue)
+
+        // 1. Выполнить шаг сканирования (вся подготовка внутри)
+        var scanResult = await ExecuteScanStepAsync(context, ct);
+        if (scanResult.Status != PreExecutionStatus.Continue)
         {
-            return HandleNonContinueResult(stepsResult);
+            return HandleNonContinueResult(scanResult);
         }
+
+        // 2. Выполнить BlockBoilerAdapter (с retry логикой)
+        var blockResult = await ExecuteBlockBoilerAdapterAsync(context, ct);
+        if (blockResult.Status != PreExecutionStatus.Continue)
+        {
+            return HandleNonContinueResult(blockResult);
+        }
+
+        // 3. Запустить тест
         messageState.Clear();
         StartTestExecution(context);
         return PreExecutionResult.TestStarted();
     }
 
+    private async Task<PreExecutionResult> ExecuteScanStepAsync(PreExecutionContext context, CancellationToken ct)
+    {
+        var scanStep = GetScanStep();
+        var stepId = GetOrCreateStepId(scanStep, context);
+        try
+        {
+            await pauseToken.WaitWhilePausedAsync(ct);
+            var startTime = DateTime.Now;
+            var result = await scanStep.ExecuteAsync(context, ct);
+            stepTimingService.Record(scanStep.Name, scanStep.Description, DateTime.Now - startTime);
+            ReportStepResult(stepId, result);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return HandleStepException(scanStep, stepId, ex);
+        }
+    }
+
+    private async Task<PreExecutionResult> ExecuteBlockBoilerAdapterAsync(PreExecutionContext context, CancellationToken ct)
+    {
+        var stepId = statusReporter.ReportStepStarted(blockBoilerAdapterStep);
+        try
+        {
+            await pauseToken.WaitWhilePausedAsync(ct);
+            var startTime = DateTime.Now;
+            var result = await blockBoilerAdapterStep.ExecuteAsync(context, ct);
+            stepTimingService.Record(blockBoilerAdapterStep.Name, blockBoilerAdapterStep.Description, DateTime.Now - startTime);
+
+            if (result.IsRetryable)
+            {
+                return await ExecuteRetryLoopAsync(blockBoilerAdapterStep, result, context, stepId, ct);
+            }
+
+            ReportStepResult(stepId, result);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return HandleStepException(blockBoilerAdapterStep, stepId, ex);
+        }
+    }
+
+    private ScanStepBase GetScanStep()
+    {
+        return appSettings.UseMes ? scanBarcodeMesStep : scanBarcodeStep;
+    }
+
     private PreExecutionResult HandleNonContinueResult(PreExecutionResult result)
     {
-        if (result.Status == PreExecutionStatus.Failed && result.UserMessage != null)
+        if (result is { Status: PreExecutionStatus.Failed, UserMessage: not null })
         {
             messageState.SetMessage(result.UserMessage);
         }
         return result;
     }
 
-    private async Task<PreExecutionResult> ExecuteAllStepsAsync(PreExecutionContext context, CancellationToken ct)
-    {
-        foreach (var step in stepRegistry.GetOrderedSteps())
-        {
-            await pauseToken.WaitWhilePausedAsync(ct);
-            var result = await ExecuteStepAsync(step, context, ct);
-            if (result.Status != PreExecutionStatus.Continue)
-            {
-                return result;
-            }
-        }
-        return PreExecutionResult.Continue();
-    }
-
-    private async Task<PreExecutionResult> ExecuteStepAsync(
-        IPreExecutionStep step,
-        PreExecutionContext context,
-        CancellationToken ct)
-    {
-        var stepId = GetOrCreateStepId(step, context);
-        try
-        {
-            return await ExecuteStepCoreAsync(step, stepId, context, ct);
-        }
-        catch (Exception ex)
-        {
-            return HandleStepException(step, stepId, ex);
-        }
-    }
-
-    private Guid GetOrCreateStepId(IPreExecutionStep step, PreExecutionContext context)
+    private Guid GetOrCreateStepId(ScanStepBase step, PreExecutionContext context)
     {
         return context.ScanStepId.HasValue ? ReuseExistingScanStepId(context) : CreateNewStepId(step);
     }
 
-    private Guid CreateNewStepId(IPreExecutionStep step)
+    private Guid CreateNewStepId(ScanStepBase step)
     {
-        return statusReporter.ReportStepStarted(step);
+        return statusReporter.ReportStepStarted(step.Id, step.Name);
     }
 
     private Guid ReuseExistingScanStepId(PreExecutionContext context)
@@ -113,32 +151,6 @@ public partial class PreExecutionCoordinator(
         statusReporter.ReportRetry(stepId);
         context.ScanStepId = null;
         return stepId;
-    }
-
-    private async Task<PreExecutionResult> ExecuteStepCoreAsync(
-        IPreExecutionStep step,
-        Guid stepId,
-        PreExecutionContext context,
-        CancellationToken ct)
-    {
-        var result = await ExecuteAndRecordAsync(step, context, ct);
-        if (result.IsRetryable)
-        {
-            return await ExecuteRetryLoopAsync(step, result, context, stepId, ct);
-        }
-        ReportStepResult(stepId, result);
-        return result;
-    }
-
-    private async Task<PreExecutionResult> ExecuteAndRecordAsync(
-        IPreExecutionStep step,
-        PreExecutionContext context,
-        CancellationToken ct)
-    {
-        var startTime = DateTime.Now;
-        var result = await step.ExecuteAsync(context, ct);
-        stepTimingService.Record(step.Name, step.Description, DateTime.Now - startTime);
-        return result;
     }
 
     private void ReportStepResult(Guid stepId, PreExecutionResult result)
@@ -161,7 +173,15 @@ public partial class PreExecutionCoordinator(
         }
     }
 
-    private PreExecutionResult HandleStepException(IPreExecutionStep step, Guid stepId, Exception ex)
+    private PreExecutionResult HandleStepException(ScanStepBase step, Guid stepId, Exception ex)
+    {
+        logger.LogError(ex, "Ошибка в шаге {StepId}", step.Id);
+        testStepLogger.LogError(ex, "Ошибка в шаге {StepId}", step.Id);
+        statusReporter.ReportError(stepId, ex.Message);
+        return PreExecutionResult.Fail(ex.Message);
+    }
+
+    private PreExecutionResult HandleStepException(BlockBoilerAdapterStep step, Guid stepId, Exception ex)
     {
         logger.LogError(ex, "Ошибка в шаге {StepId}", step.Id);
         testStepLogger.LogError(ex, "Ошибка в шаге {StepId}", step.Id);

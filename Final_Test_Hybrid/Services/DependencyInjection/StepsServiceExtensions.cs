@@ -12,13 +12,11 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorHandling;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Final_Test_Hybrid.Services.Steps.Steps;
-using Final_Test_Hybrid.Services.Steps.Steps.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -93,27 +91,10 @@ public static class StepsServiceExtensions
         // Test step registry
         services.AddSingleton<ITestStepRegistry, TestStepRegistry>();
 
-        // Pre-execution
-        services.AddSingleton<IPreExecutionStepRegistry, PreExecutionStepRegistry>();
-        services.AddSingleton<IPreExecutionStep, ScanBarcodeStep>();
-        services.AddSingleton<IPreExecutionStep, ScanBarcodeMesStep>();
-
-        // Новые скрытые PreExecution шаги
-        services.AddSingleton<IPreExecutionStep, ValidateBarcodeStep>();
-        services.AddSingleton<IPreExecutionStep, FindBoilerTypeStep>();
-        services.AddSingleton<IPreExecutionStep, LoadRecipesStep>();
-        services.AddSingleton<IPreExecutionStep, StartOperationMesStep>();
-        services.AddSingleton<IPreExecutionStep, LoadTestSequenceStep>();
-        services.AddSingleton<IPreExecutionStep, BuildTestMapsStep>();
-        services.AddSingleton<IPreExecutionStep, SaveBoilerStateStep>();
-
-        // Существующие шаги
-        services.AddSingleton<IPreExecutionStep, WriteRecipesToPlcStep>();
-        services.AddSingleton<IPreExecutionStep, ResolveTestMapsStep>();
-        services.AddSingleton<IPreExecutionStep, ValidateRecipesStep>();
-        services.AddSingleton<IPreExecutionStep, InitializeDatabaseStep>();
-        services.AddSingleton<IPreExecutionStep, InitializeRecipeProviderStep>();
-        services.AddSingleton<IPreExecutionStep, BlockBoilerAdapterStep>();
+        // Pre-execution (упрощённая архитектура: 2 scan-шага + BlockBoilerAdapter)
+        services.AddSingleton<ScanBarcodeStep>();
+        services.AddSingleton<ScanBarcodeMesStep>();
+        services.AddSingleton<BlockBoilerAdapterStep>();
         services.AddSingleton<PreExecutionCoordinator>();
 
         return services;
