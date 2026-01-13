@@ -1,15 +1,36 @@
 using Final_Test_Hybrid.Components.Main.Modals.Rework;
+using Final_Test_Hybrid.Services.Main.PlcReset;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Radzen;
 
 namespace Final_Test_Hybrid.Services.SpringBoot.Operation;
 
-public class ReworkDialogService(DialogService dialogService)
+public class ReworkDialogService : IDisposable
 {
+    private readonly DialogService _dialogService;
+    private readonly PlcResetCoordinator _plcReset;
+    private readonly ErrorCoordinator _errorCoordinator;
     private string? _lastError;
+
+    public ReworkDialogService(
+        DialogService dialogService,
+        PlcResetCoordinator plcReset,
+        ErrorCoordinator errorCoordinator)
+    {
+        _dialogService = dialogService;
+        _plcReset = plcReset;
+        _errorCoordinator = errorCoordinator;
+
+        _plcReset.OnForceStop += HandleForceStop;
+        _errorCoordinator.OnReset += HandleReset;
+    }
+
+    private void HandleForceStop() => _dialogService.Close();
+    private void HandleReset() => _dialogService.Close();
 
     public async Task<bool> ShowRouteErrorAsync(string message)
     {
-        var result = await dialogService.OpenAsync<RouteErrorDialog>(
+        var result = await _dialogService.OpenAsync<RouteErrorDialog>(
             "",
             new Dictionary<string, object> { ["Message"] = message },
             CreateModalOptions("500px", showTitle: false));
@@ -18,7 +39,7 @@ public class ReworkDialogService(DialogService dialogService)
 
     public async Task<AdminAuthResult?> ShowAdminAuthAsync()
     {
-        var result = await dialogService.OpenAsync<AdminAuthDialog>(
+        var result = await _dialogService.OpenAsync<AdminAuthDialog>(
             "Авторизация администратора",
             new Dictionary<string, object>(),
             CreateModalOptions("450px"));
@@ -27,7 +48,7 @@ public class ReworkDialogService(DialogService dialogService)
 
     public async Task<string?> ShowReworkReasonAsync()
     {
-        var result = await dialogService.OpenAsync<ReworkReasonDialog>(
+        var result = await _dialogService.OpenAsync<ReworkReasonDialog>(
             "Доработка/пропуск",
             new Dictionary<string, object>(),
             CreateModalOptions("85vw"));
@@ -37,7 +58,7 @@ public class ReworkDialogService(DialogService dialogService)
     public async Task<ReworkSubmitResult?> ShowReworkReasonAsync(
         Func<string, Task<ReworkSubmitResult>> onSubmit)
     {
-        var result = await dialogService.OpenAsync<ReworkReasonDialog>(
+        var result = await _dialogService.OpenAsync<ReworkReasonDialog>(
             "Доработка/пропуск",
             new Dictionary<string, object> { ["OnSubmit"] = onSubmit },
             CreateModalOptions("85vw"));
@@ -70,73 +91,38 @@ public class ReworkDialogService(DialogService dialogService)
 
     private async Task<ReworkFlowResult> ProcessAuthAndReasonAsync()
     {
-        var authResult = await AuthenticateAdminAsync();
-        if (!authResult.Success)
-        {
-            return ReworkFlowResult.Cancelled(_lastError);
-        }
-        return await GetReasonAndCompleteFlowAsync(authResult.Username);
-    }
-
-    private async Task<ReworkFlowResult> ProcessAuthAndSubmitAsync(
-        Func<string, string, Task<ReworkSubmitResult>> executeRework)
-    {
-        var authResult = await AuthenticateAdminAsync();
-        if (!authResult.Success)
-        {
-            return ReworkFlowResult.Cancelled(_lastError);
-        }
-        return await SubmitReworkAsync(authResult.Username, executeRework);
-    }
-
-    private async Task<(bool Success, string Username)> AuthenticateAdminAsync()
-    {
         var authResult = await ShowAdminAuthAsync();
-        if (authResult is { Success: true })
+        if (authResult is not { Success: true })
         {
-            return (true, authResult.Username);
+            _lastError = authResult?.ErrorMessage ?? _lastError;
+            return ReworkFlowResult.Cancelled(_lastError);
         }
-        UpdateLastErrorFromAuth(authResult);
-        return (false, string.Empty);
-    }
 
-    private void UpdateLastErrorFromAuth(AdminAuthResult? authResult)
-    {
-        if (authResult?.ErrorMessage != null)
-        {
-            _lastError = authResult.ErrorMessage;
-        }
-    }
-
-    private async Task<ReworkFlowResult> GetReasonAndCompleteFlowAsync(string username)
-    {
         var reason = await ShowReworkReasonAsync();
         if (string.IsNullOrEmpty(reason))
         {
             return ReworkFlowResult.Cancelled(_lastError);
         }
-        return ReworkFlowResult.Success(username);
+        return ReworkFlowResult.Success(authResult.Username);
     }
 
-    private async Task<ReworkFlowResult> SubmitReworkAsync(
-        string username,
+    private async Task<ReworkFlowResult> ProcessAuthAndSubmitAsync(
         Func<string, string, Task<ReworkSubmitResult>> executeRework)
     {
-        var submitResult = await ShowReworkReasonAsync(reason => executeRework(username, reason));
+        var authResult = await ShowAdminAuthAsync();
+        if (authResult is not { Success: true })
+        {
+            _lastError = authResult?.ErrorMessage ?? _lastError;
+            return ReworkFlowResult.Cancelled(_lastError);
+        }
+
+        var submitResult = await ShowReworkReasonAsync(reason => executeRework(authResult.Username, reason));
         if (submitResult is { IsSuccess: true })
         {
-            return ReworkFlowResult.Success(username, submitResult.Data);
+            return ReworkFlowResult.Success(authResult.Username, submitResult.Data);
         }
-        UpdateLastErrorFromSubmit(submitResult);
+        _lastError = submitResult?.ErrorMessage ?? _lastError;
         return ReworkFlowResult.Cancelled(_lastError);
-    }
-
-    private void UpdateLastErrorFromSubmit(ReworkSubmitResult? submitResult)
-    {
-        if (submitResult?.ErrorMessage != null)
-        {
-            _lastError = submitResult.ErrorMessage;
-        }
     }
 
     private static DialogOptions CreateModalOptions(string width, bool showTitle = true)
@@ -149,6 +135,12 @@ public class ReworkDialogService(DialogService dialogService)
             CloseDialogOnEsc = false
         };
     }
+
+    public void Dispose()
+    {
+        _plcReset.OnForceStop -= HandleForceStop;
+        _errorCoordinator.OnReset -= HandleReset;
+    }
 }
 
 public class ReworkFlowResult
@@ -156,7 +148,6 @@ public class ReworkFlowResult
     public bool IsSuccess { get; init; }
     public bool IsCancelled { get; init; }
     public string AdminUsername { get; init; } = string.Empty;
-    public string Reason { get; init; } = string.Empty;
     public object? Data { get; init; }
     public string? ErrorMessage { get; init; }
 

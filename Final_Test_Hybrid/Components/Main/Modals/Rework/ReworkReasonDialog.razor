@@ -23,12 +23,6 @@
     }
 
     <div class="dialog-buttons">
-        <RadzenButton Text="Отмена"
-                      Icon="close"
-                      Click="@OnCancel"
-                      ButtonStyle="ButtonStyle.Light"
-                      Disabled="@_isLoading"
-                      class="cancel-button" />
         <RadzenButton Text="Подтвердить"
                       Click="@OnConfirm"
                       ButtonStyle="ButtonStyle.Primary"
@@ -44,41 +38,21 @@
     private string _validationError = string.Empty;
     private bool _isLoading;
     private bool _disposed;
-    private string? _lastError;
 
     private async Task OnConfirm()
     {
-        if (!ValidateReason())
+        _validationError = string.Empty;
+        if (string.IsNullOrWhiteSpace(_reason))
         {
+            _validationError = "Введите причину доработки/пропуска";
             return;
         }
-        await ProcessConfirmationAsync();
-    }
-
-    private async Task ProcessConfirmationAsync()
-    {
         if (OnSubmit == null)
         {
-            CloseWithReason();
+            DialogService.Close(_reason.Trim());
             return;
         }
         await SubmitReasonAsync();
-    }
-
-    private bool ValidateReason()
-    {
-        _validationError = string.Empty;
-        if (!string.IsNullOrWhiteSpace(_reason))
-        {
-            return true;
-        }
-        _validationError = "Введите причину доработки/пропуска";
-        return false;
-    }
-
-    private void CloseWithReason()
-    {
-        DialogService.Close(_reason.Trim());
     }
 
     private async Task SubmitReasonAsync()
@@ -87,7 +61,10 @@
         try
         {
             var result = await OnSubmit!(_reason.Trim());
-            HandleSubmitResult(result);
+            if (!_disposed)
+            {
+                HandleSubmitResult(result);
+            }
         }
         finally
         {
@@ -111,9 +88,8 @@
         {
             return;
         }
-        _lastError = result.ErrorMessage ?? "Ошибка сервера";
-        NotificationService.Notify(NotificationSeverity.Error, _lastError);
-        StateHasChanged();
+        var error = result.ErrorMessage ?? "Ошибка сервера";
+        NotificationService.Notify(NotificationSeverity.Error, error);
     }
 
     private void SetLoadingState(bool isLoading)
@@ -123,16 +99,6 @@
         {
             StateHasChanged();
         }
-    }
-
-    private void OnCancel()
-    {
-        if (OnSubmit == null)
-        {
-            DialogService.Close();
-            return;
-        }
-        DialogService.Close(ReworkSubmitResult.Fail(_lastError ?? "Операция отменена"));
     }
 
     public void Dispose()

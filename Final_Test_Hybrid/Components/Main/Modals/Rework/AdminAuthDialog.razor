@@ -35,22 +35,17 @@
         <div class="loading-text">Авторизация...</div>
     }
 
-    <div class="dialog-buttons">
-        @if (!UseQrAuth)
-        {
+    @if (!UseQrAuth)
+    {
+        <div class="dialog-buttons">
             <RadzenButton Text="Подтвердить"
                           Icon="check"
                           Click="@OnConfirm"
                           ButtonStyle="ButtonStyle.Primary"
                           IsBusy="_isLoading"
                           class="confirm-button" />
-        }
-        <RadzenButton Text="Отмена"
-                      Click="@OnCancel"
-                      ButtonStyle="ButtonStyle.Light"
-                      Disabled="@_isLoading"
-                      class="cancel-button" />
-    </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -61,7 +56,6 @@
     private string _login = string.Empty;
     private string _password = string.Empty;
     private string _validationError = string.Empty;
-    private string? _lastError;
 
     protected override void OnInitialized()
     {
@@ -73,22 +67,22 @@
 
     private async void OnBarcodeScanned(string barcode)
     {
-        if (_disposed)
-        {
-            return;
-        }
-        await InvokeBarcodeProcessingAsync(barcode);
-    }
-
-    private async Task InvokeBarcodeProcessingAsync(string barcode)
-    {
         try
         {
-            await InvokeAsync(() => ProcessBarcodeAsync(barcode));
+            if (_disposed) return;
+
+            try
+            {
+                await InvokeAsync(() => ProcessBarcodeAsync(barcode));
+            }
+            catch (Exception) when (_disposed)
+            {
+                // Component disposed during async operation - expected
+            }
         }
-        catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException)
+        catch (Exception e)
         {
-            // Component or renderer disposed - expected during cleanup
+            //ignored
         }
     }
 
@@ -126,6 +120,10 @@
         _isLoading = true;
         StateHasChanged();
         var result = await action();
+        if (_disposed)
+        {
+            return;
+        }
         _isLoading = false;
         StateHasChanged();
         HandleResult(result);
@@ -149,13 +147,8 @@
 
     private void ShowAuthError(OperatorAuthResult result)
     {
-        _lastError = result.ErrorMessage ?? "Ошибка авторизации";
-        StateHasChanged();
-    }
-
-    private void OnCancel()
-    {
-        DialogService.Close(new AdminAuthResult { Success = false, ErrorMessage = _lastError });
+        var error = result.ErrorMessage ?? "Ошибка авторизации";
+        NotificationService.Notify(NotificationSeverity.Error, error);
     }
 
     public void Dispose()

@@ -11,15 +11,10 @@
     </div>
 
     <div class="dialog-buttons">
-        <RadzenButton Text="Отмена"
-                      Icon="close"
-                      Click="@OnCancel"
-                      ButtonStyle="ButtonStyle.Light"
-                      class="cancel-button" />
         <RadzenButton Text="Продолжить"
                       Icon="play_arrow"
                       Click="@OnContinue"
-                      ButtonStyle="ButtonStyle.Light"
+                      ButtonStyle="ButtonStyle.Primary"
                       class="continue-button" />
     </div>
 </div>
@@ -27,11 +22,6 @@
 @code {
     [Parameter]
     public string Message { get; set; } = "Котёл находится на более позднем этапе маршрута";
-
-    private void OnCancel()
-    {
-        DialogService.Close(false);
-    }
 
     private void OnContinue()
     {
