@@ -1,6 +1,5 @@
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
@@ -24,7 +23,6 @@ public class ScanModeController : IDisposable
     private Action<string>? _barcodeHandler;
     private object? _messageProviderKey;
     private bool _disposed;
-
     public bool IsScanModeEnabled => _operatorState.IsAuthenticated && _autoReady.IsReady;
 
     public ScanModeController(
