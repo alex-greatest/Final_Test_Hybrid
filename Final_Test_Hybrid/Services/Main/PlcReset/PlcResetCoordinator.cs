@@ -76,7 +76,7 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            HandleResetException(ex);
+            await HandleResetExceptionAsync(ex);
         }
         finally
         {
@@ -123,7 +123,7 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
         _scanModeController.TransitionToReady();
     }
 
-    private void HandleResetException(Exception ex)
+    private async Task HandleResetExceptionAsync(Exception ex)
     {
         switch (ex)
         {
@@ -136,8 +136,8 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
                 break;
 
             case TimeoutException:
-                _logger.LogWarning("Таймаут Ask_End ({Timeout} сек) — полный сброс", AskEndTimeout.TotalSeconds);
-                _errorCoordinator.Reset();
+                _logger.LogWarning("Таймаут Ask_End ({Timeout} сек)", AskEndTimeout.TotalSeconds);
+                await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout);
                 _scanModeController.TransitionToReady();
                 break;
             default:

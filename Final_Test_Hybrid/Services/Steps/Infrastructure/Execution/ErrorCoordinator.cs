@@ -54,7 +54,7 @@ public partial class ErrorCoordinator : IAsyncDisposable
             Action: InterruptAction.PauseAndWait),
 
         [InterruptReason.TagTimeout] = new InterruptBehavior(
-            Message: "Нет ответа",
+            Message: "Нет ответа от PLC",
             Action: InterruptAction.ResetAfterDelay)
     };
 
