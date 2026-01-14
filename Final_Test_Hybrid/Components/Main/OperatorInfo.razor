@@ -1,8 +1,12 @@
 @using Final_Test_Hybrid.Components.Main.Modals
 @using Final_Test_Hybrid.Services.Common.Settings
 @using Final_Test_Hybrid.Services.Main
+@using Final_Test_Hybrid.Services.Main.PlcReset
 @using Final_Test_Hybrid.Services.SpringBoot.Operator
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution
+@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator
+@inject PlcResetCoordinator PlcResetCoordinator
+@inject ErrorCoordinator ErrorCoordinator
 @implements IDisposable
 
 <div class="buttons-row">
@@ -42,7 +46,8 @@
 
     private bool IsOnScanStep => TestSequenseService.IsOnActiveScanStep;
     private bool IsWaitingForAuto => !TestSequenseService.Data.Any() && !AutoReadySubscription.IsReady;
-    private bool CanInteract => IsOnScanStep || IsWaitingForAuto || !TestSequenseService.Data.Any();
+    private bool IsBlocked => PlcResetCoordinator.IsActive || ErrorCoordinator.CurrentInterrupt != null;
+    private bool CanInteract => !IsBlocked && (IsOnScanStep || IsWaitingForAuto || !TestSequenseService.Data.Any());
     private bool CanShowAuthButton => !OperatorState.IsAuthenticated && CanInteract;
     private bool CanShowLogoutButton => OperatorState.IsAuthenticated && CanInteract;
 
@@ -51,6 +56,8 @@
         OperatorState.OnStateChanged += OnLocalStateChanged;
         TestSequenseService.OnDataChanged += OnLocalStateChanged;
         AutoReadySubscription.OnStateChanged += OnLocalStateChanged;
+        PlcResetCoordinator.OnActiveChanged += OnLocalStateChanged;
+        ErrorCoordinator.OnInterruptChanged += OnLocalStateChanged;
     }
 
     private void OnLocalStateChanged()
@@ -134,5 +141,7 @@
         OperatorState.OnStateChanged -= OnLocalStateChanged;
         TestSequenseService.OnDataChanged -= OnLocalStateChanged;
         AutoReadySubscription.OnStateChanged -= OnLocalStateChanged;
+        PlcResetCoordinator.OnActiveChanged -= OnLocalStateChanged;
+        ErrorCoordinator.OnInterruptChanged -= OnLocalStateChanged;
     }
 }

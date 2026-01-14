@@ -46,7 +46,6 @@ public partial class PreExecutionCoordinator
         {
             statusReporter.ClearAllExceptScan();
         }
-
         SignalResolution(resolution);
     }
 

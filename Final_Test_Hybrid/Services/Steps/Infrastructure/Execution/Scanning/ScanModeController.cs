@@ -1,6 +1,8 @@
 using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 
@@ -13,9 +15,11 @@ public class ScanModeController : IDisposable
     private readonly ScanSessionManager _sessionManager;
     private readonly OperatorState _operatorState;
     private readonly AutoReadySubscription _autoReady;
-    private readonly MessageService _messageService;
     private readonly StepStatusReporter _statusReporter;
     private readonly PreExecutionCoordinator _preExecutionCoordinator;
+    private readonly PlcResetCoordinator _plcResetCoordinator;
+    private readonly IStepTimingService _stepTimingService;
+    private readonly Lock _stateLock = new();
     private CancellationTokenSource? _loopCts;
     private bool _isActivated;
     private bool _isResetting;
@@ -35,16 +39,18 @@ public class ScanModeController : IDisposable
         ScanSessionManager sessionManager,
         OperatorState operatorState,
         AutoReadySubscription autoReady,
-        MessageService messageService,
         StepStatusReporter statusReporter,
-        PreExecutionCoordinator preExecutionCoordinator)
+        PreExecutionCoordinator preExecutionCoordinator,
+        PlcResetCoordinator plcResetCoordinator,
+        IStepTimingService stepTimingService)
     {
         _sessionManager = sessionManager;
         _operatorState = operatorState;
         _autoReady = autoReady;
-        _messageService = messageService;
         _statusReporter = statusReporter;
         _preExecutionCoordinator = preExecutionCoordinator;
+        _plcResetCoordinator = plcResetCoordinator;
+        _stepTimingService = stepTimingService;
         SubscribeToEvents();
     }
 
@@ -52,20 +58,45 @@ public class ScanModeController : IDisposable
     {
         _operatorState.OnStateChanged += UpdateScanModeState;
         _autoReady.OnStateChanged += UpdateScanModeState;
+        SubscribeToResetEvents();
         UpdateScanModeState();
+    }
+
+    private void SubscribeToResetEvents()
+    {
+        _plcResetCoordinator.OnResetStarting += () =>
+        {
+            lock (_stateLock)
+            {
+                var wasInScanPhase = IsInScanningPhase;
+                _isResetting = true;
+                _sessionManager.ReleaseSession();
+                return wasInScanPhase;
+            }
+        };
+
+        _plcResetCoordinator.OnResetCompleted += () =>
+        {
+            lock (_stateLock)
+            {
+                TransitionToReadyInternal();
+            }
+        };
     }
 
     private void UpdateScanModeState()
     {
-        if (IsScanModeEnabled)
+        lock (_stateLock)
         {
-            TryActivateScanMode();
+            if (IsScanModeEnabled)
+            {
+                TryActivateScanMode();
+            }
+            else
+            {
+                TryDeactivateScanMode();
+            }
         }
-        else
-        {
-            TryDeactivateScanMode();
-        }
-        _messageService.NotifyChanged();
         OnStateChanged?.Invoke();
     }
 
@@ -78,7 +109,14 @@ public class ScanModeController : IDisposable
         _isActivated = true;
         _sessionManager.AcquireSession(HandleBarcodeScanned);
         AddScanStepToGrid();
+        StartScanTiming();
         StartMainLoop();
+    }
+
+    private void StartScanTiming()
+    {
+        var scanStep = _preExecutionCoordinator.GetScanStep();
+        _stepTimingService.StartScanTiming(scanStep.Name, scanStep.Description);
     }
 
     private void AddScanStepToGrid()
@@ -115,11 +153,19 @@ public class ScanModeController : IDisposable
         _sessionManager.ReleaseSession();
         if (!_operatorState.IsAuthenticated)
         {
-            _statusReporter.ClearAll();
+            _statusReporter.ClearAllExceptScan();
         }
     }
 
-    public void TransitionToReady()
+    private void TransitionToReady()
+    {
+        lock (_stateLock)
+        {
+            TransitionToReadyInternal();
+        }
+    }
+
+    private void TransitionToReadyInternal()
     {
         _isResetting = false;
         if (!IsScanModeEnabled)
@@ -127,13 +173,14 @@ public class ScanModeController : IDisposable
             _isActivated = false;
             return;
         }
+        _stepTimingService.ResetScanTiming();
         _sessionManager.AcquireSession(HandleBarcodeScanned);
     }
 
     /// <summary>
     /// Входит в режим сброса — блокирует ввод сканера до завершения сброса.
     /// </summary>
-    public void EnterResettingMode()
+    private void EnterResettingMode()
     {
         _isResetting = true;
         _sessionManager.ReleaseSession();

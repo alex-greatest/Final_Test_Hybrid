@@ -125,12 +125,12 @@ public partial class PreExecutionCoordinator(
 
     private async Task RunSingleCycleAsync(CancellationToken ct)
     {
-        statusReporter.UpdateScanStepStatus(TestStepStatus.Running, "Ожидание сканирования");
         SetAcceptingInput(true);
 
         var barcode = await WaitForBarcodeAsync(ct);
         SetAcceptingInput(false);
 
+        statusReporter.UpdateScanStepStatus(TestStepStatus.Running, "Обработка штрихкода");
         _currentCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         try
         {
@@ -201,18 +201,16 @@ public partial class PreExecutionCoordinator(
 
         var scanResult = await ExecuteScanStepAsync(context, ct);
 
-        if (scanResult.Status == PreExecutionStatus.Failed)
+        switch (scanResult.Status)
         {
-            statusReporter.UpdateScanStepStatus(
-                TestStepStatus.Error,
-                scanResult.ErrorMessage ?? "Ошибка",
-                scanResult.Limits);
-            return scanResult;
-        }
-
-        if (scanResult.Status == PreExecutionStatus.Cancelled)
-        {
-            return scanResult;
+            case PreExecutionStatus.Failed:
+                statusReporter.UpdateScanStepStatus(
+                    TestStepStatus.Error,
+                    scanResult.ErrorMessage ?? "Ошибка",
+                    scanResult.Limits);
+                return scanResult;
+            case PreExecutionStatus.Cancelled:
+                return scanResult;
         }
 
         statusReporter.UpdateScanStepStatus(
@@ -237,9 +235,11 @@ public partial class PreExecutionCoordinator(
         try
         {
             await pauseToken.WaitWhilePausedAsync(ct);
-            var startTime = DateTime.Now;
             var result = await scanStep.ExecuteAsync(context, ct);
-            stepTimingService.Record(scanStep.Name, scanStep.Description, DateTime.Now - startTime);
+            if (result.Status != PreExecutionStatus.Failed)
+            {
+                stepTimingService.StopScanTiming();
+            }
             return result;
         }
         catch (Exception ex)

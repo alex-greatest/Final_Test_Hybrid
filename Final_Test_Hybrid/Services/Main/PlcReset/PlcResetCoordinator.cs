@@ -4,7 +4,6 @@ namespace Final_Test_Hybrid.Services.Main.PlcReset;
 
 using Models.Plc.Tags;
 using OpcUa;
-using Steps.Infrastructure.Execution.Scanning;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
@@ -15,7 +14,6 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
 {
     private readonly ResetSubscription _resetSubscription;
     private readonly ErrorCoordinator _errorCoordinator;
-    private readonly ScanModeController _scanModeController;
     private readonly TagWaiter _tagWaiter;
     private readonly OpcUaTagService _plcService;
     private readonly ILogger<PlcResetCoordinator> _logger;
@@ -27,18 +25,18 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
     public bool IsActive { get; private set; }
     public event Action? OnActiveChanged;
     public event Action? OnForceStop;
+    public event Func<bool>? OnResetStarting;
+    public event Action? OnResetCompleted;
 
     public PlcResetCoordinator(
         ResetSubscription resetSubscription,
         ErrorCoordinator errorCoordinator,
-        ScanModeController scanModeController,
         TagWaiter tagWaiter,
         OpcUaTagService plcService,
         ILogger<PlcResetCoordinator> logger)
     {
         _resetSubscription = resetSubscription;
         _errorCoordinator = errorCoordinator;
-        _scanModeController = scanModeController;
         _tagWaiter = tagWaiter;
         _plcService = plcService;
         _logger = logger;
@@ -85,10 +83,8 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
     {
         _logger.LogWarning("═══ СБРОС ПО СИГНАЛУ PLC ═══");
 
-        var wasInScanPhase = _scanModeController.IsInScanningPhase;
+        var wasInScanPhase = InvokeEventSafeWithResult(OnResetStarting) ?? false;
         _logger.LogInformation("Состояние до сброса: InScanPhase: {InScanPhase}", wasInScanPhase);
-
-        _scanModeController.EnterResettingMode();
 
         SignalForceStop();
         await SendDataToMesAsync(ct);
@@ -111,7 +107,7 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
             _errorCoordinator.Reset();
         }
 
-        _scanModeController.TransitionToReady();
+        InvokeEventSafe(OnResetCompleted);
     }
 
     private async Task HandleResetExceptionAsync(Exception ex)
@@ -123,18 +119,18 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
                 break;
             case OperationCanceledException:
                 _logger.LogInformation("PLC Reset отменён");
-                _scanModeController.TransitionToReady();
+                InvokeEventSafe(OnResetCompleted);
                 break;
 
             case TimeoutException:
                 _logger.LogWarning("Таймаут Ask_End ({Timeout} сек)", AskEndTimeout.TotalSeconds);
                 await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout);
-                _scanModeController.TransitionToReady();
+                InvokeEventSafe(OnResetCompleted);
                 break;
             default:
                 _logger.LogError(ex, "Неожиданная ошибка PLC Reset — полный сброс");
                 _errorCoordinator.Reset();
-                _scanModeController.TransitionToReady();
+                InvokeEventSafe(OnResetCompleted);
                 break;
         }
     }
@@ -190,6 +186,16 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка в обработчике события");
+        }
+    }
+
+    private bool? InvokeEventSafeWithResult(Func<bool>? handler)
+    {
+        try { return handler?.Invoke(); }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка в обработчике события");
+            return null;
         }
     }
 
@@ -253,6 +259,8 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
     {
         _resetSubscription.OnStateChanged -= HandleResetSignal;
         OnForceStop = null;
+        OnResetStarting = null;
+        OnResetCompleted = null;
     }
 
     private async Task WaitForCurrentOperationAsync()

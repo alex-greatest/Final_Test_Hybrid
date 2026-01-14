@@ -50,7 +50,10 @@
     private const string PlaceholderText = "Отсканируйте или введите";
 
     private bool IsOnActiveScanStep => TestSequenseService.IsOnActiveScanStep;
-    private bool IsFieldReadOnly => !PreExecution.IsAcceptingInput || !IsOnActiveScanStep;
+    private bool IsFieldReadOnly => !PreExecution.IsAcceptingInput
+        || !IsOnActiveScanStep
+        || PlcResetCoordinator.IsActive
+        || ErrorCoordinator.CurrentInterrupt != null;
     private string Placeholder => IsOnActiveScanStep ? PlaceholderText : "";
 
     protected override void OnInitialized()
@@ -67,6 +70,8 @@
         AppSettingsService.UseMesChanged += OnUseMesChanged;
         ErrorCoordinator.OnReset += CloseDialogs;
         PlcResetCoordinator.OnForceStop += CloseDialogs;
+        PlcResetCoordinator.OnActiveChanged += OnBlockingStateChanged;
+        ErrorCoordinator.OnInterruptChanged += OnBlockingStateChanged;
     }
 
     private void CloseDialogs()
@@ -79,6 +84,8 @@
     private void OnDataChanged() => InvokeIfNotDisposed(StateHasChanged);
 
     private void OnScanStateChanged() => InvokeIfNotDisposed(StateHasChanged);
+
+    private void OnBlockingStateChanged() => InvokeIfNotDisposed(StateHasChanged);
 
     private void OnUseMesChanged(bool _)
     {
@@ -248,5 +255,7 @@
         AppSettingsService.UseMesChanged -= OnUseMesChanged;
         ErrorCoordinator.OnReset -= CloseDialogs;
         PlcResetCoordinator.OnForceStop -= CloseDialogs;
+        PlcResetCoordinator.OnActiveChanged -= OnBlockingStateChanged;
+        ErrorCoordinator.OnInterruptChanged -= OnBlockingStateChanged;
     }
 }

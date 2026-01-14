@@ -1,7 +1,9 @@
 using Final_Test_Hybrid.Components.Engineer.Modals;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 using Microsoft.AspNetCore.Components;
 using Radzen;
@@ -24,15 +26,24 @@ public partial class SwitchMes
     public required PreExecutionCoordinator PreExecution { get; set; }
     [Inject]
     public required SettingsAccessStateManager SettingsAccessState { get; set; }
+    [Inject]
+    public required PlcResetCoordinator PlcResetCoordinator { get; set; }
+    [Inject]
+    public required ErrorCoordinator ErrorCoordinator { get; set; }
     private bool _useMes;
 
-    private bool IsDisabled => PreExecution.IsProcessing || !SettingsAccessState.CanInteract;
+    private bool IsDisabled => PreExecution.IsProcessing
+        || !SettingsAccessState.CanInteract
+        || PlcResetCoordinator.IsActive
+        || ErrorCoordinator.CurrentInterrupt != null;
 
     protected override void OnInitialized()
     {
         _useMes = AppSettingsService.UseMes;
         PreExecution.OnStateChanged += HandleStateChanged;
         SettingsAccessState.OnStateChanged += HandleStateChanged;
+        PlcResetCoordinator.OnActiveChanged += HandleStateChanged;
+        ErrorCoordinator.OnInterruptChanged += HandleStateChanged;
     }
 
     private void HandleStateChanged()
@@ -102,5 +113,7 @@ public partial class SwitchMes
     {
         PreExecution.OnStateChanged -= HandleStateChanged;
         SettingsAccessState.OnStateChanged -= HandleStateChanged;
+        PlcResetCoordinator.OnActiveChanged -= HandleStateChanged;
+        ErrorCoordinator.OnInterruptChanged -= HandleStateChanged;
     }
 }
