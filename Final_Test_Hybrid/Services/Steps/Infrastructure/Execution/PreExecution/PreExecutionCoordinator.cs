@@ -146,6 +146,8 @@ public partial class PreExecutionCoordinator(
         catch (OperationCanceledException) when (_resetRequested)
         {
             _resetRequested = false;
+            boilerState.Clear();
+            phaseState.Clear();
         }
         finally
         {
@@ -217,6 +219,8 @@ public partial class PreExecutionCoordinator(
             TestStepStatus.Success,
             scanResult.SuccessMessage ?? "",
             scanResult.Limits);
+
+        ct.ThrowIfCancellationRequested();
 
         var blockResult = await ExecuteBlockBoilerAdapterAsync(context, ct);
         if (blockResult.Status != PreExecutionStatus.Continue)

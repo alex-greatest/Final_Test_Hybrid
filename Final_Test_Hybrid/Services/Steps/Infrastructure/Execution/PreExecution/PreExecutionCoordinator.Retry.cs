@@ -161,10 +161,8 @@ public partial class PreExecutionCoordinator
         {
             return await signal.Task;
         }
-
         var errorResolutionTask = (Task<ErrorResolution>)completedTask;
         var errorResolution = await errorResolutionTask;
-
         return MapToPreExecutionResolution(errorResolution);
     }
 

@@ -65,10 +65,12 @@ public class ScanBarcodeMesStep(
         // 2. Запрос в MES (получаем BoilerTypeCycle + Recipes)
         var mesError = await StartOperationMesAsync(context, ct);
         if (mesError != null) return mesError;
+        ct.ThrowIfCancellationRequested();
 
         // 3. Загрузка последовательности тестов
         var loadSequenceError = await LoadTestSequenceAsync(context);
         if (loadSequenceError != null) return loadSequenceError;
+        ct.ThrowIfCancellationRequested();
 
         // 4. Построение карт тестов
         var buildMapsError = BuildTestMaps(context);

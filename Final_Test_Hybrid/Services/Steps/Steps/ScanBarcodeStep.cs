@@ -64,12 +64,16 @@ public class ScanBarcodeStep(
             return loadError;
         }
 
+        ct.ThrowIfCancellationRequested();
+
         // 4. Загрузка последовательности тестов
         var loadSequenceError = await LoadTestSequenceAsync(context);
         if (loadSequenceError != null)
         {
             return loadSequenceError;
         }
+
+        ct.ThrowIfCancellationRequested();
 
         // 5. Построение карт тестов
         var buildMapsError = BuildTestMaps(context);
@@ -105,6 +109,8 @@ public class ScanBarcodeStep(
         {
             return initDbError;
         }
+
+        ct.ThrowIfCancellationRequested();
 
         // 10. Запись рецептов в PLC
         var writePlcError = await WriteRecipesToPlcAsync(context, ct);
