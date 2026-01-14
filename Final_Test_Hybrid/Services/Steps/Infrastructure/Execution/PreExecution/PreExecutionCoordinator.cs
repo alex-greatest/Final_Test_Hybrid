@@ -207,7 +207,6 @@ public partial class PreExecutionCoordinator(
                 TestStepStatus.Error,
                 scanResult.ErrorMessage ?? "Ошибка",
                 scanResult.Limits);
-            await dialogCoordinator.HandlePreExecutionErrorAsync(scanResult);
             return scanResult;
         }
 
