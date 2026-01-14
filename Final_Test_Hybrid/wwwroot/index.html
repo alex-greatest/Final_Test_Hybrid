@@ -63,13 +63,41 @@
             }
         };
 
-        window.dialogUtils = {
-            makeNonModal: () => {
-                const wrappers = document.querySelectorAll('.rz-dialog-wrapper');
-                const wrapper = wrappers[wrappers.length - 1];
-                if (wrapper) {
-                    wrapper.classList.add('non-modal-wrapper');
-                }
+        window.floatingPanel = {
+            _dragState: null,
+            startDrag: (elementId, startX, startY) => {
+                const el = document.getElementById(elementId);
+                if (!el) return;
+
+                const rect = el.getBoundingClientRect();
+                window.floatingPanel._dragState = {
+                    elementId: elementId,
+                    offsetX: startX - rect.left,
+                    offsetY: startY - rect.top
+                };
+
+                document.addEventListener('mousemove', window.floatingPanel._onMouseMove);
+                document.addEventListener('mouseup', window.floatingPanel._onMouseUp);
+            },
+            _onMouseMove: (e) => {
+                const state = window.floatingPanel._dragState;
+                if (!state) return;
+
+                const el = document.getElementById(state.elementId);
+                if (!el) return;
+
+                const newX = e.clientX - state.offsetX;
+                const newY = e.clientY - state.offsetY;
+
+                el.style.left = newX + 'px';
+                el.style.top = newY + 'px';
+                el.style.right = 'auto';
+                el.style.bottom = 'auto';
+            },
+            _onMouseUp: () => {
+                window.floatingPanel._dragState = null;
+                document.removeEventListener('mousemove', window.floatingPanel._onMouseMove);
+                document.removeEventListener('mouseup', window.floatingPanel._onMouseUp);
             }
         };
     </script>

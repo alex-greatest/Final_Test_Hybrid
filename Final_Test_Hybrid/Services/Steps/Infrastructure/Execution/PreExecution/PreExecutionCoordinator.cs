@@ -28,6 +28,13 @@ public partial class PreExecutionCoordinator(
         OnStateChanged?.Invoke();
     }
 
+    private void ClearStateOnReset()
+    {
+        state.BoilerState.Clear();
+        state.PhaseState.Clear();
+        ClearBarcode();
+    }
+
     public void SubmitBarcode(string barcode)
     {
         _barcodeSource?.TrySetResult(barcode);

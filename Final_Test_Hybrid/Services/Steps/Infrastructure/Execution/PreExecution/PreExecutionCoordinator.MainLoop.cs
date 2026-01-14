@@ -48,9 +48,7 @@ public partial class PreExecutionCoordinator
         catch (OperationCanceledException) when (_resetRequested)
         {
             _resetRequested = false;
-            state.BoilerState.Clear();
-            state.PhaseState.Clear();
-            ClearBarcode();
+            ClearStateOnReset();
         }
         finally
         {
@@ -93,8 +91,9 @@ public partial class PreExecutionCoordinator
         coordinators.DialogCoordinator.ShowCompletionNotification(coordinators.TestCoordinator.HasErrors);
         if (_resetRequested)
         {
-            infra.StatusReporter.ClearAllExceptScan();
             _resetRequested = false;
+            ClearStateOnReset();
+            infra.StatusReporter.ClearAllExceptScan();
         }
     }
 }

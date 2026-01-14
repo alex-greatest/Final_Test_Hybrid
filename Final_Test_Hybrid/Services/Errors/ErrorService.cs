@@ -35,7 +35,7 @@ public sealed class ErrorService : IErrorService
         }
     }
 
-    public bool IsHistoryEnabled { get; set; } = true;
+    public bool IsHistoryEnabled { get; set; } = false;
 
     public IReadOnlyList<ActiveError> GetActiveErrors()
     {

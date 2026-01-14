@@ -1,4 +1,3 @@
-@using Microsoft.JSInterop
 @using Final_Test_Hybrid.Components.Errors
 @using Final_Test_Hybrid.Components.Main.Modals
 @using Final_Test_Hybrid.Models.Steps
@@ -20,7 +19,7 @@
 @inject AppSettingsService AppSettingsService
 @inject ErrorCoordinator ErrorCoordinator
 @inject PlcResetCoordinator PlcResetCoordinator
-@inject IJSRuntime JSRuntime
+@inject ExecutionStateManager ExecutionStateManager
 @implements IDisposable
 
 <div class="field-row field-row-middle">
@@ -49,10 +48,22 @@
     </div>
 </div>
 
+<FloatingErrorPanel
+    IsVisible="@_showErrorPanel"
+    StepName="@_errorStepName"
+    ErrorMessage="@_errorMessage"
+    ColumnIndex="0"
+    StateManager="@ExecutionStateManager"
+    OnClose="@CloseErrorPanel" />
+
 @code {
     private string _manualInput = "";
     private bool _disposed;
     private const string PlaceholderText = "Отсканируйте или введите";
+
+    private bool _showErrorPanel;
+    private string? _errorStepName;
+    private string? _errorMessage;
 
     private bool IsOnActiveScanStep => TestSequenseService.IsOnActiveScanStep;
     private bool IsFieldReadOnly => !PreExecution.IsAcceptingInput
@@ -83,7 +94,11 @@
 
     private void CloseDialogs()
     {
-        _ = InvokeAsync(() => DialogService.Close());
+        _ = InvokeAsync(() =>
+        {
+            DialogService.Close();
+            CloseErrorPanel();
+        });
     }
 
     private string GetDisplayValue() => BoilerState.SerialNumber ?? PreExecution.CurrentBarcode ?? _manualInput;
@@ -133,6 +148,7 @@
     {
         _manualInput = "";
         PreExecution.ClearBarcode();
+        BoilerState.Clear();
         StateHasChanged();
     }
 
@@ -240,31 +256,23 @@
         };
     }
 
-    private async Task ShowBlockErrorDialogAsync(string stepName, string errorMessage)
+    private Task ShowBlockErrorDialogAsync(string stepName, string errorMessage)
     {
-        await InvokeAsync(async () =>
+        return InvokeAsync(() =>
         {
-            _ = DialogService.OpenAsync<ErrorHandlingDialog>(
-                "Ошибка шага",
-                new Dictionary<string, object>
-                {
-                    { "StepName", stepName },
-                    { "ErrorMessage", errorMessage }
-                },
-                new DialogOptions
-                {
-                    Width = "auto",
-                    Height = "auto",
-                    Draggable = true,
-                    ShowClose = false,
-                    CloseDialogOnOverlayClick = false,
-                    CloseDialogOnEsc = false,
-                    CssClass = "block-error-dialog-window non-modal-dialog"
-                });
-
-            await Task.Delay(50);
-            await JSRuntime.InvokeVoidAsync("dialogUtils.makeNonModal");
+            _errorStepName = stepName;
+            _errorMessage = errorMessage;
+            _showErrorPanel = true;
+            StateHasChanged();
         });
+    }
+
+    private void CloseErrorPanel()
+    {
+        _showErrorPanel = false;
+        _errorStepName = null;
+        _errorMessage = null;
+        InvokeIfNotDisposed(StateHasChanged);
     }
 
     private Task<ReworkFlowResult> HandleReworkDialogAsync(

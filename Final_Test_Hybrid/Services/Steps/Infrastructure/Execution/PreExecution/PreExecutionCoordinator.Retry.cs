@@ -34,16 +34,32 @@ public partial class PreExecutionCoordinator
 
     private void HandleStopSignal(PreExecutionResolution resolution)
     {
+        if (TryCancelActiveOperation())
+        {
+            // Очистка произойдёт позже: в catch блоке или HandlePostTestCompletion
+        }
+        else
+        {
+            // Нет активной операции — очищаем сразу
+            ClearStateOnReset();
+        }
+        SignalResolution(resolution);
+    }
+
+    private bool TryCancelActiveOperation()
+    {
         if (coordinators.TestCoordinator.IsRunning)
         {
             _resetRequested = true;
+            return true;
         }
-        else if (state.ActivityTracker.IsPreExecutionActive)
+        if (state.ActivityTracker.IsPreExecutionActive)
         {
             _resetRequested = true;
             _currentCts?.Cancel();
+            return true;
         }
-        SignalResolution(resolution);
+        return false;
     }
 
     private void HandleGridClear()
