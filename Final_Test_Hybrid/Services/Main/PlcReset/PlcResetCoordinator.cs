@@ -1,8 +1,9 @@
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
+
 namespace Final_Test_Hybrid.Services.Main.PlcReset;
 
 using Models.Plc.Tags;
 using OpcUa;
-using Steps.Infrastructure.Execution;
 using Steps.Infrastructure.Execution.Scanning;
 using Microsoft.Extensions.Logging;
 

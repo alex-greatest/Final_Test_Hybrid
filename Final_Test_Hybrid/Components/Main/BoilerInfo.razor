@@ -2,9 +2,10 @@
 @using Final_Test_Hybrid.Models.Steps
 @using Final_Test_Hybrid.Services.Common.Settings
 @using Final_Test_Hybrid.Services.Main
+@using Final_Test_Hybrid.Services.Main.PlcReset
 @using Final_Test_Hybrid.Services.SpringBoot.Operation
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution
-@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning
+@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution
 @using Final_Test_Hybrid.Services.Steps.Validation
 @inject PreExecutionCoordinator PreExecution
@@ -13,6 +14,8 @@
 @inject DialogService DialogService
 @inject ReworkDialogService ReworkDialogService
 @inject AppSettingsService AppSettingsService
+@inject ErrorCoordinator ErrorCoordinator
+@inject PlcResetCoordinator PlcResetCoordinator
 @implements IDisposable
 
 <div class="field-row field-row-middle">
@@ -62,6 +65,13 @@
         PreExecution.OnRecipeWriteErrorDialogRequested += ShowRecipeWriteErrorDialogAsync;
         PreExecution.OnReworkDialogRequested += HandleReworkDialogAsync;
         AppSettingsService.UseMesChanged += OnUseMesChanged;
+        ErrorCoordinator.OnReset += CloseDialogs;
+        PlcResetCoordinator.OnForceStop += CloseDialogs;
+    }
+
+    private void CloseDialogs()
+    {
+        _ = InvokeAsync(() => DialogService.Close());
     }
 
     private string GetDisplayValue() => BoilerState.SerialNumber ?? PreExecution.CurrentBarcode ?? _manualInput;
@@ -209,7 +219,9 @@
         {
             Width = "95vw",
             Height = "90vh",
+            ShowClose = false,
             CloseDialogOnOverlayClick = false,
+            CloseDialogOnEsc = false,
             CssClass = cssClass
         };
     }
@@ -234,5 +246,7 @@
         PreExecution.OnRecipeWriteErrorDialogRequested -= ShowRecipeWriteErrorDialogAsync;
         PreExecution.OnReworkDialogRequested -= HandleReworkDialogAsync;
         AppSettingsService.UseMesChanged -= OnUseMesChanged;
+        ErrorCoordinator.OnReset -= CloseDialogs;
+        PlcResetCoordinator.OnForceStop -= CloseDialogs;
     }
 }

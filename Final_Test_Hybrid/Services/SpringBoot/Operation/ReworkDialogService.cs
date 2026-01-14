@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Components.Main.Modals.Rework;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Radzen;
 
 namespace Final_Test_Hybrid.Services.SpringBoot.Operation;
@@ -99,11 +100,7 @@ public class ReworkDialogService : IDisposable
         }
 
         var reason = await ShowReworkReasonAsync();
-        if (string.IsNullOrEmpty(reason))
-        {
-            return ReworkFlowResult.Cancelled(_lastError);
-        }
-        return ReworkFlowResult.Success(authResult.Username);
+        return string.IsNullOrEmpty(reason) ? ReworkFlowResult.Cancelled(_lastError) : ReworkFlowResult.Success(authResult.Username);
     }
 
     private async Task<ReworkFlowResult> ProcessAuthAndSubmitAsync(
@@ -131,6 +128,7 @@ public class ReworkDialogService : IDisposable
         {
             Width = width,
             ShowTitle = showTitle,
+            ShowClose = false,
             CloseDialogOnOverlayClick = false,
             CloseDialogOnEsc = false
         };

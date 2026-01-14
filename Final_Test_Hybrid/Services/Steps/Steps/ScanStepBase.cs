@@ -18,39 +18,27 @@ namespace Final_Test_Hybrid.Services.Steps.Steps;
 /// Базовый класс для шагов сканирования (Non-MES и MES).
 /// Содержит общую логику подготовки к тесту.
 /// </summary>
-public abstract class ScanStepBase
+public abstract class ScanStepBase(
+    BarcodeScanService barcodeScanService,
+    ITestSequenceLoader sequenceLoader,
+    ITestMapBuilder mapBuilder,
+    ITestMapResolver mapResolver,
+    RecipeValidator recipeValidator,
+    BoilerState boilerState,
+    PausableOpcUaTagService opcUa,
+    IRecipeProvider recipeProvider,
+    ExecutionMessageState messageState)
+    : IPreExecutionStep
 {
-    protected readonly BarcodeScanService BarcodeScanService;
-    protected readonly ITestSequenceLoader SequenceLoader;
-    protected readonly ITestMapBuilder MapBuilder;
-    protected readonly ITestMapResolver MapResolver;
-    protected readonly RecipeValidator RecipeValidator;
-    protected readonly BoilerState BoilerState;
-    protected readonly PausableOpcUaTagService OpcUa;
-    protected readonly IRecipeProvider RecipeProvider;
-    protected readonly ExecutionMessageState MessageState;
-
-    protected ScanStepBase(
-        BarcodeScanService barcodeScanService,
-        ITestSequenceLoader sequenceLoader,
-        ITestMapBuilder mapBuilder,
-        ITestMapResolver mapResolver,
-        RecipeValidator recipeValidator,
-        BoilerState boilerState,
-        PausableOpcUaTagService opcUa,
-        IRecipeProvider recipeProvider,
-        ExecutionMessageState messageState)
-    {
-        BarcodeScanService = barcodeScanService;
-        SequenceLoader = sequenceLoader;
-        MapBuilder = mapBuilder;
-        MapResolver = mapResolver;
-        RecipeValidator = recipeValidator;
-        BoilerState = boilerState;
-        OpcUa = opcUa;
-        RecipeProvider = recipeProvider;
-        MessageState = messageState;
-    }
+    protected readonly BarcodeScanService BarcodeScanService = barcodeScanService;
+    protected readonly ITestSequenceLoader SequenceLoader = sequenceLoader;
+    protected readonly ITestMapBuilder MapBuilder = mapBuilder;
+    protected readonly ITestMapResolver MapResolver = mapResolver;
+    protected readonly RecipeValidator RecipeValidator = recipeValidator;
+    protected readonly BoilerState BoilerState = boilerState;
+    protected readonly PausableOpcUaTagService OpcUa = opcUa;
+    protected readonly IRecipeProvider RecipeProvider = recipeProvider;
+    protected readonly ExecutionMessageState MessageState = messageState;
 
     public abstract string Id { get; }
     public abstract string Name { get; }

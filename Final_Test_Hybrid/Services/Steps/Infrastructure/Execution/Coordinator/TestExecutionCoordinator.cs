@@ -17,7 +17,7 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly ColumnExecutor[] _executors;
     private readonly ILogger<TestExecutionCoordinator> _logger;
     private readonly ITestStepLogger _testLogger;
-    private readonly ErrorCoordinator _errorCoordinator;
+    private readonly ErrorCoordinator.ErrorCoordinator _errorCoordinator;
     private readonly OpcUaTagService _plcService;
     private readonly PauseTokenSource _pauseToken;
     private readonly ExecutionActivityTracker _activityTracker;
@@ -51,7 +51,7 @@ public partial class TestExecutionCoordinator : IDisposable
         StepStatusReporter statusReporter,
         IRecipeProvider recipeProvider,
         ExecutionStateManager stateManager,
-        ErrorCoordinator errorCoordinator,
+        ErrorCoordinator.ErrorCoordinator errorCoordinator,
         PauseTokenSource pauseToken,
         ExecutionActivityTracker activityTracker,
         PlcResetCoordinator plcResetCoordinator,

@@ -13,21 +13,9 @@
             <RadzenDataGridColumn TItem="MissingRecipeInfo" Property="RecipeAddress" Title="Адрес рецепта" />
         </Columns>
     </RadzenDataGrid>
-    <div class="dialog-buttons">
-        <RadzenButton Text="Закрыть" Icon="close"
-                      Click="@OnClose"
-                      ButtonStyle="ButtonStyle.Primary" />
-    </div>
 </div>
 
 @code {
     [Parameter]
     public List<MissingRecipeInfo> MissingRecipes { get; set; } = [];
-    [Inject]
-    public required DialogService DialogService { get; set; }
-
-    private void OnClose()
-    {
-        DialogService.Close();
-    }
 }

@@ -14,21 +14,9 @@
             <RadzenDataGridColumn TItem="UnknownStepInfo" Property="Column" Title="Колонка" />
         </Columns>
     </RadzenDataGrid>
-    <div class="dialog-buttons">
-        <RadzenButton Text="Закрыть" Icon="close"
-                      Click="@OnClose"
-                      ButtonStyle="ButtonStyle.Primary" />
-    </div>
 </div>
 
 @code {
     [Parameter]
     public List<UnknownStepInfo> UnknownSteps { get; set; } = [];
-    [Inject]
-    public required DialogService DialogService { get; set; }
-
-    private void OnClose()
-    {
-        DialogService.Close();
-    }
 }

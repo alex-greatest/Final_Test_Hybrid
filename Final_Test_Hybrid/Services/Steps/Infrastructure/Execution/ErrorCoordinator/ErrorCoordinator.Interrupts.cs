@@ -3,7 +3,7 @@ using Final_Test_Hybrid.Models.Plc.Tags;
 using Final_Test_Hybrid.Models.Steps;
 using Microsoft.Extensions.Logging;
 
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 
 /// <summary>
 /// ErrorCoordinator partial: Interrupt handling logic.

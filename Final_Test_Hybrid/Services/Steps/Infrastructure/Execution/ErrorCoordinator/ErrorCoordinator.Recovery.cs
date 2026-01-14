@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Models.Errors;
+using Microsoft.Extensions.Logging;
 
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 
 /// <summary>
 /// ErrorCoordinator partial: Reset and recovery logic.

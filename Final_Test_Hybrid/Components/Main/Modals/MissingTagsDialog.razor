@@ -14,11 +14,6 @@
             </RadzenDataGridColumn>
         </Columns>
     </RadzenDataGrid>
-    <div class="dialog-buttons">
-        <RadzenButton Text="Закрыть" Icon="close"
-                      Click="@OnClose"
-                      ButtonStyle="ButtonStyle.Primary" />
-    </div>
 </div>
 
 @code {
@@ -26,11 +21,4 @@
     public List<string> MissingTags { get; set; } = [];
     [Parameter]
     public string InfoMessage { get; set; } = "В PLC DB_Recipe отсутствуют следующие теги:";
-    [Inject]
-    public required DialogService DialogService { get; set; }
-
-    private void OnClose()
-    {
-        DialogService.Close();
-    }
 }

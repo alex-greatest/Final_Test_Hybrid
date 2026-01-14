@@ -12,6 +12,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorHandling;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
@@ -19,6 +20,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Final_Test_Hybrid.Services.Steps.Steps;
 using Final_Test_Hybrid.Services.Steps.Validation;
 using Final_Test_Hybrid.Services.Preparation;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Final_Test_Hybrid.Services.DependencyInjection;
@@ -99,6 +101,7 @@ public static class StepsServiceExtensions
         services.AddSingleton<ScanBarcodeStep>();
         services.AddSingleton<ScanBarcodeMesStep>();
         services.AddSingleton<BlockBoilerAdapterStep>();
+        services.AddSingleton<IPreExecutionStepRegistry, PreExecutionStepAdapter>();
         services.AddSingleton<PreExecutionCoordinator>();
 
         return services;

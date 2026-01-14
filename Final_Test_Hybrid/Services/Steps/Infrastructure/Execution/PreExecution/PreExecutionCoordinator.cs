@@ -35,7 +35,7 @@ public partial class PreExecutionCoordinator(
     ExecutionActivityTracker activityTracker,
     ExecutionMessageState messageState,
     PauseTokenSource pauseToken,
-    ErrorCoordinator errorCoordinator,
+    ErrorCoordinator.ErrorCoordinator errorCoordinator,
     PlcResetCoordinator plcResetCoordinator,
     IErrorService errorService,
     IStepTimingService stepTimingService,

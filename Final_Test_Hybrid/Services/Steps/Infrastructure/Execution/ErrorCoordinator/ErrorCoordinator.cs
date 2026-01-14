@@ -7,7 +7,7 @@ using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Microsoft.Extensions.Logging;
 
-namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 
 /// <summary>
 /// Unified error and interrupt coordinator for test execution.
@@ -129,7 +129,7 @@ public partial class ErrorCoordinator : IAsyncDisposable
     private void FireAndForgetInterrupt(InterruptReason reason)
     {
         _ = HandleInterruptAsync(reason, _disposeCts.Token).ContinueWith(
-            t => _logger.LogError(t.Exception, "Ошибка обработки {Reason}", reason),
+            t => LoggerExtensions.LogError((ILogger)_logger, (Exception?)t.Exception, "Ошибка обработки {Reason}", reason),
             TaskContinuationOptions.OnlyOnFaulted);
     }
 
