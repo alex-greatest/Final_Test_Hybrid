@@ -1,0 +1,38 @@
+@if (IsVisible)
+{
+    <div class="floating-error-panel" id="floating-error-panel" style="@PositionStyle">
+        <div class="floating-error-header" @onmousedown="StartDrag">
+            <span>Ошибка @GetStandName()</span>
+        </div>
+
+        <div class="floating-error-subheader">
+            @DisplayStepName
+        </div>
+
+        <div class="floating-error-body">
+            <div class="action-row">
+                <div class="action-text">
+                    <span class="action-label">"Повтор"</span>
+                    <span class="action-hint">для повтора шага</span>
+                </div>
+                <span class="action-indicator green">Повтор</span>
+            </div>
+
+            <div class="action-row">
+                <div class="action-text">
+                    <span class="action-label">"Один шаг"</span>
+                    <span class="action-hint">для перехода на следующий шаг</span>
+                </div>
+                <span class="action-indicator green">Один шаг</span>
+            </div>
+
+            <div class="action-row">
+                <div class="action-text">
+                    <span class="action-label">"СТОП"</span>
+                    <span class="action-hint">для отмены теста</span>
+                </div>
+                <span class="action-indicator red">Стоп</span>
+            </div>
+        </div>
+    </div>
+}

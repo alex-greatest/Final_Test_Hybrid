@@ -78,6 +78,17 @@ public class BlazorUiDispatcher(BlazorDispatcherAccessor a) : IUiDispatcher
 
 **Подписчики OnReset:** TestExecutionCoordinator, ReworkDialogService, PreExecutionCoordinator.Retry
 
+## PlcReset — Логика сброса
+
+Сброс по сигналу PLC с очисткой состояния. См. [PlcResetGuide.md](PlcResetGuide.md)
+
+| Тип сброса | Условие | Метод |
+|------------|---------|-------|
+| Мягкий | `wasInScanPhase = true` | `ForceStop()` |
+| Жёсткий | `wasInScanPhase = false` | `Reset()` |
+
+**Очистка BoilerState:** гарантирована через `ClearStateOnReset()` в PreExecutionCoordinator.
+
 ## Accepted Patterns (NOT bugs)
 
 | Паттерн | Почему OK |
