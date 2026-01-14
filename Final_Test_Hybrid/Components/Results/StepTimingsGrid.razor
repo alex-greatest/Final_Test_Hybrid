@@ -7,6 +7,7 @@
 
 <div class="step-timings-wrapper">
     <RadzenDataGrid Data="@_timings" TItem="StepTimingRecord"
+                    KeyProperty="Id"
                     AllowFiltering="true" AllowSorting="true"
                     FilterText="@DataGridRu.Filter"
                     ApplyFilterText="@DataGridRu.ApplyFilter"

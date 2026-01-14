@@ -1,34 +1,35 @@
 <div class="error-dialog-container">
     <div class="error-dialog-header">
-        <RadzenIcon Icon="warning" class="warning-icon" />
         <span>Ошибка @GetStandName()</span>
     </div>
 
-    <div class="error-dialog-body">
-        <div class="step-info">
-            <span class="step-label">Шаг:</span>
-            <span class="step-name">@StepName</span>
-        </div>
-
-        <div class="error-message">
-            @ErrorMessage
-        </div>
-
-        <div class="waiting-message">
-            Ожидание команды от PLC...
-        </div>
+    <div class="error-dialog-subheader">
+        @DisplayStepName
     </div>
 
-    <div class="error-dialog-footer">
-        <div class="signal-indicator @GetRetryClass()">
-            <span class="indicator-dot"></span>
-            <span class="indicator-label">Повтор</span>
-            <span class="indicator-hint">- "Повтор" для повтора шага</span>
+    <div class="error-dialog-body">
+        <div class="action-row">
+            <div class="action-text">
+                <span class="action-label">"Повтор"</span>
+                <span class="action-hint">для повтора шага</span>
+            </div>
+            <span class="action-indicator green">Повтор</span>
         </div>
-        <div class="signal-indicator @GetSkipClass()">
-            <span class="indicator-dot"></span>
-            <span class="indicator-label">Один шаг</span>
-            <span class="indicator-hint">- пропуск на следующий шаг</span>
+
+        <div class="action-row">
+            <div class="action-text">
+                <span class="action-label">"Один шаг"</span>
+                <span class="action-hint">для перехода на следующий шаг</span>
+            </div>
+            <span class="action-indicator green">Один шаг</span>
+        </div>
+
+        <div class="action-row">
+            <div class="action-text">
+                <span class="action-label">"СТОП"</span>
+                <span class="action-hint">для отмены теста</span>
+            </div>
+            <span class="action-indicator red">Стоп</span>
         </div>
     </div>
 </div>

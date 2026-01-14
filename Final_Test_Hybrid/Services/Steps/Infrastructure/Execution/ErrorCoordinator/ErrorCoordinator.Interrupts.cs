@@ -269,7 +269,9 @@ public partial class ErrorCoordinator
         return ErrorResolution.Timeout;
     }
 
-    public async Task SendAskRepeatAsync(CancellationToken ct)
+    public Task SendAskRepeatAsync(CancellationToken ct) => SendAskRepeatAsync(null, ct);
+
+    public async Task SendAskRepeatAsync(string? blockErrorTag, CancellationToken ct)
     {
         _logger.LogInformation("Отправка AskRepeat в PLC");
         var result = await _plcService.WriteAsync(BaseTags.AskRepeat, true, ct);
@@ -277,7 +279,22 @@ public partial class ErrorCoordinator
         if (result.Error != null)
         {
             _logger.LogError("Ошибка записи AskRepeat: {Error}", result.Error);
+            return;
         }
+
+        await WaitForPlcAcknowledgeAsync(blockErrorTag, ct);
+    }
+
+    private async Task WaitForPlcAcknowledgeAsync(string? blockErrorTag, CancellationToken ct)
+    {
+        if (blockErrorTag == null)
+        {
+            return;
+        }
+
+        _logger.LogDebug("Ожидание сброса Error блока: {Tag}", blockErrorTag);
+        await _tagWaiter.WaitForFalseAsync(blockErrorTag, timeout: null, ct);
+        _logger.LogDebug("Error блока сброшен");
     }
 
     #endregion

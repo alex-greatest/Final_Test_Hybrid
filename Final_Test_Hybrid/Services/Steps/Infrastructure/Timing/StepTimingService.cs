@@ -6,8 +6,6 @@ public interface IStepTimingService
 {
     event Action? OnChanged;
 
-    // Существующие методы для тестовых шагов
-    void Record(string name, string description, TimeSpan duration);
     IReadOnlyList<StepTimingRecord> GetAll();
     void Clear();
 
@@ -15,6 +13,10 @@ public interface IStepTimingService
     void StartScanTiming(string name, string description);
     void StopScanTiming();
     void ResetScanTiming();
+
+    // Методы для текущего шага (таймер в реальном времени)
+    void StartCurrentStepTiming(string name, string description);
+    void StopCurrentStepTiming();
 }
 
 public class StepTimingService : IStepTimingService, IDisposable
@@ -24,11 +26,19 @@ public class StepTimingService : IStepTimingService, IDisposable
     private readonly System.Threading.Timer _timer;
 
     // Состояние шага сканирования
+    private readonly Guid _scanId = Guid.NewGuid();
     private string? _scanName;
     private string? _scanDescription;
     private DateTime _scanStartTime;
     private bool _scanIsRunning;
     private TimeSpan _scanFrozenDuration;
+
+    // Состояние текущего шага
+    private readonly Guid _currentId = Guid.NewGuid();
+    private string? _currentName;
+    private string? _currentDescription;
+    private DateTime _currentStartTime;
+    private bool _currentIsRunning;
 
     public event Action? OnChanged;
 
@@ -81,18 +91,55 @@ public class StepTimingService : IStepTimingService, IDisposable
         OnChanged?.Invoke();
     }
 
-    private void OnTimerTick(object? state)
+    public void StartCurrentStepTiming(string name, string description)
     {
+        lock (_lock)
+        {
+            _currentName = name;
+            _currentDescription = description;
+            _currentStartTime = DateTime.Now;
+            _currentIsRunning = true;
+        }
+
+        StartTimerIfNeeded();
         OnChanged?.Invoke();
     }
 
-    public void Record(string name, string description, TimeSpan duration)
+    public void StopCurrentStepTiming()
     {
-        var formatted = FormatDuration(duration);
         lock (_lock)
         {
-            _records.Add(new StepTimingRecord(name, description, formatted));
+            if (!_currentIsRunning) return;
+
+            var duration = DateTime.Now - _currentStartTime;
+            _records.Add(new StepTimingRecord(Guid.NewGuid(), _currentName!, _currentDescription!, FormatDuration(duration)));
+            _currentIsRunning = false;
+            _currentName = null;
+            _currentDescription = null;
         }
+
+        StopTimerIfNotNeeded();
+        OnChanged?.Invoke();
+    }
+
+    private void StartTimerIfNeeded()
+    {
+        if (_scanIsRunning || _currentIsRunning)
+        {
+            _timer.Change(0, 1000);
+        }
+    }
+
+    private void StopTimerIfNotNeeded()
+    {
+        if (!_scanIsRunning && !_currentIsRunning)
+        {
+            _timer.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+    }
+
+    private void OnTimerTick(object? state)
+    {
         OnChanged?.Invoke();
     }
 
@@ -108,7 +155,14 @@ public class StepTimingService : IStepTimingService, IDisposable
                 var duration = _scanIsRunning
                     ? DateTime.Now - _scanStartTime
                     : _scanFrozenDuration;
-                result.Add(new StepTimingRecord(_scanName, _scanDescription!, FormatDuration(duration)));
+                result.Add(new StepTimingRecord(_scanId, _scanName, _scanDescription!, FormatDuration(duration)));
+            }
+
+            // Текущий выполняемый шаг
+            if (_currentIsRunning && _currentName != null)
+            {
+                var duration = DateTime.Now - _currentStartTime;
+                result.Add(new StepTimingRecord(_currentId, _currentName, _currentDescription!, FormatDuration(duration)));
             }
 
             result.AddRange(_records);

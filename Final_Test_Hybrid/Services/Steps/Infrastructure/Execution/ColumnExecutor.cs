@@ -73,15 +73,19 @@ public class ColumnExecutor(
     {
         try
         {
+            stepTimingService.StartCurrentStepTiming(step.Name, step.Description);
             var result = await step.ExecuteAsync(context, ct);
+            stepTimingService.StopCurrentStepTiming();
             ProcessStepResult(step, result);
         }
         catch (OperationCanceledException)
         {
+            stepTimingService.StopCurrentStepTiming();
             ClearStatusIfNotFailed();
         }
         catch (Exception ex)
         {
+            stepTimingService.StopCurrentStepTiming();
             SetErrorState(step, ex.Message, null);
             LogError(step, ex.Message, ex);
         }
@@ -124,8 +128,6 @@ public class ColumnExecutor(
 
     private void SetSuccessState(ITestStep step, TestStepResult result, string? limits)
     {
-        var duration = DateTime.Now - _state.StartTime;
-        stepTimingService.Record(step.Name, step.Description, duration);
         var statusText = result.Skipped ? "Пропуск" : "Готово";
         statusReporter.ReportSuccess(_state.UiStepId, result.Message, limits);
         _state = _state with { Status = statusText, ResultValue = result.Message, FailedStep = null };
@@ -139,13 +141,10 @@ public class ColumnExecutor(
 
     private void SetErrorState(ITestStep step, string message, string? limits, List<ErrorDefinition>? errors = null)
     {
-        var duration = DateTime.Now - _state.StartTime;
-        stepTimingService.Record(step.Name, step.Description, duration);
         statusReporter.ReportError(_state.UiStepId, message, limits);
         ClearStepErrors();
         _errorScope = new ErrorScope(errorService);
         _errorScope.Raise(errors, step.Id, step.Name);
-
         _state = _state with { Status = "Ошибка", ErrorMessage = message, HasFailed = true, FailedStep = step };
         OnStateChanged?.Invoke();
     }

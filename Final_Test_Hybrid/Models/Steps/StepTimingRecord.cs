@@ -1,3 +1,3 @@
 namespace Final_Test_Hybrid.Models.Steps;
 
-public record StepTimingRecord(string Name, string Description, string Duration);
+public record StepTimingRecord(Guid Id, string Name, string Description, string Duration);

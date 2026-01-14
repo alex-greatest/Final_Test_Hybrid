@@ -101,6 +101,12 @@ public static class StepsServiceExtensions
         services.AddSingleton<ScanBarcodeMesStep>();
         services.AddSingleton<BlockBoilerAdapterStep>();
         services.AddSingleton<IPreExecutionStepRegistry, PreExecutionStepAdapter>();
+
+        // Pre-execution dependencies
+        services.AddSingleton<PreExecutionSteps>();
+        services.AddSingleton<PreExecutionInfrastructure>();
+        services.AddSingleton<PreExecutionCoordinators>();
+        services.AddSingleton<PreExecutionState>();
         services.AddSingleton<PreExecutionCoordinator>();
 
         return services;

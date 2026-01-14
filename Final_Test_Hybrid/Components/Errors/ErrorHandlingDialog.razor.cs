@@ -8,11 +8,13 @@ public partial class ErrorHandlingDialog : ComponentBase, IDisposable
     private const string DefaultStepName = "Неизвестный шаг";
     private const string DefaultErrorMessage = "Неизвестная ошибка";
     [Parameter] public StepError? Error { get; set; }
+    [Parameter] public string? StepName { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
     [Parameter] public ExecutionStateManager? StateManager { get; set; }
     [Inject] private Radzen.DialogService DialogService { get; set; } = null!;
     private ExecutionState _currentState = ExecutionState.PausedOnError;
-    public string StepName => Error?.StepName ?? DefaultStepName;
-    public string ErrorMessage => Error?.ErrorMessage ?? DefaultErrorMessage;
+    public string DisplayStepName => StepName ?? Error?.StepName ?? DefaultStepName;
+    public string DisplayErrorMessage => ErrorMessage ?? Error?.ErrorMessage ?? DefaultErrorMessage;
     public int ColumnIndex => Error?.ColumnIndex ?? 0;
 
     protected override void OnInitialized()

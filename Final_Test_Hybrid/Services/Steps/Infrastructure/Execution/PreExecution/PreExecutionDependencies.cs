@@ -1,0 +1,79 @@
+using Final_Test_Hybrid.Services.Common;
+using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Common.Settings;
+using Final_Test_Hybrid.Services.Errors;
+using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Services.Main.Messages;
+using Final_Test_Hybrid.Services.Main.PlcReset;
+using Final_Test_Hybrid.Services.OpcUa;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
+using Final_Test_Hybrid.Services.Steps.Steps;
+using Microsoft.Extensions.Logging;
+
+namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
+
+/// <summary>
+/// Шаги PreExecution.
+/// </summary>
+public class PreExecutionSteps(
+    AppSettingsService appSettings,
+    ScanBarcodeStep scanBarcodeStep,
+    ScanBarcodeMesStep scanBarcodeMesStep,
+    BlockBoilerAdapterStep blockBoilerAdapterStep)
+{
+    public ScanStepBase GetScanStep() => appSettings.UseMes ? scanBarcodeMesStep : scanBarcodeStep;
+    public BlockBoilerAdapterStep BlockBoilerAdapter => blockBoilerAdapterStep;
+}
+
+/// <summary>
+/// Инфраструктурные сервисы для PreExecution.
+/// </summary>
+public class PreExecutionInfrastructure(
+    PausableOpcUaTagService opcUa,
+    OpcUaTagService plcService,
+    PauseTokenSource pauseToken,
+    IStepTimingService stepTimingService,
+    StepStatusReporter statusReporter,
+    ITestStepLogger testStepLogger,
+    IErrorService errorService,
+    ILogger<PreExecutionCoordinator> logger)
+{
+    public PausableOpcUaTagService OpcUa => opcUa;
+    public OpcUaTagService PlcService => plcService;
+    public PauseTokenSource PauseToken => pauseToken;
+    public IStepTimingService StepTimingService => stepTimingService;
+    public StepStatusReporter StatusReporter => statusReporter;
+    public ITestStepLogger TestStepLogger => testStepLogger;
+    public IErrorService ErrorService => errorService;
+    public ILogger<PreExecutionCoordinator> Logger => logger;
+}
+
+/// <summary>
+/// Связанные координаторы.
+/// </summary>
+public class PreExecutionCoordinators(
+    TestExecutionCoordinator testCoordinator,
+    ErrorCoordinator.ErrorCoordinator errorCoordinator,
+    PlcResetCoordinator plcResetCoordinator,
+    ScanDialogCoordinator dialogCoordinator)
+{
+    public TestExecutionCoordinator TestCoordinator => testCoordinator;
+    public ErrorCoordinator.ErrorCoordinator ErrorCoordinator => errorCoordinator;
+    public PlcResetCoordinator PlcResetCoordinator => plcResetCoordinator;
+    public ScanDialogCoordinator DialogCoordinator => dialogCoordinator;
+}
+
+/// <summary>
+/// Состояние выполнения.
+/// </summary>
+public class PreExecutionState(
+    BoilerState boilerState,
+    ExecutionActivityTracker activityTracker,
+    ExecutionPhaseState phaseState)
+{
+    public BoilerState BoilerState => boilerState;
+    public ExecutionActivityTracker ActivityTracker => activityTracker;
+    public ExecutionPhaseState PhaseState => phaseState;
+}

@@ -1,3 +1,4 @@
+@using Final_Test_Hybrid.Components.Errors
 @using Final_Test_Hybrid.Components.Main.Modals
 @using Final_Test_Hybrid.Models.Steps
 @using Final_Test_Hybrid.Services.Common.Settings
@@ -7,8 +8,10 @@
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution
+@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning
 @using Final_Test_Hybrid.Services.Steps.Validation
 @inject PreExecutionCoordinator PreExecution
+@inject ScanDialogCoordinator DialogCoordinator
 @inject BoilerState BoilerState
 @inject TestSequenseService TestSequenseService
 @inject DialogService DialogService
@@ -61,12 +64,14 @@
         BoilerState.OnChanged += OnBoilerStateChanged;
         TestSequenseService.OnDataChanged += OnDataChanged;
         PreExecution.OnStateChanged += OnScanStateChanged;
-        PreExecution.OnMissingPlcTagsDialogRequested += ShowMissingPlcTagsDialogAsync;
-        PreExecution.OnMissingRequiredTagsDialogRequested += ShowMissingRequiredTagsDialogAsync;
-        PreExecution.OnUnknownStepsDialogRequested += ShowUnknownStepsDialogAsync;
-        PreExecution.OnMissingRecipesDialogRequested += ShowMissingRecipesDialogAsync;
-        PreExecution.OnRecipeWriteErrorDialogRequested += ShowRecipeWriteErrorDialogAsync;
-        PreExecution.OnReworkDialogRequested += HandleReworkDialogAsync;
+        DialogCoordinator.OnMissingPlcTagsDialogRequested += ShowMissingPlcTagsDialogAsync;
+        DialogCoordinator.OnMissingRequiredTagsDialogRequested += ShowMissingRequiredTagsDialogAsync;
+        DialogCoordinator.OnUnknownStepsDialogRequested += ShowUnknownStepsDialogAsync;
+        DialogCoordinator.OnMissingRecipesDialogRequested += ShowMissingRecipesDialogAsync;
+        DialogCoordinator.OnRecipeWriteErrorDialogRequested += ShowRecipeWriteErrorDialogAsync;
+        DialogCoordinator.OnReworkDialogRequested += HandleReworkDialogAsync;
+        DialogCoordinator.OnBlockErrorDialogRequested += ShowBlockErrorDialogAsync;
+        DialogCoordinator.OnBlockErrorDialogCloseRequested += CloseDialogs;
         AppSettingsService.UseMesChanged += OnUseMesChanged;
         ErrorCoordinator.OnReset += CloseDialogs;
         PlcResetCoordinator.OnForceStop += CloseDialogs;
@@ -233,6 +238,30 @@
         };
     }
 
+    private async Task ShowBlockErrorDialogAsync(string stepName, string errorMessage)
+    {
+        await InvokeAsync(async () =>
+        {
+            await DialogService.OpenAsync<ErrorHandlingDialog>(
+                "Ошибка шага",
+                new Dictionary<string, object>
+                {
+                    { "StepName", stepName },
+                    { "ErrorMessage", errorMessage }
+                },
+                new DialogOptions
+                {
+                    Width = "auto",
+                    Height = "auto",
+                    Draggable = true,
+                    ShowClose = false,
+                    CloseDialogOnOverlayClick = false,
+                    CloseDialogOnEsc = false,
+                    CssClass = "block-error-dialog-window non-modal-dialog"
+                });
+        });
+    }
+
     private Task<ReworkFlowResult> HandleReworkDialogAsync(
         string errorMessage,
         Func<string, string, Task<ReworkSubmitResult>> executeRework)
@@ -246,12 +275,14 @@
         BoilerState.OnChanged -= OnBoilerStateChanged;
         TestSequenseService.OnDataChanged -= OnDataChanged;
         PreExecution.OnStateChanged -= OnScanStateChanged;
-        PreExecution.OnMissingPlcTagsDialogRequested -= ShowMissingPlcTagsDialogAsync;
-        PreExecution.OnMissingRequiredTagsDialogRequested -= ShowMissingRequiredTagsDialogAsync;
-        PreExecution.OnUnknownStepsDialogRequested -= ShowUnknownStepsDialogAsync;
-        PreExecution.OnMissingRecipesDialogRequested -= ShowMissingRecipesDialogAsync;
-        PreExecution.OnRecipeWriteErrorDialogRequested -= ShowRecipeWriteErrorDialogAsync;
-        PreExecution.OnReworkDialogRequested -= HandleReworkDialogAsync;
+        DialogCoordinator.OnMissingPlcTagsDialogRequested -= ShowMissingPlcTagsDialogAsync;
+        DialogCoordinator.OnMissingRequiredTagsDialogRequested -= ShowMissingRequiredTagsDialogAsync;
+        DialogCoordinator.OnUnknownStepsDialogRequested -= ShowUnknownStepsDialogAsync;
+        DialogCoordinator.OnMissingRecipesDialogRequested -= ShowMissingRecipesDialogAsync;
+        DialogCoordinator.OnRecipeWriteErrorDialogRequested -= ShowRecipeWriteErrorDialogAsync;
+        DialogCoordinator.OnReworkDialogRequested -= HandleReworkDialogAsync;
+        DialogCoordinator.OnBlockErrorDialogRequested -= ShowBlockErrorDialogAsync;
+        DialogCoordinator.OnBlockErrorDialogCloseRequested -= CloseDialogs;
         AppSettingsService.UseMesChanged -= OnUseMesChanged;
         ErrorCoordinator.OnReset -= CloseDialogs;
         PlcResetCoordinator.OnForceStop -= CloseDialogs;

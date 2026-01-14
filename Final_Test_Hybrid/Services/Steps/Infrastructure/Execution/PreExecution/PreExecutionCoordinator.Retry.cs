@@ -2,6 +2,7 @@ using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Plc;
 using Final_Test_Hybrid.Services.Steps.Steps;
 using Microsoft.Extensions.Logging;
 
@@ -26,18 +27,18 @@ public partial class PreExecutionCoordinator
 
     private void SubscribeToStopSignals()
     {
-        plcResetCoordinator.OnForceStop += HandleSoftStop;
-        plcResetCoordinator.OnAskEndReceived += HandleGridClear;
-        errorCoordinator.OnReset += HandleHardReset;
+        coordinators.PlcResetCoordinator.OnForceStop += HandleSoftStop;
+        coordinators.PlcResetCoordinator.OnAskEndReceived += HandleGridClear;
+        coordinators.ErrorCoordinator.OnReset += HandleHardReset;
     }
 
     private void HandleStopSignal(PreExecutionResolution resolution)
     {
-        if (testCoordinator.IsRunning)
+        if (coordinators.TestCoordinator.IsRunning)
         {
             _resetRequested = true;
         }
-        else if (activityTracker.IsPreExecutionActive)
+        else if (state.ActivityTracker.IsPreExecutionActive)
         {
             _resetRequested = true;
             _currentCts?.Cancel();
@@ -47,20 +48,20 @@ public partial class PreExecutionCoordinator
 
     private void HandleGridClear()
     {
-        statusReporter.ClearAllExceptScan();
+        infra.StatusReporter.ClearAllExceptScan();
     }
 
     private void HandleSoftStop() => HandleStopSignal(PreExecutionResolution.SoftStop);
-    
+
     private void HandleHardReset()
     {
         HandleStopSignal(PreExecutionResolution.HardReset);
-        statusReporter.ClearAllExceptScan();
+        infra.StatusReporter.ClearAllExceptScan();
     }
 
     private void SignalResolution(PreExecutionResolution resolution)
     {
-        errorService.ClearActiveApplicationErrors();
+        infra.ErrorService.ClearActiveApplicationErrors();
         _externalSignal?.TrySetResult(resolution);
     }
 
@@ -75,28 +76,43 @@ public partial class PreExecutionCoordinator
         Guid stepId,
         CancellationToken ct)
     {
-        var errorScope = new ErrorScope(errorService);
+        infra.Logger.LogInformation("Вход в ExecuteRetryLoopAsync для {StepName}", step.Name);
+        var errorScope = new ErrorScope(infra.ErrorService);
         var currentResult = initialResult;
         try
         {
             while (currentResult.IsRetryable)
             {
+                infra.Logger.LogInformation("Retry loop: IsRetryable=true, показываем диалог");
                 await SetSelectedAsync(step);
                 errorScope.Raise(currentResult.Errors, step.Id, step.Name);
-                statusReporter.ReportError(stepId, currentResult.ErrorMessage!);
+                infra.StatusReporter.ReportError(stepId, currentResult.ErrorMessage!);
 
+                await coordinators.DialogCoordinator.ShowBlockErrorDialogAsync(
+                    step.Name,
+                    currentResult.UserMessage ?? currentResult.ErrorMessage!);
+
+                infra.Logger.LogInformation("Диалог показан, ожидаем WaitForResolutionAsync...");
                 var resolution = await WaitForResolutionAsync(ct);
+                infra.Logger.LogInformation("WaitForResolutionAsync вернул: {Resolution}", resolution);
+
                 if (resolution == PreExecutionResolution.Retry)
                 {
+                    infra.Logger.LogInformation("Отправляем SendAskRepeatAsync...");
+                    var errorTag = GetBlockErrorTag(step);
+                    await coordinators.ErrorCoordinator.SendAskRepeatAsync(errorTag, ct);
+                    coordinators.DialogCoordinator.CloseBlockErrorDialog();
+                    infra.Logger.LogInformation("SendAskRepeatAsync отправлен, повторяем шаг");
                     errorScope.Clear();
                     currentResult = await RetryStepAsync(step, context, stepId, ct);
                 }
                 else
                 {
+                    coordinators.DialogCoordinator.CloseBlockErrorDialog();
+                    infra.Logger.LogInformation("Не Retry, выходим из цикла с {Resolution}", resolution);
                     return CreateExitResult(resolution, currentResult);
                 }
             }
-
             return currentResult;
         }
         finally
@@ -124,10 +140,10 @@ public partial class PreExecutionCoordinator
         Guid stepId,
         CancellationToken ct)
     {
-        statusReporter.ReportRetry(stepId);
-        var startTime = DateTime.Now;
+        infra.StatusReporter.ReportRetry(stepId);
+        infra.StepTimingService.StartCurrentStepTiming(step.Name, step.Description);
         var result = await step.ExecuteAsync(context, ct);
-        stepTimingService.Record(step.Name, step.Description, DateTime.Now - startTime);
+        infra.StepTimingService.StopCurrentStepTiming();
         return result;
     }
 
@@ -137,10 +153,12 @@ public partial class PreExecutionCoordinator
 
     private async Task<PreExecutionResolution> WaitForResolutionAsync(CancellationToken ct)
     {
+        infra.Logger.LogDebug("WaitForResolutionAsync: создаём _externalSignal");
         var signal = _externalSignal = new TaskCompletionSource<PreExecutionResolution>();
         try
         {
             var completedTask = await WaitForFirstSignalAsync(signal, ct);
+            infra.Logger.LogDebug("WaitForResolutionAsync: получили completedTask");
             return await ExtractResolutionAsync(completedTask, signal);
         }
         finally
@@ -153,22 +171,25 @@ public partial class PreExecutionCoordinator
         TaskCompletionSource<PreExecutionResolution> signal,
         CancellationToken ct)
     {
-        var resolutionTask = errorCoordinator.WaitForResolutionAsync(ct);
+        infra.Logger.LogDebug("WaitForFirstSignalAsync: вызываем errorCoordinator.WaitForResolutionAsync");
+        var resolutionTask = coordinators.ErrorCoordinator.WaitForResolutionAsync(ct);
         var externalTask = signal.Task;
 
         return Task.WhenAny(resolutionTask, externalTask);
     }
 
-    private static async Task<PreExecutionResolution> ExtractResolutionAsync(
+    private async Task<PreExecutionResolution> ExtractResolutionAsync(
         Task completedTask,
         TaskCompletionSource<PreExecutionResolution> signal)
     {
         if (completedTask == signal.Task)
         {
+            infra.Logger.LogDebug("ExtractResolutionAsync: сработал externalSignal");
             return await signal.Task;
         }
         var errorResolutionTask = (Task<ErrorResolution>)completedTask;
         var errorResolution = await errorResolutionTask;
+        infra.Logger.LogDebug("ExtractResolutionAsync: errorCoordinator вернул {Resolution}", errorResolution);
         return MapToPreExecutionResolution(errorResolution);
     }
 
@@ -188,17 +209,25 @@ public partial class PreExecutionCoordinator
 
     private async Task SetSelectedAsync(BlockBoilerAdapterStep step)
     {
-        if (step is not IHasPlcBlockPath plcStep)
-        {
-            return;
-        }
-        var selectedTag = $"ns=3;s=\"{plcStep.PlcBlockPath}\".\"Selected\"";
-        logger.LogDebug("Взведение Selected для {BlockPath}", plcStep.PlcBlockPath);
-        var result = await plcService.WriteAsync(selectedTag, true);
+        var selectedTag = PlcBlockTagHelper.GetSelectedTag(step as IHasPlcBlockPath);
+        if (selectedTag == null) return;
+
+        infra.Logger.LogDebug("Взведение Selected для {BlockPath}: {Tag}",
+            (step as IHasPlcBlockPath)?.PlcBlockPath, selectedTag);
+        var result = await infra.PlcService.WriteAsync(selectedTag, true);
         if (result.Error != null)
         {
-            logger.LogWarning("Ошибка записи Selected: {Error}", result.Error);
+            infra.Logger.LogWarning("Ошибка записи Selected: {Error}", result.Error);
         }
+    }
+
+    #endregion
+
+    #region Block Error Tag
+
+    private static string? GetBlockErrorTag(BlockBoilerAdapterStep step)
+    {
+        return PlcBlockTagHelper.GetErrorTag(step as IHasPlcBlockPath);
     }
 
     #endregion
