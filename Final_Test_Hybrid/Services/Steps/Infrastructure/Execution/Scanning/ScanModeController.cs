@@ -12,7 +12,6 @@ public class ScanModeController : IDisposable
 {
     private const int MessagePriority = 100;
     private const string ScanPromptMessage = "Отсканируйте серийный номер котла";
-    private readonly ScanStateManager _scanStateManager;
     private readonly ScanSessionManager _sessionManager;
     private readonly OperatorState _operatorState;
     private readonly AutoReadySubscription _autoReady;
@@ -22,11 +21,19 @@ public class ScanModeController : IDisposable
     private readonly PreExecutionCoordinator _preExecutionCoordinator;
     private CancellationTokenSource? _loopCts;
     private object? _messageProviderKey;
+    private bool _isActivated;
+    private bool _isResetting;
     private bool _disposed;
+
     public bool IsScanModeEnabled => _operatorState.IsAuthenticated && _autoReady.IsReady;
 
+    /// <summary>
+    /// Находится ли система в фазе сканирования (активирована, но не в режиме сброса).
+    /// Используется PlcResetCoordinator для определения типа сброса.
+    /// </summary>
+    public bool IsInScanningPhase => _isActivated && !_isResetting;
+
     public ScanModeController(
-        ScanStateManager scanStateManager,
         ScanSessionManager sessionManager,
         OperatorState operatorState,
         AutoReadySubscription autoReady,
@@ -35,7 +42,6 @@ public class ScanModeController : IDisposable
         StepStatusReporter statusReporter,
         PreExecutionCoordinator preExecutionCoordinator)
     {
-        _scanStateManager = scanStateManager;
         _sessionManager = sessionManager;
         _operatorState = operatorState;
         _autoReady = autoReady;
@@ -74,31 +80,20 @@ public class ScanModeController : IDisposable
 
     private void TryActivateScanMode()
     {
-        if (_scanStateManager.State != ScanState.Disabled)
+        if (_isActivated)
         {
             return;
         }
-        _scanStateManager.TryTransitionTo(ScanState.Ready, () =>
-        {
-            _sessionManager.AcquireSession(HandleBarcodeScanned);
-            AddScanStepToGrid();
-            StartMainLoop();
-        });
+        _isActivated = true;
+        _sessionManager.AcquireSession(HandleBarcodeScanned);
+        AddScanStepToGrid();
+        StartMainLoop();
     }
 
     private void AddScanStepToGrid()
     {
-        if (_scanStateManager.ActiveScanStepId.HasValue)
-        {
-            return;
-        }
-        var scanStep = _stepRegistry.GetOrderedSteps().FirstOrDefault();
-        if (scanStep == null)
-        {
-            return;
-        }
-        var stepId = _statusReporter.ReportStepStarted(scanStep);
-        _scanStateManager.SetActiveScanStepId(stepId);
+        var scanStep = _preExecutionCoordinator.GetScanStep();
+        _statusReporter.EnsureScanStepExists(scanStep.Name, scanStep.Description);
     }
 
     private void StartMainLoop()
@@ -117,33 +112,32 @@ public class ScanModeController : IDisposable
     private void TryDeactivateScanMode()
     {
         _loopCts?.Cancel();
-        if (_scanStateManager.State == ScanState.Resetting)
+        if (_isResetting)
         {
             return;
         }
-        _scanStateManager.TryTransitionTo(ScanState.Disabled, () =>
+        if (!_isActivated)
         {
-            _sessionManager.ReleaseSession();
-            if (!_operatorState.IsAuthenticated)
-            {
-                _statusReporter.ClearAll();
-                _scanStateManager.SetActiveScanStepId(null);
-            }
-        });
+            return;
+        }
+        _isActivated = false;
+        _sessionManager.ReleaseSession();
+        if (!_operatorState.IsAuthenticated)
+        {
+            _statusReporter.ClearAll();
+        }
     }
 
     public void TransitionToReady()
     {
+        _isResetting = false;
         if (!IsScanModeEnabled)
         {
-            _scanStateManager.TryTransitionTo(ScanState.Disabled);
+            _isActivated = false;
             return;
         }
-        _scanStateManager.TryTransitionTo(ScanState.Ready, () =>
-        {
-            _executionMessageState.Clear();
-            _sessionManager.AcquireSession(HandleBarcodeScanned);
-        });
+        _executionMessageState.Clear();
+        _sessionManager.AcquireSession(HandleBarcodeScanned);
     }
 
     /// <summary>
@@ -151,10 +145,8 @@ public class ScanModeController : IDisposable
     /// </summary>
     public void EnterResettingMode()
     {
-        _scanStateManager.TryTransitionTo(ScanState.Resetting, () =>
-        {
-            _sessionManager.ReleaseSession();
-        });
+        _isResetting = true;
+        _sessionManager.ReleaseSession();
     }
 
     public void Dispose()

@@ -71,4 +71,9 @@ public class StepStatusReporter
     {
         _sequenseService.UpdateScanStep(status, message, limits);
     }
+
+    public Guid EnsureScanStepExists(string name, string description)
+    {
+        return _sequenseService.EnsureScanStepExists(name, description);
+    }
 }

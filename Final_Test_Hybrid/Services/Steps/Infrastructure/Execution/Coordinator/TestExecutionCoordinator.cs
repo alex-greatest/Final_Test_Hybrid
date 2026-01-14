@@ -83,6 +83,7 @@ public partial class TestExecutionCoordinator : IDisposable
     private void HandleReset()
     {
         Stop("из-за полного сброса");
+        StateManager.ClearErrors();
     }
 
     private ColumnExecutor[] CreateAllExecutors(

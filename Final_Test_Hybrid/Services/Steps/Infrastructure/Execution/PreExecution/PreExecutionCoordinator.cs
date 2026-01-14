@@ -272,7 +272,7 @@ public partial class PreExecutionCoordinator(
         }
     }
 
-    private ScanStepBase GetScanStep()
+    public ScanStepBase GetScanStep()
     {
         return appSettings.UseMes ? scanBarcodeMesStep : scanBarcodeStep;
     }

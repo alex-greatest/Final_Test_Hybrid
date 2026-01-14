@@ -15,7 +15,6 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
     private readonly ResetSubscription _resetSubscription;
     private readonly ResetMessageState _resetMessage;
     private readonly ErrorCoordinator _errorCoordinator;
-    private readonly ScanStateManager _scanStateManager;
     private readonly ScanModeController _scanModeController;
     private readonly TagWaiter _tagWaiter;
     private readonly OpcUaTagService _plcService;
@@ -33,7 +32,6 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
         ResetSubscription resetSubscription,
         ResetMessageState resetMessage,
         ErrorCoordinator errorCoordinator,
-        ScanStateManager scanStateManager,
         ScanModeController scanModeController,
         TagWaiter tagWaiter,
         OpcUaTagService plcService,
@@ -42,7 +40,6 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
         _resetSubscription = resetSubscription;
         _resetMessage = resetMessage;
         _errorCoordinator = errorCoordinator;
-        _scanStateManager = scanStateManager;
         _scanModeController = scanModeController;
         _tagWaiter = tagWaiter;
         _plcService = plcService;
@@ -88,9 +85,8 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
     {
         _logger.LogWarning("═══ СБРОС ПО СИГНАЛУ PLC ═══");
 
-        var wasInScanPhase = IsInScanningPhase();
-        _logger.LogInformation("Состояние до сброса: {State}, InScanPhase: {InScanPhase}",
-            _scanStateManager.State, wasInScanPhase);
+        var wasInScanPhase = _scanModeController.IsInScanningPhase;
+        _logger.LogInformation("Состояние до сброса: InScanPhase: {InScanPhase}", wasInScanPhase);
 
         _scanModeController.EnterResettingMode();
 
@@ -100,11 +96,6 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
 
         ExecuteSmartReset(wasInScanPhase);
         _logger.LogInformation("PLC Reset завершён успешно");
-    }
-
-    private bool IsInScanningPhase()
-    {
-        return _scanStateManager.State is ScanState.Ready or ScanState.Error;
     }
 
     private void ExecuteSmartReset(bool wasInScanPhase)
