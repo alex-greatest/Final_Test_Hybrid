@@ -62,6 +62,16 @@
                 scrollArea.scrollTop = scrollArea.scrollHeight;
             }
         };
+
+        window.dialogUtils = {
+            makeNonModal: () => {
+                const wrappers = document.querySelectorAll('.rz-dialog-wrapper');
+                const wrapper = wrappers[wrappers.length - 1];
+                if (wrapper) {
+                    wrapper.classList.add('non-modal-wrapper');
+                }
+            }
+        };
     </script>
 </body>
 

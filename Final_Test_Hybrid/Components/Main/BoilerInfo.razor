@@ -1,3 +1,4 @@
+@using Microsoft.JSInterop
 @using Final_Test_Hybrid.Components.Errors
 @using Final_Test_Hybrid.Components.Main.Modals
 @using Final_Test_Hybrid.Models.Steps
@@ -19,6 +20,7 @@
 @inject AppSettingsService AppSettingsService
 @inject ErrorCoordinator ErrorCoordinator
 @inject PlcResetCoordinator PlcResetCoordinator
+@inject IJSRuntime JSRuntime
 @implements IDisposable
 
 <div class="field-row field-row-middle">
@@ -242,7 +244,7 @@
     {
         await InvokeAsync(async () =>
         {
-            await DialogService.OpenAsync<ErrorHandlingDialog>(
+            _ = DialogService.OpenAsync<ErrorHandlingDialog>(
                 "Ошибка шага",
                 new Dictionary<string, object>
                 {
@@ -259,6 +261,9 @@
                     CloseDialogOnEsc = false,
                     CssClass = "block-error-dialog-window non-modal-dialog"
                 });
+
+            await Task.Delay(50);
+            await JSRuntime.InvokeVoidAsync("dialogUtils.makeNonModal");
         });
     }
 

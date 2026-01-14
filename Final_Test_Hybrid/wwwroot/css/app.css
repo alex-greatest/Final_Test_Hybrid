@@ -541,25 +541,27 @@ svg {
 /* ===== НЕМОДАЛЬНЫЙ ДИАЛОГ ===== */
 
 /* Немодальный диалог - прозрачный overlay + клики проходят */
-.rz-dialog-wrapper:has(.non-modal-dialog) .rz-dialog-mask {
+/* Класс .non-modal-wrapper добавляется через JS */
+.non-modal-wrapper .rz-dialog-mask {
     background-color: transparent !important;
     pointer-events: none !important;
 }
 
 /* Сам диалог должен принимать клики */
-.rz-dialog-wrapper:has(.non-modal-dialog) .rz-dialog {
+.non-modal-wrapper .rz-dialog {
     pointer-events: auto !important;
 }
 
 /* ===== ДИАЛОГ ОШИБКИ СПРАВА СНИЗУ ===== */
 
 /* Позиционирование диалога ошибки справа снизу */
-.rz-dialog-wrapper:has(.block-error-dialog-window) {
+/* Класс .non-modal-wrapper добавляется через JS, он же позиционирует */
+.non-modal-wrapper {
     align-items: flex-end !important;
     justify-content: flex-end !important;
 }
 
-.rz-dialog-wrapper:has(.block-error-dialog-window) .rz-dialog {
+.non-modal-wrapper .rz-dialog {
     margin: 0 20px 20px 0 !important;
 }
 

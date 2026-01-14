@@ -92,14 +92,16 @@ public class BlazorUiDispatcher(BlazorDispatcherAccessor a) : IUiDispatcher
 ```
 Program.cs → Form1.cs (DI) → MyComponent.razor
 
-ColumnExecutor ─────────┐
-ScanErrorHandler ───────┼──► StepStatusReporter ──► TestSequenseService
-BarcodeProcessingPipeline──┘
+Excel → TestMapBuilder → TestMapResolver → TestMap
+                                            ↓
+                          TestExecutionCoordinator
+                          ├── 4 × ColumnExecutor (parallel)
+                          ├── ExecutionStateManager (error queue)
+                          └── ErrorCoordinator (interrupts)
 
 ScanStepManager
 ├── ScanModeController
 ├── ScanDialogCoordinator
-├── ScanStateManager
 └── ScanSessionManager
 ```
 
@@ -115,11 +117,42 @@ IScanBarcodeStep (отдельный)
 IPreExecutionStep (отдельный)
 ```
 
+## DI Patterns
+
+| Паттерн | Пример |
+|---------|--------|
+| Extension chain | `AddFinalTestServices()` → `AddOpcUaServices()` → `AddStepsServices()` |
+| Singleton state | `ExecutionStateManager`, `BoilerState`, `OrderState` |
+| Pausable decorator | `PausableOpcUaTagService` wraps `OpcUaTagService` + `PauseTokenSource` |
+| DbContextFactory | `AddDbContextFactory<AppDbContext>()` для scoped доступа |
+
+## OPC-UA Layer
+
+| Сервис | Назначение |
+|--------|------------|
+| `OpcUaConnectionService` | Session lifecycle, auto-reconnect |
+| `OpcUaSubscription` | Pub/sub broker, callback registry |
+| `OpcUaTagService` | Read/write API (`ReadResult<T>`, `WriteResult`) |
+| `TagWaiter` | WaitGroup builder для multi-tag conditions |
+
+## Component Organization
+
+| Папка | Содержимое |
+|-------|------------|
+| `Engineer/` | Sequence editor, Stand DB, Auth QR |
+| `Main/` | Test flow, Parameter display, Modals |
+| `Overview/` | Indicators, gauges (read-only) |
+| `Errors/`, `Results/`, `Logs/` | Специализированные UI |
+
+**Code-behind:** `.razor.cs` только если логика >50 строк или нужен `IAsyncDisposable`.
+
 ## File Locations
 
 | Category | Path |
 |----------|------|
 | Entry | `Program.cs`, `Form1.cs` |
 | Root | `MyComponent.razor` |
-| Components | `Components/Engineer/`, `Components/Overview/` |
-| Services | `Services/Sequence/`, `Services/Database/` |
+| Components | `Components/Engineer/`, `Components/Main/`, `Components/Overview/` |
+| Services | `Services/OpcUa/`, `Services/Steps/`, `Services/Database/` |
+| Models | `Models/Steps/`, `Models/Errors/`, `Models/Database/` |
+| DI | `Services/DependencyInjection/` |
