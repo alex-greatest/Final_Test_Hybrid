@@ -3,17 +3,32 @@ using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
+using Final_Test_Hybrid.Services.Steps.Steps;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 
 public class StepStatusReporter
 {
     private readonly TestSequenseService _sequenseService;
+    private readonly ScanBarcodeStep _scanBarcodeStep;
+    private readonly ScanBarcodeMesStep _scanBarcodeMesStep;
 
-    public StepStatusReporter(TestSequenseService sequenseService, AppSettingsService appSettings)
+    public StepStatusReporter(
+        TestSequenseService sequenseService,
+        AppSettingsService appSettings,
+        ScanBarcodeStep scanBarcodeStep,
+        ScanBarcodeMesStep scanBarcodeMesStep)
     {
         _sequenseService = sequenseService;
-        appSettings.UseMesChanged += _ => ClearAll();
+        _scanBarcodeStep = scanBarcodeStep;
+        _scanBarcodeMesStep = scanBarcodeMesStep;
+        appSettings.UseMesChanged += OnUseMesChanged;
+    }
+
+    private void OnUseMesChanged(bool useMes)
+    {
+        ScanStepBase step = useMes ? _scanBarcodeMesStep : _scanBarcodeStep;
+        _sequenseService.MutateScanStep(step.Name, step.Description);
     }
 
     public Guid ReportStepStarted(ITestStep step)

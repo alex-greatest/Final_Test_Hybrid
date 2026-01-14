@@ -140,6 +140,27 @@ public class TestSequenseService
         NotifyDataChanged();
     }
 
+    public void MutateScanStep(string newModule, string newDescription)
+    {
+        lock (_lock)
+        {
+            var scanStep = _steps.FirstOrDefault(s => IsScanModule(s.Module));
+            if (scanStep == null)
+            {
+                return;
+            }
+            scanStep.Module = newModule;
+            scanStep.Description = newDescription;
+            scanStep.Status = "Выполняется";
+            scanStep.StepStatus = TestStepStatus.Running;
+            scanStep.Result = "";
+            scanStep.Range = "";
+            scanStep.StartTime = DateTime.Now;
+            scanStep.EndTime = null;
+        }
+        NotifyDataChanged();
+    }
+
     public Guid EnsureScanStepExists(string moduleName, string description)
     {
         lock (_lock)
