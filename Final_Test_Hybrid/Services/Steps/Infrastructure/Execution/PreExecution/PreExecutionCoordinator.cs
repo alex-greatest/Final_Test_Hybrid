@@ -110,16 +110,23 @@ public partial class PreExecutionCoordinator(
     public async Task StartMainLoopAsync(CancellationToken ct)
     {
         EnsureSubscribed();
-        while (!ct.IsCancellationRequested)
+        try
         {
-            try
+            while (!ct.IsCancellationRequested)
             {
-                await RunSingleCycleAsync(ct);
+                try
+                {
+                    await RunSingleCycleAsync(ct);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    break;
+                }
             }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                break;
-            }
+        }
+        finally
+        {
+            SetAcceptingInput(false);
         }
     }
 
@@ -148,6 +155,7 @@ public partial class PreExecutionCoordinator(
             _resetRequested = false;
             boilerState.Clear();
             phaseState.Clear();
+            statusReporter.ClearAllExceptScan();
         }
         finally
         {

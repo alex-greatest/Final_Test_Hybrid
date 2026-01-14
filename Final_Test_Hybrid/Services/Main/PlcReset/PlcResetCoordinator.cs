@@ -40,7 +40,6 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
         _tagWaiter = tagWaiter;
         _plcService = plcService;
         _logger = logger;
-
         _resetSubscription.OnStateChanged += HandleResetSignal;
     }
 

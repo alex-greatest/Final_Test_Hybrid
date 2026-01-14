@@ -39,7 +39,6 @@ public partial class PreExecutionCoordinator
         else if (activityTracker.IsPreExecutionActive)
         {
             _resetRequested = true;
-            statusReporter.ClearAllExceptScan();
             _currentCts?.Cancel();
         }
         else
