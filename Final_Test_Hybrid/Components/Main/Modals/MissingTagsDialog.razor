@@ -1,3 +1,10 @@
+@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator
+@using Final_Test_Hybrid.Services.Main.PlcReset
+@inject DialogService DialogService
+@inject ErrorCoordinator ErrorCoordinator
+@inject PlcResetCoordinator PlcResetCoordinator
+@implements IDisposable
+
 <div class="missing-tags-dialog">
     <div class="info-message">
         @InfoMessage
@@ -21,4 +28,18 @@
     public List<string> MissingTags { get; set; } = [];
     [Parameter]
     public string InfoMessage { get; set; } = "В PLC DB_Recipe отсутствуют следующие теги:";
+
+    protected override void OnInitialized()
+    {
+        ErrorCoordinator.OnReset += Close;
+        PlcResetCoordinator.OnForceStop += Close;
+    }
+
+    private void Close() => DialogService.Close();
+
+    public void Dispose()
+    {
+        ErrorCoordinator.OnReset -= Close;
+        PlcResetCoordinator.OnForceStop -= Close;
+    }
 }

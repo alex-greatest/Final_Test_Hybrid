@@ -1,4 +1,10 @@
 @using Final_Test_Hybrid.Models.Steps
+@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator
+@using Final_Test_Hybrid.Services.Main.PlcReset
+@inject DialogService DialogService
+@inject ErrorCoordinator ErrorCoordinator
+@inject PlcResetCoordinator PlcResetCoordinator
+@implements IDisposable
 
 <div class="unknown-steps-dialog">
     <div class="info-message">
@@ -19,4 +25,18 @@
 @code {
     [Parameter]
     public List<UnknownStepInfo> UnknownSteps { get; set; } = [];
+
+    protected override void OnInitialized()
+    {
+        ErrorCoordinator.OnReset += Close;
+        PlcResetCoordinator.OnForceStop += Close;
+    }
+
+    private void Close() => DialogService.Close();
+
+    public void Dispose()
+    {
+        ErrorCoordinator.OnReset -= Close;
+        PlcResetCoordinator.OnForceStop -= Close;
+    }
 }

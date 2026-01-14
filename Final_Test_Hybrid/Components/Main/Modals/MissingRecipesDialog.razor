@@ -1,4 +1,10 @@
 @using Final_Test_Hybrid.Services.Steps.Validation
+@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator
+@using Final_Test_Hybrid.Services.Main.PlcReset
+@inject DialogService DialogService
+@inject ErrorCoordinator ErrorCoordinator
+@inject PlcResetCoordinator PlcResetCoordinator
+@implements IDisposable
 
 <div class="missing-recipes-dialog">
     <div class="info-message">
@@ -18,4 +24,18 @@
 @code {
     [Parameter]
     public List<MissingRecipeInfo> MissingRecipes { get; set; } = [];
+
+    protected override void OnInitialized()
+    {
+        ErrorCoordinator.OnReset += Close;
+        PlcResetCoordinator.OnForceStop += Close;
+    }
+
+    private void Close() => DialogService.Close();
+
+    public void Dispose()
+    {
+        ErrorCoordinator.OnReset -= Close;
+        PlcResetCoordinator.OnForceStop -= Close;
+    }
 }
