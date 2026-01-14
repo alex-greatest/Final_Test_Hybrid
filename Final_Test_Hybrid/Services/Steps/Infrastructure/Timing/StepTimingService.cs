@@ -158,14 +158,14 @@ public class StepTimingService : IStepTimingService, IDisposable
                 result.Add(new StepTimingRecord(_scanId, _scanName, _scanDescription!, FormatDuration(duration)));
             }
 
-            // Текущий выполняемый шаг
+            result.AddRange(_records);
+
+            // Текущий выполняемый шаг (всегда в конце)
             if (_currentIsRunning && _currentName != null)
             {
                 var duration = DateTime.Now - _currentStartTime;
                 result.Add(new StepTimingRecord(_currentId, _currentName, _currentDescription!, FormatDuration(duration)));
             }
-
-            result.AddRange(_records);
             return result;
         }
     }
