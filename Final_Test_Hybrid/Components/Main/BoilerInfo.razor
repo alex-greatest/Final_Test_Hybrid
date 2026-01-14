@@ -5,8 +5,9 @@
 @using Final_Test_Hybrid.Services.SpringBoot.Operation
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning
+@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution
 @using Final_Test_Hybrid.Services.Steps.Validation
-@inject ScanStepManager ScanStepManager
+@inject PreExecutionCoordinator PreExecution
 @inject BoilerState BoilerState
 @inject TestSequenseService TestSequenseService
 @inject DialogService DialogService
@@ -46,24 +47,24 @@
     private const string PlaceholderText = "Отсканируйте или введите";
 
     private bool IsOnActiveScanStep => TestSequenseService.IsOnActiveScanStep;
-    private bool IsFieldReadOnly => !ScanStepManager.CanAcceptInput || !IsOnActiveScanStep;
+    private bool IsFieldReadOnly => !PreExecution.IsAcceptingInput || !IsOnActiveScanStep;
     private string Placeholder => IsOnActiveScanStep ? PlaceholderText : "";
 
     protected override void OnInitialized()
     {
         BoilerState.OnChanged += OnBoilerStateChanged;
         TestSequenseService.OnDataChanged += OnDataChanged;
-        ScanStepManager.OnChange += OnScanStateChanged;
-        ScanStepManager.OnMissingPlcTagsDialogRequested += ShowMissingPlcTagsDialogAsync;
-        ScanStepManager.OnMissingRequiredTagsDialogRequested += ShowMissingRequiredTagsDialogAsync;
-        ScanStepManager.OnUnknownStepsDialogRequested += ShowUnknownStepsDialogAsync;
-        ScanStepManager.OnMissingRecipesDialogRequested += ShowMissingRecipesDialogAsync;
-        ScanStepManager.OnRecipeWriteErrorDialogRequested += ShowRecipeWriteErrorDialogAsync;
-        ScanStepManager.OnReworkDialogRequested += HandleReworkDialogAsync;
+        PreExecution.OnStateChanged += OnScanStateChanged;
+        PreExecution.OnMissingPlcTagsDialogRequested += ShowMissingPlcTagsDialogAsync;
+        PreExecution.OnMissingRequiredTagsDialogRequested += ShowMissingRequiredTagsDialogAsync;
+        PreExecution.OnUnknownStepsDialogRequested += ShowUnknownStepsDialogAsync;
+        PreExecution.OnMissingRecipesDialogRequested += ShowMissingRecipesDialogAsync;
+        PreExecution.OnRecipeWriteErrorDialogRequested += ShowRecipeWriteErrorDialogAsync;
+        PreExecution.OnReworkDialogRequested += HandleReworkDialogAsync;
         AppSettingsService.UseMesChanged += OnUseMesChanged;
     }
 
-    private string GetDisplayValue() => BoilerState.SerialNumber ?? ScanStepManager.CurrentBarcode ?? _manualInput;
+    private string GetDisplayValue() => BoilerState.SerialNumber ?? PreExecution.CurrentBarcode ?? _manualInput;
 
     private void OnDataChanged() => InvokeIfNotDisposed(StateHasChanged);
 
@@ -73,17 +74,17 @@
     {
         _manualInput = "";
         BoilerState.Clear();
-        ScanStepManager.ClearBarcode();
+        PreExecution.ClearBarcode();
         InvokeIfNotDisposed(StateHasChanged);
     }
 
     private void OnInput(ChangeEventArgs e) => _manualInput = e.Value?.ToString() ?? "";
 
-    private async Task OnKeyDown(KeyboardEventArgs e)
+    private void OnKeyDown(KeyboardEventArgs e)
     {
         if (e.Key != "Enter" || IsFieldReadOnly || string.IsNullOrEmpty(_manualInput)) return;
 
-        await ScanStepManager.ProcessBarcodeAsync(_manualInput);
+        PreExecution.SubmitBarcode(_manualInput);
     }
 
     private void OnBoilerStateChanged()
@@ -107,7 +108,7 @@
     private void ClearSerialNumber()
     {
         _manualInput = "";
-        ScanStepManager.ClearBarcode();
+        PreExecution.ClearBarcode();
         StateHasChanged();
     }
 
@@ -225,13 +226,13 @@
         _disposed = true;
         BoilerState.OnChanged -= OnBoilerStateChanged;
         TestSequenseService.OnDataChanged -= OnDataChanged;
-        ScanStepManager.OnChange -= OnScanStateChanged;
-        ScanStepManager.OnMissingPlcTagsDialogRequested -= ShowMissingPlcTagsDialogAsync;
-        ScanStepManager.OnMissingRequiredTagsDialogRequested -= ShowMissingRequiredTagsDialogAsync;
-        ScanStepManager.OnUnknownStepsDialogRequested -= ShowUnknownStepsDialogAsync;
-        ScanStepManager.OnMissingRecipesDialogRequested -= ShowMissingRecipesDialogAsync;
-        ScanStepManager.OnRecipeWriteErrorDialogRequested -= ShowRecipeWriteErrorDialogAsync;
-        ScanStepManager.OnReworkDialogRequested -= HandleReworkDialogAsync;
+        PreExecution.OnStateChanged -= OnScanStateChanged;
+        PreExecution.OnMissingPlcTagsDialogRequested -= ShowMissingPlcTagsDialogAsync;
+        PreExecution.OnMissingRequiredTagsDialogRequested -= ShowMissingRequiredTagsDialogAsync;
+        PreExecution.OnUnknownStepsDialogRequested -= ShowUnknownStepsDialogAsync;
+        PreExecution.OnMissingRecipesDialogRequested -= ShowMissingRecipesDialogAsync;
+        PreExecution.OnRecipeWriteErrorDialogRequested -= ShowRecipeWriteErrorDialogAsync;
+        PreExecution.OnReworkDialogRequested -= HandleReworkDialogAsync;
         AppSettingsService.UseMesChanged -= OnUseMesChanged;
     }
 }

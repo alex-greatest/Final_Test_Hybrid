@@ -2,7 +2,7 @@ using Final_Test_Hybrid.Components.Engineer.Modals;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 using Microsoft.AspNetCore.Components;
 using Radzen;
 
@@ -21,17 +21,17 @@ public partial class SwitchMes
     [Inject]
     public required NotificationService NotificationService { get; set; }
     [Inject]
-    public required ScanStepManager ScanStepManager { get; set; }
+    public required PreExecutionCoordinator PreExecution { get; set; }
     [Inject]
     public required SettingsAccessStateManager SettingsAccessState { get; set; }
     private bool _useMes;
 
-    private bool IsDisabled => ScanStepManager.IsProcessing || !SettingsAccessState.CanInteract;
+    private bool IsDisabled => PreExecution.IsProcessing || !SettingsAccessState.CanInteract;
 
     protected override void OnInitialized()
     {
         _useMes = AppSettingsService.UseMes;
-        ScanStepManager.OnChange += HandleStateChanged;
+        PreExecution.OnStateChanged += HandleStateChanged;
         SettingsAccessState.OnStateChanged += HandleStateChanged;
     }
 
@@ -100,7 +100,7 @@ public partial class SwitchMes
 
     public void Dispose()
     {
-        ScanStepManager.OnChange -= HandleStateChanged;
+        PreExecution.OnStateChanged -= HandleStateChanged;
         SettingsAccessState.OnStateChanged -= HandleStateChanged;
     }
 }

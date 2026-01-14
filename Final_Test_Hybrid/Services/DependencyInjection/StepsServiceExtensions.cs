@@ -71,7 +71,6 @@ public static class StepsServiceExtensions
         services.AddSingleton<ScanErrorHandler>();
         services.AddSingleton<ScanDialogCoordinator>();
         services.AddSingleton<ScanModeController>();
-        services.AddSingleton<ScanStepManager>();
 
         // Execution
         services.AddSingleton<ExecutionStateManager>();

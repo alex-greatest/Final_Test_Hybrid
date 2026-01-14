@@ -30,8 +30,28 @@ public partial class PreExecutionCoordinator
         errorCoordinator.OnReset += HandleHardReset;
     }
 
-    private void HandleSoftStop() => SignalResolution(PreExecutionResolution.SoftStop);
-    private void HandleHardReset() => SignalResolution(PreExecutionResolution.HardReset);
+    private void HandleStopSignal(PreExecutionResolution resolution)
+    {
+        if (testCoordinator.IsRunning)
+        {
+            _resetRequested = true;
+        }
+        else if (activityTracker.IsPreExecutionActive)
+        {
+            _resetRequested = true;
+            statusReporter.ClearAllExceptScan();
+            _currentCts?.Cancel();
+        }
+        else
+        {
+            statusReporter.ClearAllExceptScan();
+        }
+
+        SignalResolution(resolution);
+    }
+
+    private void HandleSoftStop() => HandleStopSignal(PreExecutionResolution.SoftStop);
+    private void HandleHardReset() => HandleStopSignal(PreExecutionResolution.HardReset);
 
     private void SignalResolution(PreExecutionResolution resolution)
     {

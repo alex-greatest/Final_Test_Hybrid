@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
@@ -59,5 +60,15 @@ public class StepStatusReporter
     public void ClearAll()
     {
         _sequenseService.ClearAll();
+    }
+
+    public void ClearAllExceptScan()
+    {
+        _sequenseService.ClearAllExceptScan();
+    }
+
+    public void UpdateScanStepStatus(TestStepStatus status, string message, string? limits = null)
+    {
+        _sequenseService.UpdateScanStep(status, message, limits);
     }
 }

@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.Settings;
@@ -5,10 +6,13 @@ using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
+using Final_Test_Hybrid.Services.SpringBoot.Operation;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Final_Test_Hybrid.Services.Steps.Steps;
+using Final_Test_Hybrid.Services.Steps.Validation;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
@@ -35,44 +39,193 @@ public partial class PreExecutionCoordinator(
     PlcResetCoordinator plcResetCoordinator,
     IErrorService errorService,
     IStepTimingService stepTimingService,
+    ScanDialogCoordinator dialogCoordinator,
     ILogger<PreExecutionCoordinator> logger)
 {
-    public async Task<PreExecutionResult> ExecuteAsync(string barcode, Guid? scanStepId, CancellationToken ct)
+    // === Состояние ввода ===
+    private TaskCompletionSource<string>? _barcodeSource;
+    private CancellationTokenSource? _currentCts;
+    private volatile bool _resetRequested;
+
+    public bool IsAcceptingInput { get; private set; }
+    public bool IsProcessing => !IsAcceptingInput && activityTracker.IsPreExecutionActive;
+    public string? CurrentBarcode { get; private set; }
+    public event Action? OnStateChanged;
+
+    // === Проксирование событий диалогов ===
+    public event Func<IReadOnlyList<string>, Task>? OnMissingPlcTagsDialogRequested
+    {
+        add => dialogCoordinator.OnMissingPlcTagsDialogRequested += value;
+        remove => dialogCoordinator.OnMissingPlcTagsDialogRequested -= value;
+    }
+
+    public event Func<IReadOnlyList<string>, Task>? OnMissingRequiredTagsDialogRequested
+    {
+        add => dialogCoordinator.OnMissingRequiredTagsDialogRequested += value;
+        remove => dialogCoordinator.OnMissingRequiredTagsDialogRequested -= value;
+    }
+
+    public event Func<IReadOnlyList<UnknownStepInfo>, Task>? OnUnknownStepsDialogRequested
+    {
+        add => dialogCoordinator.OnUnknownStepsDialogRequested += value;
+        remove => dialogCoordinator.OnUnknownStepsDialogRequested -= value;
+    }
+
+    public event Func<IReadOnlyList<MissingRecipeInfo>, Task>? OnMissingRecipesDialogRequested
+    {
+        add => dialogCoordinator.OnMissingRecipesDialogRequested += value;
+        remove => dialogCoordinator.OnMissingRecipesDialogRequested -= value;
+    }
+
+    public event Func<IReadOnlyList<RecipeWriteErrorInfo>, Task>? OnRecipeWriteErrorDialogRequested
+    {
+        add => dialogCoordinator.OnRecipeWriteErrorDialogRequested += value;
+        remove => dialogCoordinator.OnRecipeWriteErrorDialogRequested -= value;
+    }
+
+    public event Func<string, Func<string, string, Task<ReworkSubmitResult>>, Task<ReworkFlowResult>>? OnReworkDialogRequested
+    {
+        add => dialogCoordinator.OnReworkDialogRequested += value;
+        remove => dialogCoordinator.OnReworkDialogRequested -= value;
+    }
+
+    public void ClearBarcode()
+    {
+        CurrentBarcode = null;
+        OnStateChanged?.Invoke();
+    }
+
+    public void SubmitBarcode(string barcode)
+    {
+        _barcodeSource?.TrySetResult(barcode);
+    }
+
+    private void SetAcceptingInput(bool value)
+    {
+        IsAcceptingInput = value;
+        OnStateChanged?.Invoke();
+    }
+
+    public async Task StartMainLoopAsync(CancellationToken ct)
     {
         EnsureSubscribed();
-        activityTracker.SetPreExecutionActive(true);
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                await RunSingleCycleAsync(ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                break;
+            }
+        }
+    }
+
+    private async Task RunSingleCycleAsync(CancellationToken ct)
+    {
+        statusReporter.UpdateScanStepStatus(TestStepStatus.Running, "Ожидание сканирования");
+        SetAcceptingInput(true);
+
+        var barcode = await WaitForBarcodeAsync(ct);
+        SetAcceptingInput(false);
+
+        _currentCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         try
         {
-            return await ExecutePreExecutionPipelineAsync(barcode, scanStepId, ct);
+            activityTracker.SetPreExecutionActive(true);
+            var result = await ExecutePreExecutionPipelineAsync(barcode, _currentCts.Token);
+
+            if (result.Status == PreExecutionStatus.TestStarted)
+            {
+                await WaitForTestCompletionAsync(ct);
+                HandlePostTestCompletion();
+            }
+        }
+        catch (OperationCanceledException) when (_resetRequested)
+        {
+            _resetRequested = false;
         }
         finally
         {
             activityTracker.SetPreExecutionActive(false);
+            _currentCts?.Dispose();
+            _currentCts = null;
+        }
+    }
+
+    private async Task<string> WaitForBarcodeAsync(CancellationToken ct)
+    {
+        _barcodeSource = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var reg = ct.Register(() => _barcodeSource.TrySetCanceled());
+        var barcode = await _barcodeSource.Task;
+        CurrentBarcode = barcode;
+        OnStateChanged?.Invoke();
+        return barcode;
+    }
+
+    private async Task WaitForTestCompletionAsync(CancellationToken ct)
+    {
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        void Handler() => tcs.TrySetResult();
+        testCoordinator.OnSequenceCompleted += Handler;
+
+        try
+        {
+            await using var reg = ct.Register(() => tcs.TrySetCanceled());
+            await tcs.Task;
+        }
+        finally
+        {
+            testCoordinator.OnSequenceCompleted -= Handler;
+        }
+    }
+
+    private void HandlePostTestCompletion()
+    {
+        dialogCoordinator.ShowCompletionNotification(testCoordinator.HasErrors);
+        if (_resetRequested)
+        {
+            statusReporter.ClearAllExceptScan();
+            _resetRequested = false;
         }
     }
 
     private async Task<PreExecutionResult> ExecutePreExecutionPipelineAsync(
         string barcode,
-        Guid? scanStepId,
         CancellationToken ct)
     {
-        var context = CreateContext(barcode, scanStepId);
+        var context = CreateContext(barcode);
 
-        // 1. Выполнить шаг сканирования (вся подготовка внутри)
         var scanResult = await ExecuteScanStepAsync(context, ct);
-        if (scanResult.Status != PreExecutionStatus.Continue)
+
+        if (scanResult.Status == PreExecutionStatus.Failed)
         {
-            return HandleNonContinueResult(scanResult);
+            statusReporter.UpdateScanStepStatus(
+                TestStepStatus.Error,
+                scanResult.ErrorMessage ?? "Ошибка",
+                scanResult.Limits);
+            await dialogCoordinator.HandlePreExecutionErrorAsync(scanResult);
+            return scanResult;
         }
 
-        // 2. Выполнить BlockBoilerAdapter (с retry логикой)
+        if (scanResult.Status == PreExecutionStatus.Cancelled)
+        {
+            return scanResult;
+        }
+
+        statusReporter.UpdateScanStepStatus(
+            TestStepStatus.Success,
+            scanResult.SuccessMessage ?? "",
+            scanResult.Limits);
+
         var blockResult = await ExecuteBlockBoilerAdapterAsync(context, ct);
         if (blockResult.Status != PreExecutionStatus.Continue)
         {
             return HandleNonContinueResult(blockResult);
         }
 
-        // 3. Запустить тест
         messageState.Clear();
         StartTestExecution(context);
         return PreExecutionResult.TestStarted();
@@ -81,19 +234,17 @@ public partial class PreExecutionCoordinator(
     private async Task<PreExecutionResult> ExecuteScanStepAsync(PreExecutionContext context, CancellationToken ct)
     {
         var scanStep = GetScanStep();
-        var stepId = GetOrCreateStepId(scanStep, context);
         try
         {
             await pauseToken.WaitWhilePausedAsync(ct);
             var startTime = DateTime.Now;
             var result = await scanStep.ExecuteAsync(context, ct);
             stepTimingService.Record(scanStep.Name, scanStep.Description, DateTime.Now - startTime);
-            ReportStepResult(stepId, result);
             return result;
         }
         catch (Exception ex)
         {
-            return HandleStepException(scanStep, stepId, ex);
+            return HandleStepException(scanStep, ex);
         }
     }
 
@@ -112,7 +263,7 @@ public partial class PreExecutionCoordinator(
                 return await ExecuteRetryLoopAsync(blockBoilerAdapterStep, result, context, stepId, ct);
             }
 
-            ReportStepResult(stepId, result);
+            ReportBlockStepResult(stepId, result);
             return result;
         }
         catch (Exception ex)
@@ -135,25 +286,7 @@ public partial class PreExecutionCoordinator(
         return result;
     }
 
-    private Guid GetOrCreateStepId(ScanStepBase step, PreExecutionContext context)
-    {
-        return context.ScanStepId.HasValue ? ReuseExistingScanStepId(context) : CreateNewStepId(step);
-    }
-
-    private Guid CreateNewStepId(ScanStepBase step)
-    {
-        return statusReporter.ReportStepStarted(step.Id, step.Name);
-    }
-
-    private Guid ReuseExistingScanStepId(PreExecutionContext context)
-    {
-        var stepId = context.ScanStepId!.Value;
-        statusReporter.ReportRetry(stepId);
-        context.ScanStepId = null;
-        return stepId;
-    }
-
-    private void ReportStepResult(Guid stepId, PreExecutionResult result)
+    private void ReportBlockStepResult(Guid stepId, PreExecutionResult result)
     {
         switch (result.Status)
         {
@@ -173,11 +306,10 @@ public partial class PreExecutionCoordinator(
         }
     }
 
-    private PreExecutionResult HandleStepException(ScanStepBase step, Guid stepId, Exception ex)
+    private PreExecutionResult HandleStepException(ScanStepBase step, Exception ex)
     {
         logger.LogError(ex, "Ошибка в шаге {StepId}", step.Id);
         testStepLogger.LogError(ex, "Ошибка в шаге {StepId}", step.Id);
-        statusReporter.ReportError(stepId, ex.Message);
         return PreExecutionResult.Fail(ex.Message);
     }
 
@@ -216,12 +348,11 @@ public partial class PreExecutionCoordinator(
         testStepLogger.LogInformation("Запуск TestExecutionCoordinator с {Count} maps", mapCount);
     }
 
-    private PreExecutionContext CreateContext(string barcode, Guid? scanStepId)
+    private PreExecutionContext CreateContext(string barcode)
     {
         return new PreExecutionContext
         {
             Barcode = barcode,
-            ScanStepId = scanStepId,
             BoilerState = boilerState,
             OpcUa = opcUa,
             TestStepLogger = testStepLogger

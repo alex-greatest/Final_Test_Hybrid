@@ -74,7 +74,7 @@ public partial class Form1 : Form
         StartDatabaseService(serviceProvider);
         StartMessageService(serviceProvider);
         ConfigureDiagnosticEvents(serviceProvider);
-        _ = serviceProvider.GetRequiredService<ScanStepManager>();
+        _ = serviceProvider.GetRequiredService<ScanModeController>();
     }
 
     private void StartRawInputService(ServiceProvider serviceProvider)

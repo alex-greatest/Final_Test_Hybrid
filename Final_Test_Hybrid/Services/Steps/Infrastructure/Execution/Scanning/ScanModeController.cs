@@ -1,6 +1,6 @@
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 
@@ -19,8 +19,8 @@ public class ScanModeController : IDisposable
     private readonly MessageService _messageService;
     private readonly ExecutionMessageState _executionMessageState;
     private readonly StepStatusReporter _statusReporter;
-    private readonly IPreExecutionStepRegistry _stepRegistry;
-    private Action<string>? _barcodeHandler;
+    private readonly PreExecutionCoordinator _preExecutionCoordinator;
+    private CancellationTokenSource? _loopCts;
     private object? _messageProviderKey;
     private bool _disposed;
     public bool IsScanModeEnabled => _operatorState.IsAuthenticated && _autoReady.IsReady;
@@ -33,7 +33,7 @@ public class ScanModeController : IDisposable
         MessageService messageService,
         ExecutionMessageState executionMessageState,
         StepStatusReporter statusReporter,
-        IPreExecutionStepRegistry stepRegistry)
+        PreExecutionCoordinator preExecutionCoordinator)
     {
         _scanStateManager = scanStateManager;
         _sessionManager = sessionManager;
@@ -42,14 +42,8 @@ public class ScanModeController : IDisposable
         _messageService = messageService;
         _executionMessageState = executionMessageState;
         _statusReporter = statusReporter;
-        _stepRegistry = stepRegistry;
+        _preExecutionCoordinator = preExecutionCoordinator;
         SubscribeToEvents();
-    }
-
-    public void Initialize(Action<string> barcodeHandler)
-    {
-        _barcodeHandler = barcodeHandler;
-        UpdateScanModeState();
     }
 
     private void SubscribeToEvents()
@@ -57,6 +51,7 @@ public class ScanModeController : IDisposable
         _operatorState.OnStateChanged += UpdateScanModeState;
         _autoReady.OnStateChanged += UpdateScanModeState;
         _messageProviderKey = _messageService.RegisterProvider(MessagePriority, GetScanMessage);
+        UpdateScanModeState();
     }
 
     private string? GetScanMessage()
@@ -79,14 +74,15 @@ public class ScanModeController : IDisposable
 
     private void TryActivateScanMode()
     {
-        if (_scanStateManager.State != ScanState.Disabled || _barcodeHandler == null)
+        if (_scanStateManager.State != ScanState.Disabled)
         {
             return;
         }
         _scanStateManager.TryTransitionTo(ScanState.Ready, () =>
         {
-            _sessionManager.AcquireSession(_barcodeHandler);
+            _sessionManager.AcquireSession(HandleBarcodeScanned);
             AddScanStepToGrid();
+            StartMainLoop();
         });
     }
 
@@ -105,8 +101,22 @@ public class ScanModeController : IDisposable
         _scanStateManager.SetActiveScanStepId(stepId);
     }
 
+    private void StartMainLoop()
+    {
+        _loopCts?.Cancel();
+        _loopCts?.Dispose();
+        _loopCts = new CancellationTokenSource();
+        _ = _preExecutionCoordinator.StartMainLoopAsync(_loopCts.Token);
+    }
+
+    private void HandleBarcodeScanned(string barcode)
+    {
+        _preExecutionCoordinator.SubmitBarcode(barcode);
+    }
+
     private void TryDeactivateScanMode()
     {
+        _loopCts?.Cancel();
         if (_scanStateManager.State == ScanState.Resetting)
         {
             return;
@@ -124,7 +134,7 @@ public class ScanModeController : IDisposable
 
     public void TransitionToReady()
     {
-        if (!IsScanModeEnabled || _barcodeHandler == null)
+        if (!IsScanModeEnabled)
         {
             _scanStateManager.TryTransitionTo(ScanState.Disabled);
             return;
@@ -132,7 +142,7 @@ public class ScanModeController : IDisposable
         _scanStateManager.TryTransitionTo(ScanState.Ready, () =>
         {
             _executionMessageState.Clear();
-            _sessionManager.AcquireSession(_barcodeHandler);
+            _sessionManager.AcquireSession(HandleBarcodeScanned);
         });
     }
 
@@ -154,6 +164,8 @@ public class ScanModeController : IDisposable
             return;
         }
         _disposed = true;
+        _loopCts?.Cancel();
+        _loopCts?.Dispose();
         _operatorState.OnStateChanged -= UpdateScanModeState;
         _autoReady.OnStateChanged -= UpdateScanModeState;
         if (_messageProviderKey != null)

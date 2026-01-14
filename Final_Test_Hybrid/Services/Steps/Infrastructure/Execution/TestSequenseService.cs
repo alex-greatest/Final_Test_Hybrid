@@ -117,6 +117,69 @@ public class TestSequenseService
         NotifyDataChanged();
     }
 
+    public void ClearAllExceptScan()
+    {
+        lock (_lock)
+        {
+            _steps.RemoveAll(s => !IsScanModule(s.Module));
+        }
+        NotifyDataChanged();
+    }
+
+    public void UpdateScanStep(TestStepStatus status, string message, string? limits = null)
+    {
+        lock (_lock)
+        {
+            var scanStep = _steps.FirstOrDefault(s => IsScanModule(s.Module));
+            if (scanStep == null)
+            {
+                return;
+            }
+            ApplyScanStepUpdate(scanStep, status, message, limits);
+        }
+        NotifyDataChanged();
+    }
+
+    public Guid EnsureScanStepExists(string moduleName, string description)
+    {
+        lock (_lock)
+        {
+            var existing = _steps.FirstOrDefault(s => IsScanModule(s.Module));
+            if (existing != null)
+            {
+                return existing.Id;
+            }
+            var stepData = new TestSequenseData
+            {
+                Module = moduleName,
+                Description = description,
+                Status = "Выполняется",
+                StartTime = DateTime.Now
+            };
+            _steps.Insert(0, stepData);
+            NotifyDataChanged();
+            return stepData.Id;
+        }
+    }
+
+    private static void ApplyScanStepUpdate(TestSequenseData step, TestStepStatus status, string message, string? limits)
+    {
+        step.StepStatus = status;
+        step.Result = message;
+        step.Range = limits ?? "";
+        step.Status = status switch
+        {
+            TestStepStatus.Running => "Выполняется",
+            TestStepStatus.Success => "Готово",
+            TestStepStatus.Error => "Ошибка",
+            _ => step.Status
+        };
+        if (status is TestStepStatus.Success or TestStepStatus.Error)
+        {
+            step.EndTime = DateTime.Now;
+        }
+    }
+
     private void UpdateStepAndNotify(Guid id, Action<TestSequenseData> updateAction)
     {
         var updated = TryUpdateStep(id, updateAction);
