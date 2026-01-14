@@ -33,6 +33,7 @@ public partial class PreExecutionCoordinator(
         state.BoilerState.Clear();
         state.PhaseState.Clear();
         ClearBarcode();
+        infra.ErrorService.IsHistoryEnabled = false;
     }
 
     public void SubmitBarcode(string barcode)
