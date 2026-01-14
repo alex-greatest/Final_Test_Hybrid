@@ -38,7 +38,7 @@
         {
             <RadzenIcon
                 Icon="close"
-                Style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--rz-text-tertiary-color);"
+                Style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--rz-text-tertiary-color); font-size: 32px;"
                 @onclick="ClearSerialNumber"/>
         }
     </div>
@@ -54,7 +54,7 @@
         || !IsOnActiveScanStep
         || PlcResetCoordinator.IsActive
         || ErrorCoordinator.CurrentInterrupt != null;
-    private string Placeholder => IsOnActiveScanStep ? PlaceholderText : "";
+    private string Placeholder => !IsFieldReadOnly ? PlaceholderText : "";
 
     protected override void OnInitialized()
     {

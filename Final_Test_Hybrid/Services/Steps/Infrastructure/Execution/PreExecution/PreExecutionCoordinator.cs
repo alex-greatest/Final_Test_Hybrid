@@ -155,7 +155,7 @@ public partial class PreExecutionCoordinator(
             _resetRequested = false;
             boilerState.Clear();
             phaseState.Clear();
-            statusReporter.ClearAllExceptScan();
+            ClearBarcode();
         }
         finally
         {
@@ -278,6 +278,10 @@ public partial class PreExecutionCoordinator(
             ReportBlockStepResult(stepId, result);
             return result;
         }
+        catch (OperationCanceledException)
+        {
+            return PreExecutionResult.Cancelled();
+        }
         catch (Exception ex)
         {
             return HandleStepException(blockBoilerAdapterStep, stepId, ex);
@@ -303,7 +307,7 @@ public partial class PreExecutionCoordinator(
                 statusReporter.ReportSuccess(stepId, result.SuccessMessage ?? "", result.Limits);
                 break;
             case PreExecutionStatus.Cancelled:
-                statusReporter.ReportError(stepId, result.ErrorMessage ?? "Операция отменена", result.Limits);
+                // Не меняем статус - шаг остаётся с тем статусом, который был
                 break;
             case PreExecutionStatus.TestStarted:
                 break;

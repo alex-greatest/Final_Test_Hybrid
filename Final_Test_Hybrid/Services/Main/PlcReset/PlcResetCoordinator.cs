@@ -26,6 +26,7 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
     public event Action? OnActiveChanged;
     public event Action? OnForceStop;
     public event Func<bool>? OnResetStarting;
+    public event Action? OnAskEndReceived;
     public event Action? OnResetCompleted;
 
     public PlcResetCoordinator(
@@ -153,6 +154,7 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
     {
         await TrySendResetSignalAsync(ct);
         await WaitForAskEndAsync(ct);
+        InvokeEventSafe(OnAskEndReceived);
     }
 
     private async Task TrySendResetSignalAsync(CancellationToken ct)
@@ -259,6 +261,7 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
         _resetSubscription.OnStateChanged -= HandleResetSignal;
         OnForceStop = null;
         OnResetStarting = null;
+        OnAskEndReceived = null;
         OnResetCompleted = null;
     }
 

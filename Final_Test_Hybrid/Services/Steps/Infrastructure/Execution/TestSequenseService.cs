@@ -122,8 +122,24 @@ public class TestSequenseService
         lock (_lock)
         {
             _steps.RemoveAll(s => !IsScanModule(s.Module));
+            ResetScanStepToRunning();
         }
         NotifyDataChanged();
+    }
+
+    private void ResetScanStepToRunning()
+    {
+        var scanStep = _steps.FirstOrDefault(s => IsScanModule(s.Module));
+        if (scanStep == null)
+        {
+            return;
+        }
+        scanStep.Status = "Выполняется";
+        scanStep.StepStatus = TestStepStatus.Running;
+        scanStep.Result = "";
+        scanStep.Range = "";
+        scanStep.StartTime = DateTime.Now;
+        scanStep.EndTime = null;
     }
 
     public void UpdateScanStep(TestStepStatus status, string message, string? limits = null)

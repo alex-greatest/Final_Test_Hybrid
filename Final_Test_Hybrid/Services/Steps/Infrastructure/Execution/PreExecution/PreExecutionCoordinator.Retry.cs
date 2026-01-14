@@ -27,6 +27,7 @@ public partial class PreExecutionCoordinator
     private void SubscribeToStopSignals()
     {
         plcResetCoordinator.OnForceStop += HandleSoftStop;
+        plcResetCoordinator.OnAskEndReceived += HandleGridClear;
         errorCoordinator.OnReset += HandleHardReset;
     }
 
@@ -41,15 +42,21 @@ public partial class PreExecutionCoordinator
             _resetRequested = true;
             _currentCts?.Cancel();
         }
-        else
-        {
-            statusReporter.ClearAllExceptScan();
-        }
         SignalResolution(resolution);
     }
 
+    private void HandleGridClear()
+    {
+        statusReporter.ClearAllExceptScan();
+    }
+
     private void HandleSoftStop() => HandleStopSignal(PreExecutionResolution.SoftStop);
-    private void HandleHardReset() => HandleStopSignal(PreExecutionResolution.HardReset);
+    
+    private void HandleHardReset()
+    {
+        HandleStopSignal(PreExecutionResolution.HardReset);
+        statusReporter.ClearAllExceptScan();
+    }
 
     private void SignalResolution(PreExecutionResolution resolution)
     {
