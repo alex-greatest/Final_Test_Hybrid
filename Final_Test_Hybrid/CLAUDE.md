@@ -89,6 +89,15 @@ public class BlazorUiDispatcher(BlazorDispatcherAccessor a) : IUiDispatcher
 
 **Очистка BoilerState:** гарантирована через `ClearStateOnReset()` в PreExecutionCoordinator.
 
+## Retry/Skip — Логика повтора и пропуска шагов
+
+Обработка ошибок шагов с сигналами PLC. См. [RetrySkipGuide.md](RetrySkipGuide.md)
+
+| Действие | PLC сигнал | PC → PLC |
+|----------|------------|----------|
+| Повтор | `Req_Repeat = true` | `AskRepeat = true`, ждёт `Block.Error = false` |
+| Пропуск | `End = true` | Ничего, переход к следующему шагу (NOK) |
+
 ## Accepted Patterns (NOT bugs)
 
 | Паттерн | Почему OK |
