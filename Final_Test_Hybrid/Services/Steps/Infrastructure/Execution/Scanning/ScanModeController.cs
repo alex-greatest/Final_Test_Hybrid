@@ -6,24 +6,22 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 
 /// <summary>
 /// Управляет режимом сканирования: активация/деактивация на основе состояния оператора и автомата.
-/// Координирует регистрацию в MessageService и управление сессией сканера.
+/// Координирует управление сессией сканера и уведомляет подписчиков об изменении состояния.
 /// </summary>
 public class ScanModeController : IDisposable
 {
-    private const int MessagePriority = 100;
-    private const string ScanPromptMessage = "Отсканируйте серийный номер котла";
     private readonly ScanSessionManager _sessionManager;
     private readonly OperatorState _operatorState;
     private readonly AutoReadySubscription _autoReady;
     private readonly MessageService _messageService;
-    private readonly ExecutionMessageState _executionMessageState;
     private readonly StepStatusReporter _statusReporter;
     private readonly PreExecutionCoordinator _preExecutionCoordinator;
     private CancellationTokenSource? _loopCts;
-    private object? _messageProviderKey;
     private bool _isActivated;
     private bool _isResetting;
     private bool _disposed;
+
+    public event Action? OnStateChanged;
 
     public bool IsScanModeEnabled => _operatorState.IsAuthenticated && _autoReady.IsReady;
 
@@ -38,7 +36,6 @@ public class ScanModeController : IDisposable
         OperatorState operatorState,
         AutoReadySubscription autoReady,
         MessageService messageService,
-        ExecutionMessageState executionMessageState,
         StepStatusReporter statusReporter,
         PreExecutionCoordinator preExecutionCoordinator)
     {
@@ -46,7 +43,6 @@ public class ScanModeController : IDisposable
         _operatorState = operatorState;
         _autoReady = autoReady;
         _messageService = messageService;
-        _executionMessageState = executionMessageState;
         _statusReporter = statusReporter;
         _preExecutionCoordinator = preExecutionCoordinator;
         SubscribeToEvents();
@@ -56,13 +52,7 @@ public class ScanModeController : IDisposable
     {
         _operatorState.OnStateChanged += UpdateScanModeState;
         _autoReady.OnStateChanged += UpdateScanModeState;
-        _messageProviderKey = _messageService.RegisterProvider(MessagePriority, GetScanMessage);
         UpdateScanModeState();
-    }
-
-    private string? GetScanMessage()
-    {
-        return IsScanModeEnabled ? ScanPromptMessage : null;
     }
 
     private void UpdateScanModeState()
@@ -76,6 +66,7 @@ public class ScanModeController : IDisposable
             TryDeactivateScanMode();
         }
         _messageService.NotifyChanged();
+        OnStateChanged?.Invoke();
     }
 
     private void TryActivateScanMode()
@@ -136,7 +127,6 @@ public class ScanModeController : IDisposable
             _isActivated = false;
             return;
         }
-        _executionMessageState.Clear();
         _sessionManager.AcquireSession(HandleBarcodeScanned);
     }
 
@@ -160,9 +150,5 @@ public class ScanModeController : IDisposable
         _loopCts?.Dispose();
         _operatorState.OnStateChanged -= UpdateScanModeState;
         _autoReady.OnStateChanged -= UpdateScanModeState;
-        if (_messageProviderKey != null)
-        {
-            _messageService.UnregisterProvider(_messageProviderKey);
-        }
     }
 }

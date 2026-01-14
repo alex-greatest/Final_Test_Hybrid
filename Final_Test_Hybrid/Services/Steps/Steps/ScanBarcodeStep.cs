@@ -1,5 +1,6 @@
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Preparation;
 using Final_Test_Hybrid.Services.Scanner;
@@ -26,14 +27,14 @@ public class ScanBarcodeStep(
     BoilerState boilerState,
     PausableOpcUaTagService opcUa,
     IRecipeProvider recipeProvider,
-    ExecutionMessageState messageState,
+    ExecutionPhaseState phaseState,
     IScanPreparationFacade preparationFacade,
     OperatorState operatorState,
     ShiftState shiftState,
     ILogger<ScanBarcodeStep> logger,
     ITestStepLogger testStepLogger)
     : ScanStepBase(barcodeScanService, sequenceLoader, mapBuilder, mapResolver,
-        recipeValidator, boilerState, opcUa, recipeProvider, messageState)
+        recipeValidator, boilerState, opcUa, recipeProvider, phaseState)
 {
     private readonly DualLogger<ScanBarcodeStep> _logger = new(logger, testStepLogger);
 
@@ -47,7 +48,7 @@ public class ScanBarcodeStep(
     public override async Task<PreExecutionResult> ExecuteAsync(PreExecutionContext context, CancellationToken ct)
     {
         _logger.LogStepStart(Name);
-        MessageState.SetMessage("Штрихкод получен");
+        PhaseState.SetPhase(ExecutionPhase.BarcodeReceived);
 
         // 1. Валидация баркода
         var validateError = ValidateBarcode(context);
@@ -95,7 +96,7 @@ public class ScanBarcodeStep(
         }
 
         // 9. Инициализация БД (facade)
-        MessageState.SetMessage("Создание записей в БД...");
+        PhaseState.SetPhase(ExecutionPhase.CreatingDbRecords);
         var initDbError = await preparationFacade.InitializeDatabaseAsync(
             BoilerState,
             operatorState.Username ?? UnknownOperator,

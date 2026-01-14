@@ -4,6 +4,7 @@ using Final_Test_Hybrid.Models.Plc.Subcription;
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
@@ -27,7 +28,7 @@ public abstract class ScanStepBase(
     BoilerState boilerState,
     PausableOpcUaTagService opcUa,
     IRecipeProvider recipeProvider,
-    ExecutionMessageState messageState)
+    ExecutionPhaseState phaseState)
     : IPreExecutionStep
 {
     protected readonly BarcodeScanService BarcodeScanService = barcodeScanService;
@@ -38,7 +39,7 @@ public abstract class ScanStepBase(
     protected readonly BoilerState BoilerState = boilerState;
     protected readonly PausableOpcUaTagService OpcUa = opcUa;
     protected readonly IRecipeProvider RecipeProvider = recipeProvider;
-    protected readonly ExecutionMessageState MessageState = messageState;
+    protected readonly ExecutionPhaseState PhaseState = phaseState;
 
     public abstract string Id { get; }
     public abstract string Name { get; }
@@ -97,7 +98,7 @@ public abstract class ScanStepBase(
 
     protected PreExecutionResult? ResolveTestMaps(PreExecutionContext context)
     {
-        MessageState.SetMessage("Проверка шагов...");
+        PhaseState.SetPhase(ExecutionPhase.ValidatingSteps);
         if (context.RawMaps is not { Count: > 0 })
         {
             return PreExecutionResult.Fail("Нет тестовых последовательностей", "Ошибка проверки шагов");
@@ -125,7 +126,7 @@ public abstract class ScanStepBase(
 
     protected PreExecutionResult? ValidateRecipes(PreExecutionContext context)
     {
-        MessageState.SetMessage("Проверка рецептов...");
+        PhaseState.SetPhase(ExecutionPhase.ValidatingRecipes);
         if (context.Maps == null || context.Maps.Count == 0)
         {
             return null;
@@ -202,7 +203,7 @@ public abstract class ScanStepBase(
         var total = recipes.Count;
         for (var i = 0; i < total; i++)
         {
-            MessageState.SetMessage($"Загрузка рецептов ({i + 1}/{total})...");
+            PhaseState.SetPhase(ExecutionPhase.LoadingRecipes);
             var result = await WriteRecipeAsync(recipes[i], context, ct);
             if (result != null)
             {

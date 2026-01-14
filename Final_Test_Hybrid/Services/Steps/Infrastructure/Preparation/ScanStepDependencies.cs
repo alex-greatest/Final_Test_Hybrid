@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
@@ -19,7 +20,7 @@ public class ScanStepDependencies(
     BoilerState boilerState,
     PausableOpcUaTagService opcUa,
     IRecipeProvider recipeProvider,
-    ExecutionMessageState messageState)
+    ExecutionPhaseState phaseState)
 {
     public BarcodeScanService BarcodeScanService => barcodeScanService;
     public ITestSequenceLoader SequenceLoader => sequenceLoader;
@@ -29,5 +30,5 @@ public class ScanStepDependencies(
     public BoilerState BoilerState => boilerState;
     public PausableOpcUaTagService OpcUa => opcUa;
     public IRecipeProvider RecipeProvider => recipeProvider;
-    public ExecutionMessageState MessageState => messageState;
+    public ExecutionPhaseState PhaseState => phaseState;
 }

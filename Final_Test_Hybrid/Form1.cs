@@ -140,24 +140,10 @@ public partial class Form1 : Form
         var initializer = serviceProvider.GetRequiredService<MessageServiceInitializer>();
         await initializer.InitializeAsync();
 
-        var messageService = serviceProvider.GetRequiredService<MessageService>();
-        var executionState = serviceProvider.GetRequiredService<ExecutionMessageState>();
-        var interruptState = serviceProvider.GetRequiredService<InterruptMessageState>();
-        var resetState = serviceProvider.GetRequiredService<ResetMessageState>();
-
-        messageService.RegisterProvider(110, executionState.GetMessage);
-        messageService.RegisterProvider(120, interruptState.GetMessage);
-        messageService.RegisterProvider(130, resetState.GetMessage);
-
-        executionState.OnChange += messageService.NotifyChanged;
-        interruptState.OnChange += messageService.NotifyChanged;
-        resetState.OnChange += messageService.NotifyChanged;
-
-        // Инициализация ResetSubscription
+        // Initialize reset subscription and coordinator
         var resetSubscription = serviceProvider.GetRequiredService<ResetSubscription>();
         await resetSubscription.SubscribeAsync();
 
-        // Создаём PlcResetCoordinator (подписка в конструкторе)
         _ = serviceProvider.GetRequiredService<PlcResetCoordinator>();
     }
 

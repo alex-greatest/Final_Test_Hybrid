@@ -123,18 +123,23 @@ public partial class ErrorCoordinator
             _logger.LogError("Неизвестная причина прерывания: {Reason}", reason);
             return;
         }
-
         // Ранняя проверка: AutoModeDisabled при уже восстановленном автомате — пропуск
         if (reason == InterruptReason.AutoModeDisabled && _autoReady.IsReady)
         {
             _logger.LogInformation("AutoReady восстановлен до обработки прерывания — пропуск");
             return;
         }
-
         LogInterrupt(reason, behavior);
         RaiseErrorForInterrupt(reason);
+        SetCurrentInterrupt(reason);
         NotifyInterrupt(behavior);
         await ExecuteInterruptActionAsync(behavior, ct);
+    }
+
+    private void SetCurrentInterrupt(InterruptReason reason)
+    {
+        CurrentInterrupt = reason;
+        InvokeEventSafe(OnInterruptChanged, "OnInterruptChanged");
     }
 
     private void RaiseErrorForInterrupt(InterruptReason reason)
@@ -158,7 +163,6 @@ public partial class ErrorCoordinator
 
     private void NotifyInterrupt(InterruptBehavior behavior)
     {
-        _interruptMessage.SetMessage(behavior.Message);
         _notifications.ShowWarning(behavior.Message, GetInterruptDetails(behavior));
     }
 

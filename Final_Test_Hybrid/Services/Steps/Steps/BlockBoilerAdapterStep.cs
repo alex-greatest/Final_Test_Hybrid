@@ -1,6 +1,6 @@
 using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Common.Logging;
-using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
@@ -9,7 +9,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps;
 
 public class BlockBoilerAdapterStep(
     TagWaiter tagWaiter,
-    ExecutionMessageState messageState,
+    ExecutionPhaseState phaseState,
     DualLogger<BlockBoilerAdapterStep> logger) : IPreExecutionStep, IHasPlcBlockPath, IRequiresPlcTags
 {
     private const string BlockPath = "DB_VI.Block_Boiler_Adapter";
@@ -28,7 +28,7 @@ public class BlockBoilerAdapterStep(
 
     public async Task<PreExecutionResult> ExecuteAsync(PreExecutionContext context, CancellationToken ct)
     {
-        messageState.SetMessage("Подсоедините адаптер к котлу и нажмите \"Блок\"");
+        phaseState.SetPhase(ExecutionPhase.WaitingForAdapter);
         logger.LogInformation("Запуск блокировки адаптера");
         var writeResult = await context.OpcUa.WriteAsync(StartTag, true, ct);
         if (writeResult.Error != null)
@@ -57,7 +57,7 @@ public class BlockBoilerAdapterStep(
     private PreExecutionResult HandleSuccess()
     {
         logger.LogInformation("Адаптер заблокирован успешно");
-        messageState.Clear();
+        phaseState.Clear();
         return PreExecutionResult.Continue();
     }
 

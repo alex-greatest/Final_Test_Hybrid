@@ -14,7 +14,6 @@ using Microsoft.Extensions.Logging;
 public sealed class PlcResetCoordinator : IAsyncDisposable
 {
     private readonly ResetSubscription _resetSubscription;
-    private readonly ResetMessageState _resetMessage;
     private readonly ErrorCoordinator _errorCoordinator;
     private readonly ScanModeController _scanModeController;
     private readonly TagWaiter _tagWaiter;
@@ -24,14 +23,13 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
     private CancellationTokenSource? _currentResetCts;
     private int _isHandlingReset;
     private volatile bool _disposed;
-
     private static readonly TimeSpan AskEndTimeout = TimeSpan.FromSeconds(60);
-
+    public bool IsActive { get; private set; }
+    public event Action? OnActiveChanged;
     public event Action? OnForceStop;
 
     public PlcResetCoordinator(
         ResetSubscription resetSubscription,
-        ResetMessageState resetMessage,
         ErrorCoordinator errorCoordinator,
         ScanModeController scanModeController,
         TagWaiter tagWaiter,
@@ -39,7 +37,6 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
         ILogger<PlcResetCoordinator> logger)
     {
         _resetSubscription = resetSubscription;
-        _resetMessage = resetMessage;
         _errorCoordinator = errorCoordinator;
         _scanModeController = scanModeController;
         _tagWaiter = tagWaiter;
@@ -67,6 +64,8 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
             _logger.LogWarning("PLC Reset проигнорирован — уже обрабатывается");
             return;
         }
+        IsActive = true;
+        OnActiveChanged?.Invoke();
         _currentResetCts = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token);
         try
         {
@@ -146,20 +145,17 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
 
     private void SignalForceStop()
     {
-        _resetMessage.SetMessage("Идёт сброс теста...");
         InvokeEventSafe(OnForceStop);
     }
 
     private async Task SendDataToMesAsync(CancellationToken ct)
     {
-        _resetMessage.SetMessage("Передача данных...");
         _logger.LogInformation("MES/DB отправка (заглушка)");
         await Task.Delay(100, ct);  // TODO: реальная отправка
     }
 
     private async Task SendResetAndWaitAckAsync(CancellationToken ct)
     {
-        _resetMessage.SetMessage("Сброс теста...");
         await TrySendResetSignalAsync(ct);
         await WaitForAskEndAsync(ct);
     }
@@ -209,7 +205,8 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
 
     private void Cleanup()
     {
-        _resetMessage.Clear();
+        IsActive = false;
+        OnActiveChanged?.Invoke();
         var cts = Interlocked.Exchange(ref _currentResetCts, null);
         cts?.Dispose();
         ReleaseResetFlag();

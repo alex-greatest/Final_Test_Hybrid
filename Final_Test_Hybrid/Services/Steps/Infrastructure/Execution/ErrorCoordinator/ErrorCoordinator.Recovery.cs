@@ -18,6 +18,7 @@ public partial class ErrorCoordinator
     {
         _logger.LogInformation("=== ПОЛНЫЙ СБРОС ===");
         _pauseToken.Resume();
+        ClearCurrentInterrupt();
         InvokeEventSafe(OnReset, "OnReset");
     }
 
@@ -80,6 +81,13 @@ public partial class ErrorCoordinator
     {
         _errorService.Clear(ErrorDefinitions.OpcConnectionLost.Code);
         _errorService.Clear(ErrorDefinitions.TagReadTimeout.Code);
+        ClearCurrentInterrupt();
+    }
+
+    private void ClearCurrentInterrupt()
+    {
+        CurrentInterrupt = null;
+        InvokeEventSafe(OnInterruptChanged, "OnInterruptChanged");
     }
 
     #endregion

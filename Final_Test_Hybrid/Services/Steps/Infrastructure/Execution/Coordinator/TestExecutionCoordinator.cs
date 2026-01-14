@@ -78,6 +78,7 @@ public partial class TestExecutionCoordinator : IDisposable
     private void HandleForceStop()
     {
         Stop("по сигналу PLC");
+        StateManager.ClearErrors();
     }
 
     private void HandleReset()

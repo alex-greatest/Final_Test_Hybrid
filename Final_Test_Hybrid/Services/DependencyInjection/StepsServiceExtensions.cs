@@ -3,6 +3,7 @@ using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Results;
 using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Scanner;
@@ -49,9 +50,7 @@ public static class StepsServiceExtensions
 
         // Execution state
         services.AddSingleton<ExecutionActivityTracker>();
-        services.AddSingleton<ExecutionMessageState>();
-        services.AddSingleton<InterruptMessageState>();
-        services.AddSingleton<ResetMessageState>();
+        services.AddSingleton<ExecutionPhaseState>();
         services.AddSingleton<ResetSubscription>();
         services.AddSingleton<PlcResetCoordinator>();
 

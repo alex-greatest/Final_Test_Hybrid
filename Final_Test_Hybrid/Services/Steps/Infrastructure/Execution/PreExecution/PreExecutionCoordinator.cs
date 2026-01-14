@@ -4,6 +4,7 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.SpringBoot.Operation;
@@ -33,7 +34,7 @@ public partial class PreExecutionCoordinator(
     OpcUaTagService plcService,
     ITestStepLogger testStepLogger,
     ExecutionActivityTracker activityTracker,
-    ExecutionMessageState messageState,
+    ExecutionPhaseState phaseState,
     PauseTokenSource pauseToken,
     ErrorCoordinator.ErrorCoordinator errorCoordinator,
     PlcResetCoordinator plcResetCoordinator,
@@ -226,7 +227,7 @@ public partial class PreExecutionCoordinator(
             return HandleNonContinueResult(blockResult);
         }
 
-        messageState.Clear();
+        phaseState.Clear();
         StartTestExecution(context);
         return PreExecutionResult.TestStarted();
     }
@@ -279,10 +280,7 @@ public partial class PreExecutionCoordinator(
 
     private PreExecutionResult HandleNonContinueResult(PreExecutionResult result)
     {
-        if (result is { Status: PreExecutionStatus.Failed, UserMessage: not null })
-        {
-            messageState.SetMessage(result.UserMessage);
-        }
+        // UserMessage теперь обрабатывается через ErrorService/NotificationService
         return result;
     }
 

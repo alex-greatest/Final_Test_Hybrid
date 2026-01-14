@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Models.Database;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.SpringBoot.Operation;
@@ -27,14 +28,14 @@ public class ScanBarcodeMesStep(
     BoilerState boilerState,
     PausableOpcUaTagService opcUa,
     IRecipeProvider recipeProvider,
-    ExecutionMessageState messageState,
+    ExecutionPhaseState phaseState,
     OperationStartService operationStartService,
     OperatorState operatorState,
     OrderState orderState,
     ILogger<ScanBarcodeMesStep> logger,
     ITestStepLogger testStepLogger)
     : ScanStepBase(barcodeScanService, sequenceLoader, mapBuilder, mapResolver,
-        recipeValidator, boilerState, opcUa, recipeProvider, messageState)
+        recipeValidator, boilerState, opcUa, recipeProvider, phaseState)
 {
     private readonly DualLogger<ScanBarcodeMesStep> _logger = new(logger, testStepLogger);
 
@@ -55,7 +56,7 @@ public class ScanBarcodeMesStep(
     public override async Task<PreExecutionResult> ExecuteAsync(PreExecutionContext context, CancellationToken ct)
     {
         _logger.LogStepStart(Name);
-        MessageState.SetMessage("Штрихкод получен");
+        PhaseState.SetPhase(ExecutionPhase.BarcodeReceived);
 
         // 1. Валидация баркода
         var validateError = ValidateBarcode(context);

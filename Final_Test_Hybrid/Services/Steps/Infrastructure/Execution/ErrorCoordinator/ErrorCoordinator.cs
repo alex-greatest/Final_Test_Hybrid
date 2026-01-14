@@ -26,7 +26,6 @@ public partial class ErrorCoordinator : IAsyncDisposable
     private readonly StepStatusReporter _statusReporter;
     private readonly BoilerState _boilerState;
     private readonly ExecutionActivityTracker _activityTracker;
-    private readonly InterruptMessageState _interruptMessage;
     private readonly INotificationService _notifications;
     private readonly IErrorService _errorService;
     private readonly ILogger<ErrorCoordinator> _logger;
@@ -63,6 +62,10 @@ public partial class ErrorCoordinator : IAsyncDisposable
     // === Events ===
     public event Action? OnReset;
     public event Action? OnRecovered;
+    public event Action? OnInterruptChanged;
+
+    // === State ===
+    public InterruptReason? CurrentInterrupt { get; private set; }
 
     public ErrorCoordinator(
         OpcUaConnectionState connectionState,
@@ -74,7 +77,6 @@ public partial class ErrorCoordinator : IAsyncDisposable
         StepStatusReporter statusReporter,
         BoilerState boilerState,
         ExecutionActivityTracker activityTracker,
-        InterruptMessageState interruptMessage,
         INotificationService notifications,
         IErrorService errorService,
         ILogger<ErrorCoordinator> logger)
@@ -88,7 +90,6 @@ public partial class ErrorCoordinator : IAsyncDisposable
         _statusReporter = statusReporter;
         _boilerState = boilerState;
         _activityTracker = activityTracker;
-        _interruptMessage = interruptMessage;
         _notifications = notifications;
         _errorService = errorService;
         _logger = logger;
@@ -158,6 +159,7 @@ public partial class ErrorCoordinator : IAsyncDisposable
         _operationLock.Dispose();
         OnReset = null;
         OnRecovered = null;
+        OnInterruptChanged = null;
     }
 
     private async Task WaitForPendingOperationsAsync()
