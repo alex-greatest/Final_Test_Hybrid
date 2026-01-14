@@ -1,10 +1,6 @@
-using Final_Test_Hybrid.Models.Steps;
-using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.UI;
 using Final_Test_Hybrid.Services.Errors;
-using Final_Test_Hybrid.Services.Main;
-using Final_Test_Hybrid.Services.OpcUa;
-using Final_Test_Hybrid.Services.OpcUa.Connection;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.Behaviors;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
@@ -14,20 +10,13 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordin
 /// Handles PLC connection loss, auto mode, timeouts, and error resolution.
 /// Thread-safe with proper disposal patterns.
 /// </summary>
-public partial class ErrorCoordinator : IAsyncDisposable
+public partial class ErrorCoordinator : IErrorCoordinator, IInterruptContext, IAsyncDisposable
 {
     // === Dependencies ===
-    private readonly OpcUaConnectionState _connectionState;
-    private readonly AutoReadySubscription _autoReady;
-    private readonly PauseTokenSource _pauseToken;
-    private readonly TagWaiter _tagWaiter;
-    private readonly OpcUaTagService _plcService;
-    private readonly ExecutionStateManager _stateManager;
-    private readonly StepStatusReporter _statusReporter;
-    private readonly BoilerState _boilerState;
-    private readonly ExecutionActivityTracker _activityTracker;
-    private readonly INotificationService _notifications;
-    private readonly IErrorService _errorService;
+    private readonly ErrorCoordinatorSubscriptions _subscriptions;
+    private readonly ErrorResolutionServices _resolution;
+    private readonly ErrorCoordinatorState _state;
+    private readonly InterruptBehaviorRegistry _behaviorRegistry;
     private readonly ILogger<ErrorCoordinator> _logger;
 
     // === Synchronization ===
@@ -39,25 +28,6 @@ public partial class ErrorCoordinator : IAsyncDisposable
 
     // === Constants ===
     private static readonly TimeSpan ResolutionTimeout = TimeSpan.FromSeconds(60);
-    private static readonly TimeSpan PlcReconnectDelay = TimeSpan.FromSeconds(5);
-
-    // === Interrupt Behaviors ===
-    private static readonly Dictionary<InterruptReason, InterruptBehavior> InterruptBehaviors = new()
-    {
-        [InterruptReason.PlcConnectionLost] = new InterruptBehavior(
-            Message: "Потеря связи с PLC",
-            Action: InterruptAction.ResetAfterDelay,
-            Delay: PlcReconnectDelay),
-
-        [InterruptReason.AutoModeDisabled] = new InterruptBehavior(
-            Message: "Нет автомата",
-            Action: InterruptAction.PauseAndWait),
-
-        [InterruptReason.TagTimeout] = new InterruptBehavior(
-            Message: "Нет ответа от PLC",
-            Action: InterruptAction.ResetAfterDelay,
-            Delay: PlcReconnectDelay)
-    };
 
     // === Events ===
     public event Action? OnReset;
@@ -68,30 +38,16 @@ public partial class ErrorCoordinator : IAsyncDisposable
     public InterruptReason? CurrentInterrupt { get; private set; }
 
     public ErrorCoordinator(
-        OpcUaConnectionState connectionState,
-        AutoReadySubscription autoReady,
-        PauseTokenSource pauseToken,
-        TagWaiter tagWaiter,
-        OpcUaTagService plcService,
-        ExecutionStateManager stateManager,
-        StepStatusReporter statusReporter,
-        BoilerState boilerState,
-        ExecutionActivityTracker activityTracker,
-        INotificationService notifications,
-        IErrorService errorService,
+        ErrorCoordinatorSubscriptions subscriptions,
+        ErrorResolutionServices resolution,
+        ErrorCoordinatorState state,
+        InterruptBehaviorRegistry behaviorRegistry,
         ILogger<ErrorCoordinator> logger)
     {
-        _connectionState = connectionState;
-        _autoReady = autoReady;
-        _pauseToken = pauseToken;
-        _tagWaiter = tagWaiter;
-        _plcService = plcService;
-        _stateManager = stateManager;
-        _statusReporter = statusReporter;
-        _boilerState = boilerState;
-        _activityTracker = activityTracker;
-        _notifications = notifications;
-        _errorService = errorService;
+        _subscriptions = subscriptions;
+        _resolution = resolution;
+        _state = state;
+        _behaviorRegistry = behaviorRegistry;
         _logger = logger;
 
         SubscribeToEvents();
@@ -101,13 +57,13 @@ public partial class ErrorCoordinator : IAsyncDisposable
 
     private void SubscribeToEvents()
     {
-        _connectionState.ConnectionStateChanged += HandleConnectionChanged;
-        _autoReady.OnStateChanged += HandleAutoReadyChanged;
+        _subscriptions.ConnectionState.ConnectionStateChanged += HandleConnectionChanged;
+        _subscriptions.AutoReady.OnStateChanged += HandleAutoReadyChanged;
     }
 
     private void HandleConnectionChanged(bool isConnected)
     {
-        if (_disposed || isConnected || !_activityTracker.IsAnyActive) { return; }
+        if (_disposed || isConnected || !_subscriptions.ActivityTracker.IsAnyActive) { return; }
         FireAndForgetInterrupt(InterruptReason.PlcConnectionLost);
     }
 
@@ -115,13 +71,13 @@ public partial class ErrorCoordinator : IAsyncDisposable
     {
         if (_disposed) { return; }
 
-        if (_autoReady.IsReady)
+        if (_subscriptions.AutoReady.IsReady)
         {
             FireAndForgetResume();
             return;
         }
 
-        if (_activityTracker.IsAnyActive)
+        if (_subscriptions.ActivityTracker.IsAnyActive)
         {
             FireAndForgetInterrupt(InterruptReason.AutoModeDisabled);
         }
@@ -176,9 +132,18 @@ public partial class ErrorCoordinator : IAsyncDisposable
 
     private void UnsubscribeFromEvents()
     {
-        _connectionState.ConnectionStateChanged -= HandleConnectionChanged;
-        _autoReady.OnStateChanged -= HandleAutoReadyChanged;
+        _subscriptions.ConnectionState.ConnectionStateChanged -= HandleConnectionChanged;
+        _subscriptions.AutoReady.OnStateChanged -= HandleAutoReadyChanged;
     }
+
+    #endregion
+
+    #region IInterruptContext Implementation
+
+    void IInterruptContext.Pause() => _state.PauseToken.Pause();
+    void IInterruptContext.Reset() => Reset();
+    IErrorService IInterruptContext.ErrorService => _resolution.ErrorService;
+    INotificationService IInterruptContext.Notifications => _resolution.Notifications;
 
     #endregion
 }

@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 public sealed class PlcResetCoordinator : IAsyncDisposable
 {
     private readonly ResetSubscription _resetSubscription;
-    private readonly ErrorCoordinator _errorCoordinator;
+    private readonly IErrorCoordinator _errorCoordinator;
     private readonly TagWaiter _tagWaiter;
     private readonly OpcUaTagService _plcService;
     private readonly ILogger<PlcResetCoordinator> _logger;
@@ -31,7 +31,7 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
 
     public PlcResetCoordinator(
         ResetSubscription resetSubscription,
-        ErrorCoordinator errorCoordinator,
+        IErrorCoordinator errorCoordinator,
         TagWaiter tagWaiter,
         OpcUaTagService plcService,
         ILogger<PlcResetCoordinator> logger)

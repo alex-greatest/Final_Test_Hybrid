@@ -1,0 +1,9 @@
+# Reserved Windows device names
+nul
+Final_Test_Hybrid/nul
+
+# Dependencies
+node_modules/
+
+# Build outputs
+%TEMP%/build_test/

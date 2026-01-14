@@ -10,13 +10,13 @@ public class ReworkDialogService : IDisposable
 {
     private readonly DialogService _dialogService;
     private readonly PlcResetCoordinator _plcReset;
-    private readonly ErrorCoordinator _errorCoordinator;
+    private readonly IErrorCoordinator _errorCoordinator;
     private string? _lastError;
 
     public ReworkDialogService(
         DialogService dialogService,
         PlcResetCoordinator plcReset,
-        ErrorCoordinator errorCoordinator)
+        IErrorCoordinator errorCoordinator)
     {
         _dialogService = dialogService;
         _plcReset = plcReset;

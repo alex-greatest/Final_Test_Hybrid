@@ -4,6 +4,7 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
@@ -17,7 +18,7 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly ColumnExecutor[] _executors;
     private readonly ILogger<TestExecutionCoordinator> _logger;
     private readonly ITestStepLogger _testLogger;
-    private readonly ErrorCoordinator.ErrorCoordinator _errorCoordinator;
+    private readonly IErrorCoordinator _errorCoordinator;
     private readonly OpcUaTagService _plcService;
     private readonly PauseTokenSource _pauseToken;
     private readonly ExecutionActivityTracker _activityTracker;
@@ -51,7 +52,7 @@ public partial class TestExecutionCoordinator : IDisposable
         StepStatusReporter statusReporter,
         IRecipeProvider recipeProvider,
         ExecutionStateManager stateManager,
-        ErrorCoordinator.ErrorCoordinator errorCoordinator,
+        IErrorCoordinator errorCoordinator,
         PauseTokenSource pauseToken,
         ExecutionActivityTracker activityTracker,
         PlcResetCoordinator plcResetCoordinator,

@@ -22,6 +22,7 @@ using Final_Test_Hybrid.Services.Steps.Steps;
 using Final_Test_Hybrid.Services.Steps.Validation;
 using Final_Test_Hybrid.Services.Preparation;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.Behaviors;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Final_Test_Hybrid.Services.DependencyInjection;
@@ -77,7 +78,22 @@ public static class StepsServiceExtensions
         services.AddSingleton<StepStatusReporter>();
         services.AddSingleton<ErrorPlcMonitor>();
         services.AddSingleton<PauseTokenSource>();
+
+        // ErrorCoordinator dependency groups
+        services.AddSingleton<ErrorCoordinatorSubscriptions>();
+        services.AddSingleton<ErrorResolutionServices>();
+        services.AddSingleton<ErrorCoordinatorState>();
+
+        // ErrorCoordinator behaviors
+        services.AddSingleton<IInterruptBehavior, PlcConnectionLostBehavior>();
+        services.AddSingleton<IInterruptBehavior, AutoModeDisabledBehavior>();
+        services.AddSingleton<IInterruptBehavior, TagTimeoutBehavior>();
+        services.AddSingleton<InterruptBehaviorRegistry>();
+
+        // ErrorCoordinator
         services.AddSingleton<ErrorCoordinator>();
+        services.AddSingleton<IErrorCoordinator>(sp => sp.GetRequiredService<ErrorCoordinator>());
+
         services.AddSingleton<TestExecutionCoordinator>();
         services.AddSingleton<IStepTimingService, StepTimingService>();
 

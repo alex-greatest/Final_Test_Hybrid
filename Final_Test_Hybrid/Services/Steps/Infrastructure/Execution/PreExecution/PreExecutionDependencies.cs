@@ -7,6 +7,7 @@ using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Final_Test_Hybrid.Services.Steps.Steps;
@@ -55,12 +56,12 @@ public class PreExecutionInfrastructure(
 /// </summary>
 public class PreExecutionCoordinators(
     TestExecutionCoordinator testCoordinator,
-    ErrorCoordinator.ErrorCoordinator errorCoordinator,
+    IErrorCoordinator errorCoordinator,
     PlcResetCoordinator plcResetCoordinator,
     ScanDialogCoordinator dialogCoordinator)
 {
     public TestExecutionCoordinator TestCoordinator => testCoordinator;
-    public ErrorCoordinator.ErrorCoordinator ErrorCoordinator => errorCoordinator;
+    public IErrorCoordinator ErrorCoordinator => errorCoordinator;
     public PlcResetCoordinator PlcResetCoordinator => plcResetCoordinator;
     public ScanDialogCoordinator DialogCoordinator => dialogCoordinator;
 }

@@ -29,7 +29,7 @@ public partial class SwitchMes
     [Inject]
     public required PlcResetCoordinator PlcResetCoordinator { get; set; }
     [Inject]
-    public required ErrorCoordinator ErrorCoordinator { get; set; }
+    public required IErrorCoordinator ErrorCoordinator { get; set; }
     private bool _useMes;
 
     private bool IsDisabled => PreExecution.IsProcessing

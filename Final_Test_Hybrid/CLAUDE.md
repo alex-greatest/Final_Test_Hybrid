@@ -64,15 +64,17 @@ public class BlazorUiDispatcher(BlazorDispatcherAccessor a) : IUiDispatcher
 | Тестовые шаги | `PausableOpcUaTagService`, `PausableTagWaiter` |
 | Системные операции | `OpcUaTagService`, `TagWaiter` |
 
-## ErrorCoordinator — сигнализатор
+## ErrorCoordinator — Strategy Pattern
 
-Только снимает паузу и сигнализирует. Логику делают подписчики.
+Координатор прерываний с расширяемой архитектурой. См. [ErrorCoordinatorGuide.md](ErrorCoordinatorGuide.md)
 
 | Метод | Действия |
 |-------|----------|
-| `Reset()` | `_pauseToken.Resume()` → `OnReset` |
-| `ForceStop()` | `_pauseToken.Resume()` |
-| `ResumeExecution()` | `_pauseToken.Resume()` → `ClearConnectionErrors()` → `OnRecovered` |
+| `HandleInterruptAsync(reason)` | Делегирует в `IInterruptBehavior` |
+| `Reset()` | `_state.PauseToken.Resume()` → `OnReset` |
+| `ForceStop()` | `_state.PauseToken.Resume()` |
+
+**Добавить новый InterruptReason:** создать класс `XxxBehavior : IInterruptBehavior` → зарегистрировать в DI.
 
 **Подписчики OnReset:** TestExecutionCoordinator, ReworkDialogService, PreExecutionCoordinator.Retry
 

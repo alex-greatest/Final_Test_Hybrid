@@ -17,7 +17,7 @@ public partial class ErrorCoordinator
     public void Reset()
     {
         _logger.LogInformation("=== ПОЛНЫЙ СБРОС ===");
-        _pauseToken.Resume();
+        _state.PauseToken.Resume();
         ClearCurrentInterrupt();
         InvokeEventSafe(OnReset, "OnReset");
     }
@@ -33,7 +33,7 @@ public partial class ErrorCoordinator
     public void ForceStop()
     {
         _logger.LogInformation("=== МЯГКИЙ СБРОС (данные сохранены) ===");
-        _pauseToken.Resume();
+        _state.PauseToken.Resume();
     }
 
     #endregion
@@ -66,21 +66,21 @@ public partial class ErrorCoordinator
 
     private void ResumeIfPaused()
     {
-        if (!_pauseToken.IsPaused) { return; }
+        if (!_state.PauseToken.IsPaused) { return; }
         ResumeExecution();
     }
 
     private void ResumeExecution()
     {
-        _pauseToken.Resume();
+        _state.PauseToken.Resume();
         ClearConnectionErrors();
         InvokeEventSafe(OnRecovered, "OnRecovered");
     }
 
     private void ClearConnectionErrors()
     {
-        _errorService.Clear(ErrorDefinitions.OpcConnectionLost.Code);
-        _errorService.Clear(ErrorDefinitions.TagReadTimeout.Code);
+        _resolution.ErrorService.Clear(ErrorDefinitions.OpcConnectionLost.Code);
+        _resolution.ErrorService.Clear(ErrorDefinitions.TagReadTimeout.Code);
         ClearCurrentInterrupt();
     }
 

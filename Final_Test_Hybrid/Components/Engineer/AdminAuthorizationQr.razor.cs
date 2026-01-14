@@ -19,7 +19,7 @@ public partial class AdminAuthorizationQr : IDisposable
     [Inject]
     public required PlcResetCoordinator PlcResetCoordinator { get; set; }
     [Inject]
-    public required ErrorCoordinator ErrorCoordinator { get; set; }
+    public required IErrorCoordinator ErrorCoordinator { get; set; }
 
     private bool _useAdminQrAuth;
 

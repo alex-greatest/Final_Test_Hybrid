@@ -1,4 +1,3 @@
-using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Models.Plc.Tags;
 using Final_Test_Hybrid.Models.Steps;
 using Microsoft.Extensions.Logging;
@@ -118,94 +117,35 @@ public partial class ErrorCoordinator
 
     private async Task ProcessInterruptAsync(InterruptReason reason, CancellationToken ct)
     {
-        if (!InterruptBehaviors.TryGetValue(reason, out var behavior))
+        var behavior = _behaviorRegistry.Get(reason);
+        if (behavior == null)
         {
             _logger.LogError("Неизвестная причина прерывания: {Reason}", reason);
             return;
         }
+
         // Ранняя проверка: AutoModeDisabled при уже восстановленном автомате — пропуск
-        if (reason == InterruptReason.AutoModeDisabled && _autoReady.IsReady)
+        if (reason == InterruptReason.AutoModeDisabled && _subscriptions.AutoReady.IsReady)
         {
             _logger.LogInformation("AutoReady восстановлен до обработки прерывания — пропуск");
             return;
         }
-        LogInterrupt(reason, behavior);
-        RaiseErrorForInterrupt(reason);
+
+        _logger.LogWarning("Прерывание: {Reason} — {Message}", reason, behavior.Message);
+
+        if (behavior.AssociatedError != null)
+        {
+            _resolution.ErrorService.Raise(behavior.AssociatedError);
+        }
+
         SetCurrentInterrupt(reason);
-        NotifyInterrupt(behavior);
-        await ExecuteInterruptActionAsync(behavior, ct);
+        await behavior.ExecuteAsync(this, ct);
     }
 
     private void SetCurrentInterrupt(InterruptReason reason)
     {
         CurrentInterrupt = reason;
         InvokeEventSafe(OnInterruptChanged, "OnInterruptChanged");
-    }
-
-    private void RaiseErrorForInterrupt(InterruptReason reason)
-    {
-        var error = reason switch
-        {
-            InterruptReason.PlcConnectionLost => ErrorDefinitions.OpcConnectionLost,
-            InterruptReason.TagTimeout => ErrorDefinitions.TagReadTimeout,
-            _ => null
-        };
-        if (error != null)
-        {
-            _errorService.Raise(error);
-        }
-    }
-
-    private void LogInterrupt(InterruptReason reason, InterruptBehavior behavior)
-    {
-        _logger.LogWarning("Прерывание: {Reason} — {Message}", reason, behavior.Message);
-    }
-
-    private void NotifyInterrupt(InterruptBehavior behavior)
-    {
-        _notifications.ShowWarning(behavior.Message, GetInterruptDetails(behavior));
-    }
-
-    private static string GetInterruptDetails(InterruptBehavior behavior)
-    {
-        return behavior.Action switch
-        {
-            InterruptAction.PauseAndWait => "Ожидание восстановления...",
-            InterruptAction.ResetAfterDelay when behavior.Delay.HasValue =>
-                $"Сброс через {behavior.Delay.Value.TotalSeconds:0} сек",
-            InterruptAction.ResetAfterDelay => "Сброс теста",
-            _ => string.Empty
-        };
-    }
-
-    private async Task ExecuteInterruptActionAsync(InterruptBehavior behavior, CancellationToken ct)
-    {
-        switch (behavior.Action)
-        {
-            case InterruptAction.PauseAndWait:
-                _pauseToken.Pause();
-                break;
-
-            case InterruptAction.ResetAfterDelay:
-                await DelayThenResetAsync(behavior.Delay, ct);
-                break;
-
-            case InterruptAction.ResetImmediately:
-                Reset();
-                break;
-
-            default:
-                throw new ArgumentOutOfRangeException(nameof(behavior), behavior.Action, "Неизвестное действие");
-        }
-    }
-
-    private async Task DelayThenResetAsync(TimeSpan? delay, CancellationToken ct)
-    {
-        if (delay.HasValue)
-        {
-            await Task.Delay(delay.Value, ct);
-        }
-        Reset();
     }
 
     #endregion
@@ -250,8 +190,8 @@ public partial class ErrorCoordinator
 
     private async Task<ErrorResolution> WaitForOperatorSignalAsync(CancellationToken ct)
     {
-        var waitResult = await _tagWaiter.WaitAnyAsync(
-            _tagWaiter.CreateWaitGroup<ErrorResolution>()
+        var waitResult = await _resolution.TagWaiter.WaitAnyAsync(
+            _resolution.TagWaiter.CreateWaitGroup<ErrorResolution>()
                 .WaitForTrue(BaseTags.ErrorRetry, () => ErrorResolution.Retry, "Retry")
                 .WaitForTrue(BaseTags.ErrorSkip, () => ErrorResolution.Skip, "Skip")
                 .WithTimeout(ResolutionTimeout),
@@ -274,14 +214,13 @@ public partial class ErrorCoordinator
     public async Task SendAskRepeatAsync(string? blockErrorTag, CancellationToken ct)
     {
         _logger.LogInformation("Отправка AskRepeat в PLC");
-        var result = await _plcService.WriteAsync(BaseTags.AskRepeat, true, ct);
+        var result = await _resolution.PlcService.WriteAsync(BaseTags.AskRepeat, true, ct);
 
         if (result.Error != null)
         {
             _logger.LogError("Ошибка записи AskRepeat: {Error}", result.Error);
             return;
         }
-
         await WaitForPlcAcknowledgeAsync(blockErrorTag, ct);
     }
 
@@ -291,9 +230,8 @@ public partial class ErrorCoordinator
         {
             return;
         }
-
         _logger.LogDebug("Ожидание сброса Error блока: {Tag}", blockErrorTag);
-        await _tagWaiter.WaitForFalseAsync(blockErrorTag, timeout: null, ct);
+        await _resolution.TagWaiter.WaitForFalseAsync(blockErrorTag, timeout: null, ct);
         _logger.LogDebug("Error блока сброшен");
     }
 
