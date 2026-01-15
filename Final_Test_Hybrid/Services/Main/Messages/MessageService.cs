@@ -57,7 +57,7 @@ public class MessageService
 
         // Критичные без сброса
         (180, () => !_connection.IsConnected,
-              () => "Потеря связи с PLC"),
+              () => "Нет связи с PLC"),
 
         (170, () => _errorCoord.CurrentInterrupt == InterruptReason.TagTimeout,
               () => "Нет ответа от ПЛК"),

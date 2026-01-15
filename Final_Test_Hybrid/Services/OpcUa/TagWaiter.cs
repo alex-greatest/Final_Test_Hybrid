@@ -149,6 +149,10 @@ public class TagWaiter(
             {
                 continue;
             }
+            if (!CheckAdditionalTags(condition))
+            {
+                continue;
+            }
             var result = builder.ResultCallbacks[i](current);
             logger.LogInformation("WaitGroup: условие [{Index}] {Name} уже выполнено, тег {NodeId} = {Value}",
                 i, condition.Name ?? "unnamed", condition.NodeId, current);
@@ -164,6 +168,23 @@ public class TagWaiter(
             };
         }
         return null;
+    }
+
+    private bool CheckAdditionalTags(TagWaitCondition condition)
+    {
+        if (condition.AdditionalNodeIds == null)
+        {
+            return true;
+        }
+        foreach (var additionalNodeId in condition.AdditionalNodeIds)
+        {
+            var value = subscription.GetValue<bool>(additionalNodeId);
+            if (value != true)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void RecheckAfterSubscribe<TResult>(
@@ -203,6 +224,10 @@ public class TagWaiter(
             {
                 return Task.CompletedTask;
             }
+            if (!CheckAdditionalTags(condition))
+            {
+                return Task.CompletedTask;
+            }
             var result = resultCallback(value);
             logger.LogInformation("WaitGroup: условие [{Index}] {Name} сработало, тег {NodeId} = {Value}, результат = {Result}",
                 index, condition.Name ?? "unnamed", condition.NodeId, value, result);
@@ -227,7 +252,15 @@ public class TagWaiter(
     {
         for (var i = 0; i < conditions.Count; i++)
         {
-            await subscription.SubscribeAsync(conditions[i].NodeId, handlers[i], ct);
+            var condition = conditions[i];
+            await subscription.SubscribeAsync(condition.NodeId, handlers[i], ct);
+            if (condition.AdditionalNodeIds is { } additionalNodeIds)
+            {
+                foreach (var additionalNodeId in additionalNodeIds)
+                {
+                    await subscription.SubscribeAsync(additionalNodeId, handlers[i], ct);
+                }
+            }
         }
     }
 
@@ -237,11 +270,23 @@ public class TagWaiter(
     {
         for (var i = 0; i < conditions.Count; i++)
         {
+            var condition = conditions[i];
             await subscription.UnsubscribeAsync(
-                conditions[i].NodeId,
+                condition.NodeId,
                 handlers[i],
                 removeTag: false,
                 ct: CancellationToken.None);
+            if (condition.AdditionalNodeIds is { } additionalNodeIds)
+            {
+                foreach (var additionalNodeId in additionalNodeIds)
+                {
+                    await subscription.UnsubscribeAsync(
+                        additionalNodeId,
+                        handlers[i],
+                        removeTag: false,
+                        ct: CancellationToken.None);
+                }
+            }
         }
     }
 

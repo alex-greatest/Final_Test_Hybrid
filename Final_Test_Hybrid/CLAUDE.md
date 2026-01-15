@@ -59,6 +59,8 @@ public class BlazorUiDispatcher(BlazorDispatcherAccessor a) : IUiDispatcher
 
 ### Pausable vs Non-Pausable
 
+См. [TagWaiterGuide.md](TagWaiterGuide.md) для подробностей.
+
 | Контекст | Сервис |
 |----------|--------|
 | Тестовые шаги | `PausableOpcUaTagService`, `PausableTagWaiter` |
@@ -89,6 +91,15 @@ public class BlazorUiDispatcher(BlazorDispatcherAccessor a) : IUiDispatcher
 
 **Очистка BoilerState:** гарантирована через `ClearStateOnReset()` в PreExecutionCoordinator.
 
+## ErrorService — История ошибок
+
+| Момент | Действие | Где |
+|--------|----------|-----|
+| После записи Start в BlockBoilerAdapter | `IsHistoryEnabled = true` | `BlockBoilerAdapterStep.ExecuteAsync` |
+| При сбросе PLC (любой) | `IsHistoryEnabled = false` | `PreExecutionCoordinator.ClearStateOnReset` |
+
+История пишется только во время выполнения теста (от блокировки адаптера до сброса).
+
 ## Retry/Skip — Логика повтора и пропуска шагов
 
 Обработка ошибок шагов с сигналами PLC. См. [RetrySkipGuide.md](RetrySkipGuide.md)
@@ -97,6 +108,17 @@ public class BlazorUiDispatcher(BlazorDispatcherAccessor a) : IUiDispatcher
 |----------|------------|----------|
 | Повтор | `Req_Repeat = true` | `AskRepeat = true`, ждёт `Block.Error = false` |
 | Пропуск | `End = true` | Ничего, переход к следующему шагу (NOK) |
+
+## Settings Blocking — Блокировка настроек
+
+Галочки в панели Engineer блокируются во время операций. См. [SettingsBlockingGuide.md](SettingsBlockingGuide.md)
+
+| Сервис | Блокирует |
+|--------|-----------|
+| `SettingsAccessStateManager` | Когда тест НЕ на scan step |
+| `PlcResetCoordinator` | Во время сброса PLC |
+| `ErrorCoordinator` | При активном прерывании |
+| `PreExecutionCoordinator` | Только SwitchMes, при pre-execution |
 
 ## Accepted Patterns (NOT bugs)
 

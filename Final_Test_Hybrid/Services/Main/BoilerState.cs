@@ -21,6 +21,7 @@ public class BoilerState
     private BoilerTypeCycle? _boilerTypeCycle;
     private IReadOnlyList<RecipeResponseDto>? _recipes;
     private string? _lastSerialNumber;
+    private bool _isTestRunning;
 
     public event Action? OnChanged;
 
@@ -94,6 +95,26 @@ public class BoilerState
         }
     }
 
+    public bool IsTestRunning
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _isTestRunning;
+            }
+        }
+    }
+
+    public void SetTestRunning(bool value)
+    {
+        lock (_lock)
+        {
+            _isTestRunning = value;
+        }
+        NotifyChanged();
+    }
+
     public void SetData(
         string serialNumber,
         string article,
@@ -110,6 +131,7 @@ public class BoilerState
         lock (_lock)
         {
             _lastSerialNumber = _serialNumber;
+            _isTestRunning = false;
         }
         UpdateState(serialNumber: null, article: null, isValid: false, boilerTypeCycle: null, recipes: null);
         _recipeProvider.Clear();

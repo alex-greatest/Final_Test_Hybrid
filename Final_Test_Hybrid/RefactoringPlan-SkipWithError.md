@@ -164,4 +164,4 @@ private async Task<ErrorResolution> WaitForOperatorSignalAsync(string? blockErro
 ---
 
 ## Статус
-- [ ] Не начат
+- [x] Завершён

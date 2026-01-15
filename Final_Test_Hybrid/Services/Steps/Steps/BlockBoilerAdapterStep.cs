@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Errors;
+using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
@@ -12,6 +13,7 @@ public class BlockBoilerAdapterStep(
     TagWaiter tagWaiter,
     ExecutionPhaseState phaseState,
     IErrorService errorService,
+    BoilerState boilerState,
     DualLogger<BlockBoilerAdapterStep> logger) : IPreExecutionStep, IHasPlcBlockPath, IRequiresPlcTags
 {
     private const string BlockPath = "DB_VI.Block_Boiler_Adapter";
@@ -38,6 +40,7 @@ public class BlockBoilerAdapterStep(
             return CreateWriteError(writeResult.Error);
         }
         errorService.IsHistoryEnabled = true;
+        boilerState.SetTestRunning(true);
         return await WaitForCompletionAsync(ct);
     }
 

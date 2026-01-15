@@ -17,6 +17,7 @@ public interface IErrorCoordinator
     void Reset();
     void ForceStop();
     Task<ErrorResolution> WaitForResolutionAsync(CancellationToken ct);
+    Task<ErrorResolution> WaitForResolutionAsync(string? blockErrorTag, CancellationToken ct, TimeSpan? timeout = null);
     Task SendAskRepeatAsync(CancellationToken ct);
     Task SendAskRepeatAsync(string? blockErrorTag, CancellationToken ct);
 }

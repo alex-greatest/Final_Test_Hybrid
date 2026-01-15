@@ -2,36 +2,40 @@
 {
     <div class="floating-error-panel" id="floating-error-panel" style="@PositionStyle">
         <div class="floating-error-header" @onmousedown="StartDrag">
-            <span>Ошибка @GetStandName()</span>
+            <h2 class="title">Ошибка @GetStandName()</h2>
+            <p class="subtitle">@DisplayStepName</p>
         </div>
 
-        <div class="floating-error-subheader">
-            @DisplayStepName
-        </div>
-
-        <div class="floating-error-body">
-            <div class="action-row">
-                <div class="action-text">
-                    <span class="action-label">"Повтор"</span>
-                    <span class="action-hint">для повтора шага</span>
+        <div class="rows">
+            <div class="row">
+                <p class="description">
+                    <span class="action">"Повтор"</span> для повтора шага
+                </p>
+                <div class="lamp-container">
+                    <span class="lamp-label">Повтор</span>
+                    <div class="lamp lamp-black"></div>
                 </div>
-                <span class="action-indicator green">Повтор</span>
             </div>
 
-            <div class="action-row">
-                <div class="action-text">
-                    <span class="action-label">"Один шаг"</span>
-                    <span class="action-hint">для перехода на следующий шаг</span>
+            <div class="row">
+                <p class="description">
+                    <span class="action">"Один шаг"</span> для перехода<br />
+                    на следующий шаг
+                </p>
+                <div class="lamp-container">
+                    <span class="lamp-label">Один шаг</span>
+                    <div class="lamp lamp-green"></div>
                 </div>
-                <span class="action-indicator green">Один шаг</span>
             </div>
 
-            <div class="action-row">
-                <div class="action-text">
-                    <span class="action-label">"СТОП"</span>
-                    <span class="action-hint">для отмены теста</span>
+            <div class="row">
+                <p class="description">
+                    <span class="action">"СТОП"</span> для отмены теста
+                </p>
+                <div class="lamp-container">
+                    <span class="lamp-label">Стоп</span>
+                    <div class="lamp lamp-red"></div>
                 </div>
-                <span class="action-indicator red">Стоп</span>
             </div>
         </div>
     </div>

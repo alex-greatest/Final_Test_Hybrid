@@ -4,7 +4,7 @@ public static partial class ErrorDefinitions
 {
     // Глобальные программные ошибки
     public static readonly ErrorDefinition OpcConnectionLost = new(
-        "G010", "Потеря связи с ПЛК",
+        "О-004-00", "Потеря связи с ПЛК",
         Severity: ErrorSeverity.Critical);
 
     public static readonly ErrorDefinition DatabaseError = new(

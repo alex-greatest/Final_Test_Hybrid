@@ -40,6 +40,27 @@ public class WaitGroupBuilder<TResult>
         return WaitFor<bool>(nodeId, v => !v, _ => onTriggered(), name);
     }
 
+    public WaitGroupBuilder<TResult> WaitForAllTrue(
+        IReadOnlyList<string> nodeIds,
+        Func<TResult> resultFactory,
+        string? name = null)
+    {
+        if (nodeIds.Count == 0)
+        {
+            throw new ArgumentException("nodeIds cannot be empty", nameof(nodeIds));
+        }
+
+        _conditions.Add(new TagWaitCondition
+        {
+            NodeId = nodeIds[0],
+            AdditionalNodeIds = nodeIds.Count > 1 ? nodeIds.Skip(1).ToList() : null,
+            Condition = value => value is bool b && b,
+            Name = name
+        });
+        _resultCallbacks.Add(_ => resultFactory());
+        return this;
+    }
+
     internal WaitGroupBuilder<TResult> AddCondition(
         TagWaitCondition condition,
         Func<object?, TResult> resultCallback)

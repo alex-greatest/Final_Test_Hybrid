@@ -151,13 +151,16 @@ public partial class ErrorCoordinator
     #endregion
     #region Error Resolution
 
-    public async Task<ErrorResolution> WaitForResolutionAsync(CancellationToken ct)
+    public Task<ErrorResolution> WaitForResolutionAsync(CancellationToken ct)
+        => WaitForResolutionAsync(null, ct);
+
+    public async Task<ErrorResolution> WaitForResolutionAsync(string? blockErrorTag, CancellationToken ct, TimeSpan? timeout = null)
     {
-        _logger.LogInformation("Ожидание решения оператора (таймаут {Timeout} сек)...",
-            ResolutionTimeout.TotalSeconds);
+        var timeoutMsg = timeout.HasValue ? $"таймаут {timeout.Value.TotalSeconds} сек" : "без таймаута";
+        _logger.LogInformation("Ожидание решения оператора ({Timeout})...", timeoutMsg);
         try
         {
-            return await WaitForOperatorSignalAsync(ct);
+            return await WaitForOperatorSignalAsync(blockErrorTag, timeout, ct);
         }
         catch (Exception ex)
         {
@@ -188,14 +191,29 @@ public partial class ErrorCoordinator
         return default;
     }
 
-    private async Task<ErrorResolution> WaitForOperatorSignalAsync(CancellationToken ct)
+    private async Task<ErrorResolution> WaitForOperatorSignalAsync(string? blockErrorTag, TimeSpan? timeout, CancellationToken ct)
     {
-        var waitResult = await _resolution.TagWaiter.WaitAnyAsync(
-            _resolution.TagWaiter.CreateWaitGroup<ErrorResolution>()
-                .WaitForTrue(BaseTags.ErrorRetry, () => ErrorResolution.Retry, "Retry")
-                .WaitForTrue(BaseTags.ErrorSkip, () => ErrorResolution.Skip, "Skip")
-                .WithTimeout(ResolutionTimeout),
-            ct);
+        var builder = _resolution.TagWaiter.CreateWaitGroup<ErrorResolution>()
+            .WaitForTrue(BaseTags.ErrorRetry, () => ErrorResolution.Retry, "Retry");
+
+        if (blockErrorTag != null)
+        {
+            builder.WaitForAllTrue(
+                [BaseTags.ErrorSkip, blockErrorTag],
+                () => ErrorResolution.Skip,
+                "Skip");
+        }
+        else
+        {
+            builder.WaitForTrue(BaseTags.ErrorSkip, () => ErrorResolution.Skip, "Skip");
+        }
+
+        if (timeout.HasValue)
+        {
+            builder.WithTimeout(timeout.Value);
+        }
+
+        var waitResult = await _resolution.TagWaiter.WaitAnyAsync(builder, ct);
 
         var resolution = waitResult.Result;
         _logger.LogInformation("Получен сигнал: {Resolution}", resolution);

@@ -1,6 +1,8 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Plc;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
@@ -63,7 +65,8 @@ public partial class TestExecutionCoordinator
             ErrorResolution resolution;
             try
             {
-                resolution = await _errorCoordinator.WaitForResolutionAsync(_cts.Token);
+                var blockErrorTag = GetBlockErrorTag(error.FailedStep);
+                resolution = await _errorCoordinator.WaitForResolutionAsync(blockErrorTag, _cts.Token, timeout: null);
             }
             catch (OperationCanceledException)
             {
@@ -136,5 +139,10 @@ public partial class TestExecutionCoordinator
     {
         executor.ClearFailedState();
         StateManager.DequeueError();
+    }
+
+    private static string? GetBlockErrorTag(ITestStep? step)
+    {
+        return PlcBlockTagHelper.GetErrorTag(step as IHasPlcBlockPath);
     }
 }

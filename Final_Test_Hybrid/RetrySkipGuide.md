@@ -64,6 +64,16 @@
 
 ## Skip Flow (Пропуск)
 
+### Условия срабатывания Skip
+
+| Тип шага | Условие Skip |
+|----------|--------------|
+| **С блоком** (IHasPlcBlock) | `End=true AND Block.Error=true` |
+| **Без блока** | `End=true` |
+
+> **Почему AND-логика для шагов с блоком?**
+> Предотвращает случайный Skip когда оператор нажимает "Один шаг" без реальной ошибки блока.
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  ЭТАП 1-2: Ошибка + Диалог (как в Retry)                        │
@@ -77,6 +87,7 @@
 ├─────────────────────────────────────────────────────────────────┤
 │  Оператор нажимает "Один шаг"                                   │
 │  PLC → PC: End = true                                           │
+│  PC проверяет: Block.Error = true? (для шагов с блоком)         │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -101,36 +112,43 @@
 
 ## Различия Retry vs Skip
 
-| Параметр | Retry | Skip |
-|----------|-------|------|
-| **Сигнал от оператора** | `Req_Repeat = true` | `End = true` |
-| **PC → PLC** | `AskRepeat = true` | Ничего |
-| **Ждёт подтверждения** | `Block.Error = false` | Нет |
-| **Шаг выполняется** | Заново | Нет |
-| **Block.Error** | Сбрасывается PLC | Остаётся true |
-| **Статус шага в UI** | Может стать OK | Остаётся NOK (Ошибка) |
+| Параметр | Retry | Skip (с блоком) | Skip (без блока) |
+|----------|-------|-----------------|------------------|
+| **Условие** | `Req_Repeat = true` | `End=true AND Block.Error=true` | `End = true` |
+| **PC → PLC** | `AskRepeat = true` | Ничего | Ничего |
+| **Ждёт подтверждения** | `Block.Error = false` | Нет | Нет |
+| **Шаг выполняется** | Заново | Нет | Нет |
+| **Block.Error** | Сбрасывается PLC | Остаётся true | — |
+| **Статус шага в UI** | Может стать OK | NOK (Ошибка) | NOK (Ошибка) |
 
 ## Ключевые методы
 
 ### ErrorCoordinator.Interrupts.cs
 
 ```csharp
-// Ожидание решения оператора
-public async Task<ErrorResolution> WaitForResolutionAsync(CancellationToken ct)
+// Ожидание решения оператора (с blockErrorTag для AND-логики Skip)
+public Task<ErrorResolution> WaitForResolutionAsync(CancellationToken ct)
+    => WaitForResolutionAsync(null, ct);
+
+public async Task<ErrorResolution> WaitForResolutionAsync(string? blockErrorTag, CancellationToken ct)
 {
-    return await WaitForOperatorSignalAsync(ct);
+    return await WaitForOperatorSignalAsync(blockErrorTag, ct);
 }
 
 // Ожидание сигналов от PLC
-private async Task<ErrorResolution> WaitForOperatorSignalAsync(CancellationToken ct)
+private async Task<ErrorResolution> WaitForOperatorSignalAsync(string? blockErrorTag, CancellationToken ct)
 {
-    var waitResult = await _resolution.TagWaiter.WaitAnyAsync(
-        _resolution.TagWaiter.CreateWaitGroup<ErrorResolution>()
-            .WaitForTrue(BaseTags.ErrorRetry, () => ErrorResolution.Retry, "Retry")
-            .WaitForTrue(BaseTags.ErrorSkip, () => ErrorResolution.Skip, "Skip")
-            .WithTimeout(ResolutionTimeout),
-        ct);
-    return waitResult.Result;
+    var builder = _resolution.TagWaiter.CreateWaitGroup<ErrorResolution>()
+        .WaitForTrue(BaseTags.ErrorRetry, () => ErrorResolution.Retry, "Retry");
+
+    // Skip: AND-логика для шагов с блоком
+    if (blockErrorTag != null)
+        builder.WaitForAllTrue([BaseTags.ErrorSkip, blockErrorTag], () => ErrorResolution.Skip, "Skip");
+    else
+        builder.WaitForTrue(BaseTags.ErrorSkip, () => ErrorResolution.Skip, "Skip");
+
+    builder.WithTimeout(ResolutionTimeout);
+    return (await _resolution.TagWaiter.WaitAnyAsync(builder, ct)).Result;
 }
 
 // Отправка сигнала готовности к повтору

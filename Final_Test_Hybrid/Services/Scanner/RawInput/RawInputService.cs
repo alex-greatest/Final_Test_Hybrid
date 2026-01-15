@@ -128,6 +128,7 @@ public sealed class RawInputService : IDisposable
                 CompleteBarcode();
                 break;
             case KeyboardAction.Ignore:
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(result));
         }

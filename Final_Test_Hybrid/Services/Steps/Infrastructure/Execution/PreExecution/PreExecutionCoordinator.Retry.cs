@@ -109,7 +109,7 @@ public partial class PreExecutionCoordinator
                     currentResult.UserMessage ?? currentResult.ErrorMessage!);
 
                 infra.Logger.LogInformation("Диалог показан, ожидаем WaitForResolutionAsync...");
-                var resolution = await WaitForResolutionAsync(ct);
+                var resolution = await WaitForResolutionAsync(step, ct);
                 infra.Logger.LogInformation("WaitForResolutionAsync вернул: {Resolution}", resolution);
 
                 if (resolution == PreExecutionResolution.Retry)
@@ -167,13 +167,14 @@ public partial class PreExecutionCoordinator
 
     #region Wait For Resolution
 
-    private async Task<PreExecutionResolution> WaitForResolutionAsync(CancellationToken ct)
+    private async Task<PreExecutionResolution> WaitForResolutionAsync(BlockBoilerAdapterStep step, CancellationToken ct)
     {
         infra.Logger.LogDebug("WaitForResolutionAsync: создаём _externalSignal");
         var signal = _externalSignal = new TaskCompletionSource<PreExecutionResolution>();
+        var blockErrorTag = GetBlockErrorTag(step);
         try
         {
-            var completedTask = await WaitForFirstSignalAsync(signal, ct);
+            var completedTask = await WaitForFirstSignalAsync(signal, blockErrorTag, ct);
             infra.Logger.LogDebug("WaitForResolutionAsync: получили completedTask");
             return await ExtractResolutionAsync(completedTask, signal);
         }
@@ -185,10 +186,11 @@ public partial class PreExecutionCoordinator
 
     private Task<Task> WaitForFirstSignalAsync(
         TaskCompletionSource<PreExecutionResolution> signal,
+        string? blockErrorTag,
         CancellationToken ct)
     {
         infra.Logger.LogDebug("WaitForFirstSignalAsync: вызываем errorCoordinator.WaitForResolutionAsync");
-        var resolutionTask = coordinators.ErrorCoordinator.WaitForResolutionAsync(ct);
+        var resolutionTask = coordinators.ErrorCoordinator.WaitForResolutionAsync(blockErrorTag, ct, timeout: null);
         var externalTask = signal.Task;
 
         return Task.WhenAny(resolutionTask, externalTask);
