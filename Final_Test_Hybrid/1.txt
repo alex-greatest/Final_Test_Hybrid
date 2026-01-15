@@ -1,0 +1,16 @@
+смотри дальше нам нужно внедрить систему повтора. давай начнём с состояние ок. у нас в @Final_Test_Hybrid/Services/Main/BoilerState.cs есть тег _isTestRunning что тест идёт. вот мы выполнили все шаги в
+  @Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.cs которые были запущены из @Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.cs.
+  дальше предлагаю добавить состояние например в тот же @Final_Test_Hybrid/Models/BoilerState.cs результат теста. если хоть один шаг был не ок, то тест nok. хранить надо в интовойй переменной 1 - ок, 2 - nok.
+
+напомню что пропуск шага это то же nok
+  @Final_Test_Hybrid/RetrySkipGuide.md. Сосредоточимя пока на ок, когда все шаг были ок. если всё ок, вот закончили мы тест @Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.cs всё
+  было ок. выключаем сохранение истории ошибок и isTestRunning = false. нам надо записать общий сигнал end (ErrorSkip в BaseTags) в plc = true пишем только без паузы D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\TagWaiterGuide.md. 
+И дальше нам не нужны паузы и таймауты, ждём бесконечно
+И начинаем ждать, если пропадает сигнал End. то надо отправить данные в mes или в бд в зависимости от usemes. это делам пока заглушку. если не получилось то показываем уведомление от сервиса и отображаем окно диалоговое окно с кнопкой повтора, которая будет повторять запрос. показываем окно пока не получим ок или пока не произойдёт мягки или жёсткий сброс @Final_Test_Hybrid/PlcResetGuide.md. если всё получилось то делам сброс аналогичный мягкому или жёсктому (те же очистики и т.д. ну один в один крч) и можно сбросить новую переменную в принципе, которая определяте общий результат теста. 
+Так а если был сброшен End = false, но появился ErrorRetry = true из @BaseTags, то это повтор теста. тут надо очистить только грид, кроме шага сканирвания и Block Boiler Adapter. очистить время шагов кроме вот этих двух (если было несколько запусков Block Boiler Adapter, то сохранить все надо). очистить все результаты и истории ошибок и включить сохранение истории ошибок и isTestRunning = true и сбросить сигнал который определяет ок или nok был общий тест (надо добавить в Final_Test_Hybrid/Services/Main/BoilerState.cs).
+
+
+
+когда начинаем ждать пропажу сигнала end или пропажу end и появления rrorRetry = true мы можем в компоненте @Final_Test_Hybrid/MyComponent.razor прям вместо грида и тексовтого поля @Final_Test_Hybrid/Services/Main/Messages/MessageService.cs показать
+  @Final_Test_Hybrid/wwwroot/images/green_smiley_clean.png поверх текст в самом вверху - "Один шаг" - закончить тест или "Повтор" (чёрного цвета, жирным) для повтора теста. если вдруг случится мягки или жёсктй сброс
+  @Final_Test_Hybrid/PlcResetGuide.md то это изображение надо скрыть и опять показать грид и тектсвое поле для сообщений. ну и понятно когда повторили тест или закончили, то надо скрыть изображение и вернуть грид и текстовое поле. D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Screenshot_3.png пример когда есть изображение

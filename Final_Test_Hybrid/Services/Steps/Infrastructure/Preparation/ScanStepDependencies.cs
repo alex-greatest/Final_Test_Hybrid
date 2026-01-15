@@ -1,4 +1,4 @@
-using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Models;
 using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Scanner;
