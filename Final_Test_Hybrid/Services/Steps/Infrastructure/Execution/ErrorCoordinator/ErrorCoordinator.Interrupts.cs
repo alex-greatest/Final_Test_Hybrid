@@ -125,7 +125,8 @@ public partial class ErrorCoordinator
         }
 
         // Ранняя проверка: AutoModeDisabled при уже восстановленном автомате — пропуск
-        if (reason == InterruptReason.AutoModeDisabled && _subscriptions.AutoReady.IsReady)
+        var isAutoReady = _subscriptions.AutoReady.IsReady;
+        if (reason == InterruptReason.AutoModeDisabled && isAutoReady)
         {
             _logger.LogInformation("AutoReady восстановлен до обработки прерывания — пропуск");
             return;

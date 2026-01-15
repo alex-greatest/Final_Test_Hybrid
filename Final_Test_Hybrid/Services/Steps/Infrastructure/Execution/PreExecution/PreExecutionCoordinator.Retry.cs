@@ -34,28 +34,27 @@ public partial class PreExecutionCoordinator
 
     private void HandleStopSignal(PreExecutionResolution resolution)
     {
-        if (TryCancelActiveOperation())
+        var exitReason = resolution == PreExecutionResolution.SoftStop
+            ? CycleExitReason.SoftReset
+            : CycleExitReason.HardReset;
+
+        if (TryCancelActiveOperation(exitReason))
         {
-            // Очистка произойдёт позже: в catch блоке или HandlePostTestCompletion
+            // Очистка произойдёт в HandleCycleExit
         }
         else
         {
             // Нет активной операции — очищаем сразу
-            ClearStateOnReset();
+            HandleCycleExit(exitReason);
         }
         SignalResolution(resolution);
     }
 
-    private bool TryCancelActiveOperation()
+    private bool TryCancelActiveOperation(CycleExitReason exitReason)
     {
-        if (coordinators.TestCoordinator.IsRunning)
+        if (coordinators.TestCoordinator.IsRunning || state.ActivityTracker.IsPreExecutionActive)
         {
-            _resetRequested = true;
-            return true;
-        }
-        if (state.ActivityTracker.IsPreExecutionActive)
-        {
-            _resetRequested = true;
+            _pendingExitReason = exitReason;
             _currentCts?.Cancel();
             return true;
         }
@@ -64,6 +63,7 @@ public partial class PreExecutionCoordinator
 
     private void HandleGridClear()
     {
+        ClearStateOnReset();
         infra.StatusReporter.ClearAllExceptScan();
     }
 

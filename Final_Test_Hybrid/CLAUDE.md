@@ -89,7 +89,24 @@ public class BlazorUiDispatcher(BlazorDispatcherAccessor a) : IUiDispatcher
 | Мягкий | `wasInScanPhase = true` | `ForceStop()` |
 | Жёсткий | `wasInScanPhase = false` | `Reset()` |
 
-**Очистка BoilerState:** гарантирована через `ClearStateOnReset()` в PreExecutionCoordinator.
+**Очистка BoilerState:** гарантирована через `HandleCycleExit()` в PreExecutionCoordinator.
+
+## CycleExitReason — Состояния выхода из цикла
+
+Явное управление очисткой состояния. См. [CycleExitGuide.md](CycleExitGuide.md)
+
+```csharp
+enum CycleExitReason { PipelineFailed, PipelineCancelled, TestCompleted, SoftReset, HardReset }
+```
+
+| Состояние | Очистка | Когда |
+|-----------|---------|-------|
+| `TestCompleted` | `SetTestResult()` | Сразу |
+| `SoftReset` | `ClearStateOnReset()` | По AskEnd (синхронно с гридом) |
+| `HardReset` | `ClearStateOnReset()` + grid | Сразу |
+| `PipelineFailed/Cancelled` | Ничего | — |
+
+**Добавить новое состояние:** enum → `HandleCycleExit` case → источник сигнала.
 
 ## ErrorService — История ошибок
 
@@ -129,6 +146,48 @@ public class BlazorUiDispatcher(BlazorDispatcherAccessor a) : IUiDispatcher
 | `?.TrySetResult()` без синхронизации | Идемпотентна |
 | Fire-and-forget в singleton | С `.ContinueWith` для ошибок |
 
+## Race Condition Prevention — TOCTOU Pattern
+
+При работе с полями класса между `await` или в event handlers — **захватывай в локальную переменную**.
+
+### Проблема (TOCTOU — Time-of-Check-Time-of-Use)
+```csharp
+// ПЛОХО: поле может измениться между проверкой и использованием
+if (_state.FailedStep != null)
+{
+    RestartFailedStep();  // Может обнулить _state.FailedStep!
+    await ExecuteStepCoreAsync(_state.FailedStep, ct);  // NullReferenceException
+}
+```
+
+### Решение
+```csharp
+// ХОРОШО: захватить в локальную переменную
+var step = _state.FailedStep;
+if (step != null)
+{
+    RestartFailedStep();
+    await ExecuteStepCoreAsync(step, ct);  // Безопасно
+}
+```
+
+### Когда применять
+
+| Ситуация | Паттерн |
+|----------|---------|
+| Поле читается перед `await` и после | Захват в локальную переменную |
+| Поле в event handler | Захват в начале метода |
+| `CancellationTokenSource` | Захват перед использованием `.Token` |
+| `TaskCompletionSource` | `Interlocked.Exchange` при присваивании |
+| Property с side effects | Один вызов, результат в переменную |
+
+### Примеры из кодовой базы
+
+- `ColumnExecutor.RetryLastFailedStepAsync` — захват `step`
+- `TestExecutionCoordinator.HandleErrorsIfAny` — захват `_cts`
+- `ErrorCoordinator.HandleConnectionChanged` — захват `IsAnyActive`
+- `ScanModeController.IsInScanningPhase` — `IsInScanningPhaseUnsafe` для внутренних вызовов
+
 ## Architecture
 
 ```
@@ -145,6 +204,171 @@ ScanStepManager
 ├── ScanModeController
 ├── ScanDialogCoordinator
 └── ScanSessionManager
+```
+
+## Step Execution System — Полный Flow
+
+Система выполнения тестов состоит из двух фаз: **PreExecution** (подготовка) и **TestExecution** (параллельное выполнение).
+
+### Общая схема
+
+```
+[Сканирование штрихкода]
+        ↓
+┌─────────────────────────────────────┐
+│ PreExecutionCoordinator             │
+│ ├─ ScanStep (подготовка данных)     │
+│ └─ BlockBoilerAdapterStep (PLC)     │
+└─────────────────────────────────────┘
+        ↓ StartTestExecution()
+┌─────────────────────────────────────┐
+│ TestExecutionCoordinator            │
+│ └─ 4 × ColumnExecutor (parallel)    │
+│    └─ TestMap → TestMapRow[4]       │
+└─────────────────────────────────────┘
+        ↓ OnSequenceCompleted
+[Результат: OK/NOK]
+```
+
+### Фаза 1: PreExecution
+
+**Файлы:** `Services/Steps/Infrastructure/Execution/PreExecution/`
+
+```
+PreExecutionCoordinator.StartMainLoopAsync()
+└─ while (!ct.IsCancellationRequested)
+   └─ RunSingleCycleAsync()
+      ├─ SetAcceptingInput(true)      // UI: поле ввода активно
+      ├─ WaitForBarcodeAsync()        // Блокируется до сканирования
+      ├─ SetAcceptingInput(false)
+      └─ ExecuteCycleAsync(barcode)
+         ├─ ScanStep.ExecuteAsync()   // 10 шагов подготовки
+         ├─ BlockBoilerAdapterStep    // Блокировка адаптера
+         └─ StartTestExecution()      // Fire-and-forget
+```
+
+**ScanStep** (10 шагов):
+1. `ValidateBarcode()` → проверка формата
+2. `LoadBoilerDataAsync()` → тип котла из БД/MES
+3. `LoadTestSequenceAsync()` → последовательность тестов
+4. `BuildTestMaps()` → матрица шагов
+5. `SaveBoilerState()` → сохранение в singleton
+6. `ResolveTestMaps()` → резолвинг шагов по именам
+7. `ValidateRecipes()` → проверка рецептов
+8. `InitializeDatabaseAsync()` → записи в БД
+9. `WriteRecipesToPlcAsync()` → запись рецептов в PLC
+10. `InitializeRecipeProvider()` → подготовка провайдера
+
+**BlockBoilerAdapterStep:**
+```csharp
+WriteAsync(StartTag, true)           // Сигнал PLC
+IsHistoryEnabled = true              // Начало сбора ошибок
+WaitAnyAsync([EndTag, ErrorTag])     // Ждём ответ PLC
+├─ EndTag → Continue()               // Успех, запуск теста
+└─ ErrorTag → FailRetryable()        // Ошибка с возможностью повтора
+```
+
+### Фаза 2: TestExecution
+
+**Файлы:** `Services/Steps/Infrastructure/Execution/Coordinator/`
+
+```
+TestExecutionCoordinator.StartAsync()
+├─ BeginExecution()
+│  ├─ TransitionTo(Running)
+│  └─ SetTestExecutionActive(true)
+├─ RunAllMaps()
+│  └─ for each TestMap:
+│     └─ ExecuteMapOnAllColumns()
+│        ├─ executor[0].ExecuteMapAsync() ─┐
+│        ├─ executor[1].ExecuteMapAsync() ─┼─ Task.WhenAll()
+│        ├─ executor[2].ExecuteMapAsync() ─┤
+│        ├─ executor[3].ExecuteMapAsync() ─┘
+│        └─ HandleErrorsIfAny()        // После каждого Map
+└─ Complete()
+   └─ OnSequenceCompleted?.Invoke()
+```
+
+**ColumnExecutor** — выполнение одной колонки:
+```csharp
+ExecuteMapAsync(map, ct)
+└─ foreach row in map.Rows:
+   └─ step = row.Steps[ColumnIndex]  // Берёт шаг для своей колонки
+   └─ ExecuteStepCoreAsync(step, ct)
+      ├─ step.ExecuteAsync()
+      ├─ Success → SetSuccessState()
+      └─ Error → SetErrorState() → EnqueueError()
+```
+
+### Обработка ошибок
+
+```
+ColumnExecutor.SetErrorState()
+        ↓ OnStateChanged
+TestExecutionCoordinator.EnqueueFailedExecutors()
+        ↓
+ExecutionStateManager.EnqueueError()
+        ↓ Task.WhenAll завершился
+HandleErrorsIfAny()
+├─ TransitionTo(PausedOnError)
+├─ OnErrorOccurred?.Invoke(error)    // UI показывает диалог
+├─ WaitForResolutionAsync()          // Ждём PLC сигнал
+│  ├─ ErrorRetry → Retry
+│  └─ ErrorSkip → Skip
+├─ Retry: RetryLastFailedStepAsync()
+└─ Skip: ClearFailedState() + DequeueError()
+```
+
+### Синхронизация между Coordinators
+
+```
+PreExecutionCoordinator                    TestExecutionCoordinator
+        │                                          │
+        │ StartTestExecution()                     │
+        ├────── SetMaps(context.Maps) ────────────►│
+        │                                          │
+        │ fire-and-forget                          │
+        ├────── StartAsync() ─────────────────────►│
+        │                                          ├─ RunAllMaps()
+        │                                          │
+        │ await testCompletionTcs.Task             │
+        │◄─────── OnSequenceCompleted ─────────────┤ Complete()
+        │                                          │
+        ▼                                          │
+HandleTestCompleted()
+└─ SetTestResult(1 or 2)
+```
+
+### Данные между фазами
+
+| Данные | Источник | Назначение |
+|--------|----------|------------|
+| `BoilerState` | ScanStep | Singleton, shared |
+| `TestMap[]` | ScanStep → `context.Maps` | `SetMaps()` → `_maps` |
+| `Recipes` | ScanStep | `RecipeProvider` |
+| `TestResult` | `HandleTestCompleted()` | `BoilerState.SetTestResult()` |
+
+### ExecutionActivityTracker
+
+Отслеживает активные фазы для UI и блокировок:
+
+```csharp
+public bool IsPreExecutionActive { get; }   // Фаза подготовки
+public bool IsTestExecutionActive { get; }  // Фаза выполнения
+public bool IsAnyActive { get; }            // Любая активность
+```
+
+**Жизненный цикл:**
+```
+RunSingleCycleAsync()
+├─ SetPreExecutionActive(true)
+│  └─ StartTestExecution()
+│     └─ BeginExecution()
+│        └─ SetTestExecutionActive(true)
+│        └─ ... выполнение ...
+│        └─ Complete()
+│           └─ SetTestExecutionActive(false)
+└─ SetPreExecutionActive(false)
 ```
 
 ## Test Step Interfaces

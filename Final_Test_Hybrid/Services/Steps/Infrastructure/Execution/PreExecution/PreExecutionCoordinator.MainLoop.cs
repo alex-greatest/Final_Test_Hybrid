@@ -28,72 +28,112 @@ public partial class PreExecutionCoordinator
     private async Task RunSingleCycleAsync(CancellationToken ct)
     {
         SetAcceptingInput(true);
-
         var barcode = await WaitForBarcodeAsync(ct);
         SetAcceptingInput(false);
 
         infra.StatusReporter.UpdateScanStepStatus(Models.Steps.TestStepStatus.Running, "Обработка штрихкода");
         _currentCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+        var testCompletionTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Action onTestCompleted = () => testCompletionTcs.TrySetResult();
+        coordinators.TestCoordinator.OnSequenceCompleted += onTestCompleted;
+
+        CycleExitReason exitReason;
         try
         {
             state.ActivityTracker.SetPreExecutionActive(true);
-            var result = await ExecutePreExecutionPipelineAsync(barcode, _currentCts.Token);
-
-            if (result.Status == Interfaces.PreExecution.PreExecutionStatus.TestStarted)
-            {
-                await WaitForTestCompletionAsync(ct);
-                HandlePostTestCompletion();
-            }
+            exitReason = await ExecuteCycleAsync(barcode, testCompletionTcs, ct);
         }
-        catch (OperationCanceledException) when (_resetRequested)
+        catch (OperationCanceledException)
         {
-            _resetRequested = false;
-            ClearStateOnReset();
+            exitReason = _pendingExitReason ?? CycleExitReason.PipelineCancelled;
         }
         finally
         {
+            _pendingExitReason = null;
+            coordinators.TestCoordinator.OnSequenceCompleted -= onTestCompleted;
             state.ActivityTracker.SetPreExecutionActive(false);
             _currentCts?.Dispose();
             _currentCts = null;
         }
+
+        HandleCycleExit(exitReason);
+    }
+
+    private async Task<CycleExitReason> ExecuteCycleAsync(
+        string barcode,
+        TaskCompletionSource testCompletionTcs,
+        CancellationToken ct)
+    {
+        var result = await ExecutePreExecutionPipelineAsync(barcode, _currentCts!.Token);
+
+        // Проверяем pending exit reason (сброс мог прийти во время pipeline)
+        if (_pendingExitReason.HasValue)
+        {
+            return _pendingExitReason.Value;
+        }
+
+        if (result.Status != Interfaces.PreExecution.PreExecutionStatus.TestStarted)
+        {
+            return result.Status == Interfaces.PreExecution.PreExecutionStatus.Cancelled
+                ? CycleExitReason.PipelineCancelled
+                : CycleExitReason.PipelineFailed;
+        }
+
+        // Ждём завершения теста
+        await using var reg = ct.Register(() => testCompletionTcs.TrySetCanceled());
+        await testCompletionTcs.Task;
+
+        // Проверяем pending exit reason после теста
+        if (_pendingExitReason.HasValue)
+        {
+            return _pendingExitReason.Value;
+        }
+
+        return CycleExitReason.TestCompleted;
+    }
+
+    private void HandleCycleExit(CycleExitReason reason)
+    {
+        switch (reason)
+        {
+            case CycleExitReason.TestCompleted:
+                HandleTestCompleted();
+                break;
+
+            case CycleExitReason.SoftReset:
+                // Ничего - очистка произойдёт по AskEnd в HandleGridClear
+                break;
+
+            case CycleExitReason.HardReset:
+                ClearStateOnReset();
+                infra.StatusReporter.ClearAllExceptScan();
+                break;
+
+            case CycleExitReason.PipelineFailed:
+            case CycleExitReason.PipelineCancelled:
+                // Ничего — состояние сохраняется для retry или следующей попытки
+                break;
+        }
+    }
+
+    private void HandleTestCompleted()
+    {
+        var hasErrors = coordinators.TestCoordinator.HasErrors || coordinators.TestCoordinator.HadSkippedError;
+        var testResult = hasErrors ? 2 : 1;
+        state.BoilerState.SetTestResult(testResult);
+        infra.Logger.LogInformation("Тест завершён. Результат: {Result} ({Status})",
+            testResult, testResult == 1 ? "OK" : "NOK");
     }
 
     private async Task<string> WaitForBarcodeAsync(CancellationToken ct)
     {
-        _barcodeSource = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var reg = ct.Register(() => _barcodeSource.TrySetCanceled());
-        var barcode = await _barcodeSource.Task;
+        var newSource = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Interlocked.Exchange(ref _barcodeSource, newSource);
+        await using var reg = ct.Register(() => newSource.TrySetCanceled());
+        var barcode = await newSource.Task;
         CurrentBarcode = barcode;
         OnStateChanged?.Invoke();
         return barcode;
-    }
-
-    private async Task WaitForTestCompletionAsync(CancellationToken ct)
-    {
-        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        void Handler() => tcs.TrySetResult();
-        coordinators.TestCoordinator.OnSequenceCompleted += Handler;
-
-        try
-        {
-            await using var reg = ct.Register(() => tcs.TrySetCanceled());
-            await tcs.Task;
-        }
-        finally
-        {
-            coordinators.TestCoordinator.OnSequenceCompleted -= Handler;
-        }
-    }
-
-    private void HandlePostTestCompletion()
-    {
-        coordinators.DialogCoordinator.ShowCompletionNotification(coordinators.TestCoordinator.HasErrors);
-        if (_resetRequested)
-        {
-            _resetRequested = false;
-            ClearStateOnReset();
-            infra.StatusReporter.ClearAllExceptScan();
-        }
     }
 }

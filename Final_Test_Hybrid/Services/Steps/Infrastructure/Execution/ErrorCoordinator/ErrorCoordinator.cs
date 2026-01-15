@@ -63,7 +63,8 @@ public partial class ErrorCoordinator : IErrorCoordinator, IInterruptContext, IA
 
     private void HandleConnectionChanged(bool isConnected)
     {
-        if (_disposed || isConnected || !_subscriptions.ActivityTracker.IsAnyActive) { return; }
+        var isActive = _subscriptions.ActivityTracker.IsAnyActive;
+        if (_disposed || isConnected || !isActive) { return; }
         FireAndForgetInterrupt(InterruptReason.PlcConnectionLost);
     }
 
@@ -71,13 +72,16 @@ public partial class ErrorCoordinator : IErrorCoordinator, IInterruptContext, IA
     {
         if (_disposed) { return; }
 
-        if (_subscriptions.AutoReady.IsReady)
+        var isReady = _subscriptions.AutoReady.IsReady;
+        var isActive = _subscriptions.ActivityTracker.IsAnyActive;
+
+        if (isReady)
         {
             FireAndForgetResume();
             return;
         }
 
-        if (_subscriptions.ActivityTracker.IsAnyActive)
+        if (isActive)
         {
             FireAndForgetInterrupt(InterruptReason.AutoModeDisabled);
         }

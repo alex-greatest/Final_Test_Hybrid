@@ -193,11 +193,12 @@ public class ColumnExecutor(
 
     public async Task RetryLastFailedStepAsync(CancellationToken ct)
     {
-        if (_state.FailedStep == null)
+        var step = _state.FailedStep;
+        if (step == null)
         {
             return;
         }
         RestartFailedStep();
-        await ExecuteStepCoreAsync(_state.FailedStep, ct);
+        await ExecuteStepCoreAsync(step, ct);
     }
 }

@@ -22,6 +22,7 @@ public class BoilerState
     private IReadOnlyList<RecipeResponseDto>? _recipes;
     private string? _lastSerialNumber;
     private bool _isTestRunning;
+    private int _testResult;
 
     public event Action? OnChanged;
 
@@ -104,6 +105,26 @@ public class BoilerState
                 return _isTestRunning;
             }
         }
+    }
+
+    public int TestResult
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _testResult;
+            }
+        }
+    }
+
+    public void SetTestResult(int value)
+    {
+        lock (_lock)
+        {
+            _testResult = value;
+        }
+        NotifyChanged();
     }
 
     public void SetTestRunning(bool value)

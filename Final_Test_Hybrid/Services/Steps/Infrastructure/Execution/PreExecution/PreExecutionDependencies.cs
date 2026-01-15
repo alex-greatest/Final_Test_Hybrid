@@ -11,7 +11,6 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Final_Test_Hybrid.Services.Steps.Steps;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
@@ -39,7 +38,7 @@ public class PreExecutionInfrastructure(
     StepStatusReporter statusReporter,
     ITestStepLogger testStepLogger,
     IErrorService errorService,
-    ILogger<PreExecutionCoordinator> logger)
+    DualLogger<PreExecutionCoordinator> logger)
 {
     public PausableOpcUaTagService OpcUa => opcUa;
     public OpcUaTagService PlcService => plcService;
@@ -48,7 +47,7 @@ public class PreExecutionInfrastructure(
     public StepStatusReporter StatusReporter => statusReporter;
     public ITestStepLogger TestStepLogger => testStepLogger;
     public IErrorService ErrorService => errorService;
-    public ILogger<PreExecutionCoordinator> Logger => logger;
+    public DualLogger<PreExecutionCoordinator> Logger => logger;
 }
 
 /// <summary>

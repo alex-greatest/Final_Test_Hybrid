@@ -38,6 +38,7 @@ public partial class TestExecutionCoordinator : IDisposable
     public int TotalMaps => _maps.Count;
     public bool IsRunning => StateManager.State == ExecutionState.Running;
     public bool HasErrors => StateManager.HasPendingErrors;
+    public bool HadSkippedError => StateManager.HadSkippedError;
     public ExecutionStateManager StateManager { get; }
 
     private bool ShouldStop => IsCancellationRequested;

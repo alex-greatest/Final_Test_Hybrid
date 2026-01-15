@@ -46,13 +46,14 @@ public partial class TestExecutionCoordinator
 
     private async Task HandleErrorsIfAny()
     {
-        if (_cts == null)
+        var cts = _cts;
+        if (cts == null)
         {
             _logger.LogWarning("HandleErrorsIfAny вызван без активного CancellationTokenSource");
             return;
         }
 
-        while (StateManager.HasPendingErrors && !IsCancellationRequested)
+        while (StateManager.HasPendingErrors && !cts.IsCancellationRequested)
         {
             var error = StateManager.CurrentError;
             if (error == null)
@@ -66,7 +67,7 @@ public partial class TestExecutionCoordinator
             try
             {
                 var blockErrorTag = GetBlockErrorTag(error.FailedStep);
-                resolution = await _errorCoordinator.WaitForResolutionAsync(blockErrorTag, _cts.Token, timeout: null);
+                resolution = await _errorCoordinator.WaitForResolutionAsync(blockErrorTag, cts.Token, timeout: null);
             }
             catch (OperationCanceledException)
             {
@@ -76,15 +77,15 @@ public partial class TestExecutionCoordinator
 
             if (resolution == ErrorResolution.Timeout)
             {
-                await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout);
-                await _cts?.CancelAsync()!;
+                await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout, cts.Token);
+                await cts.CancelAsync();
                 break;
             }
-            await ProcessErrorResolution(error, resolution, _cts.Token);
+            await ProcessErrorResolution(error, resolution, cts.Token);
             // await SetSelectedAsync(error, false);  // PLC сам сбросит
         }
 
-        if (!IsCancellationRequested)
+        if (!cts.IsCancellationRequested)
         {
             StateManager.TransitionTo(ExecutionState.Running);
         }
@@ -137,6 +138,7 @@ public partial class TestExecutionCoordinator
 
     private void ProcessSkip(ColumnExecutor executor)
     {
+        StateManager.MarkErrorSkipped();
         executor.ClearFailedState();
         StateManager.DequeueError();
     }

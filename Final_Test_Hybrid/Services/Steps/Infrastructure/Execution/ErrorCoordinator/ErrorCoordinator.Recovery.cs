@@ -66,7 +66,8 @@ public partial class ErrorCoordinator
 
     private void ResumeIfPaused()
     {
-        if (!_state.PauseToken.IsPaused) { return; }
+        var isPaused = _state.PauseToken.IsPaused;
+        if (!isPaused) { return; }
         ResumeExecution();
     }
 

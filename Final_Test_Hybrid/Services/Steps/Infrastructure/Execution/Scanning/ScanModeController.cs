@@ -30,10 +30,25 @@ public class ScanModeController : IDisposable
     public bool IsScanModeEnabled => _operatorState.IsAuthenticated && _autoReady.IsReady;
 
     /// <summary>
+    /// Внутренняя проверка без блокировки - использовать только внутри lock(_stateLock).
+    /// </summary>
+    private bool IsInScanningPhaseUnsafe => _isActivated && !_isResetting;
+
+    /// <summary>
     /// Находится ли система в фазе сканирования (активирована, но не в режиме сброса).
     /// Используется PlcResetCoordinator для определения типа сброса.
+    /// Thread-safe для внешних вызовов.
     /// </summary>
-    public bool IsInScanningPhase => _isActivated && !_isResetting;
+    public bool IsInScanningPhase
+    {
+        get
+        {
+            lock (_stateLock)
+            {
+                return IsInScanningPhaseUnsafe;
+            }
+        }
+    }
 
     public ScanModeController(
         ScanSessionManager sessionManager,
@@ -68,7 +83,7 @@ public class ScanModeController : IDisposable
         {
             lock (_stateLock)
             {
-                var wasInScanPhase = IsInScanningPhase;
+                var wasInScanPhase = IsInScanningPhaseUnsafe;
                 _isResetting = true;
                 _sessionManager.ReleaseSession();
                 return wasInScanPhase;

@@ -79,6 +79,7 @@ public partial class TestExecutionCoordinator
     {
         StateManager.TransitionTo(ExecutionState.Running);
         StateManager.ClearErrors();
+        StateManager.ResetErrorTracking();
         _activityTracker.SetTestExecutionActive(true);
         _cts?.Dispose();
         _cts = new CancellationTokenSource();

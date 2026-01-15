@@ -14,7 +14,9 @@ public class ExecutionStateManager
 {
     private readonly Queue<StepError> _errorQueue = new();
     private readonly Lock _queueLock = new();
+    private volatile bool _hadSkippedError;
     public bool HasPendingErrors => ErrorCount > 0;
+    public bool HadSkippedError => _hadSkippedError;
     public bool CanProcessSignals => State == ExecutionState.PausedOnError;
     public bool IsActive => State is ExecutionState.Running or ExecutionState.Processing or ExecutionState.PausedOnError;
     public event Action<ExecutionState>? OnStateChanged;
@@ -79,5 +81,15 @@ public class ExecutionStateManager
             _errorQueue.Clear();
         }
         OnStateChanged?.Invoke(State);
+    }
+
+    public void MarkErrorSkipped()
+    {
+        _hadSkippedError = true;
+    }
+
+    public void ResetErrorTracking()
+    {
+        _hadSkippedError = false;
     }
 }

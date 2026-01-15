@@ -6,6 +6,7 @@
 @using Final_Test_Hybrid.Services.Main.PlcReset
 @using Final_Test_Hybrid.Services.SpringBoot.Operation
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution
+@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning
@@ -20,6 +21,7 @@
 @inject ErrorCoordinator ErrorCoordinator
 @inject PlcResetCoordinator PlcResetCoordinator
 @inject ExecutionStateManager ExecutionStateManager
+@inject TestExecutionCoordinator TestCoordinator
 @implements IDisposable
 
 <div class="field-row field-row-middle">
@@ -90,6 +92,7 @@
         PlcResetCoordinator.OnForceStop += CloseDialogs;
         PlcResetCoordinator.OnActiveChanged += OnBlockingStateChanged;
         ErrorCoordinator.OnInterruptChanged += OnBlockingStateChanged;
+        TestCoordinator.OnErrorOccurred += HandleTestErrorOccurred;
     }
 
     private void CloseDialogs()
@@ -275,6 +278,17 @@
         InvokeIfNotDisposed(StateHasChanged);
     }
 
+    private void HandleTestErrorOccurred(StepError error)
+    {
+        _ = InvokeAsync(() =>
+        {
+            _errorStepName = error.StepName;
+            _errorMessage = error.ErrorMessage;
+            _showErrorPanel = true;
+            StateHasChanged();
+        });
+    }
+
     private Task<ReworkFlowResult> HandleReworkDialogAsync(
         string errorMessage,
         Func<string, string, Task<ReworkSubmitResult>> executeRework)
@@ -301,5 +315,6 @@
         PlcResetCoordinator.OnForceStop -= CloseDialogs;
         PlcResetCoordinator.OnActiveChanged -= OnBlockingStateChanged;
         ErrorCoordinator.OnInterruptChanged -= OnBlockingStateChanged;
+        TestCoordinator.OnErrorOccurred -= HandleTestErrorOccurred;
     }
 }
