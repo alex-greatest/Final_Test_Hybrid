@@ -1,5 +1,6 @@
 namespace Final_Test_Hybrid.Services.Main;
 
+using Final_Test_Hybrid.Models;
 using Messages;
 using OpcUa.Connection;
 using SpringBoot.Operator;
@@ -19,6 +20,7 @@ public class MessageService
     private readonly ExecutionPhaseState _phaseState;
     private readonly ErrorCoordinator _errorCoord;
     private readonly PlcResetCoordinator _resetCoord;
+    private readonly BoilerState _boilerState;
 
     public event Action? OnChange;
 
@@ -29,7 +31,8 @@ public class MessageService
         ScanModeController scanMode,
         ExecutionPhaseState phaseState,
         ErrorCoordinator errorCoord,
-        PlcResetCoordinator resetCoord)
+        PlcResetCoordinator resetCoord,
+        BoilerState boilerState)
     {
         _operator = operatorState;
         _autoReady = autoReady;
@@ -38,6 +41,7 @@ public class MessageService
         _phaseState = phaseState;
         _errorCoord = errorCoord;
         _resetCoord = resetCoord;
+        _boilerState = boilerState;
 
         _rules = BuildRules();
         SubscribeToChanges();
@@ -73,8 +77,8 @@ public class MessageService
         (130, () => _operator.IsAuthenticated && !_autoReady.IsReady,
               () => "Ожидание автомата"),
 
-        // Сканирование (только если нет активной фазы выполнения)
-        (120, () => _scanMode.IsScanModeEnabled && _phaseState.Phase == null,
+        // Сканирование (только если тест не запущен)
+        (120, () => _scanMode.IsScanModeEnabled && !_boilerState.IsTestRunning,
               () => "Отсканируйте серийный номер котла"),
 
         // Фазы выполнения
@@ -102,6 +106,7 @@ public class MessageService
         _phaseState.OnChanged += NotifyChanged;
         _errorCoord.OnInterruptChanged += NotifyChanged;
         _resetCoord.OnActiveChanged += NotifyChanged;
+        _boilerState.OnChanged += NotifyChanged;
     }
 
     public string CurrentMessage

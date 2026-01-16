@@ -99,6 +99,7 @@ public partial class PreExecutionCoordinator
         {
             case CycleExitReason.TestCompleted:
                 HandleTestCompleted();
+                state.BoilerState.SetTestRunning(false);
                 break;
 
             case CycleExitReason.SoftReset:
