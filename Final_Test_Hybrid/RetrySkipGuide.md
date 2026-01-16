@@ -269,3 +269,22 @@ return PreExecutionResult.FailRetryable(
 После retry PC ждёт Req_Repeat = false (WaitForRetrySignalResetAsync)
 чтобы следующая ошибка не получила сразу тот же сигнал.
 ```
+
+### Retry: PLC vs не-PLC шаги
+
+При Retry поведение зависит от типа шага:
+
+| Этап | PLC шаг (IHasPlcBlock) | Не-PLC шаг |
+|------|------------------------|------------|
+| `GetBlockErrorTag()` | `DB_VI.Block_X.Error` | `null` |
+| `WaitForPlcAcknowledgeAsync` | **Ждёт** Block.Error=false | Пропускает (return) |
+| `RetryLastFailedStepAsync` | После сброса Block.Error | Сразу |
+| `WaitForRetrySignalResetAsync` | Ждёт Req_Repeat=false | Ждёт Req_Repeat=false |
+
+**Для PLC шагов — двойная защита:**
+1. **Block.Error=false** — PLC готов к новому запуску блока
+2. **Req_Repeat=false** — следующая ошибка не получит сразу тот же сигнал
+
+**Для не-PLC шагов:**
+- `blockErrorTag = null` → `WaitForPlcAcknowledgeAsync` сразу выходит
+- Защита только через `WaitForRetrySignalResetAsync`
