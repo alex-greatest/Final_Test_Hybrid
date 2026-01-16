@@ -112,10 +112,10 @@ enum CycleExitReason { PipelineFailed, PipelineCancelled, TestCompleted, SoftRes
 
 | Момент | Действие | Где |
 |--------|----------|-----|
-| После записи Start в BlockBoilerAdapter | `IsHistoryEnabled = true` | `BlockBoilerAdapterStep.ExecuteAsync` |
+| После успешного ScanStep | `IsHistoryEnabled = true` | `PreExecutionCoordinator.Pipeline` |
 | При сбросе PLC (любой) | `IsHistoryEnabled = false` | `PreExecutionCoordinator.ClearStateOnReset` |
 
-История пишется только во время выполнения теста (от блокировки адаптера до сброса).
+История пишется только во время выполнения теста (от успешного сканирования до сброса).
 
 ## Retry/Skip — Логика повтора и пропуска шагов
 
@@ -262,7 +262,6 @@ PreExecutionCoordinator.StartMainLoopAsync()
 **BlockBoilerAdapterStep:**
 ```csharp
 WriteAsync(StartTag, true)           // Сигнал PLC
-IsHistoryEnabled = true              // Начало сбора ошибок
 WaitAnyAsync([EndTag, ErrorTag])     // Ждём ответ PLC
 ├─ EndTag → Continue()               // Успех, запуск теста
 └─ ErrorTag → FailRetryable()        // Ошибка с возможностью повтора

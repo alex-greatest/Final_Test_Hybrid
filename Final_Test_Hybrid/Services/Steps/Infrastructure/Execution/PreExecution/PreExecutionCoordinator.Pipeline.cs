@@ -32,6 +32,10 @@ public partial class PreExecutionCoordinator
             scanResult.SuccessMessage ?? "",
             scanResult.Limits);
 
+        // Включаем после успешного сканирования
+        infra.ErrorService.IsHistoryEnabled = true;
+        state.BoilerState.SetTestRunning(true);
+
         ct.ThrowIfCancellationRequested();
 
         var timerResult = await ExecuteStartTimer1Async(context, ct);
