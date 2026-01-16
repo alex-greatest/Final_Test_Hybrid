@@ -34,6 +34,12 @@ public partial class PreExecutionCoordinator
 
         ct.ThrowIfCancellationRequested();
 
+        var timerResult = await ExecuteStartTimer1Async(context, ct);
+        if (timerResult.Status != PreExecutionStatus.Continue)
+        {
+            return timerResult;
+        }
+
         var blockResult = await ExecuteBlockBoilerAdapterAsync(context, ct);
         if (blockResult.Status != PreExecutionStatus.Continue)
         {
@@ -61,6 +67,28 @@ public partial class PreExecutionCoordinator
         catch (Exception ex)
         {
             return HandleStepException(scanStep, ex);
+        }
+    }
+
+    private async Task<PreExecutionResult> ExecuteStartTimer1Async(PreExecutionContext context, CancellationToken ct)
+    {
+        var stepId = infra.StatusReporter.ReportStepStarted(steps.StartTimer1);
+        try
+        {
+            await infra.PauseToken.WaitWhilePausedAsync(ct);
+            var result = await steps.StartTimer1.ExecuteAsync(context, ct);
+            infra.StatusReporter.ReportSuccess(stepId, result.SuccessMessage ?? "");
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            infra.Logger.LogError(ex, "Ошибка в шаге StartTimer1");
+            infra.StatusReporter.ReportError(stepId, ex.Message);
+            return PreExecutionResult.Fail(ex.Message);
         }
     }
 

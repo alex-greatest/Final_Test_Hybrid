@@ -25,6 +25,7 @@ public class BoilerState
     private int _testResult;
 
     public event Action? OnChanged;
+    public event Action? OnCleared;
 
     public string? SerialNumber
     {
@@ -157,6 +158,7 @@ public class BoilerState
         UpdateState(serialNumber: null, article: null, isValid: false, boilerTypeCycle: null, recipes: null);
         _recipeProvider.Clear();
         NotifyChanged();
+        OnCleared?.Invoke();
     }
 
     private void UpdateState(

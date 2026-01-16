@@ -20,6 +20,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Final_Test_Hybrid.Services.Steps.Steps;
+using Final_Test_Hybrid.Services.Steps.Steps.Misc;
 using Final_Test_Hybrid.Services.Steps.Validation;
 using Final_Test_Hybrid.Services.Preparation;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
@@ -97,6 +98,7 @@ public static class StepsServiceExtensions
 
         services.AddSingleton<TestExecutionCoordinator>();
         services.AddSingleton<IStepTimingService, StepTimingService>();
+        services.AddSingleton<ITimerService, TimerService>();
 
         // Errors
         services.AddSingleton<IErrorService, ErrorService>();
@@ -113,9 +115,10 @@ public static class StepsServiceExtensions
         services.AddSingleton<IBoilerDatabaseInitializer, BoilerDatabaseInitializer>();
         services.AddSingleton<IScanPreparationFacade, ScanPreparationFacade>();
 
-        // Pre-execution (упрощённая архитектура: 2 scan-шага + BlockBoilerAdapter)
+        // Pre-execution (упрощённая архитектура: 2 scan-шага + StartTimer1 + BlockBoilerAdapter)
         services.AddSingleton<ScanBarcodeStep>();
         services.AddSingleton<ScanBarcodeMesStep>();
+        services.AddSingleton<StartTimer1Step>();
         services.AddSingleton<BlockBoilerAdapterStep>();
         services.AddSingleton<IPreExecutionStepRegistry, PreExecutionStepAdapter>();
 

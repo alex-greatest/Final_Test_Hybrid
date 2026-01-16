@@ -11,6 +11,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Final_Test_Hybrid.Services.Steps.Steps;
+using Final_Test_Hybrid.Services.Steps.Steps.Misc;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
@@ -21,9 +22,11 @@ public class PreExecutionSteps(
     AppSettingsService appSettings,
     ScanBarcodeStep scanBarcodeStep,
     ScanBarcodeMesStep scanBarcodeMesStep,
+    StartTimer1Step startTimer1Step,
     BlockBoilerAdapterStep blockBoilerAdapterStep)
 {
     public ScanStepBase GetScanStep() => appSettings.UseMes ? scanBarcodeMesStep : scanBarcodeStep;
+    public StartTimer1Step StartTimer1 => startTimer1Step;
     public BlockBoilerAdapterStep BlockBoilerAdapter => blockBoilerAdapterStep;
 }
 
