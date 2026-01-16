@@ -7,6 +7,8 @@
 | **ErrorRetry** | `DB_Station.Test.Req_Repeat` | PLC → PC | Оператор нажал "Повтор" |
 | **ErrorSkip** | `DB_Station.Test.End` | PLC → PC | Оператор нажал "Один шаг" |
 | **AskRepeat** | `DB_Station.Test.Ask_Repeat` | PC → PLC | PC готов к повтору |
+| **Fault** | `DB_Station.Test.Fault` | PC → PLC | Ошибка шага без блока |
+| **Test_End_Step** | `DB_Station.Test.Test_End_Step` | PLC → PC | PLC сигнал завершения (для шагов без блока) |
 | **Block.Selected** | `DB_VI.Block_X.Selected` | PC → PLC | Какой блок в ошибке |
 | **Block.Error** | `DB_VI.Block_X.Error` | PLC → PC | Флаг ошибки блока |
 
@@ -127,6 +129,7 @@
 | **Ждёт подтверждения** | `Block.Error = false` | Нет | Нет |
 | **Шаг выполняется** | Заново | Нет | Нет |
 | **Block.Error** | Сбрасывается PLC | Остаётся true | — |
+| **Fault сброс** | `Fault = false` (для не-PLC) | — | `Fault = false` |
 | **Статус шага в UI** | Может стать OK | NOK (Ошибка) | NOK (Ошибка) |
 
 ## Ключевые методы
@@ -191,7 +194,7 @@ private async Task ProcessErrorResolution(StepError error, ErrorResolution resol
     }
     else
     {
-        ProcessSkip(executor);
+        await ProcessSkipAsync(error, executor, ct);
     }
 }
 
@@ -205,14 +208,31 @@ private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, C
     {
         StateManager.DequeueError();
     }
+
+    await ResetFaultIfNoBlockAsync(error.FailedStep);  // Сброс Fault для шагов без блока
     await _errorCoordinator.WaitForRetrySignalResetAsync(ct);
 }
 
 // Пропуск
-private void ProcessSkip(ColumnExecutor executor)
+private async Task ProcessSkipAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
 {
+    await ResetBlockStartAsync(error.FailedStep);
+    await ResetFaultIfNoBlockAsync(error.FailedStep);  // Сброс Fault для шагов без блока
+
+    await WaitForSkipSignalsResetAsync(error.FailedStep, ct);
+
+    StateManager.MarkErrorSkipped();
     executor.ClearFailedState();
     StateManager.DequeueError();
+}
+
+// Сброс Fault для шагов БЕЗ блока (PLC сбросит Test_End_Step)
+private async Task ResetFaultIfNoBlockAsync(ITestStep? step)
+{
+    if (step is IHasPlcBlock)
+        return;
+
+    await _plcService.WriteAsync(BaseTags.Fault, false);
 }
 ```
 
@@ -221,9 +241,9 @@ private void ProcessSkip(ColumnExecutor executor)
 | Файл | Назначение |
 |------|------------|
 | `ErrorCoordinator.Interrupts.cs` | WaitForResolutionAsync, SendAskRepeatAsync, WaitForRetrySignalResetAsync |
-| `TestExecutionCoordinator.ErrorHandling.cs` | ProcessRetryAsync, ProcessSkip |
+| `TestExecutionCoordinator.ErrorHandling.cs` | ProcessRetryAsync, ProcessSkipAsync, ResetFaultIfNoBlockAsync |
 | `PreExecutionCoordinator.Retry.cs` | RetryStepAsync для PreExecution шагов |
-| `BaseTags.cs` | Константы PLC тегов |
+| `BaseTags.cs` | Константы PLC тегов (Fault, Test_End_Step) |
 | `PlcBlockTagHelper.cs` | Формирование тегов Block.Selected, Block.Error |
 
 ## UI Диалог
@@ -279,12 +299,38 @@ return PreExecutionResult.FailRetryable(
 | `GetBlockErrorTag()` | `DB_VI.Block_X.Error` | `null` |
 | `WaitForPlcAcknowledgeAsync` | **Ждёт** Block.Error=false | Пропускает (return) |
 | `RetryLastFailedStepAsync` | После сброса Block.Error | Сразу |
+| `ResetFaultIfNoBlockAsync` | Пропускает (return) | **Сбрасывает** Fault=false |
 | `WaitForRetrySignalResetAsync` | Ждёт Req_Repeat=false | Ждёт Req_Repeat=false |
 
 **Для PLC шагов — двойная защита:**
 1. **Block.Error=false** — PLC готов к новому запуску блока
 2. **Req_Repeat=false** — следующая ошибка не получит сразу тот же сигнал
 
-**Для не-PLC шагов:**
-- `blockErrorTag = null` → `WaitForPlcAcknowledgeAsync` сразу выходит
-- Защита только через `WaitForRetrySignalResetAsync`
+**Для не-PLC шагов — тройная защита:**
+1. **Fault=false** → PLC сбрасывает Test_End_Step=false
+2. **Test_End_Step=false** — следующая ошибка не получит сразу Skip
+3. **Req_Repeat=false** — следующая ошибка не получит сразу Retry
+
+### Сброс Fault для шагов без блока
+
+Для шагов **без PLC блока** используется тег `Fault` вместо `Block.Error`:
+
+```
+Проблема (до исправления):
+1. PC ставит Fault = true при ошибке шага без блока
+2. Оператор нажимает Skip → PLC: Test_End_Step = true
+3. PC НЕ сбрасывал Fault = false
+4. PLC ждёт сброс Fault чтобы сбросить Test_End_Step
+5. На следующей ошибке CheckCurrentValues видит Test_End_Step = true → сразу Skip!
+
+Решение:
+При Skip и Retry для шагов без блока PC сбрасывает Fault = false
+→ PLC автоматически сбрасывает Test_End_Step = false
+```
+
+| Этап | PLC шаг (IHasPlcBlock) | Не-PLC шаг |
+|------|------------------------|------------|
+| Ошибка | PC: `Block.Selected = true` | PC: `Fault = true` |
+| Skip/Retry | — | PC: `Fault = false` |
+| PLC реакция | Сам сбрасывает `Block.Error` | Сбрасывает `Test_End_Step = false` |
+| Ожидание сброса | `Block.End = false` | `Test_End_Step = false` |

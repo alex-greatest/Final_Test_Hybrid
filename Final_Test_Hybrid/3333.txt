@@ -1,6 +1,53 @@
-смотри сейчай у нас есть force stop в @Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/ErrorCoordinator.cs - это мягкий стоп. когда начинается сброс - мы выставляем сигнал Reset. и смотри нам надо                
-  очистить, получается все поля ввода @Final_Test_Hybrid/Services/Main/BoilerState.cs, потом рецепты. но надо наверное оставить историю ошибок, результаты и времена тестов. и где-то сохранить сериыйнй номер котла до         
-                                                                                                                                                                                                                                
-  следующего теста. очищается основной грид, и получается мы вовзаращаемся в оснойв шаг - сканировани бар кода. то есть начинаем с чистого листа. но, навреное, если мы и так в шаге сканирования, то чистить поля и            
-  состояние @Final_Test_Hybrid/Services/Main/BoilerState.cs не надо и грид тоже. чтобы грид показывал ошибку допустим и можно было отсделить. надо это как-то красиво сделать, не ломая архитектуру. 
-нужно в messageservice показывать сообщение идёт сброс теста, пока не придёт сигнал Ask_end. если мы в шаге сканирования то надо блокировать ввод и сканирование
+      ��� ns=3;s="PC_ON" = False
+info: Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription[0]
+      ��� ns=3;s="30SB11" = False
+info: Final_Test_Hybrid.Services.Common.UI.NotificationServiceWrapper[0]
+      NotifyCore called: �������
+info: Final_Test_Hybrid.Services.Common.UI.NotificationServiceWrapper[0]
+      Radzen Notify completed: �������
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+fail: Final_Test_Hybrid.Services.Editor.SequenceExcelService[0]
+      ������ ���������� ������������������ � ����: D:\TestSequences\8732302142.xlsx
+      System.InvalidOperationException: Error saving file D:\TestSequences\8732302142.xlsx
+       ---> System.Exception: Error overwriting file D:\TestSequences\8732302142.xlsx
+       ---> System.IO.IOException: The process cannot access the file 'D:\TestSequences\8732302142.xlsx' because it is being used by another process.
+         at System.IO.FileSystem.DeleteFile(String fullPath)
+         at OfficeOpenXml.ExcelPackage.Save()
+         --- End of inner exception stack trace ---
+         at OfficeOpenXml.ExcelPackage.Save()
+         --- End of inner exception stack trace ---
+         at OfficeOpenXml.ExcelPackage.Save()
+         at OfficeOpenXml.ExcelPackage.SaveAs(FileInfo file)
+         at Final_Test_Hybrid.Services.Editor.SequenceExcelService.SaveWorkbook(String path, List`1 rows) in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\Editor\SequenceExcelService.cs:line 55
+         at Final_Test_Hybrid.Services.Editor.SequenceExcelService.SaveSequence(String path, List`1 rows) in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\Editor\SequenceExcelService.cs:line 17
+fail: Final_Test_Hybrid.Components.Engineer.Sequence.TestSequenceEditor[0]
+      ������ ���������� � Excel: D:\TestSequences\8732302142.xlsx
+      System.InvalidOperationException: Error saving file D:\TestSequences\8732302142.xlsx
+       ---> System.Exception: Error overwriting file D:\TestSequences\8732302142.xlsx
+       ---> System.IO.IOException: The process cannot access the file 'D:\TestSequences\8732302142.xlsx' because it is being used by another process.
+         at System.IO.FileSystem.DeleteFile(String fullPath)
+         at OfficeOpenXml.ExcelPackage.Save()
+         --- End of inner exception stack trace ---
+         at OfficeOpenXml.ExcelPackage.Save()
+         --- End of inner exception stack trace ---
+         at OfficeOpenXml.ExcelPackage.Save()
+         at OfficeOpenXml.ExcelPackage.SaveAs(FileInfo file)
+         at Final_Test_Hybrid.Services.Editor.SequenceExcelService.SaveWorkbook(String path, List`1 rows) in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\Editor\SequenceExcelService.cs:line 55
+         at Final_Test_Hybrid.Services.Editor.SequenceExcelService.SaveSequence(String path, List`1 rows) in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\Editor\SequenceExcelService.cs:line 17
+         at Final_Test_Hybrid.Services.Editor.SequenceExcelService.<>c__DisplayClass5_0.<SaveSequenceAsync>b__0() in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\Editor\SequenceExcelService.cs:line 41
+         at System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(Thread threadPoolThread, ExecutionContext executionContext, ContextCallback callback, Object state)
+      --- End of stack trace from previous location ---
+         at System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(Thread threadPoolThread, ExecutionContext executionContext, ContextCallback callback, Object state)
+         at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)
+      --- End of stack trace from previous location ---
+         at Final_Test_Hybrid.Services.Editor.SequenceExcelService.SaveSequenceAsync(String path, List`1 rows) in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\Editor\SequenceExcelService.cs:line 41
+         at Final_Test_Hybrid.Services.Editor.TestSequenceService.SaveToExcelAsync(String path, List`1 rows) in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\Editor\TestSequenceService.cs:line 63
+         at Final_Test_Hybrid.Components.Engineer.Sequence.TestSequenceEditor.PerformSaveAsync(String filePath) in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Components\Engineer\Sequence\TestSequenceEditor.Save.cs:line 118
+fail: Final_Test_Hybrid.Services.Common.UI.NotificationServiceWrapper[0]
+      UI Error: ������ ���������� - ���� �����. �������� ��� � Excel
+info: Final_Test_Hybrid.Services.Common.UI.NotificationServiceWrapper[0]
+      NotifyCore called: ������ ����������
+info: Final_Test_Hybrid.Services.Common.UI.NotificationServiceWrapper[0]
+      Radzen Notify completed: ������ ����������

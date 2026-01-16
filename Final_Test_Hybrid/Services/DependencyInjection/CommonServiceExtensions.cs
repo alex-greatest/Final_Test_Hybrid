@@ -23,9 +23,6 @@ public static class CommonServiceExtensions
         services.AddSingleton<IUiDispatcher, BlazorUiDispatcher>();
         services.AddSingleton<INotificationService, NotificationServiceWrapper>();
 
-        // Override Radzen's scoped NotificationService with singleton for hybrid app
-        services.AddSingleton<Radzen.NotificationService>();
-
         // File services
         services.AddScoped<IFilePickerService, WinFormsFilePickerService>();
         services.AddScoped<ISequenceExcelService, SequenceExcelService>();

@@ -45,16 +45,23 @@ namespace Final_Test_Hybrid.Services.Common.UI
                     RemoveMessageById(id);
                 }
 
-                notificationService.Notify(new NotificationMessage
+                try
                 {
-                    Severity = severity,
-                    Summary = summary,
-                    Detail = detail,
-                    Duration = duration ?? 4000,
-                    CloseOnClick = closeOnClick,
-                    Payload = id,
-                    Style = style
-                });
+                    notificationService.Notify(new NotificationMessage
+                    {
+                        Severity = severity,
+                        Summary = summary,
+                        Detail = detail,
+                        Duration = duration ?? 4000,
+                        CloseOnClick = closeOnClick,
+                        Payload = id,
+                        Style = style
+                    });
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to show notification: {Summary}", summary);
+                }
             }
         }
 

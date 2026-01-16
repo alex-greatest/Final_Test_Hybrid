@@ -49,6 +49,7 @@ public partial class Form1 : Form
 #endif
         services.AddWindowsFormsBlazorWebView();
         services.AddRadzenComponents();
+        services.AddSingleton<NotificationService>(); // Override Radzen's scoped with singleton
 
         blazorWebView1.HostPage = "wwwroot\\index.html";
         _serviceProvider = services.BuildServiceProvider();
