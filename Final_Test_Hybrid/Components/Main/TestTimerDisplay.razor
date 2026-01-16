@@ -1,0 +1,37 @@
+@implements IDisposable
+@inject BoilerState BoilerState
+
+<RadzenCard Class="rz-p-2" Style="background-color: #e0e0e0; min-width: 220px;">
+    <RadzenStack Gap="10" AlignItems="AlignItems.Center">
+        <RadzenText Style="font-size: 1.8rem; color: black">Время теста</RadzenText>
+        <RadzenText Style="font-size: 1.8rem; color: black">@_displayTime</RadzenText>
+    </RadzenStack>
+</RadzenCard>
+
+@code {
+    private string _displayTime = "00:00:00";
+
+    protected override void OnInitialized()
+    {
+        BoilerState.OnTestTimerTick += OnTimerTick;
+        BoilerState.OnCleared += OnCleared;
+    }
+
+    private void OnTimerTick()
+    {
+        _displayTime = BoilerState.GetTestDurationFormatted();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnCleared()
+    {
+        _displayTime = "00:00:00";
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        BoilerState.OnTestTimerTick -= OnTimerTick;
+        BoilerState.OnCleared -= OnCleared;
+    }
+}

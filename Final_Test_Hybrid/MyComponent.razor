@@ -9362,18 +9362,8 @@
 
         <!-- Центр: занимает ровно столько, сколько контент, стоит по центру экрана -->
         <div class="app-bottom-10-content" style="flex: 0 0 auto; gap: 40px; margin-left: 230px">
-            <RadzenCard Class="rz-p-2" Style="background-color: #e0e0e0; min-width: 220px;">
-                <RadzenStack Gap="10" AlignItems="AlignItems.Center">
-                    <RadzenText Style="font-size: 1.8rem; color: black">Время теста</RadzenText>  <!-- Заголовок -->
-                    <RadzenText Style="font-size: 1.8rem; color: black">00:00:00</RadzenText>     <!-- Значение -->
-                </RadzenStack>
-            </RadzenCard>
-            <RadzenCard Class="rz-p-2" Style="background-color: #e0e0e0; min-width: 220px;">
-                <RadzenStack Gap="10" AlignItems="AlignItems.Center">
-                    <RadzenText Style="font-size: 1.8rem; color: black">Время теста</RadzenText>  <!-- Заголовок -->
-                    <RadzenText Style="font-size: 1.8rem; color: black">00:00:00</RadzenText>     <!-- Значение -->
-                </RadzenStack>
-            </RadzenCard>
+            <TestTimerDisplay />
+            <TestTimerDisplay />
             <RadzenCard Class="rz-p-2" Style="background-color: #e0e0e0; min-width: 220px;">
                 <RadzenStack Gap="10" AlignItems="AlignItems.Center">
                     <RadzenText Style="font-size: 1.8rem; color: black">Время розжига</RadzenText>  <!-- Заголовок -->

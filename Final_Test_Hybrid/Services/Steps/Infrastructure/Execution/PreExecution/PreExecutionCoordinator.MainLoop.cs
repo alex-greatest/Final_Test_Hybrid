@@ -120,6 +120,7 @@ public partial class PreExecutionCoordinator
 
     private void HandleTestCompleted()
     {
+        state.BoilerState.StopTestTimer();
         var hasErrors = coordinators.TestCoordinator.HasErrors || coordinators.TestCoordinator.HadSkippedError;
         var testResult = hasErrors ? 2 : 1;
         state.BoilerState.SetTestResult(testResult);

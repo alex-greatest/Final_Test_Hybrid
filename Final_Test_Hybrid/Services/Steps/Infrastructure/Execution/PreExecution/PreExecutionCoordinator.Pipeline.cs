@@ -35,6 +35,7 @@ public partial class PreExecutionCoordinator
         // Включаем после успешного сканирования
         infra.ErrorService.IsHistoryEnabled = true;
         state.BoilerState.SetTestRunning(true);
+        state.BoilerState.StartTestTimer();
 
         ct.ThrowIfCancellationRequested();
 

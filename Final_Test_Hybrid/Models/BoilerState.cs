@@ -23,9 +23,12 @@ public class BoilerState
     private string? _lastSerialNumber;
     private bool _isTestRunning;
     private int _testResult;
+    private DateTime? _testStartTime;
+    private System.Threading.Timer? _testTimer;
 
     public event Action? OnChanged;
     public event Action? OnCleared;
+    public event Action? OnTestTimerTick;
 
     public string? SerialNumber
     {
@@ -137,6 +140,45 @@ public class BoilerState
         NotifyChanged();
     }
 
+    public void StartTestTimer()
+    {
+        lock (_lock)
+        {
+            _testStartTime = DateTime.Now;
+            _testTimer?.Dispose();
+            _testTimer = new System.Threading.Timer(OnTimerTick, null, 0, 1000);
+        }
+    }
+
+    public void StopTestTimer()
+    {
+        lock (_lock)
+        {
+            _testTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+    }
+
+    public TimeSpan GetTestDuration()
+    {
+        lock (_lock)
+        {
+            return _testStartTime.HasValue
+                ? DateTime.Now - _testStartTime.Value
+                : TimeSpan.Zero;
+        }
+    }
+
+    public string GetTestDurationFormatted()
+    {
+        var duration = GetTestDuration();
+        return $"{(int)duration.TotalHours:D2}:{duration.Minutes:D2}:{duration.Seconds:D2}";
+    }
+
+    private void OnTimerTick(object? state)
+    {
+        OnTestTimerTick?.Invoke();
+    }
+
     public void SetData(
         string serialNumber,
         string article,
@@ -154,6 +196,9 @@ public class BoilerState
         {
             _lastSerialNumber = _serialNumber;
             _isTestRunning = false;
+            _testTimer?.Dispose();
+            _testTimer = null;
+            _testStartTime = null;
         }
         UpdateState(serialNumber: null, article: null, isValid: false, boilerTypeCycle: null, recipes: null);
         _recipeProvider.Clear();
