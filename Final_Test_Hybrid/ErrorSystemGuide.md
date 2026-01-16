@@ -222,6 +222,24 @@ public static IReadOnlyList<ErrorDefinition> All => [
 
 3. Готово! `PlcErrorMonitorService` автоматически подпишется при старте.
 
+## История ошибок (IsHistoryEnabled)
+
+История записывается только когда `IsHistoryEnabled = true`.
+
+| Момент | Действие | Где |
+|--------|----------|-----|
+| После успешного ScanStep | `IsHistoryEnabled = true` | `PreExecutionCoordinator.Pipeline` |
+| При сбросе PLC (любой) | `IsHistoryEnabled = false` | `PreExecutionCoordinator.ClearStateOnReset` |
+
+### Поведение при включении
+
+При установке `IsHistoryEnabled = true` все текущие активные ошибки из `_activeErrors` автоматически копируются в историю. Это гарантирует, что ошибки, возникшие ДО сканирования (например, ПЛК-ошибки), попадут в журнал и будут корректно закрыты при их снятии.
+
+**Сценарий:**
+1. ПЛК-ошибка возникает ДО сканирования → попадает в `_activeErrors`
+2. ScanStep успешно завершается → `IsHistoryEnabled = true` → ошибка копируется в историю
+3. Ошибка исправляется → `CloseHistoryRecord()` находит запись и ставит `EndTime`
+
 ## Ограничения
 
 - История ограничена **1000 записей** (FIFO)

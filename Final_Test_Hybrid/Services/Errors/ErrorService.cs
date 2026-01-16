@@ -35,7 +35,23 @@ public sealed class ErrorService : IErrorService
         }
     }
 
-    public bool IsHistoryEnabled { get; set; } = false;
+    private bool _isHistoryEnabled;
+    public bool IsHistoryEnabled
+    {
+        get => _isHistoryEnabled;
+        set
+        {
+            if (_isHistoryEnabled == value)
+                return;
+
+            _isHistoryEnabled = value;
+
+            if (value)
+            {
+                AddActiveErrorsToHistory();
+            }
+        }
+    }
 
     public IReadOnlyList<ActiveError> GetActiveErrors()
     {
@@ -221,11 +237,46 @@ public sealed class ErrorService : IErrorService
             return;
         }
 
+        AddToHistoryInternal(item);
+    }
+
+    private void AddToHistoryInternal(ErrorHistoryItem item)
+    {
         if (_history.Count >= MaxHistorySize)
         {
             _history.RemoveAt(0);
         }
         _history.Add(item);
+    }
+
+    private void AddActiveErrorsToHistory()
+    {
+        bool hasErrors;
+        lock (_errorsLock)
+        {
+            foreach (var error in _activeErrors)
+            {
+                var historyItem = new ErrorHistoryItem
+                {
+                    StartTime = error.Time,
+                    Code = error.Code,
+                    Description = error.Description,
+                    Severity = error.Severity,
+                    Source = error.Source,
+                    StepId = error.StepId,
+                    StepName = error.StepName
+                };
+
+                AddToHistoryInternal(historyItem);
+            }
+
+            hasErrors = _activeErrors.Count > 0;
+        }
+
+        if (hasErrors)
+        {
+            OnHistoryChanged?.Invoke();
+        }
     }
 
     private void CloseHistoryRecord(string errorCode)
