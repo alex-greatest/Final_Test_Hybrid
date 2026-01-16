@@ -50,6 +50,13 @@
 │  PLC:      Выполняет блок заново                                │
 │  Результат: Block.End=true (успех) или Block.Error=true (снова) │
 └─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  ЭТАП 5.5: Ожидание сброса Req_Repeat                           │
+├─────────────────────────────────────────────────────────────────┤
+│  PC ждёт: Req_Repeat = false (макс 5 сек)                       │
+│  Нужно чтобы следующая ошибка не получила сразу тот же сигнал   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 **Шаги:**
@@ -61,6 +68,7 @@
 6. PC → PLC: `AskRepeat = true`
 7. PLC: Сбрасывает `Block.Error = false`
 8. PC: Повторяет шаг (`Block.Start = true`)
+9. PC ждёт: `Req_Repeat = false` (макс 5 сек)
 
 ## Skip Flow (Пропуск)
 
@@ -157,6 +165,18 @@ public async Task SendAskRepeatAsync(string? blockErrorTag, CancellationToken ct
     await _resolution.PlcService.WriteAsync(BaseTags.AskRepeat, true, ct);
     await WaitForPlcAcknowledgeAsync(blockErrorTag, ct);  // Ждёт Block.Error = false
 }
+
+// Ожидание сброса Req_Repeat (защита от race condition)
+public async Task WaitForRetrySignalResetAsync(CancellationToken ct)
+{
+    // Ждёт Req_Repeat = false (таймаут 5 сек)
+    // Нужно чтобы следующая ошибка не получила сразу тот же сигнал
+    var currentValue = _resolution.Subscription.GetValue<bool>(BaseTags.ErrorRetry);
+    if (currentValue != true) return;  // Уже сброшен
+
+    await _resolution.TagWaiter.WaitForFalseAsync(BaseTags.ErrorRetry,
+        timeout: TimeSpan.FromSeconds(5), ct);
+}
 ```
 
 ### TestExecutionCoordinator.ErrorHandling.cs
@@ -167,7 +187,7 @@ private async Task ProcessErrorResolution(StepError error, ErrorResolution resol
 {
     if (resolution == ErrorResolution.Retry)
     {
-        await ProcessRetryAsync(executor, ct);
+        await ProcessRetryAsync(error, executor, ct);
     }
     else
     {
@@ -176,10 +196,16 @@ private async Task ProcessErrorResolution(StepError error, ErrorResolution resol
 }
 
 // Повтор
-private async Task ProcessRetryAsync(ColumnExecutor executor, CancellationToken ct)
+private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
 {
-    await _errorCoordinator.SendAskRepeatAsync(ct);
+    var blockErrorTag = GetBlockErrorTag(error.FailedStep);
+    await _errorCoordinator.SendAskRepeatAsync(blockErrorTag, ct);
     await executor.RetryLastFailedStepAsync(ct);
+    if (!executor.HasFailed)
+    {
+        StateManager.DequeueError();
+    }
+    await _errorCoordinator.WaitForRetrySignalResetAsync(ct);
 }
 
 // Пропуск
@@ -194,7 +220,7 @@ private void ProcessSkip(ColumnExecutor executor)
 
 | Файл | Назначение |
 |------|------------|
-| `ErrorCoordinator.Interrupts.cs` | WaitForResolutionAsync, SendAskRepeatAsync |
+| `ErrorCoordinator.Interrupts.cs` | WaitForResolutionAsync, SendAskRepeatAsync, WaitForRetrySignalResetAsync |
 | `TestExecutionCoordinator.ErrorHandling.cs` | ProcessRetryAsync, ProcessSkip |
 | `PreExecutionCoordinator.Retry.cs` | RetryStepAsync для PreExecution шагов |
 | `BaseTags.cs` | Константы PLC тегов |
@@ -225,3 +251,21 @@ return PreExecutionResult.FailRetryable(
 ```
 
 При `canSkip: false` даже если оператор нажмёт "Один шаг", пропуск не сработает.
+
+### Race condition при нескольких ошибках
+
+При нескольких ошибках в очереди возможен race condition с сигналом `Req_Repeat`:
+
+```
+Проблема:
+1. Ошибка 1 (col 2) + Ошибка 2 (col 3) в очереди
+2. Оператор нажимает Retry → Req_Repeat = true
+3. PC обрабатывает ошибку 1, отправляет AskRepeat
+4. PLC начинает сбрасывать Req_Repeat...
+5. PC обрабатывает ошибку 2 → CheckCurrentValues() видит Req_Repeat ВСЁ ЕЩЁ true!
+6. Ошибка 2 сразу получает Retry без нажатия оператором
+
+Решение:
+После retry PC ждёт Req_Repeat = false (WaitForRetrySignalResetAsync)
+чтобы следующая ошибка не получила сразу тот же сигнал.
+```

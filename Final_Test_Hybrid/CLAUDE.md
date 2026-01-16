@@ -350,26 +350,13 @@ HandleTestCompleted()
 
 ### ExecutionActivityTracker
 
-Отслеживает активные фазы для UI и блокировок:
+Отслеживает активные фазы для UI и блокировок. См. [ExecutionActivityTrackerGuide.md](ExecutionActivityTrackerGuide.md)
 
-```csharp
-public bool IsPreExecutionActive { get; }   // Фаза подготовки
-public bool IsTestExecutionActive { get; }  // Фаза выполнения
-public bool IsAnyActive { get; }            // Любая активность
-```
-
-**Жизненный цикл:**
-```
-RunSingleCycleAsync()
-├─ SetPreExecutionActive(true)
-│  └─ StartTestExecution()
-│     └─ BeginExecution()
-│        └─ SetTestExecutionActive(true)
-│        └─ ... выполнение ...
-│        └─ Complete()
-│           └─ SetTestExecutionActive(false)
-└─ SetPreExecutionActive(false)
-```
+| Свойство | Описание |
+|----------|----------|
+| `IsPreExecutionActive` | Фаза подготовки |
+| `IsTestExecutionActive` | Фаза выполнения |
+| `IsAnyActive` | Любая активность |
 
 ## Test Step Interfaces
 

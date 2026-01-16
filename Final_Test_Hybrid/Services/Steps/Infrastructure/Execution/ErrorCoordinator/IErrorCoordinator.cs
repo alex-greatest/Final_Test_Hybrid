@@ -20,4 +20,5 @@ public interface IErrorCoordinator
     Task<ErrorResolution> WaitForResolutionAsync(string? blockErrorTag, CancellationToken ct, TimeSpan? timeout = null);
     Task SendAskRepeatAsync(CancellationToken ct);
     Task SendAskRepeatAsync(string? blockErrorTag, CancellationToken ct);
+    Task WaitForRetrySignalResetAsync(CancellationToken ct);
 }

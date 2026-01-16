@@ -117,7 +117,7 @@ public partial class TestExecutionCoordinator
 
         if (resolution == ErrorResolution.Retry)
         {
-            await ProcessRetryAsync(executor, ct);
+            await ProcessRetryAsync(error, executor, ct);
         }
         else
         {
@@ -125,15 +125,16 @@ public partial class TestExecutionCoordinator
         }
     }
 
-    private async Task ProcessRetryAsync(ColumnExecutor executor, CancellationToken ct)
+    private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
     {
-        await _errorCoordinator.SendAskRepeatAsync(ct);
+        var blockErrorTag = GetBlockErrorTag(error.FailedStep);
+        await _errorCoordinator.SendAskRepeatAsync(blockErrorTag, ct);
         await executor.RetryLastFailedStepAsync(ct);
         if (!executor.HasFailed)
         {
             StateManager.DequeueError();
         }
-        // Если снова ошибка — останется в очереди, покажем снова
+        await _errorCoordinator.WaitForRetrySignalResetAsync(ct);
     }
 
     private void ProcessSkip(ColumnExecutor executor)

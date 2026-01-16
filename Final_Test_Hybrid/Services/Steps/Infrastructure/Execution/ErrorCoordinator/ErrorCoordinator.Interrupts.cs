@@ -254,5 +254,19 @@ public partial class ErrorCoordinator
         _logger.LogDebug("Error блока сброшен");
     }
 
+    public async Task WaitForRetrySignalResetAsync(CancellationToken ct)
+    {
+        _logger.LogDebug("Ожидание сброса Req_Repeat...");
+        try
+        {
+            await _resolution.TagWaiter.WaitForFalseAsync(BaseTags.ErrorRetry, timeout: TimeSpan.FromSeconds(5), ct);
+            _logger.LogDebug("Req_Repeat сброшен");
+        }
+        catch (TimeoutException)
+        {
+            _logger.LogWarning("Таймаут ожидания сброса Req_Repeat (5 сек)");
+        }
+    }
+
     #endregion
 }
