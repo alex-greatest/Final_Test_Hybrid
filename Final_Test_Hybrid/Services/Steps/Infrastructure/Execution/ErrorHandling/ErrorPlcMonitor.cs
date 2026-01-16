@@ -26,6 +26,20 @@ public class ErrorPlcMonitor(
                 $"Не удалось подписаться на {BaseTags.ErrorSkip}: {skipError.Message}");
         }
 
+        var faultError = await subscription.AddTagAsync(BaseTags.Fault, ct);
+        if (faultError != null)
+        {
+            throw new InvalidOperationException(
+                $"Не удалось подписаться на {BaseTags.Fault}: {faultError.Message}");
+        }
+
+        var testEndStepError = await subscription.AddTagAsync(BaseTags.TestEndStep, ct);
+        if (testEndStepError != null)
+        {
+            throw new InvalidOperationException(
+                $"Не удалось подписаться на {BaseTags.TestEndStep}: {testEndStepError.Message}");
+        }
+
         logger.LogInformation("Физические подписки на теги ошибок созданы");
     }
 }

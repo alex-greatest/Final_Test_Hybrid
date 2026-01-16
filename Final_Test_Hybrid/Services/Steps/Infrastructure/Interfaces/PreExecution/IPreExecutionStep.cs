@@ -7,5 +7,11 @@ public interface IPreExecutionStep
     string Description { get; }
     bool IsVisibleInStatusGrid { get; }
 
+    /// <summary>
+    /// Можно ли пропустить этот шаг при ошибке.
+    /// Если false — Skip сигнал полностью игнорируется.
+    /// </summary>
+    bool IsSkippable { get; }
+
     Task<PreExecutionResult> ExecuteAsync(PreExecutionContext context, CancellationToken ct);
 }

@@ -145,6 +145,11 @@ public class TagWaiter(
         {
             var condition = builder.Conditions[i];
             var current = subscription.GetValue(condition.NodeId);
+
+            // ОТЛАДКА: Логируем что видит CheckCurrentValues
+            logger.LogWarning(">>> CheckCurrentValues: {NodeId} = {Value}",
+                condition.NodeId, current);
+
             if (current == null || !condition.Condition(current))
             {
                 continue;

@@ -123,7 +123,6 @@ public partial class ErrorCoordinator
             _logger.LogError("Неизвестная причина прерывания: {Reason}", reason);
             return;
         }
-
         // Ранняя проверка: AutoModeDisabled при уже восстановленном автомате — пропуск
         var isAutoReady = _subscriptions.AutoReady.IsReady;
         if (reason == InterruptReason.AutoModeDisabled && isAutoReady)
@@ -131,14 +130,11 @@ public partial class ErrorCoordinator
             _logger.LogInformation("AutoReady восстановлен до обработки прерывания — пропуск");
             return;
         }
-
         _logger.LogWarning("Прерывание: {Reason} — {Message}", reason, behavior.Message);
-
         if (behavior.AssociatedError != null)
         {
             _resolution.ErrorService.Raise(behavior.AssociatedError);
         }
-
         SetCurrentInterrupt(reason);
         await behavior.ExecuteAsync(this, ct);
     }
@@ -153,15 +149,18 @@ public partial class ErrorCoordinator
     #region Error Resolution
 
     public Task<ErrorResolution> WaitForResolutionAsync(CancellationToken ct)
-        => WaitForResolutionAsync(null, ct);
+        => WaitForResolutionAsync(null, null, ct);
 
-    public async Task<ErrorResolution> WaitForResolutionAsync(string? blockErrorTag, CancellationToken ct, TimeSpan? timeout = null)
+    public Task<ErrorResolution> WaitForResolutionAsync(string? blockEndTag, string? blockErrorTag, CancellationToken ct, TimeSpan? timeout = null)
+        => WaitForResolutionAsync(blockEndTag, blockErrorTag, enableSkip: true, ct, timeout);
+
+    public async Task<ErrorResolution> WaitForResolutionAsync(string? blockEndTag, string? blockErrorTag, bool enableSkip, CancellationToken ct, TimeSpan? timeout = null)
     {
         var timeoutMsg = timeout.HasValue ? $"таймаут {timeout.Value.TotalSeconds} сек" : "без таймаута";
         _logger.LogInformation("Ожидание решения оператора ({Timeout})...", timeoutMsg);
         try
         {
-            return await WaitForOperatorSignalAsync(blockErrorTag, timeout, ct);
+            return await WaitForOperatorSignalAsync(blockEndTag, blockErrorTag, enableSkip, timeout, ct);
         }
         catch (Exception ex)
         {
@@ -192,30 +191,40 @@ public partial class ErrorCoordinator
         return default;
     }
 
-    private async Task<ErrorResolution> WaitForOperatorSignalAsync(string? blockErrorTag, TimeSpan? timeout, CancellationToken ct)
+    private async Task<ErrorResolution> WaitForOperatorSignalAsync(
+        string? blockEndTag,
+        string? blockErrorTag,
+        bool enableSkip,
+        TimeSpan? timeout,
+        CancellationToken ct)
     {
         var builder = _resolution.TagWaiter.CreateWaitGroup<ErrorResolution>()
             .WaitForTrue(BaseTags.ErrorRetry, () => ErrorResolution.Retry, "Retry");
 
-        if (blockErrorTag != null)
+        // Skip добавляем ТОЛЬКО если enableSkip = true
+        if (enableSkip)
         {
-            builder.WaitForAllTrue(
-                [BaseTags.ErrorSkip, blockErrorTag],
-                () => ErrorResolution.Skip,
-                "Skip");
+            if (blockEndTag != null && blockErrorTag != null)
+            {
+                // Шаг с блоком: Block.End + Block.Error
+                builder.WaitForAllTrue(
+                    [blockEndTag, blockErrorTag],
+                    () => ErrorResolution.Skip,
+                    "Skip");
+            }
+            else
+            {
+                // Шаг без блока: Test_End_Step
+                builder.WaitForTrue(BaseTags.TestEndStep, () => ErrorResolution.Skip, "Skip");
+            }
         }
-        else
-        {
-            builder.WaitForTrue(BaseTags.ErrorSkip, () => ErrorResolution.Skip, "Skip");
-        }
+        // Если enableSkip = false — Skip вообще не слушаем (шаг не пропускаемый)
 
         if (timeout.HasValue)
         {
             builder.WithTimeout(timeout.Value);
         }
-
         var waitResult = await _resolution.TagWaiter.WaitAnyAsync(builder, ct);
-
         var resolution = waitResult.Result;
         _logger.LogInformation("Получен сигнал: {Resolution}", resolution);
         return resolution;

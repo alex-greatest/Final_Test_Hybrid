@@ -24,6 +24,22 @@ public static class PlcBlockTagHelper
     }
 
     /// <summary>
+    /// Формирует тег End для блока.
+    /// </summary>
+    public static string? GetEndTag(IHasPlcBlockPath? step)
+    {
+        return step == null ? null : $"ns=3;s={QuotePath(step.PlcBlockPath)}.\"End\"";
+    }
+
+    /// <summary>
+    /// Формирует тег Start для блока.
+    /// </summary>
+    public static string? GetStartTag(IHasPlcBlockPath? step)
+    {
+        return step == null ? null : $"ns=3;s={QuotePath(step.PlcBlockPath)}.\"Start\"";
+    }
+
+    /// <summary>
     /// Кавычит каждый сегмент пути.
     /// "DB_VI.Block_Adapter" -> "\"DB_VI\".\"Block_Adapter\""
     /// </summary>

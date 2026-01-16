@@ -9,8 +9,9 @@ public class PrintLabelStep : ITestStep
     public string Name => "Печать этикетки";
     public string Description => "Печатает этикетку на принтере";
 
-    public Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
+    public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
     {
-        return Task.FromResult(TestStepResult.Pass());
+        await Task.Delay(TimeSpan.FromSeconds(10), ct);
+        return TestStepResult.Pass();
     }
 }

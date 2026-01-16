@@ -20,6 +20,12 @@ public static class BaseTags
     // Error reset (HMI)
     public const string ErrorQuitt = "ns=3;s=\"DB_HMI\".\"Button\".\"Mode\".\"xSB_Quitt\"";
 
+    /// <summary>PC сигнализирует об ошибке шага без блока</summary>
+    public const string Fault = "ns=3;s=\"DB_Station\".\"Test\".\"Fault\"";
+
+    /// <summary>PLC подтверждает Skip для шага без блока</summary>
+    public const string TestEndStep = "ns=3;s=\"DB_Station\".\"Test\".\"EndStep\"";
+
     /// <summary>
     /// Флаг контроля связи HMI. HMI взводит каждые 2 сек, PLC сбрасывает каждые 5 сек.
     /// Если не взведён вовремя - PLC выдаёт ошибку связи.

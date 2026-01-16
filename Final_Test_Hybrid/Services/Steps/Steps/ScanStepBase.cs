@@ -45,6 +45,7 @@ public abstract class ScanStepBase(
     public abstract string Name { get; }
     public abstract string Description { get; }
     public bool IsVisibleInStatusGrid => true;
+    public bool IsSkippable => true;
 
     public abstract Task<PreExecutionResult> ExecuteAsync(
         PreExecutionContext context,

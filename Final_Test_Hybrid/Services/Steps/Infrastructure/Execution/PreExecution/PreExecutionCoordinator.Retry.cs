@@ -4,7 +4,6 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Plc;
 using Final_Test_Hybrid.Services.Steps.Steps;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
@@ -171,10 +170,19 @@ public partial class PreExecutionCoordinator
     {
         infra.Logger.LogDebug("WaitForResolutionAsync: создаём _externalSignal");
         var signal = _externalSignal = new TaskCompletionSource<PreExecutionResolution>();
-        var blockErrorTag = GetBlockErrorTag(step);
+
+        // Передаём block-теги только для пропускаемых шагов
+        string? blockEndTag = null;
+        string? blockErrorTag = null;
+        if (step.IsSkippable)
+        {
+            blockEndTag = GetBlockEndTag(step);
+            blockErrorTag = GetBlockErrorTag(step);
+        }
+
         try
         {
-            var completedTask = await WaitForFirstSignalAsync(signal, blockErrorTag, ct);
+            var completedTask = await WaitForFirstSignalAsync(signal, blockEndTag, blockErrorTag, step.IsSkippable, ct);
             infra.Logger.LogDebug("WaitForResolutionAsync: получили completedTask");
             return await ExtractResolutionAsync(completedTask, signal);
         }
@@ -186,11 +194,13 @@ public partial class PreExecutionCoordinator
 
     private Task<Task> WaitForFirstSignalAsync(
         TaskCompletionSource<PreExecutionResolution> signal,
+        string? blockEndTag,
         string? blockErrorTag,
+        bool enableSkip,
         CancellationToken ct)
     {
-        infra.Logger.LogDebug("WaitForFirstSignalAsync: вызываем errorCoordinator.WaitForResolutionAsync");
-        var resolutionTask = coordinators.ErrorCoordinator.WaitForResolutionAsync(blockErrorTag, ct, timeout: null);
+        infra.Logger.LogDebug("WaitForFirstSignalAsync: вызываем errorCoordinator.WaitForResolutionAsync (enableSkip={EnableSkip})", enableSkip);
+        var resolutionTask = coordinators.ErrorCoordinator.WaitForResolutionAsync(blockEndTag, blockErrorTag, enableSkip, ct, timeout: null);
         var externalTask = signal.Task;
 
         return Task.WhenAny(resolutionTask, externalTask);
@@ -227,11 +237,11 @@ public partial class PreExecutionCoordinator
 
     private async Task SetSelectedAsync(BlockBoilerAdapterStep step)
     {
-        var selectedTag = PlcBlockTagHelper.GetSelectedTag(step as IHasPlcBlockPath);
+        var selectedTag = PlcBlockTagHelper.GetSelectedTag(step);
         if (selectedTag == null) return;
 
         infra.Logger.LogDebug("Взведение Selected для {BlockPath}: {Tag}",
-            (step as IHasPlcBlockPath)?.PlcBlockPath, selectedTag);
+            (step as IHasPlcBlockPath).PlcBlockPath, selectedTag);
         var result = await infra.PlcService.WriteAsync(selectedTag, true);
         if (result.Error != null)
         {
@@ -241,11 +251,16 @@ public partial class PreExecutionCoordinator
 
     #endregion
 
-    #region Block Error Tag
+    #region Block Tags
+
+    private static string? GetBlockEndTag(BlockBoilerAdapterStep step)
+    {
+        return PlcBlockTagHelper.GetEndTag(step);
+    }
 
     private static string? GetBlockErrorTag(BlockBoilerAdapterStep step)
     {
-        return PlcBlockTagHelper.GetErrorTag(step as IHasPlcBlockPath);
+        return PlcBlockTagHelper.GetErrorTag(step);
     }
 
     #endregion

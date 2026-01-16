@@ -25,6 +25,7 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly PlcResetCoordinator _plcResetCoordinator;
     private readonly IErrorService _errorService;
     private readonly IStepTimingService _stepTimingService;
+    private readonly TagWaiter _tagWaiter;
     private readonly Lock _stateLock = new();
     private readonly object _enqueueLock = new();
     private readonly Action _onExecutorStateChanged;
@@ -58,7 +59,8 @@ public partial class TestExecutionCoordinator : IDisposable
         ExecutionActivityTracker activityTracker,
         PlcResetCoordinator plcResetCoordinator,
         IErrorService errorService,
-        IStepTimingService stepTimingService)
+        IStepTimingService stepTimingService,
+        TagWaiter tagWaiter)
     {
         _logger = logger;
         _testLogger = testLogger;
@@ -70,6 +72,7 @@ public partial class TestExecutionCoordinator : IDisposable
         _plcResetCoordinator = plcResetCoordinator;
         _errorService = errorService;
         _stepTimingService = stepTimingService;
+        _tagWaiter = tagWaiter;
         _onExecutorStateChanged = HandleExecutorStateChanged;
         _executors = CreateAllExecutors(pausableOpcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider);
         SubscribeToExecutorEvents();

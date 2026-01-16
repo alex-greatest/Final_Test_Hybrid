@@ -15,6 +15,13 @@ public class AlwaysFailStep2 : ITestStep
 
     public Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
     {
+        var key = $"{Id}_failed";
+        if (context.Variables.ContainsKey(key))
+        {
+            return Task.FromResult(TestStepResult.Pass());
+        }
+
+        context.Variables[key] = true;
         return Task.FromResult(TestStepResult.Fail("Тестовая ошибка для проверки"));
     }
 }

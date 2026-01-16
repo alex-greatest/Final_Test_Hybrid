@@ -25,6 +25,7 @@ public class BlockBoilerAdapterStep(
     public string Name => "Block boiler adapter";
     public string Description => "Блокирование адаптера";
     public bool IsVisibleInStatusGrid => true;
+    public bool IsSkippable => false;
     public string PlcBlockPath => BlockPath;
 
     // IRequiresPlcTags - валидация тегов при старте
@@ -41,10 +42,10 @@ public class BlockBoilerAdapterStep(
         }
         errorService.IsHistoryEnabled = true;
         boilerState.SetTestRunning(true);
-        return await WaitForCompletionAsync(ct);
+        return await WaitForCompletionAsync(context, ct);
     }
 
-    private async Task<PreExecutionResult> WaitForCompletionAsync(CancellationToken ct)
+    private async Task<PreExecutionResult> WaitForCompletionAsync(PreExecutionContext context, CancellationToken ct)
     {
         var waitResult = await tagWaiter.WaitAnyAsync(
             tagWaiter.CreateWaitGroup<BlockResult>()
@@ -52,17 +53,29 @@ public class BlockBoilerAdapterStep(
                 .WaitForTrue(ErrorTag, () => BlockResult.Error, "Error"),
             ct);
 
-        return waitResult.Result switch
+        if (waitResult.Result == BlockResult.Success)
         {
-            BlockResult.Success => HandleSuccess(),
-            BlockResult.Error => CreateRetryableError(),
-            _ => PreExecutionResult.Fail("Неизвестный результат")
-        };
+            return await HandleSuccessAsync(context);
+        }
+
+        if (waitResult.Result == BlockResult.Error)
+        {
+            return CreateRetryableError();
+        }
+
+        return PreExecutionResult.Fail("Неизвестный результат");
     }
 
-    private PreExecutionResult HandleSuccess()
+    private async Task<PreExecutionResult> HandleSuccessAsync(PreExecutionContext context)
     {
         logger.LogInformation("Адаптер заблокирован успешно");
+
+        var writeResult = await context.OpcUa.WriteAsync(StartTag, false);
+        if (writeResult.Error != null)
+        {
+            return CreateWriteError(writeResult.Error);
+        }
+
         phaseState.Clear();
         return PreExecutionResult.Continue();
     }
