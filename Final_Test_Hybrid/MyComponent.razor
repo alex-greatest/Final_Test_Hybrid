@@ -9,9 +9,12 @@
 @using Final_Test_Hybrid.Services.OpcUa
 @using Final_Test_Hybrid.Services.OpcUa.Connection
 @using Final_Test_Hybrid.Services.Common.UI
+@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion
+
 @inject PlcSubscriptionState SubscriptionState
 @inject OpcUaConnectionState ConnectionState
 @inject BlazorDispatcherAccessor BlazorDispatcherAccessor
+@inject TestCompletionUiState TestCompletionUiState
 @implements IDisposable
 
 <SubscriptionLoadingOverlay IsVisible="@(SubscriptionState.IsInitializing && ConnectionState.IsConnected)" />
@@ -64,8 +67,20 @@
                                         </div>
                                     </ChildContent>
                                 </RadzenCard>
-                                <MessageHelper />
-                                <TestSequenseGrid />
+                                @if (!TestCompletionUiState.ShowResultImage)
+                                {
+                                    <MessageHelper />
+                                    <TestSequenseGrid />
+                                }
+                                else
+                                {
+                                    <div class="result-image-container">
+                                        <div class="result-image-hint">
+                                            <span class="hint-action">«Один шаг»</span> — закончить тест или <span class="hint-action">«Повтор»</span> для повтора теста
+                                        </div>
+                                        <img src="@TestCompletionUiState.ImagePath" alt="Test Result" />
+                                    </div>
+                                }
                             </div>
                         </RadzenStack>
                     </div>
@@ -9394,15 +9409,19 @@
         BlazorDispatcherAccessor.Initialize(action => InvokeAsync(action), StateHasChanged);
         SubscriptionState.OnStateChanged += HandleStateChanged;
         ConnectionState.ConnectionStateChanged += HandleConnectionChanged;
+        TestCompletionUiState.OnStateChanged += HandleTestCompletionChanged;
     }
 
     private void HandleStateChanged() => InvokeAsync(StateHasChanged);
 
     private void HandleConnectionChanged(bool _) => InvokeAsync(StateHasChanged);
 
+    private void HandleTestCompletionChanged() => InvokeAsync(StateHasChanged);
+
     public void Dispose()
     {
         SubscriptionState.OnStateChanged -= HandleStateChanged;
         ConnectionState.ConnectionStateChanged -= HandleConnectionChanged;
+        TestCompletionUiState.OnStateChanged -= HandleTestCompletionChanged;
     }
 }

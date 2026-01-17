@@ -25,6 +25,7 @@ using Final_Test_Hybrid.Services.Steps.Validation;
 using Final_Test_Hybrid.Services.Preparation;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.Behaviors;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Final_Test_Hybrid.Services.DependencyInjection;
@@ -56,6 +57,9 @@ public static class StepsServiceExtensions
         services.AddSingleton<ExecutionPhaseState>();
         services.AddSingleton<ResetSubscription>();
         services.AddSingleton<PlcResetCoordinator>();
+
+        // Test completion
+        services.AddSingleton<TestCompletionUiState>();
 
         // Test sequence
         services.AddSingleton<TestSequenseService>();
