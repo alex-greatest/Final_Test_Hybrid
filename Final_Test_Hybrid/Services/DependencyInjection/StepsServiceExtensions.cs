@@ -26,6 +26,7 @@ using Final_Test_Hybrid.Services.Preparation;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.Behaviors;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
+using Final_Test_Hybrid.Services.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Final_Test_Hybrid.Services.DependencyInjection;
@@ -62,6 +63,9 @@ public static class StepsServiceExtensions
         services.AddSingleton<TestCompletionUiState>();
         services.AddSingleton<TestCompletionDependencies>();
         services.AddSingleton<TestCompletionCoordinator>();
+
+        // Storage
+        services.AddSingleton<ITestResultStorage, TestResultStorageStub>();
 
         // Test sequence
         services.AddSingleton<TestSequenseService>();

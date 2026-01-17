@@ -1,0 +1,45 @@
+@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator
+@using Final_Test_Hybrid.Services.Main.PlcReset
+@inject DialogService DialogService
+@inject ErrorCoordinator ErrorCoordinator
+@inject PlcResetCoordinator PlcResetCoordinator
+@implements IDisposable
+
+<div class="save-error-dialog">
+    <div class="error-header">
+        <RadzenIcon Icon="error_outline" class="error-icon" />
+        <span>Не удалось сохранить результаты</span>
+    </div>
+
+    <div class="dialog-buttons">
+        <RadzenButton Text="Повторить"
+                      Icon="refresh"
+                      Click="@OnRetry"
+                      ButtonStyle="ButtonStyle.Primary"
+                      class="retry-button" />
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ErrorCoordinator.OnReset += CloseOnReset;
+        PlcResetCoordinator.OnForceStop += CloseOnReset;
+    }
+
+    private void OnRetry()
+    {
+        DialogService.Close(true);
+    }
+
+    private void CloseOnReset()
+    {
+        DialogService.Close(false);
+    }
+
+    public void Dispose()
+    {
+        ErrorCoordinator.OnReset -= CloseOnReset;
+        PlcResetCoordinator.OnForceStop -= CloseOnReset;
+    }
+}

@@ -6,6 +6,7 @@
 @using Final_Test_Hybrid.Services.Main.PlcReset
 @using Final_Test_Hybrid.Services.SpringBoot.Operation
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution
+@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution
@@ -22,6 +23,8 @@
 @inject PlcResetCoordinator PlcResetCoordinator
 @inject ExecutionStateManager ExecutionStateManager
 @inject TestExecutionCoordinator TestCoordinator
+@inject TestCompletionCoordinator CompletionCoordinator
+@inject NotificationService NotificationService
 @implements IDisposable
 
 <div class="field-row field-row-middle">
@@ -93,6 +96,7 @@
         PlcResetCoordinator.OnActiveChanged += OnBlockingStateChanged;
         ErrorCoordinator.OnInterruptChanged += OnBlockingStateChanged;
         TestCoordinator.OnErrorOccurred += HandleTestErrorOccurred;
+        CompletionCoordinator.OnSaveErrorDialogRequested += HandleSaveErrorDialogAsync;
     }
 
     private void CloseDialogs()
@@ -296,6 +300,34 @@
         return ReworkDialogService.ExecuteReworkFlowAsync(errorMessage, executeRework);
     }
 
+    private async Task<bool> HandleSaveErrorDialogAsync(string? errorMessage)
+    {
+        var tcs = new TaskCompletionSource<bool>();
+
+        await InvokeAsync(async () =>
+        {
+            // Показать конкретное сообщение в уведомлении
+            if (!string.IsNullOrEmpty(errorMessage))
+            {
+                NotificationService.Notify(NotificationSeverity.Error, "Ошибка сохранения", errorMessage);
+            }
+
+            var result = await DialogService.OpenAsync<SaveErrorDialog>(
+                "",
+                null,
+                new DialogOptions
+                {
+                    ShowTitle = false,
+                    ShowClose = false,
+                    CloseDialogOnOverlayClick = false,
+                    CloseDialogOnEsc = false
+                });
+            tcs.TrySetResult(result is true);
+        });
+
+        return await tcs.Task;
+    }
+
     public void Dispose()
     {
         _disposed = true;
@@ -316,5 +348,6 @@
         PlcResetCoordinator.OnActiveChanged -= OnBlockingStateChanged;
         ErrorCoordinator.OnInterruptChanged -= OnBlockingStateChanged;
         TestCoordinator.OnErrorOccurred -= HandleTestErrorOccurred;
+        CompletionCoordinator.OnSaveErrorDialogRequested -= HandleSaveErrorDialogAsync;
     }
 }

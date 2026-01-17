@@ -41,7 +41,7 @@ public partial class TestCompletionCoordinator
                 return await HandleRepeatAsync(testResult, ct);
             }
 
-            return HandleFinish(testResult);
+            return await HandleFinishAsync(testResult, ct);
         }
         finally
         {
@@ -60,10 +60,60 @@ public partial class TestCompletionCoordinator
         return CompletionResult.RepeatRequested;
     }
 
-    private CompletionResult HandleFinish(int testResult)
+    private async Task<CompletionResult> HandleFinishAsync(int testResult, CancellationToken ct)
     {
         logger.LogInformation("Завершение теста (result={Result})", testResult);
-        // Этап 4: здесь будет сохранение в MES/БД
+
+        // Сохранить с retry loop
+        var saved = await TrySaveWithRetryAsync(testResult, ct);
+        if (!saved)
+        {
+            return CompletionResult.Cancelled;
+        }
+
         return CompletionResult.Finished;
+    }
+
+    private async Task<bool> TrySaveWithRetryAsync(int testResult, CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            var result = await deps.Storage.SaveAsync(testResult, ct);
+            if (result.IsSuccess)
+            {
+                logger.LogInformation("Результат {Status} сохранён", testResult == 1 ? "OK" : "NOK");
+                return true;
+            }
+
+            logger.LogWarning("Ошибка сохранения: {Error}", result.ErrorMessage);
+
+            // Показать диалог ошибки
+            var shouldRetry = await ShowSaveErrorDialogAsync(result.ErrorMessage);
+            if (!shouldRetry)
+            {
+                return false; // Сброс PLC отменил операцию
+            }
+        }
+        return false;
+    }
+
+    private async Task<bool> ShowSaveErrorDialogAsync(string? errorMessage)
+    {
+        var handler = OnSaveErrorDialogRequested;
+        if (handler == null)
+        {
+            logger.LogWarning("Нет подписчика на OnSaveErrorDialogRequested");
+            return false;
+        }
+
+        try
+        {
+            return await handler(errorMessage);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка показа диалога сохранения");
+            return false;
+        }
     }
 }

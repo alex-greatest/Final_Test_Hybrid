@@ -8,4 +8,10 @@ public partial class TestCompletionCoordinator(
     DualLogger<TestCompletionCoordinator> logger)
 {
     public bool IsWaitingForCompletion { get; private set; }
+
+    /// <summary>
+    /// Событие запроса диалога ошибки сохранения.
+    /// Возвращает true = повторить, false = отменено.
+    /// </summary>
+    public event Func<string?, Task<bool>>? OnSaveErrorDialogRequested;
 }
