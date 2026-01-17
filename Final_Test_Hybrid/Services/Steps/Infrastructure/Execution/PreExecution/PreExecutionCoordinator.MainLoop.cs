@@ -1,3 +1,6 @@
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
+using Microsoft.Extensions.Logging;
+
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
 public partial class PreExecutionCoordinator
@@ -27,11 +30,21 @@ public partial class PreExecutionCoordinator
 
     private async Task RunSingleCycleAsync(CancellationToken ct)
     {
-        SetAcceptingInput(true);
-        var barcode = await WaitForBarcodeAsync(ct);
-        SetAcceptingInput(false);
+        // Проверка пропуска сканирования для повтора
+        string barcode;
+        if (_skipNextScan)
+        {
+            barcode = CurrentBarcode!;
+            infra.StatusReporter.UpdateScanStepStatus(Models.Steps.TestStepStatus.Success, "Повтор теста");
+        }
+        else
+        {
+            SetAcceptingInput(true);
+            barcode = await WaitForBarcodeAsync(ct);
+            SetAcceptingInput(false);
+            infra.StatusReporter.UpdateScanStepStatus(Models.Steps.TestStepStatus.Running, "Обработка штрихкода");
+        }
 
-        infra.StatusReporter.UpdateScanStepStatus(Models.Steps.TestStepStatus.Running, "Обработка штрихкода");
         _currentCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
         var testCompletionTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -65,7 +78,12 @@ public partial class PreExecutionCoordinator
         TaskCompletionSource testCompletionTcs,
         CancellationToken ct)
     {
-        var result = await ExecutePreExecutionPipelineAsync(barcode, _currentCts!.Token);
+        var isRepeat = _skipNextScan;
+        _skipNextScan = false;
+
+        var result = isRepeat
+            ? await ExecuteRepeatPipelineAsync(_currentCts!.Token)
+            : await ExecutePreExecutionPipelineAsync(barcode, _currentCts!.Token);
 
         // Проверяем pending exit reason (сброс мог прийти во время pipeline)
         if (_pendingExitReason.HasValue)
@@ -90,7 +108,8 @@ public partial class PreExecutionCoordinator
             return _pendingExitReason.Value;
         }
 
-        return CycleExitReason.TestCompleted;
+        // Обрабатываем завершение теста через координатор
+        return await HandleTestCompletionAsync(ct);
     }
 
     private void HandleCycleExit(CycleExitReason reason)
@@ -98,7 +117,7 @@ public partial class PreExecutionCoordinator
         switch (reason)
         {
             case CycleExitReason.TestCompleted:
-                HandleTestCompleted();
+                // HandleTestCompletionAsync вызван раньше в ExecuteCycleAsync
                 state.BoilerState.SetTestRunning(false);
                 break;
 
@@ -111,6 +130,11 @@ public partial class PreExecutionCoordinator
                 infra.StatusReporter.ClearAllExceptScan();
                 break;
 
+            case CycleExitReason.RepeatRequested:
+                ClearForRepeat();
+                _skipNextScan = true;
+                break;
+
             case CycleExitReason.PipelineFailed:
             case CycleExitReason.PipelineCancelled:
                 // Ничего — состояние сохраняется для retry или следующей попытки
@@ -118,14 +142,38 @@ public partial class PreExecutionCoordinator
         }
     }
 
-    private void HandleTestCompleted()
+    private async Task<CycleExitReason> HandleTestCompletionAsync(CancellationToken ct)
     {
         state.BoilerState.StopTestTimer();
-        var hasErrors = coordinators.TestCoordinator.HasErrors || coordinators.TestCoordinator.HadSkippedError;
+
+        var hasErrors = coordinators.TestCoordinator.HasErrors
+                        || coordinators.TestCoordinator.HadSkippedError;
         var testResult = hasErrors ? 2 : 1;
         state.BoilerState.SetTestResult(testResult);
+
         infra.Logger.LogInformation("Тест завершён. Результат: {Result} ({Status})",
             testResult, testResult == 1 ? "OK" : "NOK");
+
+        // Показать картинку результата
+        coordinators.CompletionUiState.ShowImage(testResult);
+
+        try
+        {
+            // Вызвать координатор завершения
+            var result = await coordinators.CompletionCoordinator
+                .HandleTestCompletedAsync(testResult, ct);
+
+            return result switch
+            {
+                CompletionResult.Finished => CycleExitReason.TestCompleted,
+                CompletionResult.RepeatRequested => CycleExitReason.RepeatRequested,
+                _ => _pendingExitReason ?? CycleExitReason.SoftReset,
+            };
+        }
+        finally
+        {
+            coordinators.CompletionUiState.HideImage();
+        }
     }
 
     private async Task<string> WaitForBarcodeAsync(CancellationToken ct)

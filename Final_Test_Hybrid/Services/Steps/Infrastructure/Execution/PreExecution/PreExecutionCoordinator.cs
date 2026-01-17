@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Steps;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
@@ -13,6 +14,7 @@ public enum CycleExitReason
     TestCompleted,         // Тест завершился нормально
     SoftReset,             // Мягкий сброс (wasInScanPhase = true)
     HardReset,             // Жёсткий сброс
+    RepeatRequested,       // Запрошен повтор теста
 }
 
 /// <summary>
@@ -29,6 +31,8 @@ public partial class PreExecutionCoordinator(
     private TaskCompletionSource<string>? _barcodeSource;
     private CancellationTokenSource? _currentCts;
     private CycleExitReason? _pendingExitReason;
+    private bool _skipNextScan;
+    private PreExecutionContext? _lastSuccessfulContext;
 
     public bool IsAcceptingInput { get; private set; }
     public bool IsProcessing => !IsAcceptingInput && state.ActivityTracker.IsPreExecutionActive;
@@ -47,6 +51,23 @@ public partial class PreExecutionCoordinator(
         state.PhaseState.Clear();
         ClearBarcode();
         infra.ErrorService.IsHistoryEnabled = false;
+        _lastSuccessfulContext = null;
+    }
+
+    private void ClearForRepeat()
+    {
+        // Очистка UI
+        infra.StatusReporter.ClearAllExceptScan();
+        infra.StepTimingService.Clear();
+
+        // Очистка данных
+        infra.ErrorService.ClearHistory();
+        infra.TestResultsService.Clear();
+
+        // Сброс состояния TestExecutionCoordinator
+        coordinators.TestCoordinator.ResetForRepeat();
+
+        infra.Logger.LogInformation("Состояние очищено для повтора");
     }
 
     public void SubmitBarcode(string barcode)

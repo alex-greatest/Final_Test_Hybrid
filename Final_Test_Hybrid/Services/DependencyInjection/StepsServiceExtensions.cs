@@ -60,6 +60,8 @@ public static class StepsServiceExtensions
 
         // Test completion
         services.AddSingleton<TestCompletionUiState>();
+        services.AddSingleton<TestCompletionDependencies>();
+        services.AddSingleton<TestCompletionCoordinator>();
 
         // Test sequence
         services.AddSingleton<TestSequenseService>();

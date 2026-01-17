@@ -92,6 +92,19 @@ public partial class TestExecutionCoordinator : IDisposable
         StateManager.ClearErrors();
     }
 
+    public void ResetForRepeat()
+    {
+        StateManager.ClearErrors();
+        StateManager.ResetErrorTracking();
+        StateManager.TransitionTo(ExecutionState.Idle);
+
+        // Сбросить состояние всех executor'ов
+        foreach (var executor in _executors)
+        {
+            executor.ClearFailedState();
+        }
+    }
+
     private ColumnExecutor[] CreateAllExecutors(
         PausableOpcUaTagService opcUaTagService,
         ITestStepLogger testLogger,

@@ -1,7 +1,6 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Steps;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
@@ -32,7 +31,44 @@ public partial class PreExecutionCoordinator
             scanResult.SuccessMessage ?? "",
             scanResult.Limits);
 
+        // Сохраняем context после успешного ScanStep (для повтора)
+        _lastSuccessfulContext = context;
+
         // Включаем после успешного сканирования
+        infra.ErrorService.IsHistoryEnabled = true;
+        state.BoilerState.SetTestRunning(true);
+        state.BoilerState.StartTestTimer();
+
+        ct.ThrowIfCancellationRequested();
+
+        var timerResult = await ExecuteStartTimer1Async(context, ct);
+        if (timerResult.Status != PreExecutionStatus.Continue)
+        {
+            return timerResult;
+        }
+
+        var blockResult = await ExecuteBlockBoilerAdapterAsync(context, ct);
+        if (blockResult.Status != PreExecutionStatus.Continue)
+        {
+            return HandleNonContinueResult(blockResult);
+        }
+
+        state.PhaseState.Clear();
+        StartTestExecution(context);
+        return PreExecutionResult.TestStarted();
+    }
+
+    private async Task<PreExecutionResult> ExecuteRepeatPipelineAsync(CancellationToken ct)
+    {
+        var context = _lastSuccessfulContext;
+        if (context?.Maps == null)
+        {
+            infra.Logger.LogError("Нет сохранённого контекста для повтора");
+            return PreExecutionResult.Fail("Нет данных для повтора");
+        }
+
+        // Пропускаем ScanStep - данные уже загружены
+        // Включаем флаги для теста
         infra.ErrorService.IsHistoryEnabled = true;
         state.BoilerState.SetTestRunning(true);
         state.BoilerState.StartTestTimer();

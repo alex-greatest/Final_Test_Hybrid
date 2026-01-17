@@ -3,6 +3,7 @@ using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 using Microsoft.AspNetCore.Components;
 using Radzen;
 
@@ -20,16 +21,20 @@ public partial class OperatorAuthorizationQr : IDisposable
     public required PlcResetCoordinator PlcResetCoordinator { get; set; }
     [Inject]
     public required IErrorCoordinator ErrorCoordinator { get; set; }
+    [Inject]
+    public required PreExecutionCoordinator PreExecution { get; set; }
 
     private bool _useOperatorQrAuth;
 
-    private bool IsDisabled => !SettingsAccessState.CanInteract
+    private bool IsDisabled => PreExecution.IsProcessing
+        || !SettingsAccessState.CanInteract
         || PlcResetCoordinator.IsActive
         || ErrorCoordinator.CurrentInterrupt != null;
 
     protected override void OnInitialized()
     {
         _useOperatorQrAuth = AppSettingsService.UseOperatorQrAuth;
+        PreExecution.OnStateChanged += HandleStateChanged;
         SettingsAccessState.OnStateChanged += HandleStateChanged;
         PlcResetCoordinator.OnActiveChanged += HandleStateChanged;
         ErrorCoordinator.OnInterruptChanged += HandleStateChanged;
@@ -65,6 +70,7 @@ public partial class OperatorAuthorizationQr : IDisposable
 
     public void Dispose()
     {
+        PreExecution.OnStateChanged -= HandleStateChanged;
         SettingsAccessState.OnStateChanged -= HandleStateChanged;
         PlcResetCoordinator.OnActiveChanged -= HandleStateChanged;
         ErrorCoordinator.OnInterruptChanged -= HandleStateChanged;
