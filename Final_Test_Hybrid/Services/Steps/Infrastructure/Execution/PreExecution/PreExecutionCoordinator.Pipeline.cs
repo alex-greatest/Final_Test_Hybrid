@@ -92,6 +92,44 @@ public partial class PreExecutionCoordinator
         return PreExecutionResult.TestStarted();
     }
 
+    private async Task<PreExecutionResult> ExecuteNokRepeatPipelineAsync(CancellationToken ct)
+    {
+        if (CurrentBarcode == null)
+        {
+            infra.Logger.LogError("NOK повтор: CurrentBarcode is null");
+            return PreExecutionResult.Fail("Отсутствует штрихкод для повтора");
+        }
+
+        infra.Logger.LogInformation("NOK повтор: запуск полной подготовки с barcode={Barcode}", CurrentBarcode);
+
+        while (!ct.IsCancellationRequested)
+        {
+            // Выполнить полный pipeline с сохранённым штрихкодом
+            var result = await ExecutePreExecutionPipelineAsync(CurrentBarcode, ct);
+
+            if (result.Status == PreExecutionStatus.TestStarted || result.Status == PreExecutionStatus.Cancelled)
+            {
+                return result;
+            }
+
+            // Показать диалог ошибки подготовки
+            var shouldRetry = await ShowPrepareErrorDialogAsync(result.ErrorMessage);
+            if (!shouldRetry)
+            {
+                return PreExecutionResult.Cancelled();
+            }
+
+            infra.Logger.LogInformation("NOK повтор: повторная попытка подготовки");
+        }
+
+        return PreExecutionResult.Cancelled();
+    }
+
+    private Task<bool> ShowPrepareErrorDialogAsync(string? errorMessage)
+    {
+        return coordinators.CompletionCoordinator.ShowPrepareErrorDialogAsync(errorMessage);
+    }
+
     private async Task<PreExecutionResult> ExecuteScanStepAsync(PreExecutionContext context, CancellationToken ct)
     {
         var scanStep = steps.GetScanStep();

@@ -17,6 +17,7 @@ public enum CompletionPhase
 public enum CompletionResult
 {
     Finished,           // Тест завершён, выполнен сброс
-    RepeatRequested,    // Запрошен повтор теста
+    RepeatRequested,    // OK повтор (без сохранения)
+    NokRepeatRequested, // NOK повтор с подготовкой
     Cancelled           // Отменено (сброс PLC во время ожидания)
 }

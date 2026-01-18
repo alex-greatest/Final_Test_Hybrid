@@ -1,5 +1,4 @@
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
@@ -79,11 +78,15 @@ public partial class PreExecutionCoordinator
         CancellationToken ct)
     {
         var isRepeat = _skipNextScan;
+        var isNokRepeat = _skipNextScan && _executeFullPreparation;
         _skipNextScan = false;
+        _executeFullPreparation = false;
 
-        var result = isRepeat
-            ? await ExecuteRepeatPipelineAsync(_currentCts!.Token)
-            : await ExecutePreExecutionPipelineAsync(barcode, _currentCts!.Token);
+        var result = isNokRepeat
+            ? await ExecuteNokRepeatPipelineAsync(_currentCts!.Token)
+            : isRepeat
+                ? await ExecuteRepeatPipelineAsync(_currentCts!.Token)
+                : await ExecutePreExecutionPipelineAsync(barcode, _currentCts!.Token);
 
         // Проверяем pending exit reason (сброс мог прийти во время pipeline)
         if (_pendingExitReason.HasValue)
@@ -135,6 +138,12 @@ public partial class PreExecutionCoordinator
                 _skipNextScan = true;
                 break;
 
+            case CycleExitReason.NokRepeatRequested:
+                ClearForNokRepeat();
+                _skipNextScan = true;
+                _executeFullPreparation = true;
+                break;
+
             case CycleExitReason.PipelineFailed:
             case CycleExitReason.PipelineCancelled:
                 // Ничего — состояние сохраняется для retry или следующей попытки
@@ -145,7 +154,6 @@ public partial class PreExecutionCoordinator
     private async Task<CycleExitReason> HandleTestCompletionAsync(CancellationToken ct)
     {
         state.BoilerState.StopTestTimer();
-
         var hasErrors = coordinators.TestCoordinator.HasErrors
                         || coordinators.TestCoordinator.HadSkippedError;
         var testResult = hasErrors ? 2 : 1;
@@ -153,7 +161,6 @@ public partial class PreExecutionCoordinator
 
         infra.Logger.LogInformation("Тест завершён. Результат: {Result} ({Status})",
             testResult, testResult == 1 ? "OK" : "NOK");
-
         // Показать картинку результата
         coordinators.CompletionUiState.ShowImage(testResult);
 
@@ -167,6 +174,7 @@ public partial class PreExecutionCoordinator
             {
                 CompletionResult.Finished => CycleExitReason.TestCompleted,
                 CompletionResult.RepeatRequested => CycleExitReason.RepeatRequested,
+                CompletionResult.NokRepeatRequested => CycleExitReason.NokRepeatRequested,
                 _ => _pendingExitReason ?? CycleExitReason.SoftReset,
             };
         }

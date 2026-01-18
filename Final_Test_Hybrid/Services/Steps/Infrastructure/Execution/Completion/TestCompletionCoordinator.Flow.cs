@@ -1,5 +1,4 @@
 using Final_Test_Hybrid.Models.Plc.Tags;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 
@@ -24,7 +23,6 @@ public partial class TestCompletionCoordinator
                 await deps.TagWaiter.WaitForTrueAsync(BaseTags.ErrorSkip, timeout: TimeSpan.FromSeconds(5), ct);
                 logger.LogInformation("End = true подтверждено");
             }
-
             // 3. Ждать End = false (PLC сбросит)
             await deps.TagWaiter.WaitForFalseAsync(BaseTags.ErrorSkip, timeout: null, ct);
             logger.LogDebug("PLC сбросил End");
@@ -53,10 +51,13 @@ public partial class TestCompletionCoordinator
     {
         logger.LogInformation("Запрошен повтор теста (result={Result})", testResult);
 
-        // Записать Ask_Repeat = true (PLC сбросит Req_Repeat)
+        // NOK (testResult == 2) - сохранение + ReworkDialog + полная подготовка
+        if (testResult == 2)
+        {
+            return await HandleNokRepeatAsync(ct);
+        }
+        // OK - просто сигнал повтора (без сохранения)
         await deps.PlcService.WriteAsync(BaseTags.AskRepeat, true, ct);
-
-        // Для NOK: сохранение + подготовка будут в этапе 5
         return CompletionResult.RepeatRequested;
     }
 
@@ -66,12 +67,7 @@ public partial class TestCompletionCoordinator
 
         // Сохранить с retry loop
         var saved = await TrySaveWithRetryAsync(testResult, ct);
-        if (!saved)
-        {
-            return CompletionResult.Cancelled;
-        }
-
-        return CompletionResult.Finished;
+        return !saved ? CompletionResult.Cancelled : CompletionResult.Finished;
     }
 
     private async Task<bool> TrySaveWithRetryAsync(int testResult, CancellationToken ct)
@@ -105,7 +101,6 @@ public partial class TestCompletionCoordinator
             logger.LogWarning("Нет подписчика на OnSaveErrorDialogRequested");
             return false;
         }
-
         try
         {
             return await handler(errorMessage);

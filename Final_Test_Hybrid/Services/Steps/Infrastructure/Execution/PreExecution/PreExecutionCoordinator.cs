@@ -14,7 +14,8 @@ public enum CycleExitReason
     TestCompleted,         // Тест завершился нормально
     SoftReset,             // Мягкий сброс (wasInScanPhase = true)
     HardReset,             // Жёсткий сброс
-    RepeatRequested,       // Запрошен повтор теста
+    RepeatRequested,       // OK повтор теста
+    NokRepeatRequested,    // NOK повтор с подготовкой
 }
 
 /// <summary>
@@ -32,6 +33,7 @@ public partial class PreExecutionCoordinator(
     private CancellationTokenSource? _currentCts;
     private CycleExitReason? _pendingExitReason;
     private bool _skipNextScan;
+    private bool _executeFullPreparation;
     private PreExecutionContext? _lastSuccessfulContext;
 
     public bool IsAcceptingInput { get; private set; }
@@ -56,6 +58,9 @@ public partial class PreExecutionCoordinator(
 
     private void ClearForRepeat()
     {
+        // Сбросить флаг ПЕРЕД ClearHistory, чтобы при повторе AddActiveErrorsToHistory сработал
+        infra.ErrorService.IsHistoryEnabled = false;
+
         // Очистка UI
         infra.StatusReporter.ClearAllExceptScan();
         infra.StepTimingService.Clear();
@@ -68,6 +73,28 @@ public partial class PreExecutionCoordinator(
         coordinators.TestCoordinator.ResetForRepeat();
 
         infra.Logger.LogInformation("Состояние очищено для повтора");
+    }
+
+    private void ClearForNokRepeat()
+    {
+        // Очистка состояния котла (но не CurrentBarcode!)
+        state.BoilerState.Clear();
+        state.PhaseState.Clear();
+        infra.ErrorService.IsHistoryEnabled = false;
+        _lastSuccessfulContext = null;
+
+        // Очистка UI
+        infra.StatusReporter.ClearAllExceptScan();
+        infra.StepTimingService.Clear();
+
+        // Очистка данных
+        infra.ErrorService.ClearHistory();
+        infra.TestResultsService.Clear();
+
+        // Сброс состояния TestExecutionCoordinator
+        coordinators.TestCoordinator.ResetForRepeat();
+
+        infra.Logger.LogInformation("Состояние очищено для NOK повтора с подготовкой");
     }
 
     public void SubmitBarcode(string barcode)

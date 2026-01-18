@@ -2,7 +2,6 @@
 @using Final_Test_Hybrid.Components.Main.Modals
 @using Final_Test_Hybrid.Models.Steps
 @using Final_Test_Hybrid.Services.Common.Settings
-@using Final_Test_Hybrid.Services.Main
 @using Final_Test_Hybrid.Services.Main.PlcReset
 @using Final_Test_Hybrid.Services.SpringBoot.Operation
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution
@@ -97,6 +96,8 @@
         ErrorCoordinator.OnInterruptChanged += OnBlockingStateChanged;
         TestCoordinator.OnErrorOccurred += HandleTestErrorOccurred;
         CompletionCoordinator.OnSaveErrorDialogRequested += HandleSaveErrorDialogAsync;
+        CompletionCoordinator.OnPrepareErrorDialogRequested += HandlePrepareErrorDialogAsync;
+        CompletionCoordinator.OnReworkDialogRequested += HandleReworkForNokRepeatAsync;
     }
 
     private void CloseDialogs()
@@ -328,6 +329,38 @@
         return await tcs.Task;
     }
 
+    private async Task<bool> HandlePrepareErrorDialogAsync(string? errorMessage)
+    {
+        var tcs = new TaskCompletionSource<bool>();
+
+        await InvokeAsync(async () =>
+        {
+            if (!string.IsNullOrEmpty(errorMessage))
+            {
+                NotificationService.Notify(NotificationSeverity.Error, "Ошибка подготовки", errorMessage);
+            }
+
+            var result = await DialogService.OpenAsync<PrepareErrorDialog>(
+                "",
+                null,
+                new DialogOptions
+                {
+                    ShowTitle = false,
+                    ShowClose = false,
+                    CloseDialogOnOverlayClick = false,
+                    CloseDialogOnEsc = false
+                });
+            tcs.TrySetResult(result is true);
+        });
+
+        return await tcs.Task;
+    }
+
+    private Task<ReworkFlowResult> HandleReworkForNokRepeatAsync(string message)
+    {
+        return ReworkDialogService.ExecuteReworkFlowAsync(message);
+    }
+
     public void Dispose()
     {
         _disposed = true;
@@ -349,5 +382,7 @@
         ErrorCoordinator.OnInterruptChanged -= OnBlockingStateChanged;
         TestCoordinator.OnErrorOccurred -= HandleTestErrorOccurred;
         CompletionCoordinator.OnSaveErrorDialogRequested -= HandleSaveErrorDialogAsync;
+        CompletionCoordinator.OnPrepareErrorDialogRequested -= HandlePrepareErrorDialogAsync;
+        CompletionCoordinator.OnReworkDialogRequested -= HandleReworkForNokRepeatAsync;
     }
 }
