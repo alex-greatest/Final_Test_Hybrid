@@ -32,8 +32,9 @@ public partial class ErrorCoordinator
     /// </summary>
     public void ForceStop()
     {
-        _logger.LogInformation("=== МЯГКИЙ СБРОС (данные сохранены) ===");
+        _logger.LogInformation("=== МЯГКИЙ СБРОС (снятие прерывания) ===");
         _state.PauseToken.Resume();
+        ClearCurrentInterrupt();
     }
 
     #endregion
