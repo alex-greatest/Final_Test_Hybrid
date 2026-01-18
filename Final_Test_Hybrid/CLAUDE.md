@@ -66,6 +66,15 @@ public class BlazorUiDispatcher(BlazorDispatcherAccessor a) : IUiDispatcher
 | Тестовые шаги | `PausableOpcUaTagService`, `PausableTagWaiter` |
 | Системные операции | `OpcUaTagService`, `TagWaiter` |
 
+### Pausable операции в шагах
+
+| Операция | Метод |
+|----------|-------|
+| Задержка с паузой | `await context.DelayAsync(TimeSpan.FromSeconds(5), ct)` |
+| Ручная проверка паузы | `await context.PauseToken.WaitWhilePausedAsync(ct)` |
+
+**ВАЖНО:** Не вызывать `PauseToken.Pause()` / `Resume()` в шагах — это делает `ErrorCoordinator`.
+
 ## ErrorCoordinator — Strategy Pattern
 
 Координатор прерываний с расширяемой архитектурой. См. [ErrorCoordinatorGuide.md](ErrorCoordinatorGuide.md)
@@ -189,6 +198,43 @@ if (step != null)
 - `TestExecutionCoordinator.HandleErrorsIfAny` — захват `_cts`
 - `ErrorCoordinator.HandleConnectionChanged` — захват `IsAnyActive`
 - `ScanModeController.IsInScanningPhase` — `IsInScanningPhaseUnsafe` для внутренних вызовов
+
+## CancellationToken Synchronization Pattern
+
+При сбросе системы все связанные CancellationTokenSource должны быть отменены синхронно.
+
+### Проблема
+
+Система имеет несколько независимых CTS:
+- `_loopCts` в ScanModeController (цикл ввода)
+- `_currentCts` в PreExecutionCoordinator (текущий цикл)
+- `_cts` в TestExecutionCoordinator (выполнение тестов)
+
+При сбросе легко забыть отменить один из них, что приводит к рассинхронизации UI.
+
+### Пример бага (исправлен)
+
+`TransitionToReadyInternal` не отменял `_loopCts` когда `!IsScanModeEnabled`:
+- Сканер отключался ✓
+- Но цикл ввода продолжал работать → поле ввода оставалось доступным ✗
+
+### Правило
+
+**При изменении состояния готовности системы — проверь ВСЕ связанные CTS:**
+
+| Событие | Что отменить |
+|---------|--------------|
+| Reset + AutoMode OFF | `_loopCts`, `_currentCts` |
+| ForceStop | `_currentCts`, `_cts` |
+| Logout | `_loopCts` |
+
+### Чеклист для review
+
+При добавлении нового CTS или изменении логики сброса:
+1. [ ] Где создаётся CTS?
+2. [ ] Где отменяется при нормальном завершении?
+3. [ ] Где отменяется при сбросе?
+4. [ ] Синхронизирован ли с другими CTS?
 
 ## Architecture
 

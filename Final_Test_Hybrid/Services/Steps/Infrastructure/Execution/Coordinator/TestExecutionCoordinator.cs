@@ -128,7 +128,7 @@ public partial class TestExecutionCoordinator : IDisposable
         IErrorService errorService,
         IStepTimingService stepTimingService)
     {
-        var context = new TestStepContext(index, opcUa, loggerFactory.CreateLogger($"Column{index}"), recipeProvider);
+        var context = new TestStepContext(index, opcUa, loggerFactory.CreateLogger($"Column{index}"), recipeProvider, pauseToken);
         var executorLogger = loggerFactory.CreateLogger<ColumnExecutor>();
         return new ColumnExecutor(index, context, testLogger, executorLogger, statusReporter, pauseToken, errorService, stepTimingService);
     }

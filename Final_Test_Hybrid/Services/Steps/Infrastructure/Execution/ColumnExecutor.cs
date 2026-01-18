@@ -73,19 +73,19 @@ public class ColumnExecutor(
     {
         try
         {
-            stepTimingService.StartCurrentStepTiming(step.Name, step.Description);
+            stepTimingService.StartColumnStepTiming(ColumnIndex, step.Name, step.Description);
             var result = await step.ExecuteAsync(context, ct);
-            stepTimingService.StopCurrentStepTiming();
+            stepTimingService.StopColumnStepTiming(ColumnIndex);
             ProcessStepResult(step, result);
         }
         catch (OperationCanceledException)
         {
-            stepTimingService.StopCurrentStepTiming();
+            stepTimingService.StopColumnStepTiming(ColumnIndex);
             ClearStatusIfNotFailed();
         }
         catch (Exception ex)
         {
-            stepTimingService.StopCurrentStepTiming();
+            stepTimingService.StopColumnStepTiming(ColumnIndex);
             SetErrorState(step, ex.Message, null);
             LogError(step, ex.Message, ex);
         }

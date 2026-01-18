@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
@@ -19,6 +20,7 @@ public class ScanModeController : IDisposable
     private readonly PreExecutionCoordinator _preExecutionCoordinator;
     private readonly PlcResetCoordinator _plcResetCoordinator;
     private readonly IStepTimingService _stepTimingService;
+    private readonly ExecutionActivityTracker _activityTracker;
     private readonly Lock _stateLock = new();
     private CancellationTokenSource? _loopCts;
     private bool _isActivated;
@@ -57,7 +59,8 @@ public class ScanModeController : IDisposable
         StepStatusReporter statusReporter,
         PreExecutionCoordinator preExecutionCoordinator,
         PlcResetCoordinator plcResetCoordinator,
-        IStepTimingService stepTimingService)
+        IStepTimingService stepTimingService,
+        ExecutionActivityTracker activityTracker)
     {
         _sessionManager = sessionManager;
         _operatorState = operatorState;
@@ -66,6 +69,7 @@ public class ScanModeController : IDisposable
         _preExecutionCoordinator = preExecutionCoordinator;
         _plcResetCoordinator = plcResetCoordinator;
         _stepTimingService = stepTimingService;
+        _activityTracker = activityTracker;
         SubscribeToEvents();
     }
 
@@ -119,6 +123,9 @@ public class ScanModeController : IDisposable
     {
         if (_isActivated)
         {
+            // Восстановить сканер и таймер при возврате AutoMode
+            _sessionManager.AcquireSession(HandleBarcodeScanned);
+            _stepTimingService.ResumeAllColumnsTiming();
             return;
         }
         _isActivated = true;
@@ -155,7 +162,6 @@ public class ScanModeController : IDisposable
 
     private void TryDeactivateScanMode()
     {
-        _loopCts?.Cancel();
         if (_isResetting)
         {
             return;
@@ -164,6 +170,15 @@ public class ScanModeController : IDisposable
         {
             return;
         }
+        // Если тест выполняется — только отключить сканер и приостановить таймеры всех колонок
+        if (_activityTracker.IsAnyActive)
+        {
+            _sessionManager.ReleaseSession();
+            _stepTimingService.PauseAllColumnsTiming();
+            return;
+        }
+        // Отменять loop только если тест НЕ активен
+        _loopCts?.Cancel();
         _isActivated = false;
         _sessionManager.ReleaseSession();
         if (!_operatorState.IsAuthenticated)
@@ -185,6 +200,7 @@ public class ScanModeController : IDisposable
         _isResetting = false;
         if (!IsScanModeEnabled)
         {
+            _loopCts?.Cancel();
             _isActivated = false;
             return;
         }

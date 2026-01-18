@@ -1,12 +1,117 @@
-﻿17:33:45 [INF] [Конец шага] Печать этикетки
-17:33:45 [INF] ═══ ТЕСТИРОВАНИЕ ЗАВЕРШЕНО: УСПЕШНО ═══
-17:33:45 [INF] Тест завершён. Результат: 1 (OK)
-17:33:45 [DBG] Запись в NodeId: [ns=3;s="DB_Station"."Test"."End"], значение: true
-17:33:45 [INF] End = true записан, ожидание сброса от PLC
-17:33:45 [INF] Текущее значение End после записи: true
-17:34:44 [INF] Тег ns=3;s="DB_Station"."Test"."End" = false
-17:34:44 [INF]   Получен сигнал: false
-17:34:44 [DBG] PLC сбросил End
-17:34:44 [DBG] Запись в NodeId: [ns=3;s="DB_HMI"."PLC_Flag"], значение: true
-17:34:45 [INF] Req_Repeat = false
-17:34:45 [INF] Завершение теста (result=1)
+﻿: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ��������� � ���������: 173
+info: Final_Test_Hybrid.Services.Steps.Steps.Misc.StartTimer1Step[0]
+      ������ 1 �������
+warn: Final_Test_Hybrid.Services.Steps.Infrastructure.Timing.StepTimingService[0]
+      >>> �����������: StartCurrentStepTiming() - name=Block boiler adapter, _currentIsRunning ��: False
+warn: Final_Test_Hybrid.Services.Steps.Infrastructure.Timing.StepTimingService[0]
+      >>> �����������: StartCurrentStepTiming() - _currentIsRunning �����: True
+info: Final_Test_Hybrid.Services.Steps.Steps.BlockBoilerAdapterStep[0]
+      ������ ���������� ��������
+warn: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      >>> CheckCurrentValues: ns=3;s="DB_VI"."Block_Boiler_Adapter"."End" = False
+warn: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      >>> CheckCurrentValues: ns=3;s="DB_VI"."Block_Boiler_Adapter"."Error" = False
+warn: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      >>> CheckCurrentValues: ns=3;s="DB_VI"."Block_Boiler_Adapter"."End" = False
+warn: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      >>> CheckCurrentValues: ns=3;s="DB_VI"."Block_Boiler_Adapter"."Error" = False
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription[0]
+      ��� ns=3;s="DB_Station"."Test"."Ask_Auto" = False
+warn: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      ����������: AutoModeDisabled � ��� ��������
+warn: Final_Test_Hybrid.Services.Steps.Infrastructure.Timing.StepTimingService[0]
+      >>> �����������: StopCurrentStepTiming() - _currentIsRunning ��: True, _currentName: Block boiler adapter
+                                                                                                               ���� �������:
+                                                                                                                               at System.Environment.get_StackTrace()
+         at Final_Test_Hybrid.Services.Steps.Infrastructure.Timing.StepTimingService.StopCurrentStepTiming() in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\Steps\Infrastructure\Timing\StepTimingService.cs:line 129
+         at Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution.PreExecutionCoordinator.ExecuteBlockBoilerAdapterAsync(PreExecutionContext context, CancellationToken ct) in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\Steps\Infrastructure\Execution\PreExecution\PreExecutionCoordinator.Pipeline.cs:line 181
+         at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.ExecutionContextCallback(Object s)
+         at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+         at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext()
+         at System.Threading.Tasks.AwaitTaskContinuation.RunCallback(ContextCallback callback, Object state, Task& currentTask)
+         at System.Threading.Tasks.Task.RunContinuations(Object continuationObject)
+         at System.Threading.Tasks.Task.TrySetCanceled(CancellationToken tokenToRecord, Object cancellationException)
+         at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.SetException(Exception exception, Task`1& taskField)
+         at Final_Test_Hybrid.Services.Steps.Steps.BlockBoilerAdapterStep.ExecuteAsync(PreExecutionContext context, CancellationToken ct) in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\Steps\Steps\BlockBoilerAdapterStep.cs:line 40
+         at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.ExecutionContextCallback(Object s)
+         at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+         at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext()
+         at System.Threading.Tasks.AwaitTaskContinuation.RunCallback(ContextCallback callback, Object state, Task& currentTask)
+         at System.Threading.Tasks.Task.RunContinuations(Object continuationObject)
+         at System.Threading.Tasks.Task.TrySetCanceled(CancellationToken tokenToRecord, Object cancellationException)
+         at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.SetException(Exception exception, Task`1& taskField)
+         at Final_Test_Hybrid.Services.Steps.Steps.BlockBoilerAdapterStep.WaitForCompletionAsync(PreExecutionContext context, CancellationToken ct) in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\Steps\Steps\BlockBoilerAdapterStep.cs:line 45
+         at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.ExecutionContextCallback(Object s)
+         at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+         at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext()
+         at System.Threading.Tasks.AwaitTaskContinuation.RunCallback(ContextCallback callback, Object state, Task& currentTask)
+         at System.Threading.Tasks.Task.RunContinuations(Object continuationObject)
+         at System.Threading.Tasks.Task.TrySetCanceled(CancellationToken tokenToRecord, Object cancellationException)
+         at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.SetException(Exception exception, Task`1& taskField)
+         at Final_Test_Hybrid.Services.OpcUa.TagWaiter.WaitAnyAsync[TResult](WaitGroupBuilder`1 builder, CancellationToken ct) in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\OpcUa\TagWaiter.cs:line 139
+         at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.ExecutionContextCallback(Object s)
+         at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+         at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext()
+         at System.Threading.Tasks.AwaitTaskContinuation.RunCallback(ContextCallback callback, Object state, Task& currentTask)
+         at System.Threading.Tasks.Task.RunContinuations(Object continuationObject)
+         at System.Threading.Tasks.Task.TrySetCanceled(CancellationToken tokenToRecord, Object cancellationException)
+         at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.SetException(Exception exception, Task`1& taskField)
+         at Final_Test_Hybrid.Services.OpcUa.TagWaiter.WaitWithTimeoutAsync[T](Task`1 task, Nullable`1 timeout, CancellationToken ct) in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\OpcUa\TagWaiter.cs:line 300
+         at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.ExecutionContextCallback(Object s)
+         at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+         at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext()
+         at System.Windows.Forms.Control.InvokeMarshaledCallbackHelper(Object obj)
+         at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+         at System.Windows.Forms.Control.InvokeMarshaledCallbacks()
+         at System.Windows.Forms.Control.WndProc(Message& m)
+         at System.Windows.Forms.NativeWindow.Callback(HWND hWnd, UInt32 msg, WPARAM wparam, LPARAM lparam)
+         at Windows.Win32.PInvoke.DispatchMessage(MSG* lpMsg)
+         at System.Windows.Forms.Application.LightThreadContext.FPushMessageLoop(msoloop uReason)
+         at System.Windows.Forms.Application.LightThreadContext.RunMessageLoop(msoloop reason, Boolean fullModal)
+         at System.Windows.Forms.Application.ThreadContext.RunMessageLoopInner(msoloop reason, ApplicationContext context)
+         at System.Windows.Forms.Application.Run(Form mainForm)
+         at Final_Test_Hybrid.Program.Main() in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Program.cs:line 22
+warn: Final_Test_Hybrid.Services.Steps.Infrastructure.Timing.StepTimingService[0]
+      >>> �����������: StopCurrentStepTiming() - _currentIsRunning �����: False
+warn: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution.PreExecutionCoordinator[0]
+      >>> �����������: _currentCts.Token ����ͨ�!
+                                                ����:
+                                                        at System.Environment.get_StackTrace()
+         at Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution.PreExecutionCoordinator.<>c__DisplayClass32_0.<RunSingleCycleAsync>b__0() in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\Steps\Infrastructure\Execution\PreExecution\PreExecutionCoordinator.MainLoop.cs:line 49
+         at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+         at System.Threading.CancellationTokenSource.ExecuteCallbackHandlers(Boolean throwOnFirstException)
+         at System.Threading.CancellationTokenSource.ExecuteCallbackHandlers(Boolean throwOnFirstException)
+         at Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning.ScanModeController.TryDeactivateScanMode() in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\Steps\Infrastructure\Execution\Scanning\ScanModeController.cs:line 164
+         at Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning.ScanModeController.UpdateScanModeState() in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\Steps\Infrastructure\Execution\Scanning\ScanModeController.cs:line 116
+         at Final_Test_Hybrid.Services.Main.AutoReadySubscription.<SubscribeAsync>b__9_0(Object value) in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\Main\AutoReadySubscription.cs:line 17
+         at Final_Test_Hybrid.Services.Main.AutoReadySubscription.<SubscribeAsync>b__9_0(Object value)
+         at Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription.InvokeCallbacks(String nodeId, Object value) in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\OpcUa\Subscription\OpcUaSubscription.cs:line 270
+         at Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription.OnNotification(MonitoredItem item, MonitoredItemNotificationEventArgs e) in D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\Services\OpcUa\Subscription\OpcUaSubscription.cs:line 248
+         at Opc.Ua.Client.MonitoredItem.SaveValueInCache(IEncodeable newValue)
+         at Opc.Ua.Client.Subscription.SaveDataChange(NotificationMessage message, DataChangeNotification notifications, IList`1 stringTable)
+         at Opc.Ua.Client.Subscription.OnMessageReceivedAsync(CancellationToken ct)
+         at System.Runtime.CompilerServices.AsyncMethodBuilderCore.Start[TStateMachine](TStateMachine& stateMachine)
+         at Opc.Ua.Client.Subscription.OnMessageReceivedAsync(CancellationToken ct)
+         at Opc.Ua.Client.Subscription.PublishResponseMessageWorkerAsync(CancellationToken ct)
+         at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.ExecutionContextCallback(Object s)
+         at System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(Thread threadPoolThread, ExecutionContext executionContext, ContextCallback callback, Object state)
+         at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.MoveNext(Thread threadPoolThread)
+         at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AsyncStateMachineBox`1.ExecuteFromThreadPool(Thread threadPoolThread)
+         at System.Threading.ThreadPoolWorkQueue.Dispatch()
+         at System.Threading.PortableThreadPool.WorkerThread.WorkerThreadStart()
+         at System.Threading.Thread.StartCallback()
+warn: Final_Test_Hybrid.Services.SpringBoot.Health.SpringBootHealthService[0]
+      ������ Spring Boot �� ��������
+info: Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription[0]
+      ��� ns=3;s="DB_Station"."Test"."Ask_Auto" = True
+warn: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      >>> �����������: ResumeExecution() ������. IsPaused �� Resume: True
+warn: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      >>> �����������: ResumeExecution() - PauseToken.Resume() ��������. IsPaused �����: False
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1

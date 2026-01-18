@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.Common.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 
@@ -14,16 +15,26 @@ public interface IStepTimingService
     void StopScanTiming();
     void ResetScanTiming();
 
-    // Методы для текущего шага (таймер в реальном времени)
+    // Методы для шагов колонок (4 параллельных таймера)
+    void StartColumnStepTiming(int columnIndex, string name, string description);
+    void StopColumnStepTiming(int columnIndex);
+    void PauseAllColumnsTiming();
+    void ResumeAllColumnsTiming();
+
+    // Методы для pre-execution шагов (используют колонку 0, т.к. выполняются до параллельных колонок)
     void StartCurrentStepTiming(string name, string description);
     void StopCurrentStepTiming();
 }
 
 public class StepTimingService : IStepTimingService, IDisposable
 {
+    private const int ColumnCount = 4;
+
     private readonly List<StepTimingRecord> _records = [];
     private readonly Lock _lock = new();
     private readonly System.Threading.Timer _timer;
+    private readonly DualLogger<StepTimingService> 
+        _logger;
 
     // Состояние шага сканирования
     private readonly Guid _scanId = Guid.NewGuid();
@@ -33,17 +44,34 @@ public class StepTimingService : IStepTimingService, IDisposable
     private bool _scanIsRunning;
     private TimeSpan _scanFrozenDuration;
 
-    // Состояние текущего шага
-    private readonly Guid _currentId = Guid.NewGuid();
-    private string? _currentName;
-    private string? _currentDescription;
-    private DateTime _currentStartTime;
-    private bool _currentIsRunning;
+    // Состояние шагов колонок (4 параллельных)
+    private readonly ColumnTimingState[] _columnStates = CreateColumnStates();
+
+    private static ColumnTimingState[] CreateColumnStates()
+    {
+        var states = new ColumnTimingState[ColumnCount];
+        for (var i = 0; i < ColumnCount; i++)
+        {
+            states[i] = new ColumnTimingState();
+        }
+        return states;
+    }
+
+    private class ColumnTimingState
+    {
+        public Guid Id { get; } = Guid.NewGuid();
+        public string? Name { get; set; }
+        public string? Description { get; set; }
+        public DateTime StartTime { get; set; }
+        public bool IsRunning { get; set; }
+        public TimeSpan AccumulatedDuration { get; set; }
+    }
 
     public event Action? OnChanged;
 
-    public StepTimingService()
+    public StepTimingService(DualLogger<StepTimingService> logger)
     {
+        _logger = logger;
         _timer = new System.Threading.Timer(OnTimerTick, null, Timeout.Infinite, Timeout.Infinite);
     }
 
@@ -80,8 +108,10 @@ public class StepTimingService : IStepTimingService, IDisposable
     {
         lock (_lock)
         {
-            if (_scanName == null) return;
-
+            if (_scanName == null)
+            {
+                return;
+            }
             _scanStartTime = DateTime.Now;
             _scanIsRunning = true;
             _scanFrozenDuration = TimeSpan.Zero;
@@ -91,52 +121,110 @@ public class StepTimingService : IStepTimingService, IDisposable
         OnChanged?.Invoke();
     }
 
-    public void StartCurrentStepTiming(string name, string description)
+    public void StartColumnStepTiming(int columnIndex, string name, string description)
     {
+        bool shouldStartTimer;
         lock (_lock)
         {
-            _currentName = name;
-            _currentDescription = description;
-            _currentStartTime = DateTime.Now;
-            _currentIsRunning = true;
+            var state = _columnStates[columnIndex];
+            state.Name = name;
+            state.Description = description;
+            state.StartTime = DateTime.Now;
+            state.IsRunning = true;
+            state.AccumulatedDuration = TimeSpan.Zero;
+            shouldStartTimer = true; // Всегда запускаем, т.к. только что установили IsRunning = true
         }
-
-        StartTimerIfNeeded();
-        OnChanged?.Invoke();
-    }
-
-    public void StopCurrentStepTiming()
-    {
-        lock (_lock)
-        {
-            if (!_currentIsRunning) return;
-
-            var duration = DateTime.Now - _currentStartTime;
-            _records.Add(new StepTimingRecord(Guid.NewGuid(), _currentName!, _currentDescription!, FormatDuration(duration)));
-            _currentIsRunning = false;
-            _currentName = null;
-            _currentDescription = null;
-        }
-
-        StopTimerIfNotNeeded();
-        OnChanged?.Invoke();
-    }
-
-    private void StartTimerIfNeeded()
-    {
-        if (_scanIsRunning || _currentIsRunning)
+        if (shouldStartTimer)
         {
             _timer.Change(0, 1000);
         }
+        OnChanged?.Invoke();
     }
 
-    private void StopTimerIfNotNeeded()
+    public void StopColumnStepTiming(int columnIndex)
     {
-        if (!_scanIsRunning && !_currentIsRunning)
+        bool shouldStopTimer;
+        lock (_lock)
+        {
+            var state = _columnStates[columnIndex];
+            if (state.Name == null)
+            {
+                return;
+            }
+
+            var duration = state.IsRunning
+                ? state.AccumulatedDuration + (DateTime.Now - state.StartTime)
+                : state.AccumulatedDuration;
+            _records.Add(new StepTimingRecord(Guid.NewGuid(), state.Name, state.Description!, FormatDuration(duration)));
+
+            state.Name = null;
+            state.Description = null;
+            state.IsRunning = false;
+            state.AccumulatedDuration = TimeSpan.Zero;
+
+            shouldStopTimer = !_scanIsRunning && !AnyColumnRunning;
+        }
+        if (shouldStopTimer)
         {
             _timer.Change(Timeout.Infinite, Timeout.Infinite);
         }
+        OnChanged?.Invoke();
     }
+
+    public void PauseAllColumnsTiming()
+    {
+        bool shouldStopTimer;
+        lock (_lock)
+        {
+            foreach (var state in _columnStates)
+            {
+                if (!state.IsRunning)
+                {
+                    continue;
+                }
+                state.AccumulatedDuration += DateTime.Now - state.StartTime;
+                state.IsRunning = false;
+            }
+            shouldStopTimer = !_scanIsRunning && !AnyColumnRunning;
+        }
+        if (shouldStopTimer)
+        {
+            _timer.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+        OnChanged?.Invoke();
+    }
+
+    public void ResumeAllColumnsTiming()
+    {
+        bool shouldStartTimer;
+        lock (_lock)
+        {
+            foreach (var state in _columnStates)
+            {
+                if (state.IsRunning || state.Name == null)
+                {
+                    continue;
+                }
+                state.StartTime = DateTime.Now;
+                state.IsRunning = true;
+            }
+            shouldStartTimer = _scanIsRunning || AnyColumnRunning;
+        }
+        if (shouldStartTimer)
+        {
+            _timer.Change(0, 1000);
+        }
+        OnChanged?.Invoke();
+    }
+
+    // Методы для pre-execution шагов (делегируют в колонку 0)
+    public void StartCurrentStepTiming(string name, string description) =>
+        StartColumnStepTiming(0, name, description);
+
+    public void StopCurrentStepTiming() =>
+        StopColumnStepTiming(0);
+
+    private bool AnyColumnRunning => _columnStates.Any(s => s.IsRunning);
 
     private void OnTimerTick(object? state)
     {
@@ -148,7 +236,6 @@ public class StepTimingService : IStepTimingService, IDisposable
         lock (_lock)
         {
             var result = new List<StepTimingRecord>();
-
             // Шаг сканирования всегда первый
             if (_scanName != null)
             {
@@ -157,14 +244,18 @@ public class StepTimingService : IStepTimingService, IDisposable
                     : _scanFrozenDuration;
                 result.Add(new StepTimingRecord(_scanId, _scanName, _scanDescription!, FormatDuration(duration)));
             }
-
             result.AddRange(_records);
-
-            // Текущий выполняемый шаг (всегда в конце)
-            if (_currentIsRunning && _currentName != null)
+            // Все активные колонки (и на паузе тоже)
+            foreach (var state in _columnStates)
             {
-                var duration = DateTime.Now - _currentStartTime;
-                result.Add(new StepTimingRecord(_currentId, _currentName, _currentDescription!, FormatDuration(duration)));
+                if (state.Name == null)
+                {
+                    continue;
+                }
+                var duration = state.IsRunning
+                    ? state.AccumulatedDuration + (DateTime.Now - state.StartTime)
+                    : state.AccumulatedDuration;
+                result.Add(new StepTimingRecord(state.Id, state.Name, state.Description!, FormatDuration(duration)));
             }
             return result;
         }
