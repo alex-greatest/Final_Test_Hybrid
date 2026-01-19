@@ -26,6 +26,7 @@ using Final_Test_Hybrid.Services.Preparation;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.Behaviors;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Lifecycle;
 using Final_Test_Hybrid.Services.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -58,6 +59,9 @@ public static class StepsServiceExtensions
         services.AddSingleton<ExecutionPhaseState>();
         services.AddSingleton<ResetSubscription>();
         services.AddSingleton<PlcResetCoordinator>();
+
+        // System lifecycle (new two-level architecture)
+        services.AddSingleton<SystemLifecycleManager>();
 
         // Test completion
         services.AddSingleton<TestCompletionUiState>();

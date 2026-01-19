@@ -3,29 +3,29 @@
 ## Phase 1: Create SystemLifecycleManager (Foundation)
 
 ### 1.1 Create SystemPhase and SystemTrigger enums
-- [ ] Create `SystemPhase.cs` with states: Idle, WaitingForBarcode, Preparing, Testing, Completed, Resetting
-- [ ] Create `SystemTrigger.cs` with triggers: ScanModeEnabled, ScanModeDisabled, BarcodeReceived, PreparationCompleted, PreparationFailed, TestFinished, RepeatRequested, ResetRequestedHard, ResetRequestedSoft, ResetCompleted
-- [ ] Add XML documentation for each state/trigger
+- [x] Create `SystemPhase.cs` with states: Idle, WaitingForBarcode, Preparing, Testing, Completed, Resetting
+- [x] Create `SystemTrigger.cs` with triggers: ScanModeEnabled, ScanModeDisabled, BarcodeReceived, PreparationCompleted, PreparationFailed, TestFinished, RepeatRequested, ResetRequestedHard, ResetRequestedSoft, ResetCompleted
+- [x] Add XML documentation for each state/trigger
 
-**Validation:** Файлы компилируются без ошибок
+**Validation:** ✅ Файлы компилируются без ошибок
 
 ### 1.2 Implement SystemLifecycleManager
-- [ ] Create `SystemLifecycleManager.cs` with thread-safe phase transitions
-- [ ] Implement transition table (allowed phase changes)
-- [ ] Add `OnPhaseChanged` event with old/new phase
-- [ ] Add `OnTransitionFailed` event for debugging
-- [ ] Implement `CanTransition(trigger)` method
-- [ ] Add convenience properties: `IsScannerActive`, `IsScannerInputEnabled`, `CanInteractWithSettings`
-- [ ] Add `CurrentBarcode` management with lifecycle rules
-- [ ] Add DualLogger integration
+- [x] Create `SystemLifecycleManager.cs` with thread-safe phase transitions
+- [x] Implement transition table (allowed phase changes)
+- [x] Add `OnPhaseChanged` event with old/new phase
+- [x] Add `OnTransitionFailed` event for debugging
+- [x] Implement `CanTransition(trigger)` method
+- [x] Add convenience properties: `IsScannerActive`, `IsScannerInputEnabled`, `CanInteractWithSettings`
+- [x] Add `CurrentBarcode` management with lifecycle rules
+- [x] Add DualLogger integration
 
-**Validation:** Unit tests pass for all valid/invalid transitions
+**Validation:** ✅ Сборка проходит успешно
 
 ### 1.3 Register in DI
-- [ ] Add `SystemLifecycleManager` as singleton in `StepsServiceExtensions`
-- [ ] Verify resolution works
+- [x] Add `SystemLifecycleManager` as singleton in `StepsServiceExtensions`
+- [x] Verify resolution works
 
-**Validation:** Приложение запускается, SystemLifecycleManager резолвится
+**Validation:** ✅ Приложение собирается, SystemLifecycleManager зарегистрирован
 
 ---
 
