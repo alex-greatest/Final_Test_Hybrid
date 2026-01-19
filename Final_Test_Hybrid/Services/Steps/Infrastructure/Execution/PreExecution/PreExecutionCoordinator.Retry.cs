@@ -3,6 +3,7 @@ using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Plc;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Steps;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
@@ -33,9 +34,14 @@ public partial class PreExecutionCoordinator
 
     private void HandleStopSignal(PreExecutionResolution resolution)
     {
+        infra.StepTimingService.PauseAllColumnsTiming();
         var exitReason = resolution == PreExecutionResolution.SoftStop
             ? CycleExitReason.SoftReset
             : CycleExitReason.HardReset;
+        var stopReason = resolution == PreExecutionResolution.SoftStop
+            ? ExecutionStopReason.PlcSoftReset
+            : ExecutionStopReason.PlcHardReset;
+        state.FlowState.RequestStop(stopReason, stopAsFailure: true);
 
         if (TryCancelActiveOperation(exitReason))
         {

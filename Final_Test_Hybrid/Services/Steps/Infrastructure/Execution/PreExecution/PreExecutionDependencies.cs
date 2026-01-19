@@ -11,6 +11,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Final_Test_Hybrid.Services.Steps.Steps;
@@ -85,9 +86,11 @@ public class PreExecutionCoordinators(
 public class PreExecutionState(
     BoilerState boilerState,
     ExecutionActivityTracker activityTracker,
-    ExecutionPhaseState phaseState)
+    ExecutionPhaseState phaseState,
+    ExecutionFlowState flowState)
 {
     public BoilerState BoilerState => boilerState;
     public ExecutionActivityTracker ActivityTracker => activityTracker;
     public ExecutionPhaseState PhaseState => phaseState;
+    public ExecutionFlowState FlowState => flowState;
 }

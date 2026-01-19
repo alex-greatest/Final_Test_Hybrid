@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
@@ -77,6 +78,7 @@ public partial class TestExecutionCoordinator
 
     private void BeginExecution()
     {
+        _flowState.ClearStop();
         StateManager.TransitionTo(ExecutionState.Running);
         StateManager.ClearErrors();
         StateManager.ResetErrorTracking();
@@ -127,13 +129,13 @@ public partial class TestExecutionCoordinator
 
     private void Complete()
     {
-        var finalState = StateManager.State == ExecutionState.Failed || HasErrors
-            ? ExecutionState.Failed
-            : ExecutionState.Completed;
+        var flowSnapshot = _flowState.GetSnapshot();
+        var isSuccessful = !(StateManager.State == ExecutionState.Failed || HasErrors || flowSnapshot.StopAsFailure);
+        var finalState = isSuccessful ? ExecutionState.Completed : ExecutionState.Failed;
         StateManager.TransitionTo(finalState);
         _activityTracker.SetTestExecutionActive(false);
         _errorService.ClearActiveApplicationErrors();
-        LogExecutionCompleted();
+        LogExecutionCompleted(isSuccessful, flowSnapshot);
         OnSequenceCompleted?.Invoke();
         lock (_stateLock)
         {
@@ -142,14 +144,29 @@ public partial class TestExecutionCoordinator
         }
     }
 
-    private void LogExecutionCompleted()
+    private void LogExecutionCompleted(bool isSuccessful, (ExecutionStopReason Reason, bool StopAsFailure) flowSnapshot)
     {
-        _logger.LogInformation("Завершено. Ошибки: {HasErrors}", HasErrors);
-        var result = HasErrors ? "С ОШИБКАМИ" : "УСПЕШНО";
+        _logger.LogInformation(
+            "Завершено. Ошибки: {HasErrors}, StopAsFailure: {StopAsFailure}, StopReason: {StopReason}",
+            HasErrors,
+            flowSnapshot.StopAsFailure,
+            flowSnapshot.Reason);
+        var result = isSuccessful ? "УСПЕШНО" : "С ОШИБКАМИ";
         _testLogger.LogInformation("═══ ТЕСТИРОВАНИЕ ЗАВЕРШЕНО: {Result} ═══", result);
     }
 
-    public void Stop(string reason = "оператором")
+    public void Stop(string reason = "оператором", bool markFailed = false)
+    {
+        Stop(ExecutionStopReason.Operator, reason, markFailed);
+    }
+
+    public void Stop(ExecutionStopReason stopReason, string reason, bool markFailed = false)
+    {
+        _flowState.RequestStop(stopReason, markFailed);
+        CancelExecution(reason);
+    }
+
+    private void CancelExecution(string reason)
     {
         lock (_stateLock)
         {

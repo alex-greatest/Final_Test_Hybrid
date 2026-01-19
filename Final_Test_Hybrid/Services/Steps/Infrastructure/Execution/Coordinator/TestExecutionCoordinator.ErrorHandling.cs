@@ -78,6 +78,10 @@ public partial class TestExecutionCoordinator
                 // await SetSelectedAsync(error, false);  // PLC сам сбросит
                 break;
             }
+            if (cts.IsCancellationRequested || _flowState.IsStopRequested)
+            {
+                break;
+            }
             if (resolution == ErrorResolution.Timeout)
             {
                 await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout, cts.Token);
@@ -87,7 +91,7 @@ public partial class TestExecutionCoordinator
             await ProcessErrorResolution(error, resolution, cts.Token);
             // await SetSelectedAsync(error, false);  // PLC сам сбросит
         }
-        if (!cts.IsCancellationRequested)
+        if (!cts.IsCancellationRequested && !_flowState.IsStopRequested)
         {
             StateManager.TransitionTo(ExecutionState.Running);
         }

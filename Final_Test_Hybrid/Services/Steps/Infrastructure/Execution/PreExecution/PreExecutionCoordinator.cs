@@ -1,4 +1,4 @@
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
+﻿using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Steps;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
@@ -94,7 +94,7 @@ public partial class PreExecutionCoordinator(
 
         // Очистка UI
         infra.StatusReporter.ClearAllExceptScan();
-        infra.StepTimingService.Clear();
+        infra.StepTimingService.Clear(preserveScanState: true);
 
         // История и результаты чистятся в ClearForNewTestStart при запуске pipeline
 
@@ -114,7 +114,7 @@ public partial class PreExecutionCoordinator(
 
         // Очистка UI
         infra.StatusReporter.ClearAllExceptScan();
-        infra.StepTimingService.Clear();
+        infra.StepTimingService.Clear(preserveScanState: true);
         infra.RecipeProvider.Clear();
 
         // История и результаты чистятся в ClearForNewTestStart при запуске pipeline

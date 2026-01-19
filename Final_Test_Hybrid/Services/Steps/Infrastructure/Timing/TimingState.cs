@@ -50,6 +50,11 @@ internal class TimingState
 
     public void Stop()
     {
+        if (!IsRunning)
+        {
+            return;
+        }
+        AccumulatedDuration += DateTime.Now - StartTime;
         IsRunning = false;
     }
 

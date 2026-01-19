@@ -205,12 +205,13 @@ public class ScanModeController : IDisposable
         {
             return;
         }
-        if (_activityTracker.IsAnyActive)
+        _stepTimingService.PauseAllColumnsTiming();
+        if (_operatorState.IsAuthenticated && !_autoReady.IsReady || _activityTracker.IsAnyActive || (_operatorState.IsAuthenticated && _preExecutionCoordinator.IsAcceptingInput))
         {
             _sessionManager.ReleaseSession();
-            _stepTimingService.PauseAllColumnsTiming();
             return;
         }
+
         _loopCts?.Cancel();
         _isActivated = false;
         _sessionManager.ReleaseSession();

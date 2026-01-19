@@ -5,6 +5,7 @@ using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
@@ -26,6 +27,7 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly IErrorService _errorService;
     private readonly IStepTimingService _stepTimingService;
     private readonly TagWaiter _tagWaiter;
+    private readonly ExecutionFlowState _flowState;
     private readonly Lock _stateLock = new();
     private readonly object _enqueueLock = new();
     private readonly Action _onExecutorStateChanged;
@@ -60,7 +62,8 @@ public partial class TestExecutionCoordinator : IDisposable
         PlcResetCoordinator plcResetCoordinator,
         IErrorService errorService,
         IStepTimingService stepTimingService,
-        TagWaiter tagWaiter)
+        TagWaiter tagWaiter,
+        ExecutionFlowState flowState)
     {
         _logger = logger;
         _testLogger = testLogger;
@@ -73,23 +76,47 @@ public partial class TestExecutionCoordinator : IDisposable
         _errorService = errorService;
         _stepTimingService = stepTimingService;
         _tagWaiter = tagWaiter;
+        _flowState = flowState;
         _onExecutorStateChanged = HandleExecutorStateChanged;
         _executors = CreateAllExecutors(pausableOpcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider);
         SubscribeToExecutorEvents();
         _plcResetCoordinator.OnForceStop += HandleForceStop;
         _errorCoordinator.OnReset += HandleReset;
+        _errorCoordinator.OnInterruptChanged += HandleInterruptChanged;
     }
 
     private void HandleForceStop()
     {
-        Stop("по сигналу PLC");
+        StopAsFailure(ExecutionStopReason.PlcForceStop, "по сигналу PLC");
         StateManager.ClearErrors();
     }
 
     private void HandleReset()
     {
-        Stop("из-за полного сброса");
+        StopAsFailure(ExecutionStopReason.PlcHardReset, "из-за полного сброса");
         StateManager.ClearErrors();
+    }
+
+    private void StopAsFailure(ExecutionStopReason reason, string message)
+    {
+        Stop(reason, message, markFailed: true);
+    }
+
+    private void HandleInterruptChanged()
+    {
+        if (_errorCoordinator.CurrentInterrupt != InterruptReason.AutoModeDisabled)
+        {
+            return;
+        }
+        if (!_activityTracker.IsTestExecutionActive)
+        {
+            return;
+        }
+        if (!StateManager.HasPendingErrors && StateManager.State != ExecutionState.PausedOnError)
+        {
+            return;
+        }
+        StopAsFailure(ExecutionStopReason.AutoModeDisabled, "нет автомата");
     }
 
     public void ResetForRepeat()
@@ -156,5 +183,6 @@ public partial class TestExecutionCoordinator : IDisposable
         UnsubscribeFromExecutorEvents();
         _plcResetCoordinator.OnForceStop -= HandleForceStop;
         _errorCoordinator.OnReset -= HandleReset;
+        _errorCoordinator.OnInterruptChanged -= HandleInterruptChanged;
     }
 }

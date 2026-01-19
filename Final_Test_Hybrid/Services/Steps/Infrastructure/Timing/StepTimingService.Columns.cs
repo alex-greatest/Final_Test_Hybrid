@@ -9,8 +9,9 @@ public partial class StepTimingService
         lock (_lock)
         {
             _columnStates[columnIndex].Start(name, description);
+            _columnsPausedByGlobalPauseIds[columnIndex] = null;
         }
-        StartTimer();
+        UpdateTimerState();
         OnChanged?.Invoke();
     }
 
@@ -28,6 +29,7 @@ public partial class StepTimingService
             _records.Add(new StepTimingRecord(state.Id, state.Name!, state.Description!, FormatDuration(duration)));
 
             state.Clear();
+            _columnsPausedByGlobalPauseIds[columnIndex] = null;
         }
         UpdateTimerState();
         OnChanged?.Invoke();
@@ -35,28 +37,30 @@ public partial class StepTimingService
 
     public void PauseAllColumnsTiming()
     {
+        bool hadChanges;
         lock (_lock)
         {
-            foreach (var state in _columnStates)
-            {
-                state.Pause();
-            }
+            hadChanges = PauseAllActiveUnsafe();
         }
         UpdateTimerState();
-        OnChanged?.Invoke();
+        if (hadChanges)
+        {
+            OnChanged?.Invoke();
+        }
     }
 
     public void ResumeAllColumnsTiming()
     {
+        bool hadChanges;
         lock (_lock)
         {
-            foreach (var state in _columnStates)
-            {
-                state.Resume();
-            }
+            hadChanges = ResumeAllActiveUnsafe();
         }
         UpdateTimerState();
-        OnChanged?.Invoke();
+        if (hadChanges)
+        {
+            OnChanged?.Invoke();
+        }
     }
 
     public void StartCurrentStepTiming(string name, string description) =>

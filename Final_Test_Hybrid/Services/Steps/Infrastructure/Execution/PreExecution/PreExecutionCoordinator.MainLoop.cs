@@ -29,6 +29,8 @@ public partial class PreExecutionCoordinator
 
     private async Task RunSingleCycleAsync(CancellationToken ct)
     {
+        state.FlowState.ClearStop();
+
         // Проверка пропуска сканирования для повтора
         string barcode;
         if (_skipNextScan)

@@ -6,6 +6,8 @@ public partial class StepTimingService
     {
         lock (_lock)
         {
+            _scanPausedByGlobalPauseId = null;
+            _scanStepInfo = (name, description);
             _scanState.Start(name, description);
         }
         StartTimer();
@@ -16,11 +18,12 @@ public partial class StepTimingService
     {
         lock (_lock)
         {
-            if (!_scanState.IsRunning)
+            if (!_scanState.IsActive)
             {
                 return;
             }
-            _scanState.Stop();
+            _scanState.Pause();
+            _scanPausedByGlobalPauseId = null;
         }
         UpdateTimerState();
         OnChanged?.Invoke();
@@ -30,11 +33,19 @@ public partial class StepTimingService
     {
         lock (_lock)
         {
-            if (!_scanState.IsActive)
+            _scanPausedByGlobalPauseId = null;
+            if (_scanState.IsActive)
+            {
+                _scanState.Reset();
+            }
+            else if (_scanStepInfo.HasValue)
+            {
+                _scanState.Start(_scanStepInfo.Value.Name, _scanStepInfo.Value.Description);
+            }
+            else
             {
                 return;
             }
-            _scanState.Reset();
         }
         StartTimer();
         OnChanged?.Invoke();

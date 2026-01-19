@@ -7,20 +7,20 @@ public interface IStepTimingService
     event Action? OnChanged;
 
     IReadOnlyList<StepTimingRecord> GetAll();
-    void Clear();
+    void Clear(bool preserveScanState = false);
 
-    // Методы для шага сканирования (таймер в реальном времени)
+    // РњРµС‚РѕРґС‹ РґР»СЏ С€Р°РіР° СЃРєР°РЅРёСЂРѕРІР°РЅРёСЏ (С‚Р°Р№РјРµСЂ РІ СЂРµР°Р»СЊРЅРѕРј РІСЂРµРјРµРЅРё)
     void StartScanTiming(string name, string description);
     void StopScanTiming();
     void ResetScanTiming();
 
-    // Методы для шагов колонок (4 параллельных таймера)
+    // РњРµС‚РѕРґС‹ РґР»СЏ С€Р°РіРѕРІ РєРѕР»РѕРЅРѕРє (4 РїР°СЂР°Р»Р»РµР»СЊРЅС‹С… С‚Р°Р№РјРµСЂР°)
     void StartColumnStepTiming(int columnIndex, string name, string description);
     void StopColumnStepTiming(int columnIndex);
     void PauseAllColumnsTiming();
     void ResumeAllColumnsTiming();
 
-    // Методы для pre-execution шагов (используют колонку 0, т.к. выполняются до параллельных колонок)
+    // РњРµС‚РѕРґС‹ РґР»СЏ pre-execution С€Р°РіРѕРІ (РёСЃРїРѕР»СЊР·СѓСЋС‚ РєРѕР»РѕРЅРєСѓ 0, С‚.Рє. РІС‹РїРѕР»РЅСЏСЋС‚СЃСЏ РґРѕ РїР°СЂР°Р»Р»РµР»СЊРЅС‹С… РєРѕР»РѕРЅРѕРє)
     void StartCurrentStepTiming(string name, string description);
     void StopCurrentStepTiming();
 }
@@ -33,8 +33,11 @@ public partial class StepTimingService : IStepTimingService, IDisposable
     private readonly Lock _lock = new();
     private readonly System.Threading.Timer _timer;
 
+    private (string Name, string Description)? _scanStepInfo;
     private readonly TimingState _scanState = new();
     private readonly TimingState[] _columnStates = CreateColumnStates();
+    private Guid? _scanPausedByGlobalPauseId;
+    private readonly Guid?[] _columnsPausedByGlobalPauseIds = new Guid?[ColumnCount];
 
     private static TimingState[] CreateColumnStates()
     {
@@ -57,26 +60,46 @@ public partial class StepTimingService : IStepTimingService, IDisposable
     {
         lock (_lock)
         {
-            var result = new List<StepTimingRecord>();
+            var result = new List<StepTimingRecord>(_records.Count + ColumnCount + 1);
             if (_scanState.IsActive)
             {
                 result.Add(CreateRecord(_scanState));
             }
             result.AddRange(_records);
-            result.AddRange(from state in _columnStates where state.IsActive select CreateRecord(state));
+            result.AddRange(_columnStates.Where(state => state.IsActive).Select(CreateRecord));
             return result;
         }
     }
 
-    public void Clear()
+    public void Clear(bool preserveScanState = false)
     {
-        bool hadItems;
+        bool hadChanges;
         lock (_lock)
         {
-            hadItems = _records.Count > 0;
+            hadChanges = _records.Count > 0 || _scanState.IsActive || _columnStates.Any(state => state.IsActive);
             _records.Clear();
+            foreach (var state in _columnStates)
+            {
+                state.Clear();
+            }
+
+            if (_scanState.IsActive)
+            {
+                if (preserveScanState)
+                {
+                    _scanState.Pause();
+                }
+                else
+                {
+                    _scanState.Clear();
+                }
+            }
+
+            _scanPausedByGlobalPauseId = null;
+            Array.Clear(_columnsPausedByGlobalPauseIds, 0, _columnsPausedByGlobalPauseIds.Length);
         }
-        if (hadItems)
+        UpdateTimerState();
+        if (hadChanges)
         {
             OnChanged?.Invoke();
         }
@@ -87,7 +110,7 @@ public partial class StepTimingService : IStepTimingService, IDisposable
         _timer.Dispose();
     }
 
-    private bool AnyRunning => _scanState.IsRunning || _columnStates.Any(s => s.IsRunning);
+    private bool AnyRunning => _scanState.IsRunning || _columnStates.Any(state => state.IsRunning);
 
     private void StartTimer() => _timer.Change(0, 1000);
 
@@ -103,6 +126,65 @@ public partial class StepTimingService : IStepTimingService, IDisposable
         {
             StopTimer();
         }
+    }
+
+    private bool PauseAllActiveUnsafe()
+    {
+        var hadRunning = false;
+        if (_scanState.IsRunning)
+        {
+            _scanPausedByGlobalPauseId = _scanState.Id;
+            _scanState.Pause();
+            hadRunning = true;
+        }
+
+        for (var i = 0; i < _columnStates.Length; i++)
+        {
+            var state = _columnStates[i];
+            if (!state.IsRunning)
+            {
+                continue;
+            }
+            _columnsPausedByGlobalPauseIds[i] = state.Id;
+            state.Pause();
+            hadRunning = true;
+        }
+
+        return hadRunning;
+    }
+
+    private bool ResumeAllActiveUnsafe()
+    {
+        var hadResumed = false;
+        if (_scanPausedByGlobalPauseId.HasValue)
+        {
+            hadResumed |= TryResumeIfMatch(_scanState, _scanPausedByGlobalPauseId.Value);
+            _scanPausedByGlobalPauseId = null;
+        }
+
+        for (var i = 0; i < _columnStates.Length; i++)
+        {
+            var resumeId = _columnsPausedByGlobalPauseIds[i];
+            if (!resumeId.HasValue)
+            {
+                continue;
+            }
+
+            hadResumed |= TryResumeIfMatch(_columnStates[i], resumeId.Value);
+            _columnsPausedByGlobalPauseIds[i] = null;
+        }
+
+        return hadResumed;
+    }
+
+    private static bool TryResumeIfMatch(TimingState state, Guid expectedId)
+    {
+        if (!state.IsActive || state.IsRunning || state.Id != expectedId)
+        {
+            return false;
+        }
+        state.Resume();
+        return true;
     }
 
     private void OnTimerTick(object? state) => OnChanged?.Invoke();
