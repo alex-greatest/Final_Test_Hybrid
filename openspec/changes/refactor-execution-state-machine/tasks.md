@@ -4,7 +4,7 @@
 
 ### 1.1 Create SystemPhase and SystemTrigger enums
 - [x] Create `SystemPhase.cs` with states: Idle, WaitingForBarcode, Preparing, Testing, Completed, Resetting
-- [x] Create `SystemTrigger.cs` with triggers: ScanModeEnabled, ScanModeDisabled, BarcodeReceived, PreparationCompleted, PreparationFailed, TestFinished, RepeatRequested, ResetRequestedHard, ResetRequestedSoft, ResetCompleted
+- [x] Create `SystemTrigger.cs` with triggers: ScanModeEnabled, ScanModeDisabled, BarcodeReceived, PreparationCompleted, PreparationFailed, TestFinished, RepeatRequested, TestAcknowledged, ResetRequestedHard, ResetRequestedSoft, ResetCompletedSoft, ResetCompletedHard
 - [x] Add XML documentation for each state/trigger
 
 **Validation:** ✅ Файлы компилируются без ошибок
@@ -210,8 +210,9 @@ Phase 3 (PreExecutionCoordinator)
 | Trigger | CurrentBarcode | Reason |
 |---------|----------------|--------|
 | `ScanModeDisabled` | **CLEARED** | Оператор вышел |
-| `ResetRequestedHard` | **CLEARED** | Полный сброс |
-| `ResetRequestedSoft` | **PRESERVED** | Мягкий сброс |
+| `ResetCompletedHard` | **CLEARED** | Полный сброс |
+| `ResetCompletedSoft` | **CLEARED** | Мягкий сброс, новый цикл |
+| `TestAcknowledged` | **CLEARED** | Тест завершён, новый цикл |
 | `RepeatRequested` | **PRESERVED** | Повтор теста |
 | `PreparationFailed` | **PRESERVED** | Повтор подготовки |
 

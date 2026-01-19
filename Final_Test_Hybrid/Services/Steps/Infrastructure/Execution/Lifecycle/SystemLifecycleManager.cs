@@ -219,6 +219,8 @@ public class SystemLifecycleManager(DualLogger<SystemLifecycleManager> logger)
                 break;
             case SystemTrigger.ScanModeDisabled:
             case SystemTrigger.ResetCompletedHard:
+            case SystemTrigger.ResetCompletedSoft:
+            case SystemTrigger.TestAcknowledged:
                 _currentBarcode = null;
                 break;
         }

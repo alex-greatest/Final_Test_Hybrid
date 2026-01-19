@@ -311,14 +311,13 @@ public enum SystemTrigger
     // Test Flow
     TestFinished,           // TestExecutionCoordinator completed
     RepeatRequested,        // Operator requested repeat
+    TestAcknowledged,       // Operator acknowledged result
 
     // Reset Flow
-    ResetRequested,         // PLC Reset signal
+    ResetRequestedHard,     // PLC Reset signal (hard reset)
+    ResetRequestedSoft,     // PLC Reset signal (soft reset)
     ResetCompletedSoft,     // Soft reset → WaitingForBarcode
-    ResetCompletedHard,     // Hard reset → Idle
-
-    // Barcode Management
-    ClearBarcode            // Clear CurrentBarcode
+    ResetCompletedHard      // Hard reset → Idle
 }
 ```
 
@@ -336,14 +335,16 @@ public enum SystemTrigger
 │ Preparing         │ PreparationFailed  │ WaitingForBarcode │ —                   │
 │ Testing           │ TestFinished       │ Completed         │ —                   │
 │ Completed         │ RepeatRequested    │ WaitingForBarcode │ AcquireScanner      │
-│ Completed         │ ScanModeDisabled   │ Idle              │ ClearBarcode        │
-│ *                 │ ResetRequested     │ Resetting         │ ReleaseScanner      │
-│ Resetting         │ ResetCompletedSoft │ WaitingForBarcode │ AcquireScanner      │
+│ Completed         │ TestAcknowledged   │ WaitingForBarcode │ AcquireScanner,     │
+│                   │                    │                   │ ClearBarcode        │
+│ *                 │ ResetRequestedHard │ Resetting         │ ReleaseScanner      │
+│ *                 │ ResetRequestedSoft │ Resetting         │ ReleaseScanner      │
+│ Resetting         │ ResetCompletedSoft │ WaitingForBarcode │ AcquireScanner,     │
+│                   │                    │                   │ ClearBarcode        │
 │ Resetting         │ ResetCompletedHard │ Idle              │ ClearBarcode        │
-│ *                 │ ClearBarcode       │ (same)            │ ClearBarcode        │
 └───────────────────┴────────────────────┴───────────────────┴─────────────────────┘
 
-* = any phase except Idle (for ResetRequested)
+* = any phase except Idle and Resetting
 ```
 
 ---
@@ -485,7 +486,8 @@ public void Dispose()
 |---------|----------------|--------|
 | `ScanModeDisabled` | **CLEARED** | Оператор вышел, начинаем заново |
 | `ResetCompletedHard` | **CLEARED** | Полный сброс, всё очищается |
-| `ResetCompletedSoft` | **PRESERVED** | Мягкий сброс, можно продолжить |
+| `ResetCompletedSoft` | **CLEARED** | Мягкий сброс, новый цикл |
+| `TestAcknowledged` | **CLEARED** | Тест завершён, новый цикл |
 | `RepeatRequested` | **PRESERVED** | Повтор с тем же штрихкодом |
 | `PreparationFailed` | **PRESERVED** | Можно повторить подготовку |
 
@@ -588,7 +590,6 @@ public bool Transition(SystemTrigger trigger, string? barcode = null)
                 break;
             case SystemTrigger.ScanModeDisabled:
             case SystemTrigger.ResetCompletedHard:
-            case SystemTrigger.ClearBarcode:
                 _currentBarcode = null;
                 break;
         }
@@ -696,11 +697,15 @@ public class PreExecutionCoordinator
 ### PlcResetCoordinator — Интеграция
 
 ```csharp
-// Существующий PlcResetCoordinator вызывает:
-_lifecycle.Transition(SystemTrigger.ResetRequested);
+// Существующий PlcResetCoordinator определяет тип сброса и вызывает:
+var isInScanPhase = _lifecycle.IsScannerInputEnabled;
+if (isInScanPhase)
+    _lifecycle.Transition(SystemTrigger.ResetRequestedSoft);
+else
+    _lifecycle.Transition(SystemTrigger.ResetRequestedHard);
 
-// После завершения:
-if (wasInScanPhase)
+// После завершения сброса:
+if (isInScanPhase)
     _lifecycle.Transition(SystemTrigger.ResetCompletedSoft);
 else
     _lifecycle.Transition(SystemTrigger.ResetCompletedHard);
@@ -742,7 +747,7 @@ public void ResetCompletedHard_ClearsBarcode()
     var sm = new SystemLifecycleManager();
     sm.Transition(SystemTrigger.ScanModeEnabled);
     sm.Transition(SystemTrigger.BarcodeReceived, "12345");
-    sm.Transition(SystemTrigger.ResetRequested);
+    sm.Transition(SystemTrigger.ResetRequestedHard);
     sm.Transition(SystemTrigger.ResetCompletedHard);
 
     Assert.Equal(SystemPhase.Idle, sm.Phase);

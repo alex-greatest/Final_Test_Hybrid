@@ -103,7 +103,8 @@ private bool IsFieldReadOnly => !Lifecycle.IsScannerInputEnabled;
 |---------|----------------|--------|
 | `ScanModeDisabled` | **CLEARED** | Оператор вышел |
 | `ResetCompletedHard` | **CLEARED** | Полный сброс |
-| `ResetCompletedSoft` | **PRESERVED** | Мягкий сброс |
+| `ResetCompletedSoft` | **CLEARED** | Мягкий сброс, новый цикл |
+| `TestAcknowledged` | **CLEARED** | Тест завершён, новый цикл |
 | `RepeatRequested` | **PRESERVED** | Повтор теста |
 | `PreparationFailed` | **PRESERVED** | Повтор подготовки |
 
@@ -119,7 +120,7 @@ private bool IsFieldReadOnly => !Lifecycle.IsScannerInputEnabled;
 ## Dependencies
 
 - `TestExecutionCoordinator` — интеграция через `Phase == Testing`
-- `PlcResetCoordinator` — вызывает `Transition(ResetRequested)`
+- `PlcResetCoordinator` — вызывает `Transition(ResetRequestedHard/Soft)`
 - `OperatorState` / `AutoReadySubscription` — вызывают `Transition(ScanModeEnabled/Disabled)`
 
 ## Success Criteria
