@@ -11,6 +11,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Final_Test_Hybrid.Services.Steps.Steps;
 using Final_Test_Hybrid.Services.Steps.Steps.Misc;
@@ -44,6 +45,7 @@ public class PreExecutionInfrastructure(
     ITestStepLogger testStepLogger,
     IErrorService errorService,
     ITestResultsService testResultsService,
+    IRecipeProvider recipeProvider,
     DualLogger<PreExecutionCoordinator> logger)
 {
     public PausableOpcUaTagService OpcUa => opcUa;
@@ -54,6 +56,7 @@ public class PreExecutionInfrastructure(
     public ITestStepLogger TestStepLogger => testStepLogger;
     public IErrorService ErrorService => errorService;
     public ITestResultsService TestResultsService => testResultsService;
+    public IRecipeProvider RecipeProvider => recipeProvider;
     public DualLogger<PreExecutionCoordinator> Logger => logger;
 }
 

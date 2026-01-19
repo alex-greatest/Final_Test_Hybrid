@@ -34,6 +34,9 @@ public partial class PreExecutionCoordinator
         // Сохраняем context после успешного ScanStep (для повтора)
         _lastSuccessfulContext = context;
 
+        // Очистить данные от предыдущего теста перед включением истории
+        ClearForNewTestStart();
+
         // Включаем после успешного сканирования
         infra.ErrorService.IsHistoryEnabled = true;
         state.BoilerState.SetTestRunning(true);
@@ -68,6 +71,9 @@ public partial class PreExecutionCoordinator
         }
 
         // Пропускаем ScanStep - данные уже загружены
+        // Очистить данные от предыдущего теста перед включением истории
+        ClearForNewTestStart();
+
         // Включаем флаги для теста
         infra.ErrorService.IsHistoryEnabled = true;
         state.BoilerState.SetTestRunning(true);

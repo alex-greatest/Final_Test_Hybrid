@@ -105,26 +105,49 @@ public class BlazorUiDispatcher(BlazorDispatcherAccessor a) : IUiDispatcher
 Явное управление очисткой состояния. См. [CycleExitGuide.md](CycleExitGuide.md)
 
 ```csharp
-enum CycleExitReason { PipelineFailed, PipelineCancelled, TestCompleted, SoftReset, HardReset }
+enum CycleExitReason { PipelineFailed, PipelineCancelled, TestCompleted, SoftReset, HardReset, RepeatRequested, NokRepeatRequested }
 ```
 
 | Состояние | Очистка | Когда |
 |-----------|---------|-------|
-| `TestCompleted` | `SetTestResult()` | Сразу |
+| `TestCompleted` | `ClearForTestCompletion()` | Сразу (результаты сохраняются для оператора) |
 | `SoftReset` | `ClearStateOnReset()` | По AskEnd (синхронно с гридом) |
 | `HardReset` | `ClearStateOnReset()` + grid | Сразу |
+| `RepeatRequested` | `ClearForRepeat()` | OK повтор |
+| `NokRepeatRequested` | `ClearForNokRepeat()` | NOK повтор с подготовкой |
 | `PipelineFailed/Cancelled` | Ничего | — |
 
 **Добавить новое состояние:** enum → `HandleCycleExit` case → источник сигнала.
 
-## ErrorService — История ошибок
+## ErrorService и очистка данных — Двухфазная модель
+
+### Фаза 1: Завершение теста (`ClearForTestCompletion`)
+При завершении теста (OK/NOK) очищаются:
+- Грид шагов (ClearAllExceptScan)
+- Время шагов (StepTimingService.Clear)
+- Рецепты (RecipeProvider.Clear)
+- BoilerState
+- IsHistoryEnabled = false (но **НЕ** история!)
+
+**НЕ чистятся:** История ошибок и Результаты — оператор должен их видеть до следующего теста.
+
+### Фаза 2: Готовность к новому циклу (`SetAcceptingInput(true)`)
+- ResetScanTiming() — таймер сканирования сбрасывается и запускается
+
+### Фаза 3: Начало нового теста (`ClearForNewTestStart`)
+Перед включением IsHistoryEnabled:
+- ClearHistory() — очистка истории ошибок
+- TestResultsService.Clear() — очистка результатов
+
+### Таблица моментов
 
 | Момент | Действие | Где |
 |--------|----------|-----|
+| Завершение теста | `ClearForTestCompletion()` | `HandleCycleExit(TestCompleted)` |
+| Готовность к сканированию | `ResetScanTiming()` | `SetAcceptingInput(true)` |
+| Перед включением истории | `ClearForNewTestStart()` | `ExecutePreExecutionPipelineAsync`, `ExecuteRepeatPipelineAsync` |
 | После успешного ScanStep | `IsHistoryEnabled = true` | `PreExecutionCoordinator.Pipeline` |
-| При сбросе PLC (любой) | `IsHistoryEnabled = false` | `PreExecutionCoordinator.ClearStateOnReset` |
-
-История пишется только во время выполнения теста (от успешного сканирования до сброса).
+| При сбросе PLC | `IsHistoryEnabled = false` | `ClearStateOnReset`, `ClearForTestCompletion`, `ClearForRepeat` |
 
 **При включении истории:** все текущие активные ошибки автоматически копируются в историю. Это гарантирует корректное закрытие записей для ошибок, возникших ДО сканирования.
 

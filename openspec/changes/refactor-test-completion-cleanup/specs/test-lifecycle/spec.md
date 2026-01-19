@@ -2,13 +2,14 @@
 
 ### Requirement: Test Completion Cleanup
 
-При завершении теста (OK или NOK) система ДОЛЖНА очистить рабочие данные, но сохранить результаты для просмотра оператором.
+При завершении теста (OK или NOK) система MUST очистить рабочие данные, но сохранить результаты для просмотра оператором.
 
 Очищаемые данные:
 - Грид шагов (StatusReporter.ClearAllExceptScan)
 - Время шагов (StepTimingService.Clear)
 - Рецепты (RecipeProvider.Clear)
 - Состояние котла (BoilerState.Clear)
+- Текущий штрихкод (ClearBarcode) — сброс UI отображения
 - Запись истории (IsHistoryEnabled = false)
 
 Сохраняемые данные:
@@ -18,18 +19,18 @@
 #### Scenario: OK test completion preserves results
 - **GIVEN** тест завершился успешно (OK)
 - **WHEN** вызывается HandleCycleExit(TestCompleted)
-- **THEN** грид, время, рецепты и BoilerState очищены
+- **THEN** грид, время, рецепты, BoilerState и CurrentBarcode очищены
 - **AND** история ошибок и результаты сохранены для просмотра
 
 #### Scenario: NOK test completion preserves results
 - **GIVEN** тест завершился с ошибками (NOK)
 - **WHEN** вызывается HandleCycleExit(TestCompleted)
-- **THEN** грид, время, рецепты и BoilerState очищены
+- **THEN** грид, время, рецепты, BoilerState и CurrentBarcode очищены
 - **AND** история ошибок и результаты сохранены для просмотра
 
 ### Requirement: New Test Start Cleanup
 
-При начале нового теста система ДОЛЖНА очистить результаты предыдущего теста.
+При начале нового теста система MUST очистить результаты предыдущего теста.
 
 Очищаемые данные:
 - История ошибок (ErrorService.ClearHistory)
@@ -60,7 +61,7 @@
 
 ### Requirement: Scan Timer Reset
 
-При готовности системы к приёму нового штрихкода таймер сканирования ДОЛЖЕН сброситься и запуститься заново.
+При готовности системы к приёму нового штрихкода таймер сканирования MUST сброситься и запуститься заново.
 
 #### Scenario: Scan timer resets on new cycle
 - **GIVEN** предыдущий тест завершён

@@ -56,18 +56,43 @@ public partial class PreExecutionCoordinator(
         _lastSuccessfulContext = null;
     }
 
+    /// <summary>
+    /// Очистка при завершении теста (OK/NOK).
+    /// Результаты и история ошибок НЕ чистятся — оператор должен их видеть.
+    /// </summary>
+    private void ClearForTestCompletion()
+    {
+        infra.StatusReporter.ClearAllExceptScan();
+        infra.StepTimingService.Clear();
+        infra.RecipeProvider.Clear();
+        state.BoilerState.Clear();
+        ClearBarcode();
+        infra.ErrorService.IsHistoryEnabled = false;
+
+        infra.Logger.LogInformation("Состояние очищено после завершения теста");
+    }
+
+    /// <summary>
+    /// Очистка при начале нового теста.
+    /// Вызывается перед включением IsHistoryEnabled для очистки данных от предыдущего теста.
+    /// </summary>
+    private void ClearForNewTestStart()
+    {
+        infra.ErrorService.ClearHistory();
+        infra.TestResultsService.Clear();
+
+        infra.Logger.LogInformation("История и результаты очищены для нового теста");
+    }
+
     private void ClearForRepeat()
     {
-        // Сбросить флаг ПЕРЕД ClearHistory, чтобы при повторе AddActiveErrorsToHistory сработал
         infra.ErrorService.IsHistoryEnabled = false;
 
         // Очистка UI
         infra.StatusReporter.ClearAllExceptScan();
         infra.StepTimingService.Clear();
 
-        // Очистка данных
-        infra.ErrorService.ClearHistory();
-        infra.TestResultsService.Clear();
+        // История и результаты чистятся в ClearForNewTestStart при запуске pipeline
 
         // Сброс состояния TestExecutionCoordinator
         coordinators.TestCoordinator.ResetForRepeat();
@@ -87,9 +112,7 @@ public partial class PreExecutionCoordinator(
         infra.StatusReporter.ClearAllExceptScan();
         infra.StepTimingService.Clear();
 
-        // Очистка данных
-        infra.ErrorService.ClearHistory();
-        infra.TestResultsService.Clear();
+        // История и результаты чистятся в ClearForNewTestStart при запуске pipeline
 
         // Сброс состояния TestExecutionCoordinator
         coordinators.TestCoordinator.ResetForRepeat();
@@ -105,6 +128,10 @@ public partial class PreExecutionCoordinator(
     private void SetAcceptingInput(bool value)
     {
         IsAcceptingInput = value;
+        if (value)
+        {
+            infra.StepTimingService.ResetScanTiming();
+        }
         OnStateChanged?.Invoke();
     }
 

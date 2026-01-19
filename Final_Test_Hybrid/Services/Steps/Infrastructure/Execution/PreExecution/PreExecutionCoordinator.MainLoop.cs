@@ -120,8 +120,8 @@ public partial class PreExecutionCoordinator
         switch (reason)
         {
             case CycleExitReason.TestCompleted:
-                // HandleTestCompletionAsync вызван раньше в ExecuteCycleAsync
                 state.BoilerState.SetTestRunning(false);
+                ClearForTestCompletion();
                 break;
 
             case CycleExitReason.SoftReset:
