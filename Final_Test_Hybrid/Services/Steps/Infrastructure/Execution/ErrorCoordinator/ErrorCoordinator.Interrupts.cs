@@ -1,62 +1,39 @@
-using Final_Test_Hybrid.Models.Plc.Tags;
-using Final_Test_Hybrid.Models.Steps;
-using Microsoft.Extensions.Logging;
-
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 
-/// <summary>
-/// ErrorCoordinator partial: Interrupt handling logic.
-/// </summary>
-public partial class ErrorCoordinator
+public sealed partial class ErrorCoordinator
 {
-    #region Synchronization Primitives
+    #region Interrupt Handling
 
-    private bool TryAcquireInterruptFlag(InterruptReason reason)
+    public async Task HandleInterruptAsync(InterruptReason reason, CancellationToken ct = default)
     {
-        var acquired = Interlocked.CompareExchange(ref _isHandlingInterrupt, 1, 0) == 0;
-
-        if (!acquired)
+        if (_disposed) { return; }
+        if (!await TryAcquireLockAsync(ct)) { return; }
+        try
         {
-            _logger.LogWarning("Прерывание {Reason} проигнорировано — уже обрабатывается", reason);
+            await ProcessInterruptAsync(reason, ct);
         }
-
-        return acquired;
+        finally
+        {
+            ReleaseLockSafe();
+        }
     }
-
-    private void ReleaseInterruptFlag()
-    {
-        Interlocked.Exchange(ref _isHandlingInterrupt, 0);
-    }
-
-    private void IncrementActiveOperations() => Interlocked.Increment(ref _activeOperations);
-    private void DecrementActiveOperations() => Interlocked.Decrement(ref _activeOperations);
 
     private async Task<bool> TryAcquireLockAsync(CancellationToken ct)
     {
-        if (_disposed) { return false; }
-        return await TryAcquireLockCoreAsync(ct);
-    }
-
-    private async Task<bool> TryAcquireLockCoreAsync(CancellationToken ct)
-    {
-        try { return await AcquireAndValidateAsync(ct); }
-        catch (Exception) when (ct.IsCancellationRequested || _disposed) { return false; }
-    }
-
-    private async Task<bool> AcquireAndValidateAsync(CancellationToken ct)
-    {
-        await _operationLock.WaitAsync(ct);
-        return ValidateOrRelease();
-    }
-
-    private bool ValidateOrRelease()
-    {
-        if (!_disposed)
+        try
         {
+            await _interruptLock.WaitAsync(ct);
+            if (_disposed)
+            {
+                _interruptLock.Release();
+                return false;
+            }
             return true;
         }
-        _operationLock.Release(); 
-        return false;
+        catch (Exception) when (ct.IsCancellationRequested || _disposed)
+        {
+            return false;
+        }
     }
 
     private void ReleaseLockSafe()
@@ -65,54 +42,13 @@ public partial class ErrorCoordinator
         {
             if (!_disposed)
             {
-                _operationLock.Release();
+                _interruptLock.Release();
             }
         }
         catch (ObjectDisposedException)
         {
             // Expected during shutdown
         }
-    }
-
-    #endregion
-
-    #region Interrupt Handling
-
-    public async Task HandleInterruptAsync(InterruptReason reason, CancellationToken ct = default)
-    {
-        if (!await TryAcquireResourcesAsync(reason, ct))
-        {
-            return; 
-        }
-        try
-        {
-            await ProcessInterruptAsync(reason, ct);
-        }
-        finally
-        {
-            ReleaseResources();
-        }
-    }
-
-    private async Task<bool> TryAcquireResourcesAsync(InterruptReason reason, CancellationToken ct)
-    {
-        if (_disposed) { return false; }
-        if (!TryAcquireInterruptFlag(reason)) { return false; }
-
-        IncrementActiveOperations();
-
-        if (await TryAcquireLockAsync(ct)) { return true; }
-
-        DecrementActiveOperations();
-        ReleaseInterruptFlag();
-        return false;
-    }
-
-    private void ReleaseResources()
-    {
-        ReleaseLockSafe();
-        DecrementActiveOperations();
-        ReleaseInterruptFlag();
     }
 
     private async Task ProcessInterruptAsync(InterruptReason reason, CancellationToken ct)
@@ -123,9 +59,7 @@ public partial class ErrorCoordinator
             _logger.LogError("Неизвестная причина прерывания: {Reason}", reason);
             return;
         }
-        // Ранняя проверка: AutoModeDisabled при уже восстановленном автомате — пропуск
-        var isAutoReady = _subscriptions.AutoReady.IsReady;
-        if (reason == InterruptReason.AutoModeDisabled && isAutoReady)
+        if (reason == InterruptReason.AutoModeDisabled && _subscriptions.AutoReady.IsReady)
         {
             _logger.LogInformation("AutoReady восстановлен до обработки прерывания — пропуск");
             return;
@@ -143,138 +77,6 @@ public partial class ErrorCoordinator
     {
         CurrentInterrupt = reason;
         InvokeEventSafe(OnInterruptChanged, "OnInterruptChanged");
-    }
-
-    #endregion
-    #region Error Resolution
-
-    public Task<ErrorResolution> WaitForResolutionAsync(CancellationToken ct)
-        => WaitForResolutionAsync(null, null, ct);
-
-    public Task<ErrorResolution> WaitForResolutionAsync(string? blockEndTag, string? blockErrorTag, CancellationToken ct, TimeSpan? timeout = null)
-        => WaitForResolutionAsync(blockEndTag, blockErrorTag, enableSkip: true, ct, timeout);
-
-    public async Task<ErrorResolution> WaitForResolutionAsync(string? blockEndTag, string? blockErrorTag, bool enableSkip, CancellationToken ct, TimeSpan? timeout = null)
-    {
-        var timeoutMsg = timeout.HasValue ? $"таймаут {timeout.Value.TotalSeconds} сек" : "без таймаута";
-        _logger.LogInformation("Ожидание решения оператора ({Timeout})...", timeoutMsg);
-        try
-        {
-            return await WaitForOperatorSignalAsync(blockEndTag, blockErrorTag, enableSkip, timeout, ct);
-        }
-        catch (Exception ex)
-        {
-            return HandleResolutionException(ex);
-        }
-    }
-
-    private ErrorResolution HandleResolutionException(Exception ex)
-    {
-        return ex switch
-        {
-            TimeoutException => HandleResolutionTimeout(),
-            OperationCanceledException => LogAndRethrow(ex),
-            _ => Rethrow(ex)
-        };
-    }
-
-    private ErrorResolution LogAndRethrow(Exception ex)
-    {
-        _logger.LogInformation("Ожидание решения отменено");
-        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
-        return default;
-    }
-
-    private static ErrorResolution Rethrow(Exception ex)
-    {
-        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
-        return default;
-    }
-
-    private async Task<ErrorResolution> WaitForOperatorSignalAsync(
-        string? blockEndTag,
-        string? blockErrorTag,
-        bool enableSkip,
-        TimeSpan? timeout,
-        CancellationToken ct)
-    {
-        var builder = _resolution.TagWaiter.CreateWaitGroup<ErrorResolution>()
-            .WaitForTrue(BaseTags.ErrorRetry, () => ErrorResolution.Retry, "Retry");
-
-        // Skip добавляем ТОЛЬКО если enableSkip = true
-        if (enableSkip)
-        {
-            if (blockEndTag != null && blockErrorTag != null)
-            {
-                // Шаг с блоком: Block.End + Block.Error
-                builder.WaitForAllTrue(
-                    [blockEndTag, blockErrorTag],
-                    () => ErrorResolution.Skip,
-                    "Skip");
-            }
-            else
-            {
-                // Шаг без блока: Test_End_Step
-                builder.WaitForTrue(BaseTags.TestEndStep, () => ErrorResolution.Skip, "Skip");
-            }
-        }
-        // Если enableSkip = false — Skip вообще не слушаем (шаг не пропускаемый)
-
-        if (timeout.HasValue)
-        {
-            builder.WithTimeout(timeout.Value);
-        }
-        var waitResult = await _resolution.TagWaiter.WaitAnyAsync(builder, ct);
-        var resolution = waitResult.Result;
-        _logger.LogInformation("Получен сигнал: {Resolution}", resolution);
-        return resolution;
-    }
-
-    private ErrorResolution HandleResolutionTimeout()
-    {
-        _logger.LogWarning("Таймаут ожидания ответа оператора ({Timeout} сек)",
-            ResolutionTimeout.TotalSeconds);
-        return ErrorResolution.Timeout;
-    }
-
-    public Task SendAskRepeatAsync(CancellationToken ct) => SendAskRepeatAsync(null, ct);
-
-    public async Task SendAskRepeatAsync(string? blockErrorTag, CancellationToken ct)
-    {
-        _logger.LogInformation("Отправка AskRepeat в PLC");
-        var result = await _resolution.PlcService.WriteAsync(BaseTags.AskRepeat, true, ct);
-
-        if (result.Error != null)
-        {
-            _logger.LogError("Ошибка записи AskRepeat: {Error}", result.Error);
-            return;
-        }
-        await WaitForPlcAcknowledgeAsync(blockErrorTag, ct);
-    }
-
-    private async Task WaitForPlcAcknowledgeAsync(string? blockErrorTag, CancellationToken ct)
-    {
-        if (blockErrorTag == null)
-        {
-            return;
-        }
-        _logger.LogDebug("Ожидание сброса Error блока: {Tag}", blockErrorTag);
-        await _resolution.TagWaiter.WaitForFalseAsync(blockErrorTag, timeout: null, ct);
-        _logger.LogDebug("Error блока сброшен");
-    }
-
-    public async Task WaitForRetrySignalResetAsync(CancellationToken ct)
-    {
-        _logger.LogDebug("Ожидание сброса Req_Repeat...");
-        try
-        {
-            await _resolution.TagWaiter.WaitForFalseAsync(BaseTags.ErrorRetry, timeout: TimeSpan.FromSeconds(5), ct);
-            _logger.LogDebug("Req_Repeat сброшен");
-        }
-        catch (TimeoutException)
-        {
-            _logger.LogWarning("Таймаут ожидания сброса Req_Repeat (5 сек)");
-        }
     }
 
     #endregion

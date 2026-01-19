@@ -200,7 +200,11 @@ public partial class PreExecutionCoordinator
         CancellationToken ct)
     {
         infra.Logger.LogDebug("WaitForFirstSignalAsync: вызываем errorCoordinator.WaitForResolutionAsync (enableSkip={EnableSkip})", enableSkip);
-        var resolutionTask = coordinators.ErrorCoordinator.WaitForResolutionAsync(blockEndTag, blockErrorTag, enableSkip, ct, timeout: null);
+        var options = new ErrorCoordinator.WaitForResolutionOptions(
+            BlockEndTag: blockEndTag,
+            BlockErrorTag: blockErrorTag,
+            EnableSkip: enableSkip);
+        var resolutionTask = coordinators.ErrorCoordinator.WaitForResolutionAsync(options, ct);
         var externalTask = signal.Task;
 
         return Task.WhenAny(resolutionTask, externalTask);

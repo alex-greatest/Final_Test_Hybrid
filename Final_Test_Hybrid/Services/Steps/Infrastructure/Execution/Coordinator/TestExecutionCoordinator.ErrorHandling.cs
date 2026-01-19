@@ -68,9 +68,10 @@ public partial class TestExecutionCoordinator
             ErrorResolution resolution;
             try
             {
-                var blockEndTag = GetBlockEndTag(error.FailedStep);
-                var blockErrorTag = GetBlockErrorTag(error.FailedStep);
-                resolution = await _errorCoordinator.WaitForResolutionAsync(blockEndTag, blockErrorTag, cts.Token, timeout: null);
+                var options = new WaitForResolutionOptions(
+                    BlockEndTag: GetBlockEndTag(error.FailedStep),
+                    BlockErrorTag: GetBlockErrorTag(error.FailedStep));
+                resolution = await _errorCoordinator.WaitForResolutionAsync(options, cts.Token);
             }
             catch (OperationCanceledException)
             {

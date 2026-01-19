@@ -50,7 +50,20 @@
       "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\bin\\\\psql.exe\" \"postgresql://postgres:ManLiv123@localhost:5432/traceability_boiler\" -f \"C:\\\\Users\\\\Alexander\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--projects-Final-Test-Hybrid\\\\7c80d87f-4e83-4339-91db-0ab257c1aec8\\\\scratchpad\\\\insert_errors.sql\")",
       "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\bin\\\\psql.exe\" \"postgresql://postgres:ManLiv123@localhost:5432/traceability_boiler\" -c \"SELECT setval\\(''tb_error_settings_template_id_seq'', 132, false\\);\")",
       "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\bin\\\\psql.exe\" \"postgresql://postgres:ManLiv123@localhost:5432/traceability_boiler\" -c \"SELECT column_name, column_default FROM information_schema.columns WHERE table_name = ''tb_error_settings_template'' AND column_name = ''id'';\")",
-      "mcp__playwright__browser_take_screenshot"
+      "mcp__playwright__browser_take_screenshot",
+      "Bash(openspec list:*)",
+      "Bash(npx openspec:*)",
+      "Bash(openspec validate:*)",
+      "Bash(npm exec:*)",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(where:*)",
+      "Bash(/c/Users/Alexander/AppData/Roaming/npm/openspec list)",
+      "Bash(node -e:*)",
+      "Bash(openspec show:*)",
+      "Bash(openspec archive split-error-coordinator:*)",
+      "Bash(openspec --help:*)",
+      "Bash(openspec.cmd archive split-error-coordinator:*)",
+      "Bash(openspec.cmd validate:*)"
     ]
   }
 }

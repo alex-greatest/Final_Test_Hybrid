@@ -94,7 +94,6 @@ public static class StepsServiceExtensions
         // ErrorCoordinator dependency groups
         services.AddSingleton<ErrorCoordinatorSubscriptions>();
         services.AddSingleton<ErrorResolutionServices>();
-        services.AddSingleton<ErrorCoordinatorState>();
 
         // ErrorCoordinator behaviors
         services.AddSingleton<IInterruptBehavior, PlcConnectionLostBehavior>();

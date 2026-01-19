@@ -9,9 +9,7 @@ ErrorCoordinator обрабатывает прерывания во время �
 ```
 Services/Steps/Infrastructure/Execution/ErrorCoordinator/
 ├── IErrorCoordinator.cs              # Интерфейс координатора
-├── ErrorCoordinator.cs               # Основной класс (implements IErrorCoordinator, IInterruptContext)
-├── ErrorCoordinator.Interrupts.cs    # Обработка прерываний
-├── ErrorCoordinator.Recovery.cs      # Логика сброса и восстановления
+├── ErrorCoordinator.cs               # Полная реализация (200 строк)
 ├── ErrorCoordinatorDependencies.cs   # Группы зависимостей
 └── Behaviors/
     ├── IInterruptBehavior.cs         # Интерфейс стратегии
@@ -85,13 +83,6 @@ services.AddSingleton<IInterruptBehavior, NewReasonBehavior>();
 - `ErrorService` — управление ошибками
 - `Notifications` — уведомления пользователю
 
-### ErrorCoordinatorState
-Состояние координатора:
-- `PauseToken` — токен паузы выполнения
-- `StateManager` — менеджер состояний
-- `StatusReporter` — отчёт о статусе
-- `BoilerState` — состояние бойлера
-
 ## Events
 
 | Событие | Описание | Подписчики |
@@ -119,9 +110,44 @@ _errorCoordinator.OnInterruptChanged -= HandleInterruptChanged;
 | `HandleInterruptAsync(reason)` | Основная точка входа — делегирует обработку соответствующему behavior |
 | `Reset()` | Полный сброс — Resume + вызов OnReset |
 | `ForceStop()` | Мягкий сброс — только Resume (без OnReset) |
-| `WaitForResolutionAsync()` | Ожидание решения оператора (Retry/Skip/Timeout) |
-| `Pause()` | Приостановка выполнения |
-| `Resume()` | Возобновление выполнения |
+| `WaitForResolutionAsync(options)` | Ожидание решения оператора (Retry/Skip/Timeout) |
+
+## WaitForResolutionAsync API
+
+### Сигнатура
+
+```csharp
+Task<ErrorResolution> WaitForResolutionAsync(
+    WaitForResolutionOptions? options = null,
+    CancellationToken ct = default);
+```
+
+### WaitForResolutionOptions
+
+```csharp
+public record WaitForResolutionOptions(
+    string? BlockEndTag = null,     // Тег окончания блока
+    string? BlockErrorTag = null,   // Тег ошибки блока
+    bool EnableSkip = true,         // Разрешить пропуск шага
+    TimeSpan? Timeout = null);      // Таймаут ожидания
+```
+
+### Примеры использования
+
+```csharp
+// Простой вызов без параметров (EnableSkip = true)
+var resolution = await coordinator.WaitForResolutionAsync(ct: ct);
+
+// Шаг с блоком
+var options = new WaitForResolutionOptions(
+    BlockEndTag: "Blocks.MyBlock.End",
+    BlockErrorTag: "Blocks.MyBlock.Error");
+var resolution = await coordinator.WaitForResolutionAsync(options, ct);
+
+// Шаг без возможности пропуска
+var options = new WaitForResolutionOptions(EnableSkip: false);
+var resolution = await coordinator.WaitForResolutionAsync(options, ct);
+```
 
 ## Behavior Execution Flow
 
@@ -147,9 +173,9 @@ HandleInterruptAsync(reason)
 public interface IInterruptContext
 {
     INotificationService Notifications { get; }
+    IErrorService ErrorService { get; }
     void Reset();
     void Pause();
-    void Resume();
 }
 ```
 

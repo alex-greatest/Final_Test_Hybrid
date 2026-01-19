@@ -1,52 +1,54 @@
+using Final_Test_Hybrid.Models.Errors;
+using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.Common;
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.UI;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.Behaviors;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
+
+/// <summary>
+/// Options for WaitForResolutionAsync method.
+/// </summary>
+public record WaitForResolutionOptions(
+    string? BlockEndTag = null,
+    string? BlockErrorTag = null,
+    bool EnableSkip = true,
+    TimeSpan? Timeout = null);
 
 /// <summary>
 /// Unified error and interrupt coordinator for test execution.
 /// Handles PLC connection loss, auto mode, timeouts, and error resolution.
 /// Thread-safe with proper disposal patterns.
 /// </summary>
-public partial class ErrorCoordinator : IErrorCoordinator, IInterruptContext, IAsyncDisposable
+public sealed partial class ErrorCoordinator : IErrorCoordinator, IInterruptContext, IAsyncDisposable
 {
-    // === Dependencies ===
     private readonly ErrorCoordinatorSubscriptions _subscriptions;
     private readonly ErrorResolutionServices _resolution;
-    private readonly ErrorCoordinatorState _state;
+    private readonly PauseTokenSource _pauseToken;
     private readonly InterruptBehaviorRegistry _behaviorRegistry;
-    private readonly ILogger<ErrorCoordinator> _logger;
-
-    // === Synchronization ===
-    private readonly SemaphoreSlim _operationLock = new(1, 1);
+    private readonly DualLogger<ErrorCoordinator> _logger;
+    private readonly SemaphoreSlim _interruptLock = new(1, 1);
     private readonly CancellationTokenSource _disposeCts = new();
-    private int _isHandlingInterrupt;
-    private int _activeOperations;
     private volatile bool _disposed;
 
-    // === Constants ===
-    private static readonly TimeSpan ResolutionTimeout = TimeSpan.FromSeconds(60);
-
-    // === Events ===
     public event Action? OnReset;
     public event Action? OnRecovered;
     public event Action? OnInterruptChanged;
 
-    // === State ===
     public InterruptReason? CurrentInterrupt { get; private set; }
 
     public ErrorCoordinator(
         ErrorCoordinatorSubscriptions subscriptions,
         ErrorResolutionServices resolution,
-        ErrorCoordinatorState state,
+        PauseTokenSource pauseToken,
         InterruptBehaviorRegistry behaviorRegistry,
-        ILogger<ErrorCoordinator> logger)
+        DualLogger<ErrorCoordinator> logger)
     {
         _subscriptions = subscriptions;
         _resolution = resolution;
-        _state = state;
+        _pauseToken = pauseToken;
         _behaviorRegistry = behaviorRegistry;
         _logger = logger;
 
@@ -90,7 +92,7 @@ public partial class ErrorCoordinator : IErrorCoordinator, IInterruptContext, IA
     private void FireAndForgetInterrupt(InterruptReason reason)
     {
         _ = HandleInterruptAsync(reason, _disposeCts.Token).ContinueWith(
-            t => LoggerExtensions.LogError((ILogger)_logger, (Exception?)t.Exception, "Ошибка обработки {Reason}", reason),
+            t => _logger.LogError(t.Exception, "Ошибка обработки {Reason}", reason),
             TaskContinuationOptions.OnlyOnFaulted);
     }
 
@@ -103,35 +105,28 @@ public partial class ErrorCoordinator : IErrorCoordinator, IInterruptContext, IA
 
     #endregion
 
+    #region IInterruptContext Implementation
+
+    void IInterruptContext.Pause() => _pauseToken.Pause();
+    void IInterruptContext.Reset() => Reset();
+    IErrorService IInterruptContext.ErrorService => _resolution.ErrorService;
+    INotificationService IInterruptContext.Notifications => _resolution.Notifications;
+
+    #endregion
+
     #region Disposal
 
     public async ValueTask DisposeAsync()
     {
         if (_disposed) { return; }
         _disposed = true;
-
         await _disposeCts.CancelAsync();
         UnsubscribeFromEvents();
-
-        await WaitForPendingOperationsAsync();
-
         _disposeCts.Dispose();
-        _operationLock.Dispose();
+        _interruptLock.Dispose();
         OnReset = null;
         OnRecovered = null;
         OnInterruptChanged = null;
-    }
-
-    private async Task WaitForPendingOperationsAsync()
-    {
-        var spinWait = new SpinWait();
-        var timeout = DateTime.UtcNow.AddSeconds(5);
-
-        while (Volatile.Read(ref _activeOperations) > 0 && DateTime.UtcNow < timeout)
-        {
-            spinWait.SpinOnce();
-            await Task.Yield();
-        }
     }
 
     private void UnsubscribeFromEvents()
@@ -142,12 +137,19 @@ public partial class ErrorCoordinator : IErrorCoordinator, IInterruptContext, IA
 
     #endregion
 
-    #region IInterruptContext Implementation
+    #region Helpers
 
-    void IInterruptContext.Pause() => _state.PauseToken.Pause();
-    void IInterruptContext.Reset() => Reset();
-    IErrorService IInterruptContext.ErrorService => _resolution.ErrorService;
-    INotificationService IInterruptContext.Notifications => _resolution.Notifications;
+    private void InvokeEventSafe(Action? handler, string eventName)
+    {
+        try
+        {
+            handler?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка в обработчике {EventName}", eventName);
+        }
+    }
 
     #endregion
 }

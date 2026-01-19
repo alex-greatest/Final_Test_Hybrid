@@ -4,6 +4,7 @@ using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
+using Final_Test_Hybrid.Services.Common.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 
@@ -21,9 +22,16 @@ public class ScanModeController : IDisposable
     private readonly PlcResetCoordinator _plcResetCoordinator;
     private readonly IStepTimingService _stepTimingService;
     private readonly ExecutionActivityTracker _activityTracker;
+    private readonly DualLogger<ScanModeController> _logger;
     private readonly Lock _stateLock = new();
     private CancellationTokenSource? _loopCts;
+    /// <summary>
+    /// Режим сканирования активирован (оператор авторизован + AutoReady).
+    /// </summary>
     private bool _isActivated;
+    /// <summary>
+    /// Выполняется сброс PLC (от Req_Reset сигнала).
+    /// </summary>
     private bool _isResetting;
     private bool _disposed;
 
@@ -60,7 +68,8 @@ public class ScanModeController : IDisposable
         PreExecutionCoordinator preExecutionCoordinator,
         PlcResetCoordinator plcResetCoordinator,
         IStepTimingService stepTimingService,
-        ExecutionActivityTracker activityTracker)
+        ExecutionActivityTracker activityTracker,
+        DualLogger<ScanModeController> logger)
     {
         _sessionManager = sessionManager;
         _operatorState = operatorState;
@@ -70,6 +79,7 @@ public class ScanModeController : IDisposable
         _plcResetCoordinator = plcResetCoordinator;
         _stepTimingService = stepTimingService;
         _activityTracker = activityTracker;
+        _logger = logger;
         SubscribeToEvents();
     }
 
@@ -83,30 +93,43 @@ public class ScanModeController : IDisposable
 
     private void SubscribeToResetEvents()
     {
-        _plcResetCoordinator.OnResetStarting += () =>
-        {
-            lock (_stateLock)
-            {
-                var wasInScanPhase = IsInScanningPhaseUnsafe;
-                _isResetting = true;
-                _sessionManager.ReleaseSession();
-                return wasInScanPhase;
-            }
-        };
+        _plcResetCoordinator.OnResetStarting += HandleResetStarting;
+        _plcResetCoordinator.OnResetCompleted += HandleResetCompleted;
+    }
 
-        _plcResetCoordinator.OnResetCompleted += () =>
+    /// <summary>
+    /// Обрабатывает начало сброса PLC.
+    /// Возвращает true если система была в фазе сканирования (мягкий сброс),
+    /// false если нет (жёсткий сброс). Значение используется PlcResetCoordinator
+    /// для выбора метода сброса: ForceStop vs Reset.
+    /// </summary>
+    private bool HandleResetStarting()
+    {
+        lock (_stateLock)
         {
-            lock (_stateLock)
-            {
-                TransitionToReadyInternal();
-            }
-        };
+            var wasInScanPhase = IsInScanningPhaseUnsafe;
+            _isResetting = true;
+            _sessionManager.ReleaseSession();
+            return wasInScanPhase;
+        }
+    }
+
+    private void HandleResetCompleted()
+    {
+        lock (_stateLock)
+        {
+            TransitionToReadyInternal();
+        }
     }
 
     private void UpdateScanModeState()
     {
         lock (_stateLock)
         {
+            if (_disposed)
+            {
+                return;
+            }
             if (IsScanModeEnabled)
             {
                 TryActivateScanMode();
@@ -119,11 +142,15 @@ public class ScanModeController : IDisposable
         OnStateChanged?.Invoke();
     }
 
+    /// <summary>
+    /// Активирует режим сканирования. Два режима работы:
+    /// 1) Первичная активация (!_isActivated): запуск loop, таймеров, добавление шага в grid
+    /// 2) Восстановление (_isActivated): только восстановление сканера и таймеров после возврата AutoMode
+    /// </summary>
     private void TryActivateScanMode()
     {
         if (_isActivated)
         {
-            // Восстановить сканер и таймер при возврате AutoMode
             _sessionManager.AcquireSession(HandleBarcodeScanned);
             _stepTimingService.ResumeAllColumnsTiming();
             return;
@@ -152,7 +179,10 @@ public class ScanModeController : IDisposable
         _loopCts?.Cancel();
         _loopCts?.Dispose();
         _loopCts = new CancellationTokenSource();
-        _ = _preExecutionCoordinator.StartMainLoopAsync(_loopCts.Token);
+        _ = _preExecutionCoordinator.StartMainLoopAsync(_loopCts.Token)
+            .ContinueWith(
+                t => _logger.LogError(t.Exception, "Main loop failed"),
+                TaskContinuationOptions.OnlyOnFaulted);
     }
 
     private void HandleBarcodeScanned(string barcode)
@@ -160,6 +190,11 @@ public class ScanModeController : IDisposable
         _preExecutionCoordinator.SubmitBarcode(barcode);
     }
 
+    /// <summary>
+    /// Деактивирует режим сканирования. Два режима работы:
+    /// 1) Soft (IsAnyActive): только отключение сканера и пауза таймеров (тест продолжает выполняться)
+    /// 2) Hard (!IsAnyActive): полная деактивация с отменой loop
+    /// </summary>
     private void TryDeactivateScanMode()
     {
         if (_isResetting)
@@ -170,28 +205,18 @@ public class ScanModeController : IDisposable
         {
             return;
         }
-        // Если тест выполняется — только отключить сканер и приостановить таймеры всех колонок
         if (_activityTracker.IsAnyActive)
         {
             _sessionManager.ReleaseSession();
             _stepTimingService.PauseAllColumnsTiming();
             return;
         }
-        // Отменять loop только если тест НЕ активен
         _loopCts?.Cancel();
         _isActivated = false;
         _sessionManager.ReleaseSession();
         if (!_operatorState.IsAuthenticated)
         {
             _statusReporter.ClearAllExceptScan();
-        }
-    }
-
-    private void TransitionToReady()
-    {
-        lock (_stateLock)
-        {
-            TransitionToReadyInternal();
         }
     }
 
@@ -208,15 +233,6 @@ public class ScanModeController : IDisposable
         _sessionManager.AcquireSession(HandleBarcodeScanned);
     }
 
-    /// <summary>
-    /// Входит в режим сброса — блокирует ввод сканера до завершения сброса.
-    /// </summary>
-    private void EnterResettingMode()
-    {
-        _isResetting = true;
-        _sessionManager.ReleaseSession();
-    }
-
     public void Dispose()
     {
         if (_disposed)
@@ -228,5 +244,7 @@ public class ScanModeController : IDisposable
         _loopCts?.Dispose();
         _operatorState.OnStateChanged -= UpdateScanModeState;
         _autoReady.OnStateChanged -= UpdateScanModeState;
+        _plcResetCoordinator.OnResetStarting -= HandleResetStarting;
+        _plcResetCoordinator.OnResetCompleted -= HandleResetCompleted;
     }
 }

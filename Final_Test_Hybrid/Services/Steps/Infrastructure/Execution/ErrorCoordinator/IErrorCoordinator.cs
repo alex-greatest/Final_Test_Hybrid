@@ -16,9 +16,11 @@ public interface IErrorCoordinator
     Task HandleInterruptAsync(InterruptReason reason, CancellationToken ct = default);
     void Reset();
     void ForceStop();
-    Task<ErrorResolution> WaitForResolutionAsync(CancellationToken ct);
-    Task<ErrorResolution> WaitForResolutionAsync(string? blockEndTag, string? blockErrorTag, CancellationToken ct, TimeSpan? timeout = null);
-    Task<ErrorResolution> WaitForResolutionAsync(string? blockEndTag, string? blockErrorTag, bool enableSkip, CancellationToken ct, TimeSpan? timeout = null);
+
+    Task<ErrorResolution> WaitForResolutionAsync(
+        WaitForResolutionOptions? options = null,
+        CancellationToken ct = default);
+
     Task SendAskRepeatAsync(CancellationToken ct);
     Task SendAskRepeatAsync(string? blockErrorTag, CancellationToken ct);
     Task WaitForRetrySignalResetAsync(CancellationToken ct);

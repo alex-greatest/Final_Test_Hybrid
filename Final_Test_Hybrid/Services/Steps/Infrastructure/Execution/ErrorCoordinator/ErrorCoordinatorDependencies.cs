@@ -1,5 +1,3 @@
-using Final_Test_Hybrid.Models;
-using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.UI;
 using Final_Test_Hybrid.Services.Errors;
@@ -35,19 +33,4 @@ public sealed class ErrorResolutionServices(
     public OpcUaTagService PlcService => plcService;
     public IErrorService ErrorService => errorService;
     public INotificationService Notifications => notifications;
-}
-
-/// <summary>
-/// Управление паузой и состоянием.
-/// </summary>
-public sealed class ErrorCoordinatorState(
-    PauseTokenSource pauseToken,
-    ExecutionStateManager stateManager,
-    StepStatusReporter statusReporter,
-    BoilerState boilerState)
-{
-    public PauseTokenSource PauseToken => pauseToken;
-    public ExecutionStateManager StateManager => stateManager;
-    public StepStatusReporter StatusReporter => statusReporter;
-    public BoilerState BoilerState => boilerState;
 }
