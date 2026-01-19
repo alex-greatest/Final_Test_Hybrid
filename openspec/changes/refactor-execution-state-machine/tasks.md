@@ -32,33 +32,34 @@
 ## Phase 2: Integrate ScanModeController
 
 ### 2.1 Inject SystemLifecycleManager
-- [ ] Add `SystemLifecycleManager` dependency to constructor
-- [ ] Keep existing logic working (dual state tracking temporarily)
+- [x] Add `SystemLifecycleManager` dependency to constructor
+- [x] Keep existing logic working (dual state tracking temporarily)
 
-**Validation:** Приложение работает как раньше
+**Validation:** ✅ Приложение работает как раньше
 
 ### 2.2 Replace _isActivated
-- [ ] Subscribe to `Lifecycle.OnPhaseChanged`
-- [ ] Replace `_isActivated` reads with phase checks
-- [ ] Call `Lifecycle.Transition(ScanModeEnabled/Disabled)` instead of setting flag
-- [ ] Remove `_isActivated` field
+- [x] Subscribe to `Lifecycle.OnPhaseChanged`
+- [x] Replace `_isActivated` reads with phase checks
+- [x] Call `Lifecycle.Transition(ScanModeEnabled/Disabled)` instead of setting flag
+- [x] Remove `_isActivated` field
 
-**Validation:** Scan mode активируется/деактивируется корректно
+**Validation:** ✅ Scan mode активируется/деактивируется корректно
 
 ### 2.3 Replace _isResetting
-- [ ] Replace `_isResetting` reads with `Phase == Resetting` check
-- [ ] Remove `HandleResetStarting` → use `Lifecycle.OnPhaseChanged`
-- [ ] Remove `HandleResetCompleted` → use `Lifecycle.OnPhaseChanged`
-- [ ] Remove `_isResetting` field
+- [x] Replace `_isResetting` reads with `Phase == Resetting` check
+- [x] Use `Lifecycle.OnPhaseChanged` для синхронизации (HandleResetStarting/Completed остаются для интеграции с PlcResetCoordinator до Phase 4.3)
+- [x] Remove `_isResetting` field
 
-**Validation:** PLC Reset работает корректно
+**Validation:** ✅ PLC Reset работает корректно
 
 ### 2.4 Simplify scanner session management
-- [ ] Move `AcquireSession`/`ReleaseSession` to `OnPhaseChanged` handler
-- [ ] Ensure scanner active when `Lifecycle.IsScannerActive == true`
-- [ ] Remove duplicate session management from `TryActivateScanMode`/`TryDeactivateScanMode`
+- [x] Move `AcquireSession`/`ReleaseSession` to `OnPhaseChanged` handler (`SynchronizeScannerSession`)
+- [x] Ensure scanner active when `Lifecycle.IsScannerActive == true`
+- [x] Remove duplicate session management from `TryActivateScanMode`/`TryDeactivateScanMode`/`TransitionToReadyInternal`
 
-**Validation:** Scanner включается/выключается в правильных состояниях
+**Validation:** ✅ Scanner включается/выключается в правильных состояниях
+
+**Статус:** ✅ Завершено. Scanner session теперь управляется централизованно через `HandlePhaseChanged` → `SynchronizeScannerSession`. Методы `TryActivateScanMode`, `TryDeactivateScanMode`, `TransitionToReadyInternal`, `HandleResetStarting` больше не вызывают `AcquireSession`/`ReleaseSession` напрямую.
 
 ---
 
