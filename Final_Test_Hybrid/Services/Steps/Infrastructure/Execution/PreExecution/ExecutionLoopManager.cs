@@ -1,12 +1,53 @@
+using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Lifecycle;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
-public partial class PreExecutionCoordinator
+/// <summary>
+/// Управляет основным циклом PreExecution: ожидание barcode, запуск pipeline, ожидание теста.
+/// Интегрирован с SystemLifecycleManager для управления фазами системы.
+/// </summary>
+public class ExecutionLoopManager(
+    PreExecutionPipeline pipeline,
+    PreExecutionInfrastructure infra,
+    PreExecutionCoordinators coordinators,
+    PreExecutionState state,
+    SystemLifecycleManager lifecycle,
+    DualLogger<ExecutionLoopManager> logger)
 {
+    private TaskCompletionSource<string>? _barcodeSource;
+    private CancellationTokenSource? _currentCts;
+    private CycleExitReason? _pendingExitReason;
+    private bool _skipNextScan;
+    private bool _executeFullPreparation;
+
+    /// <summary>
+    /// Принимает ли система ввод штрихкода.
+    /// </summary>
+    public bool IsAcceptingInput { get; private set; }
+
+    /// <summary>
+    /// Выполняется ли обработка (не принимает ввод, но PreExecution активен).
+    /// </summary>
+    public bool IsProcessing => !IsAcceptingInput && state.ActivityTracker.IsPreExecutionActive;
+
+    /// <summary>
+    /// Текущий штрихкод.
+    /// </summary>
+    public string? CurrentBarcode => lifecycle.CurrentBarcode;
+
+    /// <summary>
+    /// Вызывается при изменении состояния ввода.
+    /// </summary>
+    public event Action? OnStateChanged;
+
+    /// <summary>
+    /// Запускает основной цикл PreExecution.
+    /// </summary>
     public async Task StartMainLoopAsync(CancellationToken ct)
     {
-        EnsureSubscribed();
         try
         {
             while (!ct.IsCancellationRequested)
@@ -27,21 +68,53 @@ public partial class PreExecutionCoordinator
         }
     }
 
+    /// <summary>
+    /// Отправляет штрихкод в систему.
+    /// </summary>
+    public void SubmitBarcode(string barcode)
+    {
+        _barcodeSource?.TrySetResult(barcode);
+    }
+
+    /// <summary>
+    /// Уведомляет подписчиков об изменении состояния.
+    /// </summary>
+    public void NotifyStateChanged()
+    {
+        OnStateChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Устанавливает причину выхода из цикла (для обработки сброса).
+    /// </summary>
+    public void SetPendingExitReason(CycleExitReason reason)
+    {
+        _pendingExitReason = reason;
+        _currentCts?.Cancel();
+    }
+
+    /// <summary>
+    /// Проверяет, есть ли активная операция.
+    /// </summary>
+    public bool HasActiveOperation()
+    {
+        return coordinators.TestCoordinator.IsRunning || state.ActivityTracker.IsPreExecutionActive;
+    }
+
     private async Task RunSingleCycleAsync(CancellationToken ct)
     {
-        // Проверка пропуска сканирования для повтора
         string barcode;
         if (_skipNextScan)
         {
             barcode = CurrentBarcode!;
-            infra.StatusReporter.UpdateScanStepStatus(Models.Steps.TestStepStatus.Success, "Повтор теста");
+            infra.StatusReporter.UpdateScanStepStatus(TestStepStatus.Success, "Повтор теста");
         }
         else
         {
             SetAcceptingInput(true);
             barcode = await WaitForBarcodeAsync(ct);
             SetAcceptingInput(false);
-            infra.StatusReporter.UpdateScanStepStatus(Models.Steps.TestStepStatus.Running, "Обработка штрихкода");
+            infra.StatusReporter.UpdateScanStepStatus(TestStepStatus.Running, "Обработка штрихкода");
         }
 
         _currentCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -82,13 +155,8 @@ public partial class PreExecutionCoordinator
         _skipNextScan = false;
         _executeFullPreparation = false;
 
-        var result = isNokRepeat
-            ? await ExecuteNokRepeatPipelineAsync(_currentCts!.Token)
-            : isRepeat
-                ? await ExecuteRepeatPipelineAsync(_currentCts!.Token)
-                : await ExecutePreExecutionPipelineAsync(barcode, _currentCts!.Token);
+        var result = await pipeline.ExecutePipelineAsync(barcode, isRepeat, isNokRepeat, _currentCts!.Token);
 
-        // Проверяем pending exit reason (сброс мог прийти во время pipeline)
         if (_pendingExitReason.HasValue)
         {
             return _pendingExitReason.Value;
@@ -101,17 +169,14 @@ public partial class PreExecutionCoordinator
                 : CycleExitReason.PipelineFailed;
         }
 
-        // Ждём завершения теста
         await using var reg = ct.Register(() => testCompletionTcs.TrySetCanceled());
         await testCompletionTcs.Task;
 
-        // Проверяем pending exit reason после теста
         if (_pendingExitReason.HasValue)
         {
             return _pendingExitReason.Value;
         }
 
-        // Обрабатываем завершение теста через координатор
         return await HandleTestCompletionAsync(ct);
     }
 
@@ -121,32 +186,35 @@ public partial class PreExecutionCoordinator
         {
             case CycleExitReason.TestCompleted:
                 state.BoilerState.SetTestRunning(false);
-                ClearForTestCompletion();
+                pipeline.ClearForTestCompletion();
+                lifecycle.Transition(SystemTrigger.TestAcknowledged);
                 break;
 
             case CycleExitReason.SoftReset:
-                // Ничего - очистка произойдёт по AskEnd в HandleGridClear
+                // Очистка произойдёт по AskEnd в HandleGridClear
                 break;
 
             case CycleExitReason.HardReset:
-                ClearStateOnReset();
+                pipeline.ClearStateOnReset();
                 infra.StatusReporter.ClearAllExceptScan();
                 break;
 
             case CycleExitReason.RepeatRequested:
-                ClearForRepeat();
+                pipeline.ClearForRepeat();
                 _skipNextScan = true;
+                lifecycle.Transition(SystemTrigger.RepeatRequested);
                 break;
 
             case CycleExitReason.NokRepeatRequested:
-                ClearForNokRepeat();
+                pipeline.ClearForNokRepeat();
                 _skipNextScan = true;
                 _executeFullPreparation = true;
+                lifecycle.Transition(SystemTrigger.RepeatRequested);
                 break;
 
             case CycleExitReason.PipelineFailed:
             case CycleExitReason.PipelineCancelled:
-                // Ничего — состояние сохраняется для retry или следующей попытки
+                lifecycle.Transition(SystemTrigger.PreparationFailed);
                 break;
         }
     }
@@ -159,14 +227,15 @@ public partial class PreExecutionCoordinator
         var testResult = hasErrors ? 2 : 1;
         state.BoilerState.SetTestResult(testResult);
 
-        infra.Logger.LogInformation("Тест завершён. Результат: {Result} ({Status})",
+        logger.LogInformation("Тест завершён. Результат: {Result} ({Status})",
             testResult, testResult == 1 ? "OK" : "NOK");
-        // Показать картинку результата
+
         coordinators.CompletionUiState.ShowImage(testResult);
 
         try
         {
-            // Вызвать координатор завершения
+            lifecycle.Transition(SystemTrigger.TestFinished);
+
             var result = await coordinators.CompletionCoordinator
                 .HandleTestCompletedAsync(testResult, ct);
 
@@ -190,8 +259,19 @@ public partial class PreExecutionCoordinator
         Interlocked.Exchange(ref _barcodeSource, newSource);
         await using var reg = ct.Register(() => newSource.TrySetCanceled());
         var barcode = await newSource.Task;
-        CurrentBarcode = barcode;
+
+        lifecycle.Transition(SystemTrigger.BarcodeReceived, barcode);
         OnStateChanged?.Invoke();
         return barcode;
+    }
+
+    private void SetAcceptingInput(bool value)
+    {
+        IsAcceptingInput = value;
+        if (value)
+        {
+            infra.StepTimingService.ResetScanTiming();
+        }
+        OnStateChanged?.Invoke();
     }
 }

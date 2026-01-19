@@ -198,9 +198,10 @@ public class ScanModeController : IDisposable
     }
 
     /// <summary>
-    /// Деактивирует режим сканирования. Два режима работы:
-    /// 1) Soft (IsAnyActive): только пауза таймеров (тест продолжает выполняться)
-    /// 2) Hard (!IsAnyActive): полная деактивация с отменой loop.
+    /// Деактивирует режим сканирования. Три режима работы:
+    /// 1) Blocked (Resetting/Idle/Completed): игнорируем — управление через reset или completion flow
+    /// 2) Soft (Preparing/Testing): только пауза таймеров (тест продолжает выполняться)
+    /// 3) Hard (WaitingForBarcode): полная деактивация с отменой loop.
     /// Scanner session управляется централизованно через HandlePhaseChanged.
     /// </summary>
     private void TryDeactivateScanMode()
@@ -210,9 +211,11 @@ public class ScanModeController : IDisposable
         {
             case SystemPhase.Resetting:
             case SystemPhase.Idle:
+            case SystemPhase.Completed:
+                // В Completed ждём действий оператора — AutoReady не влияет
                 return;
         }
-        if (_lifecycle.IsAnyActive)
+        if (phase is SystemPhase.Preparing or SystemPhase.Testing)
         {
             SynchronizeScannerSession(phase);
             _stepTimingService.PauseAllColumnsTiming();

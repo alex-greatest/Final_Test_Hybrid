@@ -1,3 +1,5 @@
+using Final_Test_Hybrid.Services.Main.PlcReset;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Steps;
 
@@ -19,126 +21,149 @@ public enum CycleExitReason
 }
 
 /// <summary>
-/// Упрощённый координатор PreExecution.
-/// Выполняет только два шага: ScanStep (вся подготовка) и BlockBoilerAdapterStep.
+/// Координатор PreExecution — оркестратор для управления циклом ввода и подготовки.
+/// Делегирует работу: ExecutionLoopManager (main loop), PreExecutionPipeline (подготовка),
+/// RetryCoordinator (повторы шагов).
 /// </summary>
-public partial class PreExecutionCoordinator(
-    PreExecutionSteps steps,
-    PreExecutionInfrastructure infra,
-    PreExecutionCoordinators coordinators,
-    PreExecutionState state)
+public class PreExecutionCoordinator
 {
-    // === Состояние ввода ===
-    private TaskCompletionSource<string>? _barcodeSource;
-    private CancellationTokenSource? _currentCts;
-    private CycleExitReason? _pendingExitReason;
-    private bool _skipNextScan;
-    private bool _executeFullPreparation;
-    private PreExecutionContext? _lastSuccessfulContext;
+    private readonly ExecutionLoopManager _loopManager;
+    private readonly PreExecutionPipeline _pipeline;
+    private readonly RetryCoordinator _retryCoordinator;
+    private readonly PreExecutionInfrastructure _infra;
+    private readonly PlcResetCoordinator _plcResetCoordinator;
+    private readonly IErrorCoordinator _errorCoordinator;
+    private bool _subscribed;
 
-    public bool IsAcceptingInput { get; private set; }
-    public bool IsProcessing => !IsAcceptingInput && state.ActivityTracker.IsPreExecutionActive;
-    public string? CurrentBarcode { get; private set; }
-    public event Action? OnStateChanged;
-
-    public void ClearBarcode()
+    public PreExecutionCoordinator(
+        ExecutionLoopManager loopManager,
+        PreExecutionPipeline pipeline,
+        RetryCoordinator retryCoordinator,
+        PreExecutionInfrastructure infra,
+        PlcResetCoordinator plcResetCoordinator,
+        IErrorCoordinator errorCoordinator)
     {
-        CurrentBarcode = null;
-        OnStateChanged?.Invoke();
-    }
-
-    private void ClearStateOnReset()
-    {
-        state.BoilerState.Clear();
-        state.PhaseState.Clear();
-        ClearBarcode();
-        infra.ErrorService.IsHistoryEnabled = false;
-        infra.StepTimingService.Clear();
-        infra.RecipeProvider.Clear();
-        _lastSuccessfulContext = null;
-
-        infra.Logger.LogInformation("Состояние очищено при сбросе");
+        _loopManager = loopManager;
+        _pipeline = pipeline;
+        _retryCoordinator = retryCoordinator;
+        _infra = infra;
+        _plcResetCoordinator = plcResetCoordinator;
+        _errorCoordinator = errorCoordinator;
     }
 
     /// <summary>
-    /// Очистка при завершении теста (OK/NOK).
-    /// Результаты и история ошибок НЕ чистятся — оператор должен их видеть.
+    /// Принимает ли система ввод штрихкода.
     /// </summary>
-    private void ClearForTestCompletion()
-    {
-        infra.StatusReporter.ClearAllExceptScan();
-        infra.StepTimingService.Clear();
-        infra.RecipeProvider.Clear();
-        state.BoilerState.Clear();
-        ClearBarcode();
-        infra.ErrorService.IsHistoryEnabled = false;
+    public bool IsAcceptingInput => _loopManager.IsAcceptingInput;
 
-        infra.Logger.LogInformation("Состояние очищено после завершения теста");
+    /// <summary>
+    /// Выполняется ли обработка (не принимает ввод, но PreExecution активен).
+    /// </summary>
+    public bool IsProcessing => _loopManager.IsProcessing;
+
+    /// <summary>
+    /// Текущий штрихкод.
+    /// </summary>
+    public string? CurrentBarcode => _loopManager.CurrentBarcode;
+
+    /// <summary>
+    /// Вызывается при изменении состояния.
+    /// </summary>
+    public event Action? OnStateChanged
+    {
+        add => _loopManager.OnStateChanged += value;
+        remove => _loopManager.OnStateChanged -= value;
     }
 
     /// <summary>
-    /// Очистка при начале нового теста.
-    /// Вызывается перед включением IsHistoryEnabled для очистки данных от предыдущего теста.
+    /// Запускает основной цикл PreExecution.
     /// </summary>
-    private void ClearForNewTestStart()
+    public Task StartMainLoopAsync(CancellationToken ct)
     {
-        infra.ErrorService.ClearHistory();
-        infra.TestResultsService.Clear();
-
-        infra.Logger.LogInformation("История и результаты очищены для нового теста");
+        EnsureSubscribed();
+        return _loopManager.StartMainLoopAsync(ct);
     }
 
-    private void ClearForRepeat()
-    {
-        infra.ErrorService.IsHistoryEnabled = false;
-
-        // Очистка UI
-        infra.StatusReporter.ClearAllExceptScan();
-        infra.StepTimingService.Clear();
-
-        // История и результаты чистятся в ClearForNewTestStart при запуске pipeline
-
-        // Сброс состояния TestExecutionCoordinator
-        coordinators.TestCoordinator.ResetForRepeat();
-
-        infra.Logger.LogInformation("Состояние очищено для повтора");
-    }
-
-    private void ClearForNokRepeat()
-    {
-        // Очистка состояния котла (но не CurrentBarcode!)
-        state.BoilerState.Clear();
-        state.PhaseState.Clear();
-        infra.ErrorService.IsHistoryEnabled = false;
-        _lastSuccessfulContext = null;
-
-        // Очистка UI
-        infra.StatusReporter.ClearAllExceptScan();
-        infra.StepTimingService.Clear();
-        infra.RecipeProvider.Clear();
-
-        // История и результаты чистятся в ClearForNewTestStart при запуске pipeline
-
-        // Сброс состояния TestExecutionCoordinator
-        coordinators.TestCoordinator.ResetForRepeat();
-
-        infra.Logger.LogInformation("Состояние очищено для NOK повтора с подготовкой");
-    }
-
+    /// <summary>
+    /// Отправляет штрихкод в систему.
+    /// </summary>
     public void SubmitBarcode(string barcode)
     {
-        _barcodeSource?.TrySetResult(barcode);
+        _loopManager.SubmitBarcode(barcode);
     }
 
-    private void SetAcceptingInput(bool value)
+    /// <summary>
+    /// Возвращает текущий ScanStep (зависит от MES-режима).
+    /// </summary>
+    public ScanStepBase GetScanStep() => _pipeline.GetScanStep();
+
+    /// <summary>
+    /// Очищает текущий штрихкод (для UI совместимости).
+    /// Фактически, barcode управляется через SystemLifecycleManager.
+    /// </summary>
+    public void ClearBarcode()
     {
-        IsAcceptingInput = value;
-        if (value)
-        {
-            infra.StepTimingService.ResetScanTiming();
-        }
-        OnStateChanged?.Invoke();
+        _loopManager.NotifyStateChanged();
     }
 
-    public ScanStepBase GetScanStep() => steps.GetScanStep();
+    #region Stop Signal Handling
+
+    private void EnsureSubscribed()
+    {
+        if (_subscribed)
+        {
+            return;
+        }
+        _subscribed = true;
+        SubscribeToStopSignals();
+    }
+
+    private void SubscribeToStopSignals()
+    {
+        _plcResetCoordinator.OnForceStop += HandleSoftStop;
+        _plcResetCoordinator.OnAskEndReceived += HandleGridClear;
+        _errorCoordinator.OnReset += HandleHardReset;
+    }
+
+    private void HandleStopSignal(PreExecutionResolution resolution)
+    {
+        var exitReason = resolution == PreExecutionResolution.SoftStop
+            ? CycleExitReason.SoftReset
+            : CycleExitReason.HardReset;
+
+        if (_loopManager.HasActiveOperation())
+        {
+            _loopManager.SetPendingExitReason(exitReason);
+        }
+        else
+        {
+            HandleInactiveExit(exitReason);
+        }
+        _retryCoordinator.SignalExternalResolution(resolution);
+    }
+
+    private void HandleInactiveExit(CycleExitReason exitReason)
+    {
+        if (exitReason == CycleExitReason.HardReset)
+        {
+            _pipeline.ClearStateOnReset();
+            _infra.StatusReporter.ClearAllExceptScan();
+        }
+    }
+
+    private void HandleGridClear()
+    {
+        _pipeline.ClearStateOnReset();
+        _infra.StatusReporter.ClearAllExceptScan();
+    }
+
+    private void HandleSoftStop() => HandleStopSignal(PreExecutionResolution.SoftStop);
+
+    private void HandleHardReset()
+    {
+        HandleStopSignal(PreExecutionResolution.HardReset);
+        _infra.StatusReporter.ClearAllExceptScan();
+    }
+
+    #endregion
 }

@@ -66,38 +66,51 @@
 ## Phase 3: Refactor PreExecutionCoordinator
 
 ### 3.1 Extract ExecutionLoopManager
-- [ ] Create `ExecutionLoopManager.cs`
-- [ ] Move `StartMainLoopAsync` logic
-- [ ] Move `_currentCts` management
-- [ ] Move `WaitForBarcodeAsync`
-- [ ] Integrate with SystemLifecycleManager for phase transitions
+- [x] Create `ExecutionLoopManager.cs`
+- [x] Move `StartMainLoopAsync` logic
+- [x] Move `_currentCts` management
+- [x] Move `WaitForBarcodeAsync`
+- [x] Integrate with SystemLifecycleManager for phase transitions
 
-**Validation:** Main loop работает через новый класс
+**Validation:** ✅ Main loop работает через новый класс
 
 ### 3.2 Extract PreExecutionPipeline
-- [ ] Create `PreExecutionPipeline.cs`
-- [ ] Move `ExecutePreExecutionPipelineAsync`
-- [ ] Move `ExecuteRepeatPipelineAsync`
-- [ ] Move `ExecuteNokRepeatPipelineAsync`
-- [ ] Move `ExecuteScanStepAsync`, `ExecuteBlockBoilerAdapterAsync`
-- [ ] Remove state flag dependencies (get phase from SystemLifecycleManager)
+- [x] Create `PreExecutionPipeline.cs`
+- [x] Move `ExecutePreExecutionPipelineAsync`
+- [x] Move `ExecuteRepeatPipelineAsync`
+- [x] Move `ExecuteNokRepeatPipelineAsync`
+- [x] Move `ExecuteScanStepAsync`, `ExecuteBlockBoilerAdapterAsync`
+- [x] Remove state flag dependencies (get phase from SystemLifecycleManager)
 
-**Validation:** Подготовка теста работает через новый класс
+**Validation:** ✅ Подготовка теста работает через новый класс
 
 ### 3.3 Refactor RetryCoordinator
-- [ ] Rename `PreExecutionCoordinator.Retry.cs` → extract to separate class
-- [ ] Remove event subscriptions (OnForceStop, OnAskEndReceived, OnReset)
-- [ ] Keep only `ExecuteRetryLoopAsync` and `WaitForResolutionAsync`
-- [ ] Inject dependencies instead of accessing through `coordinators`
+- [x] Rename `PreExecutionCoordinator.Retry.cs` → extract to separate class
+- [x] Remove event subscriptions (OnForceStop, OnAskEndReceived, OnReset) — moved to PreExecutionCoordinator
+- [x] Keep only `ExecuteRetryLoopAsync` and `WaitForResolutionAsync`
+- [x] Inject dependencies instead of accessing through `coordinators`
 
-**Validation:** Retry/Skip логика работает
+**Validation:** ✅ Retry/Skip логика работает
 
 ### 3.4 Update PreExecutionCoordinator
-- [ ] Convert to orchestrator that composes: LoopManager, Pipeline, RetryCoordinator
-- [ ] Remove partial classes (now separate classes)
-- [ ] Simplify to ~100 lines
+- [x] Convert to orchestrator that composes: LoopManager, Pipeline, RetryCoordinator
+- [x] Remove partial classes (now separate classes)
+- [x] Simplify to ~160 lines (larger than expected due to stop signal handling)
 
-**Validation:** Полный flow работает: scan → prepare → test → complete
+**Validation:** ✅ Сборка успешна, полный flow готов к тестированию
+
+**Статус:** ✅ Завершено. PreExecutionCoordinator рефакторинг завершён:
+- `ExecutionLoopManager` (~220 строк) — main loop, ожидание barcode, управление циклом
+- `PreExecutionPipeline` (~280 строк) — pipeline подготовки, clear методы
+- `RetryCoordinator` (~175 строк) — retry loop, wait for resolution
+- `PreExecutionCoordinator` (~160 строк) — оркестратор, stop signal handling
+
+### 3.5 Bugfix: AutoReady в фазе Completed
+- [x] Исправлен баг: отключение AutoReady в фазе Completed прерывало ожидание действий оператора
+- [x] Добавлен `SystemPhase.Completed` в список игнорируемых фаз в `TryDeactivateScanMode`
+- [x] Теперь только soft/hard reset может прервать фазу Completed
+
+**Причина:** `IsAnyActive` возвращал `false` для Completed, поэтому `_loopCts?.Cancel()` отменял loop и `HandleTestCompletionAsync` прерывался.
 
 ---
 

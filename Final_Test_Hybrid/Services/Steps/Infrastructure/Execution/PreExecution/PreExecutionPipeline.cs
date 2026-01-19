@@ -1,11 +1,108 @@
 using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Lifecycle;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Steps;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
-public partial class PreExecutionCoordinator
+/// <summary>
+/// Выполняет pipeline подготовки к тесту: ScanStep, BlockBoilerAdapterStep.
+/// Делегирует retry-логику в RetryCoordinator.
+/// </summary>
+public class PreExecutionPipeline(
+    PreExecutionSteps steps,
+    PreExecutionInfrastructure infra,
+    PreExecutionCoordinators coordinators,
+    PreExecutionState state,
+    RetryCoordinator retryCoordinator,
+    SystemLifecycleManager lifecycle,
+    DualLogger<PreExecutionPipeline> logger)
 {
+    private PreExecutionContext? _lastSuccessfulContext;
+
+    /// <summary>
+    /// Возвращает текущий ScanStep (зависит от MES-режима).
+    /// </summary>
+    public ScanStepBase GetScanStep() => steps.GetScanStep();
+
+    /// <summary>
+    /// Выполняет pipeline подготовки.
+    /// </summary>
+    public Task<PreExecutionResult> ExecutePipelineAsync(
+        string barcode,
+        bool isRepeat,
+        bool isNokRepeat,
+        CancellationToken ct)
+    {
+        return isNokRepeat
+            ? ExecuteNokRepeatPipelineAsync(barcode, ct)
+            : isRepeat
+                ? ExecuteRepeatPipelineAsync(ct)
+                : ExecutePreExecutionPipelineAsync(barcode, ct);
+    }
+
+    /// <summary>
+    /// Очистка при завершении теста (OK/NOK).
+    /// Результаты и история ошибок НЕ чистятся — оператор должен их видеть.
+    /// </summary>
+    public void ClearForTestCompletion()
+    {
+        infra.StatusReporter.ClearAllExceptScan();
+        infra.StepTimingService.Clear();
+        infra.RecipeProvider.Clear();
+        state.BoilerState.Clear();
+        infra.ErrorService.IsHistoryEnabled = false;
+
+        logger.LogInformation("Состояние очищено после завершения теста");
+    }
+
+    /// <summary>
+    /// Очистка при сбросе PLC.
+    /// </summary>
+    public void ClearStateOnReset()
+    {
+        state.BoilerState.Clear();
+        state.PhaseState.Clear();
+        infra.ErrorService.IsHistoryEnabled = false;
+        infra.StepTimingService.Clear();
+        infra.RecipeProvider.Clear();
+        _lastSuccessfulContext = null;
+
+        logger.LogInformation("Состояние очищено при сбросе");
+    }
+
+    /// <summary>
+    /// Очистка для OK-повтора.
+    /// </summary>
+    public void ClearForRepeat()
+    {
+        infra.ErrorService.IsHistoryEnabled = false;
+        infra.StatusReporter.ClearAllExceptScan();
+        infra.StepTimingService.Clear();
+        coordinators.TestCoordinator.ResetForRepeat();
+
+        logger.LogInformation("Состояние очищено для повтора");
+    }
+
+    /// <summary>
+    /// Очистка для NOK-повтора с полной подготовкой.
+    /// </summary>
+    public void ClearForNokRepeat()
+    {
+        state.BoilerState.Clear();
+        state.PhaseState.Clear();
+        infra.ErrorService.IsHistoryEnabled = false;
+        _lastSuccessfulContext = null;
+
+        infra.StatusReporter.ClearAllExceptScan();
+        infra.StepTimingService.Clear();
+        infra.RecipeProvider.Clear();
+        coordinators.TestCoordinator.ResetForRepeat();
+
+        logger.LogInformation("Состояние очищено для NOK повтора с подготовкой");
+    }
+
     private async Task<PreExecutionResult> ExecutePreExecutionPipelineAsync(
         string barcode,
         CancellationToken ct)
@@ -31,13 +128,9 @@ public partial class PreExecutionCoordinator
             scanResult.SuccessMessage ?? "",
             scanResult.Limits);
 
-        // Сохраняем context после успешного ScanStep (для повтора)
         _lastSuccessfulContext = context;
-
-        // Очистить данные от предыдущего теста перед включением истории
         ClearForNewTestStart();
 
-        // Включаем после успешного сканирования
         infra.ErrorService.IsHistoryEnabled = true;
         state.BoilerState.SetTestRunning(true);
         state.BoilerState.StartTestTimer();
@@ -53,10 +146,11 @@ public partial class PreExecutionCoordinator
         var blockResult = await ExecuteBlockBoilerAdapterAsync(context, ct);
         if (blockResult.Status != PreExecutionStatus.Continue)
         {
-            return HandleNonContinueResult(blockResult);
+            return blockResult;
         }
 
         state.PhaseState.Clear();
+        lifecycle.Transition(SystemTrigger.PreparationCompleted);
         StartTestExecution(context);
         return PreExecutionResult.TestStarted();
     }
@@ -66,15 +160,12 @@ public partial class PreExecutionCoordinator
         var context = _lastSuccessfulContext;
         if (context?.Maps == null)
         {
-            infra.Logger.LogError("Нет сохранённого контекста для повтора");
+            logger.LogError("Нет сохранённого контекста для повтора");
             return PreExecutionResult.Fail("Нет данных для повтора");
         }
 
-        // Пропускаем ScanStep - данные уже загружены
-        // Очистить данные от предыдущего теста перед включением истории
         ClearForNewTestStart();
 
-        // Включаем флаги для теста
         infra.ErrorService.IsHistoryEnabled = true;
         state.BoilerState.SetTestRunning(true);
         state.BoilerState.StartTestTimer();
@@ -90,50 +181,38 @@ public partial class PreExecutionCoordinator
         var blockResult = await ExecuteBlockBoilerAdapterAsync(context, ct);
         if (blockResult.Status != PreExecutionStatus.Continue)
         {
-            return HandleNonContinueResult(blockResult);
+            return blockResult;
         }
 
         state.PhaseState.Clear();
+        lifecycle.Transition(SystemTrigger.PreparationCompleted);
         StartTestExecution(context);
         return PreExecutionResult.TestStarted();
     }
 
-    private async Task<PreExecutionResult> ExecuteNokRepeatPipelineAsync(CancellationToken ct)
+    private async Task<PreExecutionResult> ExecuteNokRepeatPipelineAsync(string barcode, CancellationToken ct)
     {
-        if (CurrentBarcode == null)
-        {
-            infra.Logger.LogError("NOK повтор: CurrentBarcode is null");
-            return PreExecutionResult.Fail("Отсутствует штрихкод для повтора");
-        }
-
-        infra.Logger.LogInformation("NOK повтор: запуск полной подготовки с barcode={Barcode}", CurrentBarcode);
+        logger.LogInformation("NOK повтор: запуск полной подготовки с barcode={Barcode}", barcode);
 
         while (!ct.IsCancellationRequested)
         {
-            // Выполнить полный pipeline с сохранённым штрихкодом
-            var result = await ExecutePreExecutionPipelineAsync(CurrentBarcode, ct);
+            var result = await ExecutePreExecutionPipelineAsync(barcode, ct);
 
             if (result.Status == PreExecutionStatus.TestStarted || result.Status == PreExecutionStatus.Cancelled)
             {
                 return result;
             }
 
-            // Показать диалог ошибки подготовки
-            var shouldRetry = await ShowPrepareErrorDialogAsync(result.ErrorMessage);
+            var shouldRetry = await coordinators.CompletionCoordinator.ShowPrepareErrorDialogAsync(result.ErrorMessage);
             if (!shouldRetry)
             {
                 return PreExecutionResult.Cancelled();
             }
 
-            infra.Logger.LogInformation("NOK повтор: повторная попытка подготовки");
+            logger.LogInformation("NOK повтор: повторная попытка подготовки");
         }
 
         return PreExecutionResult.Cancelled();
-    }
-
-    private Task<bool> ShowPrepareErrorDialogAsync(string? errorMessage)
-    {
-        return coordinators.CompletionCoordinator.ShowPrepareErrorDialogAsync(errorMessage);
     }
 
     private async Task<PreExecutionResult> ExecuteScanStepAsync(PreExecutionContext context, CancellationToken ct)
@@ -171,7 +250,7 @@ public partial class PreExecutionCoordinator
         }
         catch (Exception ex)
         {
-            infra.Logger.LogError(ex, "Ошибка в шаге StartTimer1");
+            logger.LogError(ex, "Ошибка в шаге StartTimer1");
             infra.StatusReporter.ReportError(stepId, ex.Message);
             return PreExecutionResult.Fail(ex.Message);
         }
@@ -189,7 +268,8 @@ public partial class PreExecutionCoordinator
 
             if (result.IsRetryable)
             {
-                var retryResult = await ExecuteRetryLoopAsync(steps.BlockBoilerAdapter, result, context, stepId, ct);
+                var retryResult = await retryCoordinator.ExecuteRetryLoopAsync(
+                    steps.BlockBoilerAdapter, result, context, stepId, ct);
                 ReportBlockStepResult(stepId, retryResult);
                 return retryResult;
             }
@@ -209,10 +289,11 @@ public partial class PreExecutionCoordinator
         }
     }
 
-    private static PreExecutionResult HandleNonContinueResult(PreExecutionResult result)
+    private void ClearForNewTestStart()
     {
-        // UserMessage теперь обрабатывается через ErrorService/NotificationService
-        return result;
+        infra.ErrorService.ClearHistory();
+        infra.TestResultsService.Clear();
+        logger.LogInformation("История и результаты очищены для нового теста");
     }
 
     private void ReportBlockStepResult(Guid stepId, PreExecutionResult result)
@@ -223,7 +304,6 @@ public partial class PreExecutionCoordinator
                 infra.StatusReporter.ReportSuccess(stepId, result.SuccessMessage ?? "", result.Limits);
                 break;
             case PreExecutionStatus.Cancelled:
-                // Не меняем статус - шаг остаётся с тем статусом, который был
                 break;
             case PreExecutionStatus.TestStarted:
                 break;
@@ -237,14 +317,14 @@ public partial class PreExecutionCoordinator
 
     private PreExecutionResult HandleStepException(ScanStepBase step, Exception ex)
     {
-        infra.Logger.LogError(ex, "Ошибка в шаге {StepId}", step.Id);
+        logger.LogError(ex, "Ошибка в шаге {StepId}", step.Id);
         infra.TestStepLogger.LogError(ex, "Ошибка в шаге {StepId}", step.Id);
         return PreExecutionResult.Fail(ex.Message);
     }
 
     private PreExecutionResult HandleStepException(BlockBoilerAdapterStep step, Guid stepId, Exception ex)
     {
-        infra.Logger.LogError(ex, "Ошибка в шаге {StepId}", step.Id);
+        logger.LogError(ex, "Ошибка в шаге {StepId}", step.Id);
         infra.TestStepLogger.LogError(ex, "Ошибка в шаге {StepId}", step.Id);
         infra.StatusReporter.ReportError(stepId, ex.Message);
         return PreExecutionResult.Fail(ex.Message);
@@ -252,7 +332,10 @@ public partial class PreExecutionCoordinator
 
     private void StartTestExecution(PreExecutionContext context)
     {
-        LogTestExecutionStart(context);
+        var mapCount = context.Maps?.Count ?? 0;
+        logger.LogInformation("Запуск TestExecutionCoordinator с {Count} maps", mapCount);
+        infra.TestStepLogger.LogInformation("Запуск TestExecutionCoordinator с {Count} maps", mapCount);
+
         coordinators.TestCoordinator.SetMaps(context.Maps!);
         _ = StartTestWithErrorHandlingAsync();
     }
@@ -265,16 +348,9 @@ public partial class PreExecutionCoordinator
         }
         catch (Exception ex)
         {
-            infra.Logger.LogError(ex, "Ошибка запуска теста");
+            logger.LogError(ex, "Ошибка запуска теста");
             infra.TestStepLogger.LogError(ex, "Ошибка запуска теста");
         }
-    }
-
-    private void LogTestExecutionStart(PreExecutionContext context)
-    {
-        var mapCount = context.Maps?.Count ?? 0;
-        infra.Logger.LogInformation("Запуск TestExecutionCoordinator с {Count} maps", mapCount);
-        infra.TestStepLogger.LogInformation("Запуск TestExecutionCoordinator с {Count} maps", mapCount);
     }
 
     private PreExecutionContext CreateContext(string barcode)

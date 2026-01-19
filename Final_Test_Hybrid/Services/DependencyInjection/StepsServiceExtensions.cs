@@ -140,6 +140,11 @@ public static class StepsServiceExtensions
         services.AddSingleton<PreExecutionInfrastructure>();
         services.AddSingleton<PreExecutionCoordinators>();
         services.AddSingleton<PreExecutionState>();
+
+        // Pre-execution coordinators (refactored architecture)
+        services.AddSingleton<RetryCoordinator>();
+        services.AddSingleton<PreExecutionPipeline>();
+        services.AddSingleton<ExecutionLoopManager>();
         services.AddSingleton<PreExecutionCoordinator>();
 
         return services;
