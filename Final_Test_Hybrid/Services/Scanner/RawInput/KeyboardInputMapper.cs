@@ -40,15 +40,18 @@ public sealed class KeyboardInputMapper
     private static bool IsDigit(ushort vKey) => vKey is >= 0x30 and <= 0x39;
     private static bool IsLetter(ushort vKey) => vKey is >= 0x41 and <= 0x5A;
 
-    private static char? MapSpecialKey(ushort vKey)
+    /// <summary>
+    /// Маппит OEM клавиши на символы с учётом состояния Shift.
+    /// </summary>
+    private char? MapSpecialKey(ushort vKey)
     {
         return vKey switch
         {
-            0xBD => '-',
-            0xBB => '+',
-            0xBC => ',',
-            0xBE => '.',
-            0xBF => '/',
+            0xBD => _shiftPressed ? '_' : '-',
+            0xBB => _shiftPressed ? '+' : '=',
+            0xBC => _shiftPressed ? '<' : ',',
+            0xBE => _shiftPressed ? '>' : '.',
+            0xBF => _shiftPressed ? '?' : '/',
             0x20 => ' ',
             _ => null
         };

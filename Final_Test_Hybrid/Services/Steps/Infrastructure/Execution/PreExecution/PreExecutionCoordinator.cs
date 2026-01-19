@@ -53,7 +53,11 @@ public partial class PreExecutionCoordinator(
         state.PhaseState.Clear();
         ClearBarcode();
         infra.ErrorService.IsHistoryEnabled = false;
+        infra.StepTimingService.Clear();
+        infra.RecipeProvider.Clear();
         _lastSuccessfulContext = null;
+
+        infra.Logger.LogInformation("Состояние очищено при сбросе");
     }
 
     /// <summary>
@@ -111,6 +115,7 @@ public partial class PreExecutionCoordinator(
         // Очистка UI
         infra.StatusReporter.ClearAllExceptScan();
         infra.StepTimingService.Clear();
+        infra.RecipeProvider.Clear();
 
         // История и результаты чистятся в ClearForNewTestStart при запуске pipeline
 

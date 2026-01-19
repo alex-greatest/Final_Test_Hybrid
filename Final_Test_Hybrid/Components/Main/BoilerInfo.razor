@@ -97,7 +97,6 @@
         TestCoordinator.OnErrorOccurred += HandleTestErrorOccurred;
         CompletionCoordinator.OnSaveErrorDialogRequested += HandleSaveErrorDialogAsync;
         CompletionCoordinator.OnPrepareErrorDialogRequested += HandlePrepareErrorDialogAsync;
-        CompletionCoordinator.OnReworkDialogRequested += HandleReworkForNokRepeatAsync;
     }
 
     private void CloseDialogs()
@@ -356,11 +355,6 @@
         return await tcs.Task;
     }
 
-    private Task<ReworkFlowResult> HandleReworkForNokRepeatAsync(string message)
-    {
-        return ReworkDialogService.ExecuteReworkFlowAsync(message);
-    }
-
     public void Dispose()
     {
         _disposed = true;
@@ -383,6 +377,5 @@
         TestCoordinator.OnErrorOccurred -= HandleTestErrorOccurred;
         CompletionCoordinator.OnSaveErrorDialogRequested -= HandleSaveErrorDialogAsync;
         CompletionCoordinator.OnPrepareErrorDialogRequested -= HandlePrepareErrorDialogAsync;
-        CompletionCoordinator.OnReworkDialogRequested -= HandleReworkForNokRepeatAsync;
     }
 }

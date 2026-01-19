@@ -2,85 +2,46 @@
 
 ## Overview
 
-Управление режимом сканирования штрихкодов. Режим активируется когда оператор авторизован и система в AutoReady. Координирует сессию сканера, main loop и обработку сброса PLC.
+Управление режимом сканирования штрихкодов с явным state machine.
 
 ## ADDED Requirements
 
-### Requirement: Explicit State Machine
+### Requirement: Explicit Phase Enum
 
-Система SHALL использовать явный state machine для управления фазами режима сканирования.
+Система SHALL использовать enum для состояний режима сканирования.
 
-#### Scenario: Три фазы состояния
-- **WHEN** система инициализируется
-- **THEN** доступны три фазы: `Idle`, `Active`, `Resetting`
-- **AND** начальная фаза — `Idle`
+#### Scenario: Три фазы
+- **WHEN** система работает
+- **THEN** доступны только три фазы: `Idle`, `Active`, `Resetting`
+- **AND** невозможны другие комбинации состояний
 
 #### Scenario: Переход Idle → Active
-- **WHEN** оператор авторизован
-- **AND** система в AutoReady
-- **AND** текущая фаза `Idle`
-- **THEN** система переходит в фазу `Active`
-- **AND** сканер активируется
-
-#### Scenario: Переход Active → Idle
-- **WHEN** оператор разлогинился ИЛИ AutoReady отключен
-- **AND** нет активного теста (`!IsAnyActive`)
-- **AND** текущая фаза `Active`
-- **THEN** система переходит в фазу `Idle`
-- **AND** main loop останавливается
+- **WHEN** оператор авторизован И AutoReady
+- **THEN** фаза становится `Active`
 
 #### Scenario: Переход Active → Resetting
 - **WHEN** получен сигнал сброса PLC
-- **AND** текущая фаза `Active`
-- **THEN** система переходит в фазу `Resetting`
-- **AND** сканер деактивируется
+- **AND** фаза `Active`
+- **THEN** фаза становится `Resetting`
 - **AND** возвращается `wasInScanPhase = true`
 
-#### Scenario: Переход Resetting → Active
-- **WHEN** сброс PLC завершён
-- **AND** условия активации выполнены (оператор + AutoReady)
-- **THEN** система переходит в фазу `Active`
-- **AND** сканер реактивируется
-- **AND** timing сбрасывается
+#### Scenario: Переход Resetting → Active/Idle
+- **WHEN** сброс завершён
+- **THEN** фаза становится `Active` (если условия выполнены) или `Idle`
 
-#### Scenario: Переход Resetting → Idle
-- **WHEN** сброс PLC завершён
-- **AND** условия активации НЕ выполнены
-- **THEN** система переходит в фазу `Idle`
-- **AND** main loop останавливается
+### Requirement: CTS Lifecycle
 
-### Requirement: Phase Change Notifications
+Система SHALL корректно управлять CancellationTokenSource.
 
-Система SHALL уведомлять подписчиков об изменении фазы.
+#### Scenario: Dispose при замене
+- **WHEN** создаётся новый CTS
+- **THEN** старый CTS SHALL быть Cancel() и Dispose()
 
-#### Scenario: Событие OnPhaseChanged
-- **WHEN** фаза изменяется
-- **THEN** вызывается событие с предыдущей и новой фазой
-- **AND** подписчики могут реагировать на переход
+### Requirement: Thread-safe Dispose
 
-### Requirement: Thread-Safe State Transitions
+Система SHALL обеспечивать потокобезопасный Dispose.
 
-Система SHALL обеспечивать потокобезопасность переходов состояний.
-
-#### Scenario: Конкурентные переходы
-- **WHEN** несколько потоков пытаются изменить состояние
-- **THEN** только один переход выполняется
-- **AND** остальные возвращают `false` без блокировки
-
-### Requirement: Soft Deactivation During Activity
-
-Система SHALL поддерживать мягкую деактивацию при активном тесте.
-
-#### Scenario: AutoMode отключен во время теста
-- **WHEN** AutoReady отключается
-- **AND** тест выполняется (`IsAnyActive = true`)
-- **THEN** сканер деактивируется (soft)
-- **AND** timing приостанавливается
-- **AND** фаза остаётся `Active`
-- **AND** main loop продолжает работу
-
-#### Scenario: Возврат AutoMode во время теста
-- **WHEN** AutoReady возвращается
-- **AND** фаза `Active`
-- **THEN** сканер реактивируется
-- **AND** timing возобновляется
+#### Scenario: Concurrent Dispose
+- **WHEN** Dispose вызывается из нескольких потоков
+- **THEN** только один вызов выполняется
+- **AND** нет race condition на _loopCts

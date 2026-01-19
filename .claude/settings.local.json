@@ -63,7 +63,8 @@
       "Bash(openspec archive split-error-coordinator:*)",
       "Bash(openspec --help:*)",
       "Bash(openspec.cmd archive split-error-coordinator:*)",
-      "Bash(openspec.cmd validate:*)"
+      "Bash(openspec.cmd validate:*)",
+      "Bash(openspec archive:*)"
     ]
   }
 }

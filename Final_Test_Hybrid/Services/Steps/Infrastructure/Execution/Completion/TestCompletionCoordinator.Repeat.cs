@@ -4,9 +4,13 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 
 public partial class TestCompletionCoordinator
 {
+    /// <summary>
+    /// Обрабатывает NOK повтор: сохраняет результат и сигнализирует PLC.
+    /// ReworkDialog будет показан в ScanBarcodeMesStep, если MES потребует.
+    /// </summary>
     private async Task<CompletionResult> HandleNokRepeatAsync(CancellationToken ct)
     {
-        logger.LogInformation("NOK повтор: начало процесса сохранения и подготовки");
+        logger.LogInformation("NOK повтор: начало процесса сохранения");
 
         // 1. Сохранить NOK результат
         var saved = await TrySaveWithRetryAsync(2, ct);
@@ -16,30 +20,10 @@ public partial class TestCompletionCoordinator
             return CompletionResult.Cancelled;
         }
 
-        // 2. ReworkDialog (только MES)
-        if (deps.AppSettings.UseMes)
-        {
-            var handler = OnReworkDialogRequested;
-            if (handler == null)
-            {
-                logger.LogWarning("NOK повтор: нет подписчика на OnReworkDialogRequested");
-                return CompletionResult.Cancelled;
-            }
-
-            logger.LogInformation("NOK повтор: запуск ReworkDialog");
-            var reworkResult = await handler("NOK результат - требуется доработка");
-
-            if (!reworkResult.IsSuccess)
-            {
-                logger.LogWarning("NOK повтор: ReworkDialog отменён");
-                return CompletionResult.Cancelled;
-            }
-            logger.LogInformation("NOK повтор: ReworkDialog завершён успешно");
-        }
-
-        // 3. AskRepeat = true (PLC сбросит Req_Repeat)
+        // 2. AskRepeat = true (PLC сбросит Req_Repeat)
+        // ReworkDialog будет показан в ScanBarcodeMesStep если MES потребует
         await deps.PlcService.WriteAsync(BaseTags.AskRepeat, true, ct);
-        logger.LogInformation("NOK повтор: AskRepeat = true записан, возврат к подготовке");
+        logger.LogInformation("NOK повтор: AskRepeat = true, переход к подготовке");
 
         return CompletionResult.NokRepeatRequested;
     }

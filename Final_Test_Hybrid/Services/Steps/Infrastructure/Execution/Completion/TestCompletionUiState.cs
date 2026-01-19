@@ -1,15 +1,33 @@
+using Final_Test_Hybrid.Services.Main.PlcReset;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
+
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 
 /// <summary>
 /// Состояние UI для отображения изображения результата теста.
 /// Используется в MyComponent.razor для переключения между grid и картинкой.
+/// Подписывается на события сброса для скрытия изображения.
 /// </summary>
 public class TestCompletionUiState
 {
     private readonly Lock _lock = new();
+    private readonly PlcResetCoordinator _plcResetCoordinator;
+    private readonly IErrorCoordinator _errorCoordinator;
 
     private bool _showResultImage;
     private int _testResult;
+
+    public TestCompletionUiState(
+        PlcResetCoordinator plcResetCoordinator,
+        IErrorCoordinator errorCoordinator)
+    {
+        _plcResetCoordinator = plcResetCoordinator;
+        _errorCoordinator = errorCoordinator;
+
+        // Подписка на сбросы — скрыть изображение при любом сбросе
+        _plcResetCoordinator.OnForceStop += HideImage;
+        _errorCoordinator.OnReset += HideImage;
+    }
 
     /// <summary>
     /// Показывать ли изображение результата вместо грида.
