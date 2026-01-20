@@ -107,6 +107,96 @@
 - Система отслеживает стабильность значений в пределах Tolerance
 - Поддержка режима повторов (Retry) при сбоях
 
+## Architecture
+
+```
+Program.cs → Form1.cs (DI) → BlazorWebView → Radzen UI
+
+Excel → TestMapBuilder → TestMapResolver → TestMap
+                                            ↓
+                          TestExecutionCoordinator
+                          ├── 4 × ColumnExecutor (parallel)
+                          ├── ExecutionStateManager
+                          └── ErrorCoordinator
+```
+
+### Step Execution Flow
+
+```
+[Barcode] → PreExecutionCoordinator → TestExecutionCoordinator → [OK/NOK]
+                    │                           │
+            ScanStep (10 steps)         4 × ColumnExecutor
+            BlockBoilerAdapterStep      ExecuteMapOnAllColumns
+                    │                           │
+            StartTestExecution()        OnSequenceCompleted
+            TryStartInBackground()→bool         │
+                    │                   HandleTestCompleted()
+            false → RollbackTestStart()
+                    PipelineFailed
+```
+
+## Key Services & Coordinators
+
+### Coordinators
+
+| Сервис | Назначение |
+|--------|------------|
+| `TestExecutionCoordinator` | Основной координатор выполнения тестов |
+| `PreExecutionCoordinator` | Фаза подготовки (сканирование, блокировка адаптера) |
+| `ErrorCoordinator` | Обработка прерываний и ошибок |
+| `PlcResetCoordinator` | Обработка сброса PLC (мягкий/жёсткий) |
+
+### State Management
+
+| Сервис | Назначение |
+|--------|------------|
+| `ExecutionStateManager` | Состояние выполнения теста |
+| `ExecutionActivityTracker` | Отслеживание активности (pre-execution/test execution) |
+| `BoilerState` | Состояние котла |
+| `StepTimingService` | Таймеры для UI (scan, columns) |
+
+### Pausable vs Non-Pausable Services
+
+| Контекст | Сервис |
+|----------|--------|
+| Тестовые шаги | `PausableOpcUaTagService`, `PausableTagWaiter` |
+| Системные операции | `OpcUaTagService`, `TagWaiter` |
+
+## OPC-UA Layer
+
+| Сервис | Назначение |
+|--------|------------|
+| `OpcUaConnectionService` | Session, auto-reconnect |
+| `OpcUaSubscription` | Pub/sub, callbacks |
+| `OpcUaTagService` | Read/write (`ReadResult<T>`, `WriteResult`) |
+| `TagWaiter` | Multi-tag conditions |
+
+## DI Patterns
+
+| Паттерн | Пример |
+|---------|--------|
+| Extension chain | `AddFinalTestServices()` → `AddOpcUaServices()` |
+| Singleton state | `ExecutionStateManager`, `BoilerState` |
+| Pausable decorator | `PausableOpcUaTagService` wraps `OpcUaTagService` |
+| DbContextFactory | `AddDbContextFactory<AppDbContext>()` |
+
+## Test Step Interfaces
+
+```
+ITestStep ← IRequiresPlcSubscriptions, IRequiresRecipes, IHasPlcBlock
+IScanBarcodeStep, IPreExecutionStep (отдельные)
+```
+
+## File Locations
+
+| Category | Path |
+|----------|------|
+| Entry | `Program.cs`, `Form1.cs` |
+| Components | `Components/{Engineer,Main,Overview}/` |
+| Services | `Services/{OpcUa,Steps,Database}/` |
+| Models | `Models/{Steps,Errors,Database}/` |
+| Guides | `*.Guide.md` в корне проекта |
+
 ## Important Constraints
 - Приложение работает на Windows (WinForms)
 - Требуется подключение к OPC-UA серверу для работы с оборудованием
@@ -117,3 +207,38 @@
 - **OPC-UA Server** - связь с ПЛК и промышленными контроллерами
 - **PostgreSQL Database** - хранение рецептов, результатов тестов, истории
 - **Modbus** (опционально) - альтернативный протокол связи с оборудованием
+
+## Safety Patterns
+
+### Hang Protection
+
+| Сценарий | Защита |
+|----------|--------|
+| Пустые Maps | `StartTestExecution()→false` + `RollbackTestStart()` → `PipelineFailed` |
+| Двойной старт | `TryStartInBackground()→false`, состояние не меняется |
+| Исключение в `OnSequenceCompleted` | `InvokeSequenceCompletedSafely()` — логирует, cleanup выполняется |
+
+### TOCTOU Prevention
+
+Захватывать поле в локальную переменную перед `await` или в event handler:
+```csharp
+var step = _state.FailedStep;  // Захват
+if (step != null) { await ExecuteStepCoreAsync(step, ct); }
+```
+
+### CancellationToken Sync
+
+| Событие | Отменить |
+|---------|----------|
+| Reset + AutoMode OFF | `_loopCts`, `_currentCts` |
+| ForceStop | `_currentCts`, `_cts` |
+| Logout | `_loopCts` |
+
+## Accepted Patterns (NOT bugs)
+
+| Паттерн | Почему OK |
+|---------|-----------|
+| `ExecutionStateManager.State` без Lock | Atomic enum, stale read OK для UI |
+| `?.TrySetResult()` без синхронизации | Идемпотентна |
+| Fire-and-forget в singleton | `.ContinueWith` или внутренний try-catch |
+| `TryStartInBackground()` | Исключения в `RunWithErrorHandlingAsync` |

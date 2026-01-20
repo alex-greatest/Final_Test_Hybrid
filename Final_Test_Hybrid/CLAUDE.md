@@ -89,6 +89,14 @@ public class MyService(DualLogger<MyService> logger)
 
 **История:** при включении — копирует активные ошибки; при выключении — закрывает открытые записи.
 
+### StepTiming ([StepTimingGuide.md](StepTimingGuide.md))
+
+| Метод | Поведение |
+|-------|-----------|
+| `ResetScanTiming()` | Сбрасывает только если `IsRunning=false`. При ошибке scan step таймер продолжает тикать |
+| `StopScanTiming()` | Ставит на паузу (`IsRunning=false`) |
+| `ClearScanTiming()` | Полная очистка |
+
 ### Retry/Skip ([RetrySkipGuide.md](RetrySkipGuide.md))
 
 | Действие | PLC → PC | PC → PLC |
