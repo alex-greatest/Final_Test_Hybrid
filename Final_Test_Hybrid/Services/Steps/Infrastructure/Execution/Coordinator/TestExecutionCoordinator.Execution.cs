@@ -12,18 +12,17 @@ public partial class TestExecutionCoordinator
         {
             return;
         }
-        try
+        await RunWithErrorHandlingAsync();
+    }
+
+    public bool TryStartInBackground()
+    {
+        if (!TryStart())
         {
-            await RunAllMaps();
+            return false;
         }
-        catch (Exception ex)
-        {
-            LogUnhandledException(ex);
-        }
-        finally
-        {
-            Complete();
-        }
+        _ = RunWithErrorHandlingAsync();
+        return true;
     }
 
     private void LogUnhandledException(Exception ex)
@@ -42,6 +41,22 @@ public partial class TestExecutionCoordinator
             }
             BeginExecution();
             return true;
+        }
+    }
+
+    private async Task RunWithErrorHandlingAsync()
+    {
+        try
+        {
+            await RunAllMaps();
+        }
+        catch (Exception ex)
+        {
+            LogUnhandledException(ex);
+        }
+        finally
+        {
+            Complete();
         }
     }
 
@@ -120,11 +135,23 @@ public partial class TestExecutionCoordinator
         }
     }
 
-    private async Task ExecuteMapOnAllColumns(TestMap map, CancellationToken token)
+    private Task ExecuteMapOnAllColumns(TestMap map, CancellationToken token)
+    {
+        var errorChannel = StartErrorSignalChannel();
+        var errorLoopTask = RunErrorHandlingLoopAsync(errorChannel.Reader, token);
+        var executionTask = RunExecutorsAsync(map, token);
+        var completionTask = executionTask.ContinueWith(
+            _ => CompleteErrorSignalChannel(),
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+        return Task.WhenAll(executionTask, errorLoopTask, completionTask);
+    }
+
+    private Task RunExecutorsAsync(TestMap map, CancellationToken token)
     {
         var executionTasks = _executors.Select(executor => executor.ExecuteMapAsync(map, token));
-        await Task.WhenAll(executionTasks);
-        await HandleErrorsIfAny();
+        return Task.WhenAll(executionTasks);
     }
 
     private void Complete()
@@ -136,11 +163,26 @@ public partial class TestExecutionCoordinator
         _activityTracker.SetTestExecutionActive(false);
         _errorService.ClearActiveApplicationErrors();
         LogExecutionCompleted(isSuccessful, flowSnapshot);
-        OnSequenceCompleted?.Invoke();
+        InvokeSequenceCompletedSafely();
         lock (_stateLock)
         {
             _cts?.Dispose();
             _cts = null;
+        }
+    }
+
+    /// <summary>
+    /// Безопасно вызывает OnSequenceCompleted с перехватом исключений из обработчиков.
+    /// </summary>
+    private void InvokeSequenceCompletedSafely()
+    {
+        try
+        {
+            OnSequenceCompleted?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка в обработчике OnSequenceCompleted");
         }
     }
 

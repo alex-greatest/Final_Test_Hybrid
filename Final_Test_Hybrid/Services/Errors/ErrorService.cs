@@ -50,6 +50,10 @@ public sealed class ErrorService : IErrorService
             {
                 AddActiveErrorsToHistory();
             }
+            else
+            {
+                CloseAllOpenHistoryRecords();
+            }
         }
     }
 
@@ -288,6 +292,31 @@ public sealed class ErrorService : IErrorService
                 _history[i] = _history[i] with { EndTime = DateTime.Now };
                 return;
             }
+        }
+    }
+
+    /// <summary>
+    /// Закрывает все открытые записи в истории (устанавливает EndTime).
+    /// </summary>
+    private void CloseAllOpenHistoryRecords()
+    {
+        var now = DateTime.Now;
+        bool hasChanges;
+        lock (_errorsLock)
+        {
+            hasChanges = false;
+            for (var i = 0; i < _history.Count; i++)
+            {
+                if (_history[i].EndTime == null)
+                {
+                    _history[i] = _history[i] with { EndTime = now };
+                    hasChanges = true;
+                }
+            }
+        }
+        if (hasChanges)
+        {
+            OnHistoryChanged?.Invoke();
         }
     }
 

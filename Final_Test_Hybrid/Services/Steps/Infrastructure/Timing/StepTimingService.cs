@@ -128,7 +128,7 @@ public partial class StepTimingService : IStepTimingService, IDisposable
         }
     }
 
-    private bool PauseAllActiveUnsafe()
+    private bool PauseAllActiveLocked()
     {
         var hadRunning = false;
         if (_scanState.IsRunning)
@@ -153,7 +153,7 @@ public partial class StepTimingService : IStepTimingService, IDisposable
         return hadRunning;
     }
 
-    private bool ResumeAllActiveUnsafe()
+    private bool ResumeAllActiveLocked()
     {
         var hadResumed = false;
         if (_scanPausedByGlobalPauseId.HasValue)

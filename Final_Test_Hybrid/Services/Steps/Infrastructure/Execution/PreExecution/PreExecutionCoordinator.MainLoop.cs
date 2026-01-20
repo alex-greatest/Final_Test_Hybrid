@@ -187,6 +187,7 @@ public partial class PreExecutionCoordinator
             return stopExitReason;
         }
 
+        infra.ErrorService.IsHistoryEnabled = false;
         state.BoilerState.StopTestTimer();
         var hasErrors = coordinators.TestCoordinator.HasErrors
                         || coordinators.TestCoordinator.HadSkippedError;

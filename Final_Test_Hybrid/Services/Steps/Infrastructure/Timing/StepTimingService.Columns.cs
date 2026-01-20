@@ -40,7 +40,7 @@ public partial class StepTimingService
         bool hadChanges;
         lock (_lock)
         {
-            hadChanges = PauseAllActiveUnsafe();
+            hadChanges = PauseAllActiveLocked();
         }
         UpdateTimerState();
         if (hadChanges)
@@ -54,7 +54,7 @@ public partial class StepTimingService
         bool hadChanges;
         lock (_lock)
         {
-            hadChanges = ResumeAllActiveUnsafe();
+            hadChanges = ResumeAllActiveLocked();
         }
         UpdateTimerState();
         if (hadChanges)

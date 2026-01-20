@@ -229,6 +229,7 @@ public static IReadOnlyList<ErrorDefinition> All => [
 | Момент | Действие | Где |
 |--------|----------|-----|
 | После успешного ScanStep | `IsHistoryEnabled = true` | `PreExecutionCoordinator.Pipeline` |
+| При завершении теста (OK/NOK) | `IsHistoryEnabled = false` | `PreExecutionCoordinator.HandleTestCompletionAsync` |
 | При сбросе PLC (любой) | `IsHistoryEnabled = false` | `PreExecutionCoordinator.ClearStateOnReset` |
 
 ### Поведение при включении
@@ -239,6 +240,16 @@ public static IReadOnlyList<ErrorDefinition> All => [
 1. ПЛК-ошибка возникает ДО сканирования → попадает в `_activeErrors`
 2. ScanStep успешно завершается → `IsHistoryEnabled = true` → ошибка копируется в историю
 3. Ошибка исправляется → `CloseHistoryRecord()` находит запись и ставит `EndTime`
+
+### Поведение при выключении
+
+При установке `IsHistoryEnabled = false` все открытые записи в истории (где `EndTime == null`) автоматически закрываются — устанавливается `EndTime = DateTime.Now`. Это гарантирует, что при сохранении результатов теста все записи истории имеют заполненное время окончания.
+
+**Сценарий:**
+1. Тест завершается (OK или NOK)
+2. `HandleTestCompletionAsync` устанавливает `IsHistoryEnabled = false`
+3. Все открытые записи получают `EndTime` = момент завершения теста
+4. Результаты сохраняются с полной историей ошибок
 
 ## Ограничения
 

@@ -29,25 +29,44 @@ public partial class StepTimingService
         OnChanged?.Invoke();
     }
 
+    /// <summary>
+    /// Сбрасывает таймер сканирования, если он остановлен.
+    /// Если таймер уже работает (например, после ошибки scan step) - ничего не делает.
+    /// </summary>
     public void ResetScanTiming()
     {
+        bool restarted;
         lock (_lock)
         {
             _scanPausedByGlobalPauseId = null;
-            if (_scanState.IsActive)
-            {
-                _scanState.Reset();
-            }
-            else if (_scanStepInfo.HasValue)
-            {
-                _scanState.Start(_scanStepInfo.Value.Name, _scanStepInfo.Value.Description);
-            }
-            else
-            {
-                return;
-            }
+            restarted = TryRestartScanStateLocked();
         }
+
+        if (!restarted)
+            return;
+
         StartTimer();
         OnChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Перезапускает scan state. Вызывать только под _lock.
+    /// </summary>
+    private bool TryRestartScanStateLocked()
+    {
+        if (_scanState.IsActive)
+        {
+            if (_scanState.IsRunning)
+                return false; // Таймер уже работает - не трогаем
+
+            _scanState.Reset();
+            return true;
+        }
+
+        if (!_scanStepInfo.HasValue)
+            return false;
+
+        _scanState.Start(_scanStepInfo.Value.Name, _scanStepInfo.Value.Description);
+        return true;
     }
 }

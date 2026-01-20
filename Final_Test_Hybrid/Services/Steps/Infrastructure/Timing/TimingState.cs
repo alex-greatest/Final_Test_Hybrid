@@ -48,15 +48,10 @@ internal class TimingState
         IsRunning = true;
     }
 
-    public void Stop()
-    {
-        if (!IsRunning)
-        {
-            return;
-        }
-        AccumulatedDuration += DateTime.Now - StartTime;
-        IsRunning = false;
-    }
+    /// <summary>
+    /// Останавливает таймер (семантически — завершение). Алиас для Pause().
+    /// </summary>
+    public void Stop() => Pause();
 
     public void Reset()
     {

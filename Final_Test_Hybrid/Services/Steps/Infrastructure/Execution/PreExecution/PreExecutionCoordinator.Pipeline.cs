@@ -57,7 +57,10 @@ public partial class PreExecutionCoordinator
         }
 
         state.PhaseState.Clear();
-        StartTestExecution(context);
+        if (!StartTestExecution(context))
+        {
+            return PreExecutionResult.Fail("Test execution did not start");
+        }
         return PreExecutionResult.TestStarted();
     }
 
@@ -94,7 +97,10 @@ public partial class PreExecutionCoordinator
         }
 
         state.PhaseState.Clear();
-        StartTestExecution(context);
+        if (!StartTestExecution(context))
+        {
+            return PreExecutionResult.Fail("Test execution did not start");
+        }
         return PreExecutionResult.TestStarted();
     }
 
@@ -250,31 +256,45 @@ public partial class PreExecutionCoordinator
         return PreExecutionResult.Fail(ex.Message);
     }
 
-    private void StartTestExecution(PreExecutionContext context)
+    private bool StartTestExecution(PreExecutionContext context)
     {
+        if (context.Maps == null || context.Maps.Count == 0)
+        {
+            LogStartFailure("Maps пусты");
+            RollbackTestStart();
+            return false;
+        }
         LogTestExecutionStart(context);
-        coordinators.TestCoordinator.SetMaps(context.Maps!);
-        _ = StartTestWithErrorHandlingAsync();
+        coordinators.TestCoordinator.SetMaps(context.Maps);
+        if (!coordinators.TestCoordinator.TryStartInBackground())
+        {
+            LogStartFailure("TryStartInBackground вернул false");
+            RollbackTestStart();
+            return false;
+        }
+        return true;
     }
 
-    private async Task StartTestWithErrorHandlingAsync()
+    private void LogStartFailure(string reason)
     {
-        try
-        {
-            await coordinators.TestCoordinator.StartAsync();
-        }
-        catch (Exception ex)
-        {
-            infra.Logger.LogError(ex, "Ошибка запуска теста");
-            infra.TestStepLogger.LogError(ex, "Ошибка запуска теста");
-        }
+        infra.Logger.LogWarning("Старт теста невозможен: {Reason}", reason);
+    }
+
+    /// <summary>
+    /// Откатывает состояние теста при неудачном старте.
+    /// Безопасен, т.к. откатывает флаги, установленные текущим pipeline.
+    /// </summary>
+    private void RollbackTestStart()
+    {
+        infra.Logger.LogInformation("Откат состояния теста");
+        state.BoilerState.SetTestRunning(false);
+        state.BoilerState.StopTestTimer();
     }
 
     private void LogTestExecutionStart(PreExecutionContext context)
     {
         var mapCount = context.Maps?.Count ?? 0;
         infra.Logger.LogInformation("Запуск TestExecutionCoordinator с {Count} maps", mapCount);
-        infra.TestStepLogger.LogInformation("Запуск TestExecutionCoordinator с {Count} maps", mapCount);
     }
 
     private PreExecutionContext CreateContext(string barcode)

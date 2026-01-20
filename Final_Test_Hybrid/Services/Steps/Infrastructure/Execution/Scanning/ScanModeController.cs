@@ -142,19 +142,30 @@ public class ScanModeController : IDisposable
         OnStateChanged?.Invoke();
     }
 
-    /// <summary>
-    /// Активирует режим сканирования. Два режима работы:
-    /// 1) Первичная активация (!_isActivated): запуск loop, таймеров, добавление шага в grid
-    /// 2) Восстановление (_isActivated): только восстановление сканера и таймеров после возврата AutoMode
-    /// </summary>
     private void TryActivateScanMode()
     {
         if (_isActivated)
         {
-            _sessionManager.AcquireSession(HandleBarcodeScanned);
-            _stepTimingService.ResumeAllColumnsTiming();
+            RefreshSessionAndTimingForActiveMode();
             return;
         }
+        PerformInitialActivation();
+    }
+
+    /// <summary>
+    /// Пере-захватывает сессию и возобновляет таймеры для уже активного режима.
+    /// </summary>
+    private void RefreshSessionAndTimingForActiveMode()
+    {
+        _sessionManager.AcquireSession(HandleBarcodeScanned);
+        _stepTimingService.ResumeAllColumnsTiming();
+    }
+
+    /// <summary>
+    /// Выполняет первичную активацию режима сканирования.
+    /// </summary>
+    private void PerformInitialActivation()
+    {
         _isActivated = true;
         _sessionManager.AcquireSession(HandleBarcodeScanned);
         AddScanStepToGrid();
@@ -190,11 +201,6 @@ public class ScanModeController : IDisposable
         _preExecutionCoordinator.SubmitBarcode(barcode);
     }
 
-    /// <summary>
-    /// Деактивирует режим сканирования. Два режима работы:
-    /// 1) Soft (IsAnyActive): только отключение сканера и пауза таймеров (тест продолжает выполняться)
-    /// 2) Hard (!IsAnyActive): полная деактивация с отменой loop
-    /// </summary>
     private void TryDeactivateScanMode()
     {
         if (_isResetting)
@@ -205,13 +211,41 @@ public class ScanModeController : IDisposable
         {
             return;
         }
+
         _stepTimingService.PauseAllColumnsTiming();
-        if (_operatorState.IsAuthenticated && !_autoReady.IsReady || _activityTracker.IsAnyActive || (_operatorState.IsAuthenticated && _preExecutionCoordinator.IsAcceptingInput))
+
+        if (ShouldUseSoftDeactivation())
         {
-            _sessionManager.ReleaseSession();
+            PerformSoftDeactivation();
             return;
         }
+        PerformFullDeactivation();
+    }
 
+    /// <summary>
+    /// Определяет необходимость мягкой деактивации.
+    /// </summary>
+    private bool ShouldUseSoftDeactivation()
+    {
+        var isAutoModeLost = _operatorState.IsAuthenticated && !_autoReady.IsReady;
+        var isExecutionActive = _activityTracker.IsAnyActive;
+        var isWaitingForScan = _operatorState.IsAuthenticated && _preExecutionCoordinator.IsAcceptingInput;
+        return isAutoModeLost || isExecutionActive || isWaitingForScan;
+    }
+
+    /// <summary>
+    /// Выполняет мягкую деактивацию режима сканирования.
+    /// </summary>
+    private void PerformSoftDeactivation()
+    {
+        _sessionManager.ReleaseSession();
+    }
+
+    /// <summary>
+    /// Выполняет полную деактивацию режима сканирования.
+    /// </summary>
+    private void PerformFullDeactivation()
+    {
         _loopCts?.Cancel();
         _isActivated = false;
         _sessionManager.ReleaseSession();

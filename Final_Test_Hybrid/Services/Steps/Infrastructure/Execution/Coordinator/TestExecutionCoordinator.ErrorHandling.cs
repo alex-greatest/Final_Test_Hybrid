@@ -5,30 +5,87 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Plc;
 using Microsoft.Extensions.Logging;
+using System.Threading.Channels;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 
 public partial class TestExecutionCoordinator
 {
+    private Channel<bool>? _errorSignalChannel;
+
     private void HandleExecutorStateChanged()
     {
         OnStateChanged?.Invoke();
         EnqueueFailedExecutors();
     }
 
+    private Channel<bool> StartErrorSignalChannel()
+    {
+        var channel = Channel.CreateBounded<bool>(new BoundedChannelOptions(1)
+        {
+            SingleReader = true,
+            SingleWriter = false,
+            FullMode = BoundedChannelFullMode.DropWrite
+        });
+        Interlocked.Exchange(ref _errorSignalChannel, channel);
+        return channel;
+    }
+
+    private void SignalErrorDetected()
+    {
+        var channel = Volatile.Read(ref _errorSignalChannel);
+        channel?.Writer.TryWrite(true);
+    }
+
+    private void CompleteErrorSignalChannel()
+    {
+        var channel = Interlocked.Exchange(ref _errorSignalChannel, null);
+        if (channel == null)
+        {
+            return;
+        }
+        channel.Writer.TryWrite(true);
+        channel.Writer.TryComplete();
+    }
+
+    private Task RunErrorHandlingLoopAsync(ChannelReader<bool> reader, CancellationToken token)
+    {
+        return ProcessErrorSignalsAsync(reader, token);
+    }
+
+    private async Task ProcessErrorSignalsAsync(ChannelReader<bool> reader, CancellationToken token)
+    {
+        try
+        {
+            await foreach (var _ in reader.ReadAllAsync(token))
+            {
+                await HandleErrorsIfAny();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
     private void EnqueueFailedExecutors()
     {
-        if (StateManager.State != ExecutionState.Running)
+        var state = StateManager.State;
+        if (state != ExecutionState.Running && state != ExecutionState.PausedOnError)
         {
             return;
         }
 
         lock (_enqueueLock)
         {
+            var hadErrors = StateManager.HasPendingErrors;
             foreach (var executor in _executors.Where(e => e.HasFailed))
             {
                 var error = CreateErrorFromExecutor(executor);
                 StateManager.EnqueueError(error);
+            }
+            if (!hadErrors && StateManager.HasPendingErrors)
+            {
+                SignalErrorDetected();
             }
         }
     }
