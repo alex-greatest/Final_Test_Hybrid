@@ -75,12 +75,21 @@ private void ClearStateOnReset()
 }
 ```
 
+## AskEnd-блокировка (MainLoop)
+
+Во время PLC reset цикл ввода НЕ должен продолжаться до получения AskEnd.
+PreExecutionCoordinator:
+- ждёт AskEnd перед стартом нового цикла;
+- отменяет ожидание штрихкода при reset;
+- продолжает цикл только после AskEnd (или после hard reset при таймауте AskEnd).
+
 ## Три состояния MainLoop
 
 ```
 RunSingleCycleAsync:
+0. WaitForAskEndIfNeededAsync()    // Блокировка цикла при PLC reset
 1. SetAcceptingInput(true)         // IsAcceptingInput = true
-2. WaitForBarcodeAsync()           // Ожидание ввода
+2. WaitForBarcodeAsync()           // Ожидание ввода (отменяется reset'ом)
 3. SetAcceptingInput(false)
 4. _currentCts = Create...         // CTS создаётся ПОСЛЕ получения баркода
 5. try {
@@ -91,7 +100,7 @@ RunSingleCycleAsync:
        HandlePostTestCompletion()
      }
    }
-   catch (OperationCanceledException) when (_resetRequested) {
+   catch (OperationCanceledException) when (reset signaled) {
      ClearStateOnReset()
    }
 ```

@@ -30,6 +30,7 @@ public partial class PreExecutionCoordinator
     private async Task RunSingleCycleAsync(CancellationToken ct)
     {
         state.FlowState.ClearStop();
+        await WaitForAskEndIfNeededAsync(ct);
 
         // Проверка пропуска сканирования для повтора
         string barcode;
@@ -41,7 +42,16 @@ public partial class PreExecutionCoordinator
         else
         {
             SetAcceptingInput(true);
-            barcode = await WaitForBarcodeAsync(ct);
+            var resetSequence = _resetSequence;
+            try
+            {
+                barcode = await WaitForBarcodeAsync(ct);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested && DidResetOccur(resetSequence))
+            {
+                SetAcceptingInput(false);
+                return;
+            }
             SetAcceptingInput(false);
             infra.StatusReporter.UpdateScanStepStatus(Models.Steps.TestStepStatus.Running, "Обработка штрихкода");
         }
@@ -209,7 +219,8 @@ public partial class PreExecutionCoordinator
     {
         var newSource = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         Interlocked.Exchange(ref _barcodeSource, newSource);
-        await using var reg = ct.Register(() => newSource.TrySetCanceled());
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _resetCts.Token);
+        await using var reg = linkedCts.Token.Register(() => newSource.TrySetCanceled());
         var barcode = await newSource.Task;
         CurrentBarcode = barcode;
         OnStateChanged?.Invoke();

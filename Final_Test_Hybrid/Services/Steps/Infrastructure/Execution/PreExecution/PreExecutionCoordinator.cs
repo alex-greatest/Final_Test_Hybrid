@@ -34,6 +34,9 @@ public partial class PreExecutionCoordinator(
     private CancellationTokenSource? _currentCts;
     private CycleExitReason? _pendingExitReason;
     private TaskCompletionSource<CycleExitReason>? _resetSignal;
+    private TaskCompletionSource? _askEndSignal;
+    private CancellationTokenSource _resetCts = new();
+    private int _resetSequence;
     private bool _skipNextScan;
     private bool _executeFullPreparation;
     private PreExecutionContext? _lastSuccessfulContext;
@@ -143,6 +146,61 @@ public partial class PreExecutionCoordinator(
     }
 
     public ScanStepBase GetScanStep() => steps.GetScanStep();
+
+    private void BeginPlcReset()
+    {
+        Interlocked.Increment(ref _resetSequence);
+        EnsureAskEndSignal();
+        CancelResetToken();
+    }
+
+    private void CompletePlcReset()
+    {
+        var previousCts = Interlocked.Exchange(ref _resetCts, new CancellationTokenSource());
+        previousCts.Dispose();
+        var signal = Interlocked.Exchange(ref _askEndSignal, null);
+        signal?.TrySetResult();
+    }
+
+    private void TryCompletePlcReset()
+    {
+        if (_askEndSignal == null)
+        {
+            return;
+        }
+        CompletePlcReset();
+    }
+
+    private Task WaitForAskEndIfNeededAsync(CancellationToken ct)
+    {
+        var signal = _askEndSignal;
+        return signal == null
+            ? Task.CompletedTask
+            : signal.Task.WaitAsync(ct);
+    }
+
+    private bool DidResetOccur(int sequenceSnapshot) =>
+        sequenceSnapshot != Volatile.Read(ref _resetSequence);
+
+    private void EnsureAskEndSignal()
+    {
+        if (_askEndSignal == null || _askEndSignal.Task.IsCompleted)
+        {
+            _askEndSignal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+    }
+
+    private void CancelResetToken()
+    {
+        try
+        {
+            _resetCts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Expected during shutdown
+        }
+    }
 
     /// <summary>
     /// Сигнализирует о сбросе для race condition protection.

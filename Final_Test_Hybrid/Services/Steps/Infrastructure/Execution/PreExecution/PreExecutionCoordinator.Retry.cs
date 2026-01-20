@@ -68,14 +68,20 @@ public partial class PreExecutionCoordinator
 
     private void HandleGridClear()
     {
+        CompletePlcReset();
         ClearStateOnReset();
         infra.StatusReporter.ClearAllExceptScan();
     }
 
-    private void HandleSoftStop() => HandleStopSignal(PreExecutionResolution.SoftStop);
+    private void HandleSoftStop()
+    {
+        BeginPlcReset();
+        HandleStopSignal(PreExecutionResolution.SoftStop);
+    }
 
     private void HandleHardReset()
     {
+        TryCompletePlcReset();
         HandleStopSignal(PreExecutionResolution.HardReset);
         infra.StatusReporter.ClearAllExceptScan();
     }
