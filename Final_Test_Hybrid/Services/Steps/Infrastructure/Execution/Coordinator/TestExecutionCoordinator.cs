@@ -82,7 +82,6 @@ public partial class TestExecutionCoordinator : IDisposable
         SubscribeToExecutorEvents();
         _plcResetCoordinator.OnForceStop += HandleForceStop;
         _errorCoordinator.OnReset += HandleReset;
-        _errorCoordinator.OnInterruptChanged += HandleInterruptChanged;
     }
 
     private void HandleForceStop()
@@ -101,24 +100,7 @@ public partial class TestExecutionCoordinator : IDisposable
     {
         Stop(reason, message, markFailed: true);
     }
-
-    private void HandleInterruptChanged()
-    {
-        if (_errorCoordinator.CurrentInterrupt != InterruptReason.AutoModeDisabled)
-        {
-            return;
-        }
-        if (!_activityTracker.IsTestExecutionActive)
-        {
-            return;
-        }
-        if (!StateManager.HasPendingErrors && StateManager.State != ExecutionState.PausedOnError)
-        {
-            return;
-        }
-        StopAsFailure(ExecutionStopReason.AutoModeDisabled, "нет автомата");
-    }
-
+    
     public void ResetForRepeat()
     {
         StateManager.ClearErrors();
@@ -183,6 +165,5 @@ public partial class TestExecutionCoordinator : IDisposable
         UnsubscribeFromExecutorEvents();
         _plcResetCoordinator.OnForceStop -= HandleForceStop;
         _errorCoordinator.OnReset -= HandleReset;
-        _errorCoordinator.OnInterruptChanged -= HandleInterruptChanged;
     }
 }
