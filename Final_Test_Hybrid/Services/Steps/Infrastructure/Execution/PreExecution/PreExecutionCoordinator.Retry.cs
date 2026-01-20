@@ -3,7 +3,6 @@ using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Plc;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Steps;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
@@ -42,6 +41,7 @@ public partial class PreExecutionCoordinator
             ? ExecutionStopReason.PlcSoftReset
             : ExecutionStopReason.PlcHardReset;
         state.FlowState.RequestStop(stopReason, stopAsFailure: true);
+        SignalReset(exitReason);
 
         if (TryCancelActiveOperation(exitReason))
         {

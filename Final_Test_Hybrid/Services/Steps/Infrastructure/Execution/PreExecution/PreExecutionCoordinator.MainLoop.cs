@@ -65,6 +65,7 @@ public partial class PreExecutionCoordinator
         finally
         {
             _pendingExitReason = null;
+            _resetSignal = null;
             coordinators.TestCoordinator.OnSequenceCompleted -= onTestCompleted;
             state.ActivityTracker.SetPreExecutionActive(false);
             _currentCts?.Dispose();
@@ -84,6 +85,10 @@ public partial class PreExecutionCoordinator
         _skipNextScan = false;
         _executeFullPreparation = false;
 
+        // Создаём сигнал сброса для защиты от race condition
+        var resetSignal = new TaskCompletionSource<CycleExitReason>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _resetSignal = resetSignal;
+
         var result = isNokRepeat
             ? await ExecuteNokRepeatPipelineAsync(_currentCts!.Token)
             : isRepeat
@@ -91,9 +96,9 @@ public partial class PreExecutionCoordinator
                 : await ExecutePreExecutionPipelineAsync(barcode, _currentCts!.Token);
 
         // Проверяем pending exit reason (сброс мог прийти во время pipeline)
-        if (_pendingExitReason.HasValue)
+        if (TryGetStopExitReason(out var stopExitReason))
         {
-            return _pendingExitReason.Value;
+            return stopExitReason;
         }
 
         if (result.Status != Interfaces.PreExecution.PreExecutionStatus.TestStarted)
@@ -103,14 +108,22 @@ public partial class PreExecutionCoordinator
                 : CycleExitReason.PipelineFailed;
         }
 
-        // Ждём завершения теста
+        // Ждём завершения теста ИЛИ сигнала сброса
         await using var reg = ct.Register(() => testCompletionTcs.TrySetCanceled());
+        var completedTask = await Task.WhenAny(testCompletionTcs.Task, resetSignal.Task);
+
+        // Если сработал сброс - возвращаем причину сброса
+        if (completedTask == resetSignal.Task)
+        {
+            return await resetSignal.Task;
+        }
+
         await testCompletionTcs.Task;
 
         // Проверяем pending exit reason после теста
-        if (_pendingExitReason.HasValue)
+        if (TryGetStopExitReason(out stopExitReason))
         {
-            return _pendingExitReason.Value;
+            return stopExitReason;
         }
 
         // Обрабатываем завершение теста через координатор
@@ -155,6 +168,12 @@ public partial class PreExecutionCoordinator
 
     private async Task<CycleExitReason> HandleTestCompletionAsync(CancellationToken ct)
     {
+        // Защита от race condition — если сброс уже произошёл, не показываем результат
+        if (TryGetStopExitReason(out var stopExitReason))
+        {
+            return stopExitReason;
+        }
+
         state.BoilerState.StopTestTimer();
         var hasErrors = coordinators.TestCoordinator.HasErrors
                         || coordinators.TestCoordinator.HadSkippedError;
@@ -177,7 +196,7 @@ public partial class PreExecutionCoordinator
                 CompletionResult.Finished => CycleExitReason.TestCompleted,
                 CompletionResult.RepeatRequested => CycleExitReason.RepeatRequested,
                 CompletionResult.NokRepeatRequested => CycleExitReason.NokRepeatRequested,
-                _ => _pendingExitReason ?? CycleExitReason.SoftReset,
+                _ => TryGetStopExitReason(out var exitReason) ? exitReason : CycleExitReason.SoftReset,
             };
         }
         finally

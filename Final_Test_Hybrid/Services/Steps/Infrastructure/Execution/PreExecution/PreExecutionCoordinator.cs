@@ -1,4 +1,5 @@
-﻿using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
+﻿using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Steps;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
@@ -32,6 +33,7 @@ public partial class PreExecutionCoordinator(
     private TaskCompletionSource<string>? _barcodeSource;
     private CancellationTokenSource? _currentCts;
     private CycleExitReason? _pendingExitReason;
+    private TaskCompletionSource<CycleExitReason>? _resetSignal;
     private bool _skipNextScan;
     private bool _executeFullPreparation;
     private PreExecutionContext? _lastSuccessfulContext;
@@ -141,4 +143,64 @@ public partial class PreExecutionCoordinator(
     }
 
     public ScanStepBase GetScanStep() => steps.GetScanStep();
+
+    /// <summary>
+    /// Сигнализирует о сбросе для race condition protection.
+    /// </summary>
+    private void SignalReset(CycleExitReason reason)
+    {
+        _resetSignal?.TrySetResult(reason);
+    }
+
+    /// <summary>
+    /// Проверяет наличие причины остановки из любого источника.
+    /// </summary>
+    private bool TryGetStopExitReason(out CycleExitReason reason)
+    {
+        if (_pendingExitReason.HasValue)
+        {
+            reason = _pendingExitReason.Value;
+            return true;
+        }
+
+        // Захватываем локальную копию для защиты от race condition
+        var resetSignal = _resetSignal;
+        if (resetSignal?.Task.IsCompletedSuccessfully == true)
+        {
+            reason = resetSignal.Task.Result;
+            return true;
+        }
+
+        var stopReason = state.FlowState.StopReason;
+        if (stopReason == ExecutionStopReason.PlcForceStop)
+        {
+            reason = state.BoilerState.IsTestRunning
+                ? CycleExitReason.HardReset
+                : CycleExitReason.SoftReset;
+            return true;
+        }
+
+        var mapped = MapStopReasonToExitReason(stopReason);
+        if (mapped.HasValue)
+        {
+            reason = mapped.Value;
+            return true;
+        }
+
+        reason = default;
+        return false;
+    }
+
+    /// <summary>
+    /// Маппинг причины остановки в причину выхода из цикла.
+    /// </summary>
+    private static CycleExitReason? MapStopReasonToExitReason(ExecutionStopReason stopReason)
+    {
+        return stopReason switch
+        {
+            ExecutionStopReason.PlcSoftReset => CycleExitReason.SoftReset,
+            ExecutionStopReason.PlcHardReset => CycleExitReason.HardReset,
+            _ => null,
+        };
+    }
 }
