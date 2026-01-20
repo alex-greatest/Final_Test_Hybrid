@@ -30,19 +30,22 @@ public partial class PreExecutionCoordinator
     private async Task RunSingleCycleAsync(CancellationToken ct)
     {
         state.FlowState.ClearStop();
+        // Snapshot reset sequence before await; guards reuse of CurrentBarcode on repeat.
+        var resetSequence = Volatile.Read(ref _resetSequence);
         await WaitForAskEndIfNeededAsync(ct);
 
         // Проверка пропуска сканирования для повтора
         string barcode;
         if (_skipNextScan)
         {
+            // If a reset happened during the await above, do not reuse the previous barcode.
+            if (DidResetOccur(resetSequence)) return;
             barcode = CurrentBarcode!;
             infra.StatusReporter.UpdateScanStepStatus(Models.Steps.TestStepStatus.Success, "Повтор теста");
         }
         else
         {
             SetAcceptingInput(true);
-            var resetSequence = _resetSequence;
             try
             {
                 barcode = await WaitForBarcodeAsync(ct);
@@ -219,11 +222,19 @@ public partial class PreExecutionCoordinator
     {
         var newSource = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         Interlocked.Exchange(ref _barcodeSource, newSource);
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _resetCts.Token);
-        await using var reg = linkedCts.Token.Register(() => newSource.TrySetCanceled());
-        var barcode = await newSource.Task;
-        CurrentBarcode = barcode;
-        OnStateChanged?.Invoke();
-        return barcode;
+
+        var resetCts = _resetCts;
+        CancellationTokenSource linkedCts;
+        try { linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, resetCts.Token); }
+        catch (ObjectDisposedException) { throw new OperationCanceledException(ct); }
+
+        using (linkedCts)
+        {
+            await using var reg = linkedCts.Token.Register(() => newSource.TrySetCanceled());
+            var barcode = await newSource.Task;
+            CurrentBarcode = barcode;
+            OnStateChanged?.Invoke();
+            return barcode;
+        }
     }
 }

@@ -164,11 +164,11 @@ public partial class PreExecutionCoordinator(
 
     private void TryCompletePlcReset()
     {
-        if (_askEndSignal == null)
-        {
-            return;
-        }
-        CompletePlcReset();
+        var signal = Interlocked.Exchange(ref _askEndSignal, null);
+        if (signal == null) return;
+        // Swap CTS to signal reset; disposal may trigger ODE in waiters and is expected.
+        Interlocked.Exchange(ref _resetCts, new CancellationTokenSource()).Dispose();
+        signal.TrySetResult();
     }
 
     private Task WaitForAskEndIfNeededAsync(CancellationToken ct)
