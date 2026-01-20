@@ -199,11 +199,24 @@ public partial class PreExecutionCoordinator
         // Показать картинку результата
         coordinators.CompletionUiState.ShowImage(testResult);
 
+        // Связываем с _resetCts чтобы Reset прерывал ожидание End
+        var resetCts = _resetCts;
+        CancellationTokenSource linked;
+        try { linked = CancellationTokenSource.CreateLinkedTokenSource(ct, resetCts.Token); }
+        catch (ObjectDisposedException)
+        {
+            // _resetCts disposed → reset уже завершён
+            // Примечание: в узком окне между dispose и SignalReset может вернуться SoftReset
+            // вместо HardReset — это допустимо, т.к. состояние очистится по AskEnd
+            coordinators.CompletionUiState.HideImage();
+            return TryGetStopExitReason(out var exitReason) ? exitReason : CycleExitReason.SoftReset;
+        }
+
         try
         {
             // Вызвать координатор завершения
             var result = await coordinators.CompletionCoordinator
-                .HandleTestCompletedAsync(testResult, ct);
+                .HandleTestCompletedAsync(testResult, linked.Token);
 
             return result switch
             {
@@ -213,8 +226,15 @@ public partial class PreExecutionCoordinator
                 _ => TryGetStopExitReason(out var exitReason) ? exitReason : CycleExitReason.SoftReset,
             };
         }
+        catch (OperationCanceledException)
+        {
+            // Reset или внешняя отмена прервали ожидание End
+            // При shutdown тоже вернётся SoftReset — это допустимо, цикл завершится на следующей итерации
+            return TryGetStopExitReason(out var exitReason) ? exitReason : CycleExitReason.SoftReset;
+        }
         finally
         {
+            linked.Dispose();
             coordinators.CompletionUiState.HideImage();
         }
     }

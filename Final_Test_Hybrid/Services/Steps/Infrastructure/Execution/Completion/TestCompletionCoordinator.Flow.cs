@@ -23,7 +23,7 @@ public partial class TestCompletionCoordinator
                 await deps.TagWaiter.WaitForTrueAsync(BaseTags.ErrorSkip, timeout: TimeSpan.FromSeconds(5), ct);
                 logger.LogInformation("End = true подтверждено");
             }
-            // 3. Ждать End = false (PLC сбросит)
+            // 3. Ждать End = false (PLC сбросит) — может быть прервано Reset
             await deps.TagWaiter.WaitForFalseAsync(BaseTags.ErrorSkip, timeout: null, ct);
             logger.LogDebug("PLC сбросил End");
 
@@ -40,6 +40,11 @@ public partial class TestCompletionCoordinator
             }
 
             return await HandleFinishAsync(testResult, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogInformation("Ожидание End прервано");
+            return CompletionResult.Cancelled;
         }
         finally
         {

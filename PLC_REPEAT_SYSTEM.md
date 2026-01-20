@@ -82,40 +82,44 @@ public enum CycleExitReason
 │  PreExecutionCoordinator.HandleTestCompletionAsync()            │
 │  ├─ StopTestTimer()                                             │
 │  ├─ SetTestResult(1 или 2)                                      │
-│  └─ ShowResultImage()                                           │
+│  ├─ ShowResultImage()                                           │
+│  └─ CreateLinkedTokenSource(ct, _resetCts.Token) // ⚡ Reset    │
 └─────────────────────────────────────────────────────────────────┘
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  TestCompletionCoordinator.HandleTestCompletedAsync()           │
 │  ├─ WriteAsync(End, true)         // Сигнал завершения          │
-│  ├─ WaitForFalseAsync(End)        // Ждём PLC сбросит End       │
+│  ├─ WaitForFalseAsync(End)        // Ждём PLC сбросит End ⚡    │
 │  ├─ Delay(1000ms)                 // Даём PLC время             │
 │  └─ GetValue(Req_Repeat)          // Читаем запрос повтора      │
 └─────────────────────────────────────────────────────────────────┘
                             │
-              ┌─────────────┴─────────────┐
-              │ Req_Repeat?               │
-              ▼                           ▼
-┌─────────────────────┐     ┌─────────────────────┐
-│  false              │     │  true               │
-│  HandleFinishAsync()│     │  HandleRepeatAsync()│
-│  └─ TrySaveAsync()  │     │  └─ OK или NOK?     │
-│  └─ return Finished │     └─────────────────────┘
-└─────────────────────┘               │
-                        ┌─────────────┴─────────────┐
-                        ▼                           ▼
-              ┌─────────────────┐       ┌─────────────────────┐
-              │ testResult == 1 │       │ testResult == 2     │
-              │ (OK)            │       │ (NOK)               │
-              │ WriteAsync(     │       │ HandleNokRepeatAsync│
-              │   AskRepeat,    │       │ ├─ TrySaveAsync()   │
-              │   true)         │       │ └─ WriteAsync(      │
-              │ return Repeat   │       │     AskRepeat, true)│
-              │ Requested       │       │ return NokRepeat    │
-              └─────────────────┘       │ Requested           │
-                                        └─────────────────────┘
+              ┌─────────────┼─────────────┐
+              │             │             │
+              ▼             ▼             ▼
+┌──────────────────┐ ┌────────────┐ ┌─────────────────────┐
+│  Req_Repeat?     │ │  ⚡ Reset  │ │  Req_Repeat = true  │
+│  = false         │ │  (OCE)     │ │  HandleRepeatAsync()│
+│  HandleFinish    │ │  return    │ │  └─ OK или NOK?     │
+│  Async()         │ │  Cancelled │ └─────────────────────┘
+│  └─ TrySave      │ └────────────┘           │
+│  └─ Finished     │                          │
+└──────────────────┘      ┌───────────────────┴───────────┐
+                          ▼                               ▼
+                ┌─────────────────┐       ┌─────────────────────┐
+                │ testResult == 1 │       │ testResult == 2     │
+                │ (OK)            │       │ (NOK)               │
+                │ WriteAsync(     │       │ HandleNokRepeatAsync│
+                │   AskRepeat,    │       │ ├─ TrySaveAsync()   │
+                │   true)         │       │ └─ WriteAsync(      │
+                │ return Repeat   │       │     AskRepeat, true)│
+                │ Requested       │       │ return NokRepeat    │
+                └─────────────────┘       │ Requested           │
+                                          └─────────────────────┘
 ```
+
+**⚡ Прерывание Reset:** Ожидание `End=false` связано с `_resetCts` через linked token. При Reset ожидание прерывается, возвращается `CompletionResult.Cancelled` → `CycleExitReason.SoftReset`.
 
 ### 3.2 Поток OK повтора (быстрый, переиспользование контекста)
 
@@ -232,6 +236,45 @@ public enum CycleExitReason
 │  └─ ScanModeController.TransitionToReadyInternal()              │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+### 3.5 Reset во время ожидания End=false
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Тест завершён → PC записал End = true                          │
+│  PC ждёт End = false от PLC                                     │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+              ┌─────────────┴─────────────┐
+              ▼                           ▼
+┌─────────────────────────┐   ┌─────────────────────────┐
+│  PLC сбросил End        │   │  Req_Reset пришёл       │
+│  (нормальный путь)      │   │  (прерывание)           │
+└─────────────────────────┘   └─────────────────────────┘
+              │                           │
+              ▼                           ▼
+┌─────────────────────────┐   ┌─────────────────────────┐
+│  Delay(1000ms)          │   │  _resetCts.Cancel()     │
+│  Читаем Req_Repeat      │   │  linked.Token отменён   │
+│  → Finish/Repeat        │   │  OCE в TagWaiter        │
+└─────────────────────────┘   └─────────────────────────┘
+                                          │
+                                          ▼
+                              ┌─────────────────────────┐
+                              │  catch (OCE)            │
+                              │  return Cancelled       │
+                              └─────────────────────────┘
+                                          │
+                                          ▼
+                              ┌─────────────────────────┐
+                              │  HandleCycleExit        │
+                              │  (SoftReset)            │
+                              │  → Ждём AskEnd          │
+                              │  → Разблокировка поля   │
+                              └─────────────────────────┘
+```
+
+**Ключевой момент:** Linked token (`ct` + `_resetCts.Token`) позволяет прервать бесконечное ожидание `WaitForFalseAsync(End)` при Reset, обеспечивая мгновенную разблокировку поля ввода после AskEnd.
 
 ---
 
@@ -448,7 +491,70 @@ var wasInScanPhase = IsInScanningPhase;  // _isActivated && !_isResetting
 - **wasInScanPhase = true** → Мягкий сброс (ForceStop)
 - **wasInScanPhase = false** → Жёсткий сброс (Reset)
 
-### 7.3 ReworkDialog при NOK повторе
+### 7.3 Прерывание ожидания End при Reset (linked token)
+
+```csharp
+// PreExecutionCoordinator.MainLoop.cs - HandleTestCompletionAsync
+private async Task<CycleExitReason> HandleTestCompletionAsync(CancellationToken ct)
+{
+    // ... показ результата ...
+
+    // Связываем с _resetCts чтобы Reset прерывал ожидание End
+    var resetCts = _resetCts;
+    CancellationTokenSource linked;
+    try { linked = CancellationTokenSource.CreateLinkedTokenSource(ct, resetCts.Token); }
+    catch (ObjectDisposedException)
+    {
+        // _resetCts disposed → reset уже завершён
+        // Примечание: в узком окне между dispose и SignalReset может вернуться SoftReset
+        // вместо HardReset — это допустимо, т.к. состояние очистится по AskEnd
+        coordinators.CompletionUiState.HideImage();
+        return TryGetStopExitReason(out var exitReason) ? exitReason : CycleExitReason.SoftReset;
+    }
+
+    try
+    {
+        var result = await coordinators.CompletionCoordinator
+            .HandleTestCompletedAsync(testResult, linked.Token);
+        // ... обработка результата ...
+    }
+    catch (OperationCanceledException)
+    {
+        // Reset или внешняя отмена прервали ожидание End
+        // При shutdown тоже вернётся SoftReset — это допустимо
+        return TryGetStopExitReason(out var exitReason) ? exitReason : CycleExitReason.SoftReset;
+    }
+    finally
+    {
+        linked.Dispose();
+        coordinators.CompletionUiState.HideImage();
+    }
+}
+
+// TestCompletionCoordinator.Flow.cs - HandleTestCompletedAsync
+public async Task<CompletionResult> HandleTestCompletedAsync(int testResult, CancellationToken ct)
+{
+    try
+    {
+        await deps.PlcService.WriteAsync(BaseTags.ErrorSkip, true, ct);
+        await deps.TagWaiter.WaitForFalseAsync(BaseTags.ErrorSkip, timeout: null, ct); // ⚡ Прерываемо
+        // ... обработка Req_Repeat ...
+    }
+    catch (OperationCanceledException)
+    {
+        logger.LogInformation("Ожидание End прервано");
+        return CompletionResult.Cancelled;
+    }
+    finally
+    {
+        IsWaitingForCompletion = false;
+    }
+}
+```
+
+**Важно:** Защита от `ObjectDisposedException` при создании linked token — если `_resetCts` уже disposed, значит reset завершён и нужно выходить.
+
+### 7.4 ReworkDialog при NOK повторе
 
 ReworkDialog **НЕ** показывается сразу при NOK повторе. Он показывается в `ScanBarcodeMesStep` только если MES сервер вернёт `RequiresRework = true`.
 
