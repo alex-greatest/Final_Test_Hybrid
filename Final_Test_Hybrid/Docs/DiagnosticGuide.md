@@ -5,20 +5,46 @@
 ## Архитектура
 
 ```
-[UI/Services] ──► [RegisterReader/Writer] ──► [QueuedModbusClient] ──► [ModbusDispatcher] ──► [SerialPort]
-                                                      │                        │
-[PollingService] ──► [PollingTask] ─────────────────────┘                        │
-  (Low priority)                                                          State events
-                                                                    (Connected, Disconnecting)
-                                                                              │
-                                                                    [Ping Keep-Alive Task]
-                                                                      (Low priority)
+                                    ┌─────────────────────────────────────┐
+                                    │         Тестовые шаги               │
+                                    │  (через TestStepContext)            │
+                                    └──────────────┬──────────────────────┘
+                                                   │
+                                                   ▼
+                              ┌─────────────────────────────────────────────┐
+                              │  PausableRegisterReader/Writer              │
+                              │  (блокируется при Auto OFF)                 │
+                              └──────────────┬──────────────────────────────┘
+                                             │
+              ┌──────────────────────────────┼──────────────────────────────┐
+              │                              │                              │
+              ▼                              ▼                              ▼
+┌─────────────────────┐      ┌─────────────────────┐      ┌─────────────────────┐
+│  PollingService     │      │  RegisterReader/    │      │  Boiler*Service     │
+│  (НЕ паузится)      │      │  Writer (базовые)   │      │  (НЕ паузится)      │
+└─────────┬───────────┘      └─────────┬───────────┘      └─────────┬───────────┘
+          │                            │                            │
+          └────────────────────────────┼────────────────────────────┘
+                                       │
+                                       ▼
+                          ┌─────────────────────────┐
+                          │   QueuedModbusClient    │
+                          └─────────────┬───────────┘
+                                        │
+                                        ▼
+                          ┌─────────────────────────┐
+                          │    ModbusDispatcher     │──► Ping Keep-Alive (НЕ паузится)
+                          └─────────────┬───────────┘
+                                        │
+                                        ▼
+                                   [SerialPort]
 ```
 
 **Ключевые компоненты:**
 - `IModbusDispatcher` — диспетчер команд с приоритетной очередью
 - `IModbusClient` — клиент для чтения/записи регистров
-- `RegisterReader` / `RegisterWriter` — высокоуровневые операции с типизацией
+- `RegisterReader` / `RegisterWriter` — высокоуровневые операции (системные, НЕ паузятся)
+- `PausableRegisterReader` / `PausableRegisterWriter` — операции для тестовых шагов (паузятся)
 - `PollingService` / `PollingTask` — периодический опрос регистров
 - `PingCommand` — keep-alive команда, читает ModeKey + BoilerStatus
 
@@ -286,21 +312,64 @@ if (pingData != null)
 }
 ```
 
-## Почему Ping не поддерживает паузу
+## Pausable vs Non-Pausable (Modbus)
 
 Диагностика **является частью тестовых шагов** — операции чтения/записи регистров выполняются внутри шагов теста.
 
 | Компонент | Поддержка паузы | Причина |
 |-----------|-----------------|---------|
-| Read/Write операции | **Нужна** (через PausableModbusClient) | Часть тестовых шагов |
-| Ping keep-alive | **Не нужна** | Поддержание связи независимо от паузы |
+| `PausableRegisterReader/Writer` | **Да** | Для тестовых шагов (через `TestStepContext`) |
+| `RegisterReader/Writer` | **Нет** | Системные операции (polling, Boiler*Service) |
+| Ping keep-alive | **Нет** | Поддержание связи независимо от паузы |
 
 **Ping работает непрерывно потому что:**
 - Поддерживает связь с ЭБУ даже при паузе теста
 - Предотвращает таймаут соединения
 - Обновляет LastPingData (ModeKey, BoilerStatus)
 
-**TODO:** Добавить `PausableModbusClient` по аналогии с `PausableOpcUaTagService` для операций чтения/записи в тестовых шагах.
+### Использование в тестовых шагах
+
+```csharp
+public class DiagnosticReadStep : ITestStep
+{
+    public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
+    {
+        // Пауза автоматически применится при Auto OFF
+        var result = await context.DiagReader.ReadUInt16Async(1005, ct);
+
+        if (!result.Success)
+        {
+            context.Logger.LogError("Ошибка: {Error}", result.Error);
+            return TestStepResult.Fail(result.Error);
+        }
+
+        context.Logger.LogInformation("Значение: {Value}", result.Value);
+        return TestStepResult.Pass();
+    }
+}
+```
+
+### Поведение паузы
+
+```
+TestStep вызывает context.DiagReader.ReadUInt16Async(address, ct)
+                            │
+                            ▼
+        ┌─────────────────────────────────────┐
+        │ await pauseToken.WaitWhilePausedAsync(ct) │  ← Блокируется при Auto OFF
+        └─────────────────────────────────────┘
+                            │
+                            ▼ (только после Resume)
+        ┌─────────────────────────────────────┐
+        │ await inner.ReadUInt16Async(address, ct)  │  ← Реальное чтение
+        └─────────────────────────────────────┘
+```
+
+| Момент паузы | Поведение |
+|--------------|-----------|
+| ДО вызова `ReadUInt16Async` | Следующий вызов заблокируется |
+| ВО ВРЕМЯ `WaitWhilePausedAsync` | Ждёт Resume, потом читает |
+| ПОСЛЕ `WaitWhilePausedAsync` (в Modbus) | Операция завершится (по дизайну) |
 
 ## Чтение регистров
 
@@ -475,7 +544,7 @@ High-priority команды всегда выполняются раньше Lo
 
 ## DI регистрация
 
-Сервисы регистрируются автоматически через `AddDiagnosticServices()`:
+### DiagnosticServiceExtensions (базовые сервисы)
 
 ```csharp
 services.AddDiagnosticServices(configuration);
@@ -484,9 +553,22 @@ services.AddDiagnosticServices(configuration);
 Это регистрирует:
 - `IModbusDispatcher` → `ModbusDispatcher` (singleton)
 - `IModbusClient` → `QueuedModbusClient` (singleton)
-- `RegisterReader` (singleton)
-- `RegisterWriter` (singleton)
+- `RegisterReader` (singleton) — системные операции, НЕ паузится
+- `RegisterWriter` (singleton) — системные операции, НЕ паузится
 - `PollingService` (singleton)
+
+### StepsServiceExtensions (pausable сервисы)
+
+```csharp
+services.AddStepsServices();
+```
+
+Это регистрирует (среди прочего):
+- `PauseTokenSource` (singleton)
+- `PausableRegisterReader` (singleton) — для тестовых шагов, паузится
+- `PausableRegisterWriter` (singleton) — для тестовых шагов, паузится
+
+**Важно:** Pausable сервисы зависят от `PauseTokenSource`, поэтому регистрируются в `StepsServiceExtensions`.
 
 ## Обработка ошибок
 

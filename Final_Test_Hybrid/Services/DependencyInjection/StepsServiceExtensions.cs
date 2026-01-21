@@ -21,6 +21,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Final_Test_Hybrid.Services.Steps.Steps;
+using Final_Test_Hybrid.Services.Steps.Steps.Diagnostic;
 using Final_Test_Hybrid.Services.Steps.Steps.Misc;
 using Final_Test_Hybrid.Services.Steps.Validation;
 using Final_Test_Hybrid.Services.Preparation;
@@ -155,6 +156,12 @@ public static class StepsServiceExtensions
         services.AddSingleton<PreExecutionCoordinators>();
         services.AddSingleton<PreExecutionState>();
         services.AddSingleton<PreExecutionCoordinator>();
+
+        // Diagnostic steps
+        services.AddTransient<DiagStressReadStep>();
+        services.AddTransient<DiagStartStopCycleStep>();
+        services.AddTransient<DiagReadBoilerErrorsStep>();
+        services.AddTransient<DiagPingDataStep>();
 
         return services;
     }
