@@ -49,17 +49,23 @@ Any communication error (timeout) SHALL set `IsConnected` to `false` and trigger
 - **WHEN** `IsConnected` is `true`
 - **AND** a Modbus command times out (communication error)
 - **THEN** `IsConnected` becomes `false`
-- **AND** reconnect loop starts with configured exponential backoff
+- **AND** reconnect loop starts with fixed 5 second interval
 
 ### Requirement: Ping Keep-Alive
 
 The Diagnostic Service SHALL periodically send a low-priority ping command to detect connection loss when idle.
 
-Ping SHALL read the Firmware Major register (address `1055 - BaseAddressOffset`).
+Ping SHALL read useful diagnostic data (not just connectivity check):
+- **ModeKey** (addresses 1000-1001, Modbus 999-1000): uint32 indicating current access mode
+- **BoilerStatus** (address 1005, Modbus 1004): int16 indicating boiler state (-1 to 10)
+
+Ping SHALL return `DiagnosticPingData` record with extensible structure for future parameters.
 
 Ping SHALL use `CommandPriority.Low` so user commands always execute first.
 
 Ping interval SHALL be configurable via `PingIntervalMs` setting.
+
+The dispatcher SHALL expose `LastPingData` property for UI to display current boiler state.
 
 #### Scenario: Ping runs when idle
 - **WHEN** no user commands are pending

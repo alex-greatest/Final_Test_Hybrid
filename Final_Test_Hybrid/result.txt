@@ -1,0 +1,99 @@
+
+@JmixEntity
+@Table(name = "TB_RESULT", indexes = {
+        @Index(name = "IDX_TB_RESULT_RESULT_SETTING_HISTORY", columnList = "RESULT_SETTING_HISTORY_ID"),
+        @Index(name = "IDX_TB_RESULT_OPERATION", columnList = "OPERATION_ID")
+})
+@Entity(name = "tb_Result")
+public class Result {
+    @JmixGeneratedValue
+    @Column(name = "ID", nullable = false)
+    @Id
+    private Long id;
+
+    @Column(name = "MIN_")
+    private String min;
+
+    @Column(name = "VALUE_", nullable = false)
+    @NotNull
+    private String value;
+
+    @Column(name = "MAX_")
+    private String max;
+
+    @Column(name = "STATUS")
+    private Integer status;
+
+    @OnDeleteInverse(DeletePolicy.CASCADE)
+    @JoinColumn(name = "OPERATION_ID", nullable = false)
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    private Operation operation;
+
+    @OnDeleteInverse(DeletePolicy.CASCADE)
+    @JoinColumn(name = "RESULT_SETTING_HISTORY_ID", nullable = false)
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    private ResultSettingHistory resultSettingHistory;
+    
+    
+    
+    
+    
+    
+    @JmixEntity
+    @Table(name = "TB_ERROR", indexes = {
+            @Index(name = "IDX_TB_ERROR_ERROR_SETTINGS_HISTORY", columnList = "ERROR_SETTINGS_HISTORY_ID"),
+            @Index(name = "IDX_TB_ERROR_OPERATION", columnList = "OPERATION_ID")
+    })
+    @Entity(name = "tb_Error")
+    public class Error {
+        @JmixGeneratedValue
+        @Column(name = "ID", nullable = false)
+        @Id
+        private Long id;
+    
+        @OnDeleteInverse(DeletePolicy.CASCADE)
+        @JoinColumn(name = "ERROR_SETTINGS_HISTORY_ID", nullable = false)
+        @NotNull
+        @ManyToOne(fetch = FetchType.LAZY, optional = false)
+        private ErrorSettingsHistory errorSettingsHistory;
+    
+        @OnDeleteInverse(DeletePolicy.CASCADE)
+        @JoinColumn(name = "OPERATION_ID", nullable = false)
+        @NotNull
+        @ManyToOne(fetch = FetchType.LAZY, optional = false)
+        private Operation operation;
+    
+    
+    
+    
+    
+    
+    @JmixEntity
+    @Table(name = "TB_STEP_TIME", indexes = {
+            @Index(name = "IDX_TB_STEP_TIME_STEP_FINAL_TEST", columnList = "STEP_FINAL_TEST_ID"),
+            @Index(name = "IDX_TB_STEP_TIME_OPERATION", columnList = "OPERATION_ID")
+    })
+    @Entity(name = "tb_StepTime")
+    public class StepTime {
+        @JmixGeneratedValue
+        @Column(name = "ID", nullable = false)
+        @Id
+        private Long id;
+    
+        @OnDeleteInverse(DeletePolicy.CASCADE)
+        @JoinColumn(name = "STEP_FINAL_TEST_ID", nullable = false)
+        @NotNull
+        @ManyToOne(fetch = FetchType.LAZY, optional = false)
+        private StepFinalTest stepFinalTest;
+    
+        @OnDeleteInverse(DeletePolicy.CASCADE)
+        @JoinColumn(name = "OPERATION_ID", nullable = false)
+        @NotNull
+        @ManyToOne(fetch = FetchType.LAZY, optional = false)
+        private Operation operation;
+    
+        @NotNull
+        @Column(name = "DURATION", nullable = false)
+        private String duration;

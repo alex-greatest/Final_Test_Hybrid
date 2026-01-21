@@ -16,6 +16,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ErrorSettingsHistory> ErrorSettingsHistories => Set<ErrorSettingsHistory>();
     public DbSet<Boiler> Boilers => Set<Boiler>();
     public DbSet<Operation> Operations => Set<Operation>();
+    public DbSet<Result> Results => Set<Result>();
+    public DbSet<Error> Errors => Set<Error>();
+    public DbSet<StepTime> StepTimes => Set<StepTime>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,6 +34,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         ConfigureErrorSettingsHistory(modelBuilder);
         ConfigureBoiler(modelBuilder);
         ConfigureOperation(modelBuilder);
+        ConfigureResult(modelBuilder);
+        ConfigureError(modelBuilder);
+        ConfigureStepTime(modelBuilder);
     }
 
     private static void ConfigureBoilerType(ModelBuilder modelBuilder)
@@ -277,6 +283,134 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.HasIndex(e => e.Operator).HasDatabaseName("IDX_TB_OPERATION_OPERATOR");
             entity.HasIndex(e => new { e.BoilerId, e.DateStart })
                 .HasDatabaseName("IDX_TB_OPERATION_BOILER_DATE_START");
+        });
+    }
+
+    private static void ConfigureResult(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Result>(entity =>
+        {
+            entity.ToTable("TB_RESULT");
+
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id)
+                .HasColumnName("ID")
+                .ValueGeneratedOnAdd();
+
+            entity.Property(e => e.Min)
+                .HasColumnName("MIN_");
+
+            entity.Property(e => e.Value)
+                .HasColumnName("VALUE_")
+                .IsRequired();
+
+            entity.Property(e => e.Max)
+                .HasColumnName("MAX_");
+
+            entity.Property(e => e.Status)
+                .HasColumnName("STATUS");
+
+            entity.Property(e => e.OperationId)
+                .HasColumnName("OPERATION_ID")
+                .IsRequired();
+
+            entity.Property(e => e.ResultSettingHistoryId)
+                .HasColumnName("RESULT_SETTING_HISTORY_ID")
+                .IsRequired();
+
+            entity.HasOne(e => e.Operation)
+                .WithMany()
+                .HasForeignKey(e => e.OperationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ResultSettingHistory)
+                .WithMany()
+                .HasForeignKey(e => e.ResultSettingHistoryId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.OperationId)
+                .HasDatabaseName("IDX_TB_RESULT_OPERATION");
+
+            entity.HasIndex(e => e.ResultSettingHistoryId)
+                .HasDatabaseName("IDX_TB_RESULT_RESULT_SETTING_HISTORY");
+        });
+    }
+
+    private static void ConfigureError(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Error>(entity =>
+        {
+            entity.ToTable("TB_ERROR");
+
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id)
+                .HasColumnName("ID")
+                .ValueGeneratedOnAdd();
+
+            entity.Property(e => e.ErrorSettingsHistoryId)
+                .HasColumnName("ERROR_SETTINGS_HISTORY_ID")
+                .IsRequired();
+
+            entity.Property(e => e.OperationId)
+                .HasColumnName("OPERATION_ID")
+                .IsRequired();
+
+            entity.HasOne(e => e.ErrorSettingsHistory)
+                .WithMany()
+                .HasForeignKey(e => e.ErrorSettingsHistoryId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Operation)
+                .WithMany()
+                .HasForeignKey(e => e.OperationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.ErrorSettingsHistoryId)
+                .HasDatabaseName("IDX_TB_ERROR_ERROR_SETTINGS_HISTORY");
+
+            entity.HasIndex(e => e.OperationId)
+                .HasDatabaseName("IDX_TB_ERROR_OPERATION");
+        });
+    }
+
+    private static void ConfigureStepTime(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<StepTime>(entity =>
+        {
+            entity.ToTable("TB_STEP_TIME");
+
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id)
+                .HasColumnName("ID")
+                .ValueGeneratedOnAdd();
+
+            entity.Property(e => e.StepFinalTestHistoryId)
+                .HasColumnName("STEP_FINAL_TEST_HISTORY_ID")
+                .IsRequired();
+
+            entity.Property(e => e.OperationId)
+                .HasColumnName("OPERATION_ID")
+                .IsRequired();
+
+            entity.Property(e => e.Duration)
+                .HasColumnName("DURATION")
+                .IsRequired();
+
+            entity.HasOne(e => e.StepFinalTestHistory)
+                .WithMany()
+                .HasForeignKey(e => e.StepFinalTestHistoryId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Operation)
+                .WithMany()
+                .HasForeignKey(e => e.OperationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.StepFinalTestHistoryId)
+                .HasDatabaseName("IDX_TB_STEP_TIME_STEP_FINAL_TEST_HISTORY");
+
+            entity.HasIndex(e => e.OperationId)
+                .HasDatabaseName("IDX_TB_STEP_TIME_OPERATION");
         });
     }
 }
