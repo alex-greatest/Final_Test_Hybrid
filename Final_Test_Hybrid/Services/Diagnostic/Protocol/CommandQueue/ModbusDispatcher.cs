@@ -57,6 +57,9 @@ public class ModbusDispatcher : IModbusDispatcher
     public event Action? Connected;
 
     /// <inheritdoc />
+    public event Action<DiagnosticPingData>? PingDataUpdated;
+
+    /// <inheritdoc />
     public bool IsConnected => _isConnected;
 
     /// <inheritdoc />
@@ -456,6 +459,7 @@ public class ModbusDispatcher : IModbusDispatcher
 
                     var pingData = await command.Task.ConfigureAwait(false);
                     _lastPingData = pingData;
+                    NotifyPingDataUpdatedSafely(pingData);
 
                     _logger.LogDebug("Ping OK: ModeKey={ModeKey:X8}, BoilerStatus={BoilerStatus}",
                         pingData.ModeKey, pingData.BoilerStatus);
@@ -575,6 +579,21 @@ public class ModbusDispatcher : IModbusDispatcher
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка в обработчике Connected: {Error}", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Безопасно уведомляет об обновлении данных ping.
+    /// </summary>
+    private void NotifyPingDataUpdatedSafely(DiagnosticPingData data)
+    {
+        try
+        {
+            PingDataUpdated?.Invoke(data);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка в обработчике PingDataUpdated: {Error}", ex.Message);
         }
     }
 

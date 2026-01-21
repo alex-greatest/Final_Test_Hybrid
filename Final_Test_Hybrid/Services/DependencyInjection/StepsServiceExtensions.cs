@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Models;
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common;
+using Final_Test_Hybrid.Services.Diagnostic.Protocol;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Results;
 using Final_Test_Hybrid.Services.Main;
@@ -75,7 +76,10 @@ public static class StepsServiceExtensions
         services.AddSingleton<IResultStorageService, ResultStorageService>();
         services.AddSingleton<IErrorStorageService, ErrorStorageService>();
         services.AddSingleton<IStepTimeStorageService, StepTimeStorageService>();
-        services.AddSingleton<ITestResultStorage, DatabaseTestResultStorage>();
+        services.AddSingleton<DatabaseTestResultStorage>();
+        services.AddSingleton<MesTestResultStorage>();
+        services.AddSingleton<TestResultStorageRouter>();
+        services.AddSingleton<ITestResultStorage>(sp => sp.GetRequiredService<TestResultStorageRouter>());
 
         // Test sequence
         services.AddSingleton<TestSequenseService>();
@@ -100,6 +104,10 @@ public static class StepsServiceExtensions
         services.AddSingleton<StepStatusReporter>();
         services.AddSingleton<ErrorPlcMonitor>();
         services.AddSingleton<PauseTokenSource>();
+
+        // Pausable Modbus сервисы (используются только в тестовых шагах)
+        services.AddSingleton<PausableRegisterReader>();
+        services.AddSingleton<PausableRegisterWriter>();
 
         // ErrorCoordinator dependency groups
         services.AddSingleton<ErrorCoordinatorSubscriptions>();

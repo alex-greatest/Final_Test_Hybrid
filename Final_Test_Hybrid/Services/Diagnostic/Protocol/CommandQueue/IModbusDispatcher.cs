@@ -18,6 +18,11 @@ public interface IModbusDispatcher : IAsyncDisposable
     event Action? Connected;
 
     /// <summary>
+    /// Вызывается при обновлении данных ping.
+    /// </summary>
+    event Action<DiagnosticPingData>? PingDataUpdated;
+
+    /// <summary>
     /// True если подключено к устройству.
     /// </summary>
     bool IsConnected { get; }

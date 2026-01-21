@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Diagnostic.Protocol;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
@@ -28,6 +29,8 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly IStepTimingService _stepTimingService;
     private readonly TagWaiter _tagWaiter;
     private readonly ExecutionFlowState _flowState;
+    private readonly PausableRegisterReader _pausableRegisterReader;
+    private readonly PausableRegisterWriter _pausableRegisterWriter;
     private readonly Lock _stateLock = new();
     private readonly object _enqueueLock = new();
     private readonly Action _onExecutorStateChanged;
@@ -63,7 +66,9 @@ public partial class TestExecutionCoordinator : IDisposable
         IErrorService errorService,
         IStepTimingService stepTimingService,
         TagWaiter tagWaiter,
-        ExecutionFlowState flowState)
+        ExecutionFlowState flowState,
+        PausableRegisterReader pausableRegisterReader,
+        PausableRegisterWriter pausableRegisterWriter)
     {
         _logger = logger;
         _testLogger = testLogger;
@@ -77,6 +82,8 @@ public partial class TestExecutionCoordinator : IDisposable
         _stepTimingService = stepTimingService;
         _tagWaiter = tagWaiter;
         _flowState = flowState;
+        _pausableRegisterReader = pausableRegisterReader;
+        _pausableRegisterWriter = pausableRegisterWriter;
         _onExecutorStateChanged = HandleExecutorStateChanged;
         _executors = CreateAllExecutors(pausableOpcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider);
         SubscribeToExecutorEvents();
@@ -122,7 +129,9 @@ public partial class TestExecutionCoordinator : IDisposable
         IRecipeProvider recipeProvider)
     {
         return Enumerable.Range(0, ColumnCount)
-            .Select(index => CreateExecutor(index, opcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider, _pauseToken, _errorService, _stepTimingService))
+            .Select(index => CreateExecutor(
+                index, opcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider,
+                _pauseToken, _errorService, _stepTimingService, _pausableRegisterReader, _pausableRegisterWriter))
             .ToArray();
     }
 
@@ -135,9 +144,13 @@ public partial class TestExecutionCoordinator : IDisposable
         IRecipeProvider recipeProvider,
         PauseTokenSource pauseToken,
         IErrorService errorService,
-        IStepTimingService stepTimingService)
+        IStepTimingService stepTimingService,
+        PausableRegisterReader pausableRegisterReader,
+        PausableRegisterWriter pausableRegisterWriter)
     {
-        var context = new TestStepContext(index, opcUa, loggerFactory.CreateLogger($"Column{index}"), recipeProvider, pauseToken);
+        var context = new TestStepContext(
+            index, opcUa, loggerFactory.CreateLogger($"Column{index}"), recipeProvider, pauseToken,
+            pausableRegisterReader, pausableRegisterWriter);
         var executorLogger = loggerFactory.CreateLogger<ColumnExecutor>();
         return new ColumnExecutor(index, context, testLogger, executorLogger, statusReporter, pauseToken, errorService, stepTimingService);
     }

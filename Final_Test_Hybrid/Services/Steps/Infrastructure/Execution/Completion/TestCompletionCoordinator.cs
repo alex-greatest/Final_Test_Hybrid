@@ -22,6 +22,12 @@ public partial class TestCompletionCoordinator(
     public event Func<string?, Task<bool>>? OnPrepareErrorDialogRequested;
 
     /// <summary>
+    /// Событие изменения состояния прогресса сохранения.
+    /// true = показать спиннер, false = скрыть.
+    /// </summary>
+    public event Action<bool>? OnSaveProgressChanged;
+
+    /// <summary>
     /// Показывает диалог ошибки подготовки через событие.
     /// </summary>
     public async Task<bool> ShowPrepareErrorDialogAsync(string? errorMessage)
@@ -40,6 +46,21 @@ public partial class TestCompletionCoordinator(
         {
             logger.LogError(ex, "Ошибка показа диалога подготовки");
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Безопасно вызывает событие прогресса сохранения.
+    /// </summary>
+    private void InvokeSaveProgressSafely(bool isShowing)
+    {
+        try
+        {
+            OnSaveProgressChanged?.Invoke(isShowing);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка в обработчике OnSaveProgressChanged");
         }
     }
 }

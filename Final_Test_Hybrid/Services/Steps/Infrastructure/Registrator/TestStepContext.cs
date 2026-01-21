@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Services.Common;
+using Final_Test_Hybrid.Services.Diagnostic.Protocol;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 using Microsoft.Extensions.Logging;
@@ -10,7 +11,9 @@ public class TestStepContext(
     PausableOpcUaTagService opcUa,
     ILogger logger,
     IRecipeProvider recipeProvider,
-    PauseTokenSource pauseToken)
+    PauseTokenSource pauseToken,
+    PausableRegisterReader diagReader,
+    PausableRegisterWriter diagWriter)
 {
     public int ColumnIndex { get; } = columnIndex;
     public PausableOpcUaTagService OpcUa { get; } = opcUa;
@@ -18,6 +21,8 @@ public class TestStepContext(
     public IRecipeProvider RecipeProvider { get; } = recipeProvider;
     public Dictionary<string, object> Variables { get; } = [];
     public PauseTokenSource PauseToken { get; } = pauseToken;
+    public PausableRegisterReader DiagReader { get; } = diagReader;
+    public PausableRegisterWriter DiagWriter { get; } = diagWriter;
 
     /// <summary>
     /// Pausable версия Task.Delay — останавливается при Auto OFF.

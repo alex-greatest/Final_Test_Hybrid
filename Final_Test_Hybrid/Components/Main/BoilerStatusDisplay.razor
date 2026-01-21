@@ -1,0 +1,86 @@
+@using Final_Test_Hybrid.Services.Diagnostic.Models
+@using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue
+@implements IDisposable
+@inject IModbusDispatcher Dispatcher
+
+<RadzenCard Class="rz-p-2" Style="background-color: #e0e0e0; min-width: 220px;">
+    <RadzenStack Gap="10" AlignItems="AlignItems.Center">
+        <RadzenText Style="font-size: 1.8rem; color: black">Статус Котла</RadzenText>
+        <RadzenText Style="font-size: 1.8rem; color: black; font-weight: 700">@_displayText</RadzenText>
+    </RadzenStack>
+</RadzenCard>
+
+@code {
+    private string _displayText = "Статус не смотрится";
+
+    protected override void OnInitialized()
+    {
+        Dispatcher.PingDataUpdated += OnPingDataUpdated;
+        Dispatcher.Connected += OnConnected;
+        Dispatcher.Disconnecting += OnDisconnecting;
+
+        UpdateDisplay();
+    }
+
+    private void OnPingDataUpdated(DiagnosticPingData data)
+    {
+        InvokeAsync(() =>
+        {
+            _displayText = FormatStatus(data);
+            StateHasChanged();
+        });
+    }
+
+    private void OnConnected()
+    {
+        InvokeAsync(() =>
+        {
+            UpdateDisplay();
+            StateHasChanged();
+        });
+    }
+
+    private Task OnDisconnecting()
+    {
+        InvokeAsync(() =>
+        {
+            _displayText = "Нет связи";
+            StateHasChanged();
+        });
+        return Task.CompletedTask;
+    }
+
+    private void UpdateDisplay()
+    {
+        if (!Dispatcher.IsStarted)
+        {
+            _displayText = "Статус не смотрится";
+        }
+        else if (!Dispatcher.IsConnected)
+        {
+            _displayText = "Нет связи";
+        }
+        else if (Dispatcher.LastPingData != null)
+        {
+            _displayText = FormatStatus(Dispatcher.LastPingData);
+        }
+    }
+
+    private static string FormatStatus(DiagnosticPingData data)
+    {
+        var mode = data.ModeKey switch
+        {
+            0xD7F8DB56 => "Стенд",
+            0xFA87CD5E => "Инженерный",
+            _ => "Обычный"
+        };
+        return $"{data.BoilerStatus}, {mode}";
+    }
+
+    public void Dispose()
+    {
+        Dispatcher.PingDataUpdated -= OnPingDataUpdated;
+        Dispatcher.Connected -= OnConnected;
+        Dispatcher.Disconnecting -= OnDisconnecting;
+    }
+}

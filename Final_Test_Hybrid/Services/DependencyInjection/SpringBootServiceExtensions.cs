@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Services.SpringBoot.ErrorSettings;
 using Final_Test_Hybrid.Services.SpringBoot.Health;
 using Final_Test_Hybrid.Services.SpringBoot.Operation;
+using Final_Test_Hybrid.Services.SpringBoot.Operation.Finish;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
 using Final_Test_Hybrid.Services.SpringBoot.ResultSettings;
@@ -29,6 +30,7 @@ public static class SpringBootServiceExtensions
         services.AddScoped<StepFinalTestDownloadService>();
         services.AddScoped<OperationStartService>();
         services.AddScoped<ReworkDialogService>();
+        services.AddSingleton<OperationFinishService>();
 
         return services;
     }

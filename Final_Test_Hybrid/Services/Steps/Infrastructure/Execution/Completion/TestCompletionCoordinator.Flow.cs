@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Plc.Tags;
+using Final_Test_Hybrid.Services.Storage;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 
@@ -79,7 +80,17 @@ public partial class TestCompletionCoordinator
     {
         while (!ct.IsCancellationRequested)
         {
-            var result = await deps.Storage.SaveAsync(testResult, ct);
+            InvokeSaveProgressSafely(true);
+            SaveResult result;
+            try
+            {
+                result = await deps.Storage.SaveAsync(testResult, ct);
+            }
+            finally
+            {
+                InvokeSaveProgressSafely(false);
+            }
+
             if (result.IsSuccess)
             {
                 logger.LogInformation("Результат {Status} сохранён", testResult == 1 ? "OK" : "NOK");

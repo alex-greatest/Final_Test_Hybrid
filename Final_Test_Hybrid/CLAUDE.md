@@ -44,10 +44,15 @@ public class MyService(DualLogger<MyService> logger)
 
 | Контекст | Сервис |
 |----------|--------|
-| Тестовые шаги | `PausableOpcUaTagService`, `PausableTagWaiter` |
-| Системные операции | `OpcUaTagService`, `TagWaiter` |
+| Тестовые шаги (OPC-UA) | `PausableOpcUaTagService`, `PausableTagWaiter` |
+| Тестовые шаги (Modbus) | `PausableRegisterReader`, `PausableRegisterWriter` |
+| Системные операции (OPC-UA) | `OpcUaTagService`, `TagWaiter` |
+| Системные операции (Modbus) | `RegisterReader`, `RegisterWriter` |
+| Ping keep-alive | `ModbusDispatcher` (НЕ паузится) |
+| Polling/Мониторинг | `PollingService` → `RegisterReader` (НЕ паузится) |
 
 **В шагах:** `context.DelayAsync()`, `context.PauseToken.WaitWhilePausedAsync()`. НЕ вызывать `Pause()/Resume()`.
+**Modbus в шагах:** `context.DiagReader`, `context.DiagWriter` — паузятся автоматически при Auto OFF.
 
 ## Coordinators & State Management
 
@@ -207,7 +212,8 @@ IScanBarcodeStep, IPreExecutionStep (отдельные)
 |---------|--------|
 | Extension chain | `AddFinalTestServices()` → `AddOpcUaServices()` |
 | Singleton state | `ExecutionStateManager`, `BoilerState` |
-| Pausable decorator | `PausableOpcUaTagService` wraps `OpcUaTagService` |
+| Pausable decorator (OPC-UA) | `PausableOpcUaTagService` wraps `OpcUaTagService` |
+| Pausable decorator (Modbus) | `PausableRegisterReader/Writer` wraps `RegisterReader/Writer` (в `StepsServiceExtensions`) |
 | DbContextFactory | `AddDbContextFactory<AppDbContext>()` |
 
 ## OPC-UA Layer
@@ -225,11 +231,13 @@ IScanBarcodeStep, IPreExecutionStep (отдельные)
 |--------|------------|
 | `IModbusDispatcher` | Command Queue, ping keep-alive, рестарт |
 | `IModbusClient` | Read/write регистров через очередь |
-| `RegisterReader/Writer` | Типизированные операции |
+| `RegisterReader/Writer` | Типизированные операции (системные, НЕ паузятся) |
+| `PausableRegisterReader/Writer` | Типизированные операции (тестовые шаги, паузятся) |
 | `PollingService` | Периодический опрос (Low priority) |
 | `PingCommand` | Keep-alive, читает ModeKey + BoilerStatus |
 
 **Обязательно:** `await dispatcher.StartAsync()` перед операциями.
+**Pausable сервисы** регистрируются в `StepsServiceExtensions` (зависят от `PauseTokenSource`).
 
 ```csharp
 // Индикация связи (IsConnected = true только после первой успешной команды)

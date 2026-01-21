@@ -1,0 +1,40 @@
+@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator
+@using Final_Test_Hybrid.Services.Main.PlcReset
+@inject DialogService DialogService
+@inject ErrorCoordinator ErrorCoordinator
+@inject PlcResetCoordinator PlcResetCoordinator
+@implements IDisposable
+
+<div class="save-progress-dialog">
+    <RadzenProgressBarCircular Value="100"
+                               ShowValue="false"
+                               Mode="ProgressBarMode.Indeterminate"
+                               Size="ProgressBarCircularSize.Large" />
+    <div class="progress-text">
+        Сохранение результатов...
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Закрытие при PLC reset (мягкий или жёсткий)
+        ErrorCoordinator.OnReset += CloseDialog;
+        PlcResetCoordinator.OnForceStop += CloseDialog;
+    }
+
+    /// <summary>
+    /// Закрывает диалог.
+    /// </summary>
+    private void CloseDialog()
+    {
+        // Маршалинг на UI-поток (события могут приходить с фонового потока)
+        _ = InvokeAsync(() => DialogService.Close());
+    }
+
+    public void Dispose()
+    {
+        ErrorCoordinator.OnReset -= CloseDialog;
+        PlcResetCoordinator.OnForceStop -= CloseDialog;
+    }
+}

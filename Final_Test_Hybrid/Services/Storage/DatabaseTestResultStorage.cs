@@ -37,7 +37,7 @@ public class DatabaseTestResultStorage(
             return SaveResult.Fail($"Некорректный результат теста: {testResult}");
         }
 
-        var serialNumber = boilerState.LastSerialNumber;
+        var serialNumber = boilerState.SerialNumber;
         if (string.IsNullOrEmpty(serialNumber))
         {
             logger.LogWarning("SerialNumber не найден в BoilerState");

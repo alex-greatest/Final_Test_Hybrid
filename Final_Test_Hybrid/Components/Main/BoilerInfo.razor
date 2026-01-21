@@ -11,6 +11,7 @@
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning
 @using Final_Test_Hybrid.Services.Steps.Validation
+@using Microsoft.Extensions.Logging
 @inject PreExecutionCoordinator PreExecution
 @inject ScanModeController ScanModeController
 @inject ScanDialogCoordinator DialogCoordinator
@@ -25,6 +26,7 @@
 @inject TestExecutionCoordinator TestCoordinator
 @inject TestCompletionCoordinator CompletionCoordinator
 @inject NotificationService NotificationService
+@inject ILogger<BoilerInfo> Logger
 @implements IDisposable
 
 <div class="field-row field-row-middle">
@@ -69,6 +71,8 @@
     private bool _showErrorPanel;
     private string? _errorStepName;
     private string? _errorMessage;
+    private bool _isSaveProgressDialogOpen;
+    private bool? _desiredSaveProgressState;
 
     private bool IsOnActiveScanStep => TestSequenseService.IsOnActiveScanStep;
     private bool IsFieldReadOnly => !PreExecution.IsAcceptingInput
@@ -99,6 +103,7 @@
         TestCoordinator.OnErrorOccurred += HandleTestErrorOccurred;
         CompletionCoordinator.OnSaveErrorDialogRequested += HandleSaveErrorDialogAsync;
         CompletionCoordinator.OnPrepareErrorDialogRequested += HandlePrepareErrorDialogAsync;
+        CompletionCoordinator.OnSaveProgressChanged += HandleSaveProgressChanged;
         ScanModeController.OnStateChanged += OnScanModeStateChanged;
     }
 
@@ -360,6 +365,71 @@
         return await tcs.Task;
     }
 
+    private void HandleSaveProgressChanged(bool isShowing)
+    {
+        // Сохраняем желаемое состояние синхронно (до InvokeAsync)
+        // Это решает race condition: если false придёт до обработки true в UI потоке,
+        // UI поток увидит актуальное состояние (false) и не откроет диалог
+        _desiredSaveProgressState = isShowing;
+
+        if (_disposed)
+        {
+            return;
+        }
+
+        // Используем паттерн InvokeIfNotDisposed для защиты от dispose между проверкой и вызовом
+        InvokeIfNotDisposed(() => ProcessSaveProgressStateAsync());
+    }
+
+    private async void ProcessSaveProgressStateAsync()
+    {
+        try
+        {
+            // Проверяем актуальное желаемое состояние (могло измениться с момента вызова)
+            var desired = _desiredSaveProgressState;
+
+            if (desired == true)
+            {
+                // Защита от повторного открытия и открытия во время reset
+                if (_isSaveProgressDialogOpen || PlcResetCoordinator.IsActive)
+                {
+                    return;
+                }
+                _isSaveProgressDialogOpen = true;
+                try
+                {
+                    await DialogService.OpenAsync<SaveProgressDialog>(
+                        "",
+                        null,
+                        new DialogOptions
+                        {
+                            Width = "400px",
+                            Height = "200px",
+                            ShowTitle = false,
+                            ShowClose = false,
+                            CloseDialogOnOverlayClick = false,
+                            CloseDialogOnEsc = false
+                        });
+                    // Не закрываем здесь - это делает второй вызов ProcessSaveProgressStateAsync
+                    // от события false (либо обработчики reset в самом SaveProgressDialog)
+                }
+                finally
+                {
+                    _isSaveProgressDialogOpen = false;
+                }
+            }
+            else if (desired == false && _isSaveProgressDialogOpen)
+            {
+                DialogService.Close();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Ошибки UI не должны прерывать сохранение
+            Logger.LogWarning(ex, "Ошибка отображения диалога прогресса сохранения");
+        }
+    }
+
     public void Dispose()
     {
         _disposed = true;
@@ -382,6 +452,7 @@
         TestCoordinator.OnErrorOccurred -= HandleTestErrorOccurred;
         CompletionCoordinator.OnSaveErrorDialogRequested -= HandleSaveErrorDialogAsync;
         CompletionCoordinator.OnPrepareErrorDialogRequested -= HandlePrepareErrorDialogAsync;
+        CompletionCoordinator.OnSaveProgressChanged -= HandleSaveProgressChanged;
         ScanModeController.OnStateChanged -= OnScanModeStateChanged;
     }
 }
