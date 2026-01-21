@@ -3,56 +3,67 @@ using Final_Test_Hybrid.Services.OpcUa.WaitGroup;
 
 namespace Final_Test_Hybrid.Services.OpcUa;
 
+/// <summary>
+/// Обёртка над TagWaiter, передающая PauseTokenSource во все методы.
+/// При паузе события игнорируются и таймер замораживается.
+/// При Resume — перепроверка условий, таймер продолжает с остатка.
+/// </summary>
 public class PausableTagWaiter(
     TagWaiter inner,
     PauseTokenSource pauseToken)
 {
-    public async Task<T> WaitForValueAsync<T>(
+    /// <summary>
+    /// Ожидает значение тега, удовлетворяющее условию (pause-aware).
+    /// </summary>
+    public Task<T> WaitForValueAsync<T>(
         string nodeId,
         Func<T, bool> condition,
         TimeSpan? timeout = null,
         CancellationToken ct = default)
-    {
-        await pauseToken.WaitWhilePausedAsync(ct);
-        return await inner.WaitForValueAsync(nodeId, condition, timeout, ct);
-    }
+        => inner.WaitForValueAsync(nodeId, condition, pauseToken, timeout, ct);
 
-    public async Task<T> WaitForChangeAsync<T>(
+    /// <summary>
+    /// Ожидает любое изменение значения тега (pause-aware).
+    /// </summary>
+    public Task<T> WaitForChangeAsync<T>(
         string nodeId,
         TimeSpan? timeout = null,
         CancellationToken ct = default)
-    {
-        await pauseToken.WaitWhilePausedAsync(ct);
-        return await inner.WaitForChangeAsync<T>(nodeId, timeout, ct);
-    }
+        => inner.WaitForChangeAsync<T>(nodeId, pauseToken, timeout, ct);
 
-    public async Task WaitForTrueAsync(string nodeId, TimeSpan? timeout = null, CancellationToken ct = default)
-    {
-        await pauseToken.WaitWhilePausedAsync(ct);
-        await inner.WaitForTrueAsync(nodeId, timeout, ct);
-    }
+    /// <summary>
+    /// Ожидает пока тег станет true (pause-aware).
+    /// </summary>
+    public Task WaitForTrueAsync(string nodeId, TimeSpan? timeout = null, CancellationToken ct = default)
+        => inner.WaitForTrueAsync(nodeId, pauseToken, timeout, ct);
 
-    public async Task WaitForFalseAsync(string nodeId, TimeSpan? timeout = null, CancellationToken ct = default)
-    {
-        await pauseToken.WaitWhilePausedAsync(ct);
-        await inner.WaitForFalseAsync(nodeId, timeout, ct);
-    }
+    /// <summary>
+    /// Ожидает пока тег станет false (pause-aware).
+    /// </summary>
+    public Task WaitForFalseAsync(string nodeId, TimeSpan? timeout = null, CancellationToken ct = default)
+        => inner.WaitForFalseAsync(nodeId, pauseToken, timeout, ct);
 
+    /// <summary>
+    /// Создаёт билдер для ожидания нескольких условий (без результата).
+    /// </summary>
     public WaitGroupBuilder CreateWaitGroup() => inner.CreateWaitGroup();
 
+    /// <summary>
+    /// Создаёт билдер для ожидания нескольких условий (с результатом).
+    /// </summary>
     public WaitGroupBuilder<TResult> CreateWaitGroup<TResult>() => inner.CreateWaitGroup<TResult>();
 
-    public async Task<TagWaitResult> WaitAnyAsync(WaitGroupBuilder builder, CancellationToken ct = default)
-    {
-        await pauseToken.WaitWhilePausedAsync(ct);
-        return await inner.WaitAnyAsync(builder, ct);
-    }
+    /// <summary>
+    /// Ожидает первое сработавшее условие из группы (pause-aware).
+    /// </summary>
+    public Task<TagWaitResult> WaitAnyAsync(WaitGroupBuilder builder, CancellationToken ct = default)
+        => inner.WaitAnyAsync(builder, pauseToken, ct);
 
-    public async Task<TagWaitResult<TResult>> WaitAnyAsync<TResult>(
+    /// <summary>
+    /// Ожидает первое сработавшее условие из группы с типизированным результатом (pause-aware).
+    /// </summary>
+    public Task<TagWaitResult<TResult>> WaitAnyAsync<TResult>(
         WaitGroupBuilder<TResult> builder,
         CancellationToken ct = default)
-    {
-        await pauseToken.WaitWhilePausedAsync(ct);
-        return await inner.WaitAnyAsync(builder, ct);
-    }
+        => inner.WaitAnyAsync(builder, pauseToken, ct);
 }
