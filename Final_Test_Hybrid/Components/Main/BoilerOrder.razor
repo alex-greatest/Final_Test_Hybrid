@@ -1,40 +1,90 @@
+@using Final_Test_Hybrid.Components.Main.Modals
 @using Final_Test_Hybrid.Services.Common.Settings
+@using Final_Test_Hybrid.Services.Database
 @using Final_Test_Hybrid.Services.Main
 @inject AppSettingsService AppSettingsService
 @inject OrderState OrderState
+@inject SuccessCountService SuccessCountService
+@inject DialogService DialogService
+@inject NotificationService NotificationService
 @implements IDisposable
 
-<div class="field-row">
-    <RadzenLabel Text="Номер заказа"/>
-    <RadzenTextBox Style="width:100%"
-                   Value="@OrderNumberText"
-                   Disabled="@(!AppSettingsService.UseMes)"
-                   ReadOnly="true"/>
-</div>
-<div class="field-row">
-    <RadzenLabel Text="Котлов в заказе"/>
-    <RadzenTextBox Style="width:100%"
-                   Value="@AmountBoilerOrderText"
-                   Disabled="@(!AppSettingsService.UseMes)"
-                   ReadOnly="true"/>
-</div>
-<div class="field-row">
-    <RadzenLabel Text="Котлов сделано"/>
-    <RadzenTextBox Style="width:100%"
-                   Value="@AmountBoilerMadeOrderText"
-                   Disabled="@(!AppSettingsService.UseMes)"
-                   ReadOnly="true"/>
-</div>
+@if (AppSettingsService.UseMes)
+{
+    <div class="field-row">
+        <RadzenLabel Text="Номер заказа"/>
+        <RadzenTextBox Style="width:100%"
+                       Value="@OrderNumberText"
+                       ReadOnly="true"/>
+    </div>
+    <div class="field-row">
+        <RadzenLabel Text="Котлов в заказе"/>
+        <RadzenTextBox Style="width:100%"
+                       Value="@AmountBoilerOrderText"
+                       ReadOnly="true"/>
+    </div>
+    <div class="field-row">
+        <RadzenLabel Text="Котлов сделано"/>
+        <RadzenTextBox Style="width:100%"
+                       Value="@AmountBoilerMadeOrderText"
+                       ReadOnly="true"/>
+    </div>
+}
+else
+{
+    <div style="grid-column: span 2; display: flex; align-items: center; gap: 16px;">
+        <div class="field-row" style="flex: 1;">
+            <RadzenLabel Text="Успеш. тестов"/>
+            <RadzenTextBox Style="width:100%"
+                           Value="@SuccessCountText"
+                           ReadOnly="true"/>
+        </div>
+        <RadzenButton Text="Изменить"
+                      Style="font-size: 1.3rem; font-weight: 700; padding: 10px 12px;"
+                      ButtonStyle="ButtonStyle.Secondary"
+                      Click="@OpenEditDialog"/>
+        <RadzenButton Text="Обнулить"
+                      Style="font-size: 1.3rem; font-weight: 700; padding: 10px 12px;"
+                      ButtonStyle="ButtonStyle.Danger"
+                      Click="@ResetCount"/>
+    </div>
+}
 
 @code {
     private string OrderNumberText => OrderState.OrderNumber?.ToString() ?? "";
     private string AmountBoilerOrderText => OrderState.AmountBoilerOrder?.ToString() ?? "";
     private string AmountBoilerMadeOrderText => OrderState.AmountBoilerMadeOrder?.ToString() ?? "";
+    private string SuccessCountText => _successCount.ToString();
 
-    protected override void OnInitialized()
+    private long _successCount;
+
+    protected override async Task OnInitializedAsync()
     {
         AppSettingsService.UseMesChanged += OnUseMesChanged;
         OrderState.OnChanged += OnStateChanged;
+        SuccessCountService.OnCountChanged += OnCountChanged;
+
+        await LoadSuccessCountAsync();
+    }
+
+    private async Task LoadSuccessCountAsync()
+    {
+        _successCount = await SuccessCountService.GetCountAsync();
+    }
+
+    private async void OnCountChanged()
+    {
+        try
+        {
+            await LoadSuccessCountAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
     }
 
     private async void OnStateChanged()
@@ -45,19 +95,86 @@
         }
         catch (ObjectDisposedException)
         {
-            // Component disposed during async operation
         }
         catch (InvalidOperationException)
         {
-            // Renderer disposed during navigation
         }
     }
 
-    private void OnUseMesChanged(bool _) => OnStateChanged();
+    private async void OnUseMesChanged(bool useMes)
+    {
+        try
+        {
+            if (!useMes)
+            {
+                await LoadSuccessCountAsync();
+            }
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+
+    private async Task OpenEditDialog()
+    {
+        var result = await DialogService.OpenAsync<EditSuccessCountDialog>(
+            "Редактирование счётчика",
+            new Dictionary<string, object> { ["InitialValue"] = _successCount },
+            new DialogOptions { Width = "300px" });
+
+        if (result is long newValue)
+        {
+            await SaveCountAsync(newValue);
+        }
+    }
+
+    private async Task SaveCountAsync(long newValue)
+    {
+        try
+        {
+            await SuccessCountService.UpdateCountAsync(newValue);
+            _successCount = newValue;
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Ошибка", ex.Message);
+        }
+    }
+
+    private async Task ResetCount()
+    {
+        var confirmed = await DialogService.Confirm(
+            "Обнулить счётчик успешных тестов?",
+            "Подтверждение",
+            new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Нет" });
+
+        if (confirmed == true)
+        {
+            await ResetCountAsync();
+        }
+    }
+
+    private async Task ResetCountAsync()
+    {
+        try
+        {
+            await SuccessCountService.ResetCountAsync();
+            _successCount = 0;
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Ошибка", ex.Message);
+        }
+    }
 
     public void Dispose()
     {
         AppSettingsService.UseMesChanged -= OnUseMesChanged;
         OrderState.OnChanged -= OnStateChanged;
+        SuccessCountService.OnCountChanged -= OnCountChanged;
     }
 }

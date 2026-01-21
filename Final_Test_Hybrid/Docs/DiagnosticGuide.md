@@ -46,13 +46,23 @@ public class MyService(IModbusDispatcher dispatcher)
 
 ### Инициализация в приложении (Form1.cs)
 
+**ВАЖНО:** `StartAsync()` вызывается из тестовых шагов, не из Form1.
+
 ```csharp
-private static async void ConfigureDiagnosticEvents(ServiceProvider serviceProvider)
+// Form1.cs — только подписка на события, БЕЗ StartAsync
+private static void ConfigureDiagnosticEvents(ServiceProvider serviceProvider)
 {
     var dispatcher = serviceProvider.GetRequiredService<IModbusDispatcher>();
+    var pollingService = serviceProvider.GetRequiredService<PollingService>();
+    var plcResetCoordinator = serviceProvider.GetRequiredService<PlcResetCoordinator>();
+    var errorCoordinator = serviceProvider.GetRequiredService<IErrorCoordinator>();
+    var logger = serviceProvider.GetRequiredService<ILogger<Form1>>();
 
-    // Запускаем диспетчер при старте приложения
-    await dispatcher.StartAsync();
+    dispatcher.Disconnecting += () => pollingService.StopAllTasksAsync();
+    plcResetCoordinator.OnForceStop += () => StopDispatcherSafely(dispatcher, logger);
+    errorCoordinator.OnReset += () => StopDispatcherSafely(dispatcher, logger);
+
+    // StartAsync() НЕ вызываем — диагностика запускается из тестовых шагов
 }
 ```
 
@@ -176,21 +186,22 @@ public class MyService(IModbusDispatcher dispatcher)
 
 **Поведение `StopAsync()`:**
 
-1. Завершает каналы команд (новые команды не принимаются)
-2. Отменяет ping task
-3. Отменяет worker task
-4. **Немедленно закрывает COM-порт** — прерывает текущую Modbus команду через IOException
-5. Ожидает завершения worker (таймаут 5 сек)
-6. Отменяет все pending команды в очереди
-7. Сбрасывает состояние (`IsConnected = false`, `LastPingData = null`)
+1. Завершает каналы команд (TryComplete)
+2. Отменяет CancellationToken (ping и worker)
+3. **Закрывает COM-порт СРАЗУ** — прерывает in-flight Modbus команду
+4. Уведомляет подписчиков Disconnecting (таймаут 2 сек)
+5. Ждёт завершения ping + worker параллельно (таймаут 5 сек)
+6. **Environment.FailFast** если tasks не завершились
+7. Отменяет pending команды, сбрасывает состояние
 
 **Защита от зависания:**
 
 | Сценарий | Поведение |
 |----------|-----------|
-| Worker завершился нормально | Рестарт разрешён |
-| Worker таймаут (>5 сек) | **Рестарт заблокирован**, логируется CRITICAL |
-| Текущая команда выполняется | Прерывается через `Close()` → IOException |
+| Worker завершился < 5 сек | Рестарт разрешён |
+| Worker таймаут > 5 сек | **Environment.FailFast** — критический баг |
+| Disconnecting handler таймаут > 2 сек | Логируется Warning, продолжаем |
+| Текущая команда выполняется | Прерывается через Close() → IOException |
 
 ### Рестарт после StopAsync
 
@@ -225,16 +236,16 @@ public class MyService(IModbusDispatcher dispatcher)
 **Реализация в Form1.cs:**
 
 ```csharp
-// Безопасная остановка с обработкой ошибок
-plcResetCoordinator.OnForceStop += () => StopDispatcherSafely(dispatcher);
-errorCoordinator.OnReset += () => StopDispatcherSafely(dispatcher);
-
-private static void StopDispatcherSafely(IModbusDispatcher dispatcher)
+private static void StopDispatcherSafely(IModbusDispatcher dispatcher, ILogger logger)
 {
     _ = dispatcher.StopAsync().ContinueWith(t =>
     {
-        if (t.IsFaulted)
-            Debug.WriteLine($"Ошибка: {t.Exception?.GetBaseException().Message}");
+        if (t is { IsFaulted: true, Exception: not null })
+        {
+            logger.LogError(t.Exception.GetBaseException(),
+                "Ошибка остановки диспетчера: {Error}",
+                t.Exception.GetBaseException().Message);
+        }
     }, TaskScheduler.Default);
 }
 ```
@@ -274,6 +285,22 @@ if (pingData != null)
     var status = pingData.BoilerStatus;
 }
 ```
+
+## Почему Ping не поддерживает паузу
+
+Диагностика **является частью тестовых шагов** — операции чтения/записи регистров выполняются внутри шагов теста.
+
+| Компонент | Поддержка паузы | Причина |
+|-----------|-----------------|---------|
+| Read/Write операции | **Нужна** (через PausableModbusClient) | Часть тестовых шагов |
+| Ping keep-alive | **Не нужна** | Поддержание связи независимо от паузы |
+
+**Ping работает непрерывно потому что:**
+- Поддерживает связь с ЭБУ даже при паузе теста
+- Предотвращает таймаут соединения
+- Обновляет LastPingData (ModeKey, BoilerStatus)
+
+**TODO:** Добавить `PausableModbusClient` по аналогии с `PausableOpcUaTagService` для операций чтения/записи в тестовых шагах.
 
 ## Чтение регистров
 

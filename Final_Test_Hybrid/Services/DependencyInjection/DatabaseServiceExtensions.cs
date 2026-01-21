@@ -26,6 +26,7 @@ public static class DatabaseServiceExtensions
 
         services.AddSingleton<DatabaseConnectionState>();
         services.AddSingleton<DatabaseConnectionService>();
+        services.AddSingleton<SuccessCountService>();
         services.AddScoped<BoilerTypeService>();
         services.AddScoped<BoilerService>();
         services.AddScoped<OperationService>();

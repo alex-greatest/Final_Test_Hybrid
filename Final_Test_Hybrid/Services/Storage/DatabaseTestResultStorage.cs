@@ -2,6 +2,7 @@ using System.Data.Common;
 using Final_Test_Hybrid.Models;
 using Final_Test_Hybrid.Models.Database;
 using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Database;
 using Final_Test_Hybrid.Services.Database.Config;
 using Final_Test_Hybrid.Services.Storage.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +20,7 @@ public class DatabaseTestResultStorage(
     IResultStorageService resultStorage,
     IErrorStorageService errorStorage,
     IStepTimeStorageService stepTimeStorage,
+    SuccessCountService successCountService,
     DualLogger<DatabaseTestResultStorage> logger) : ITestResultStorage
 {
     /// <summary>
@@ -91,6 +93,7 @@ public class DatabaseTestResultStorage(
                     successCount.Count++;
                 }
                 await context.SaveChangesAsync(ct);
+                successCountService.NotifyCountChanged();
             }
 
             logger.LogInformation(

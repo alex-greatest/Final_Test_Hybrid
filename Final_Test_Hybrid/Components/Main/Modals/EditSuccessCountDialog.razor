@@ -1,0 +1,43 @@
+@using Final_Test_Hybrid.Services.Database
+
+<div class="edit-count-dialog">
+    <RadzenNumeric @bind-Value="_value"
+                   Min="0"
+                   Style="width: 100%; font-size: 17px;"
+                   TValue="long" />
+    <div class="dialog-buttons">
+        <RadzenButton Text="Сохранить"
+                      Click="@OnSave"
+                      ButtonStyle="ButtonStyle.Primary"
+                      Style="padding: 8px 15px;" />
+        <RadzenButton Text="Отмена"
+                      Click="@OnCancel"
+                      ButtonStyle="ButtonStyle.Light"
+                      Style="padding: 8px 15px;" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public long InitialValue { get; set; }
+
+    [Inject]
+    public required DialogService DialogService { get; set; }
+
+    private long _value;
+
+    protected override void OnInitialized()
+    {
+        _value = InitialValue;
+    }
+
+    private void OnSave()
+    {
+        DialogService.Close(_value);
+    }
+
+    private void OnCancel()
+    {
+        DialogService.Close(null);
+    }
+}
