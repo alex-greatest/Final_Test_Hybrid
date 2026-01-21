@@ -308,7 +308,7 @@ High-priority команды всегда выполняются раньше Lo
     "SlaveId": 1,
     "ReadTimeoutMs": 1000,
     "WriteTimeoutMs": 1000,
-    "ReconnectIntervalMs": 5000,
+    "BaseAddressOffset": 1,
     "CommandQueue": {
       "HighPriorityQueueCapacity": 100,
       "LowPriorityQueueCapacity": 10,
@@ -320,6 +320,31 @@ High-priority команды всегда выполняются раньше Lo
   }
 }
 ```
+
+### DiagnosticSettings — COM-порт и Modbus RTU
+
+| Параметр | Тип | Default | Описание |
+|----------|-----|---------|----------|
+| `PortName` | string | "COM1" | Имя COM-порта (USB-RS485 адаптер) |
+| `BaudRate` | int | 115200 | Скорость передачи (бод). Должна совпадать с ЭБУ |
+| `DataBits` | int | 8 | Биты данных (стандарт для Modbus RTU) |
+| `Parity` | Parity | None | Контроль чётности: None/Odd/Even/Mark/Space |
+| `StopBits` | StopBits | One | Стоповые биты: One/Two/OnePointFive |
+| `SlaveId` | byte | 1 | Modbus Slave ID устройства (адрес ведомого) |
+| `ReadTimeoutMs` | int | 1000 | Таймаут ответа на чтение (мс) |
+| `WriteTimeoutMs` | int | 1000 | Таймаут ответа на запись (мс) |
+| `BaseAddressOffset` | ushort | 1 | Смещение адресов: документация (1005) → Modbus (1004) |
+
+### ModbusDispatcherOptions — Command Queue
+
+| Параметр | Тип | Default | Описание |
+|----------|-----|---------|----------|
+| `HighPriorityQueueCapacity` | int | 100 | Размер очереди для one-off команд (UI, read/write по запросу) |
+| `LowPriorityQueueCapacity` | int | 10 | Размер очереди для polling (фоновый опрос) |
+| `InitialReconnectDelayMs` | int | 1000 | Начальная задержка при потере связи |
+| `MaxReconnectDelayMs` | int | 30000 | Максимальная задержка (exponential backoff ceiling) |
+| `ReconnectBackoffMultiplier` | double | 2.0 | Множитель: 1с → 2с → 4с → 8с → ... → 30с |
+| `CommandWaitTimeoutMs` | int | 100 | Как долго воркер ждёт команду перед проверкой состояния |
 
 ## DI регистрация
 

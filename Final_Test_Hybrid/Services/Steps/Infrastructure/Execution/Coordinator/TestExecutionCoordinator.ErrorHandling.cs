@@ -13,12 +13,18 @@ public partial class TestExecutionCoordinator
 {
     private Channel<bool>? _errorSignalChannel;
 
+    /// <summary>
+    /// Обрабатывает изменение состояния executor'а.
+    /// </summary>
     private void HandleExecutorStateChanged()
     {
         OnStateChanged?.Invoke();
         EnqueueFailedExecutors();
     }
 
+    /// <summary>
+    /// Создаёт и запускает канал для сигналов об ошибках.
+    /// </summary>
     private Channel<bool> StartErrorSignalChannel()
     {
         var channel = Channel.CreateBounded<bool>(new BoundedChannelOptions(1)
@@ -31,12 +37,18 @@ public partial class TestExecutionCoordinator
         return channel;
     }
 
+    /// <summary>
+    /// Сигнализирует об обнаружении ошибки.
+    /// </summary>
     private void SignalErrorDetected()
     {
         var channel = Volatile.Read(ref _errorSignalChannel);
         channel?.Writer.TryWrite(true);
     }
 
+    /// <summary>
+    /// Завершает канал сигналов после окончания выполнения.
+    /// </summary>
     private void CompleteErrorSignalChannel()
     {
         var channel = Interlocked.Exchange(ref _errorSignalChannel, null);
@@ -48,11 +60,17 @@ public partial class TestExecutionCoordinator
         channel.Writer.TryComplete();
     }
 
+    /// <summary>
+    /// Запускает цикл обработки ошибок.
+    /// </summary>
     private Task RunErrorHandlingLoopAsync(ChannelReader<bool> reader, CancellationToken token)
     {
         return ProcessErrorSignalsAsync(reader, token);
     }
 
+    /// <summary>
+    /// Обрабатывает сигналы об ошибках из канала.
+    /// </summary>
     private async Task ProcessErrorSignalsAsync(ChannelReader<bool> reader, CancellationToken token)
     {
         try
@@ -67,6 +85,9 @@ public partial class TestExecutionCoordinator
         }
     }
 
+    /// <summary>
+    /// Добавляет ошибки упавших колонок в очередь.
+    /// </summary>
     private void EnqueueFailedExecutors()
     {
         var state = StateManager.State;
@@ -90,6 +111,9 @@ public partial class TestExecutionCoordinator
         }
     }
 
+    /// <summary>
+    /// Создаёт объект ошибки из состояния executor'а.
+    /// </summary>
     private static StepError CreateErrorFromExecutor(ColumnExecutor executor)
     {
         return new StepError(
@@ -102,6 +126,9 @@ public partial class TestExecutionCoordinator
             executor.FailedStep);
     }
 
+    /// <summary>
+    /// Обрабатывает все ошибки в очереди.
+    /// </summary>
     private async Task HandleErrorsIfAny()
     {
         var cts = _cts;
@@ -154,6 +181,9 @@ public partial class TestExecutionCoordinator
         }
     }
 
+    /// <summary>
+    /// Устанавливает тег Selected для PLC-блока.
+    /// </summary>
     private async Task SetSelectedAsync(StepError error, bool value)
     {
         if (error.FailedStep is not IHasPlcBlockPath plcStep)
@@ -173,9 +203,11 @@ public partial class TestExecutionCoordinator
         }
     }
 
+    /// <summary>
+    /// Устанавливает Fault для шагов без PLC-блока.
+    /// </summary>
     private async Task SetFaultIfNoBlockAsync(ITestStep? step)
     {
-        // Только для шагов БЕЗ блока
         if (step is IHasPlcBlock)
         {
             return;
@@ -185,9 +217,11 @@ public partial class TestExecutionCoordinator
         await _plcService.WriteAsync(BaseTags.Fault, true);
     }
 
+    /// <summary>
+    /// Сбрасывает Fault для шагов без PLC-блока.
+    /// </summary>
     private async Task ResetFaultIfNoBlockAsync(ITestStep? step)
     {
-        // Только для шагов БЕЗ блока (аналогично SetFaultIfNoBlockAsync)
         if (step is IHasPlcBlock)
         {
             return;
@@ -197,6 +231,9 @@ public partial class TestExecutionCoordinator
         await _plcService.WriteAsync(BaseTags.Fault, false);
     }
 
+    /// <summary>
+    /// Обрабатывает решение пользователя по ошибке.
+    /// </summary>
     private async Task ProcessErrorResolution(StepError error, ErrorResolution resolution, CancellationToken ct)
     {
         ColumnExecutor executor;
@@ -215,6 +252,9 @@ public partial class TestExecutionCoordinator
         }
     }
 
+    /// <summary>
+    /// Обрабатывает повтор шага.
+    /// </summary>
     private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
     {
         var blockErrorTag = GetBlockErrorTag(error.FailedStep);
@@ -228,6 +268,9 @@ public partial class TestExecutionCoordinator
         await _errorCoordinator.WaitForRetrySignalResetAsync(ct);
     }
 
+    /// <summary>
+    /// Обрабатывает пропуск шага.
+    /// </summary>
     private async Task ProcessSkipAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
     {
         await ResetBlockStartAsync(error.FailedStep);
@@ -242,6 +285,9 @@ public partial class TestExecutionCoordinator
         StateManager.DequeueError();
     }
 
+    /// <summary>
+    /// Ожидает сброса сигналов после пропуска.
+    /// </summary>
     private async Task WaitForSkipSignalsResetAsync(ITestStep? step, CancellationToken ct)
     {
         if (step is IHasPlcBlockPath plcStep)
@@ -266,6 +312,9 @@ public partial class TestExecutionCoordinator
         }
     }
 
+    /// <summary>
+    /// Сбрасывает сигнал Start для PLC-блока.
+    /// </summary>
     private async Task ResetBlockStartAsync(ITestStep? step)
     {
         if (step is not IHasPlcBlockPath plcStep)
@@ -281,11 +330,17 @@ public partial class TestExecutionCoordinator
         await _plcService.WriteAsync(startTag, false);
     }
 
+    /// <summary>
+    /// Возвращает тег End для PLC-блока.
+    /// </summary>
     private static string? GetBlockEndTag(ITestStep? step)
     {
         return PlcBlockTagHelper.GetEndTag(step as IHasPlcBlockPath);
     }
 
+    /// <summary>
+    /// Возвращает тег Error для PLC-блока.
+    /// </summary>
     private static string? GetBlockErrorTag(ITestStep? step)
     {
         return PlcBlockTagHelper.GetErrorTag(step as IHasPlcBlockPath);

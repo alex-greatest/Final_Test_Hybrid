@@ -6,6 +6,9 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 
 public partial class TestExecutionCoordinator
 {
+    /// <summary>
+    /// Запускает выполнение тестов с ожиданием завершения.
+    /// </summary>
     public async Task StartAsync()
     {
         if (!TryStart())
@@ -15,6 +18,9 @@ public partial class TestExecutionCoordinator
         await RunWithErrorHandlingAsync();
     }
 
+    /// <summary>
+    /// Запускает выполнение тестов в фоновом режиме.
+    /// </summary>
     public bool TryStartInBackground()
     {
         if (!TryStart())
@@ -25,12 +31,18 @@ public partial class TestExecutionCoordinator
         return true;
     }
 
+    /// <summary>
+    /// Логирует необработанное исключение.
+    /// </summary>
     private void LogUnhandledException(Exception ex)
     {
         _logger.LogError(ex, "Необработанная ошибка в TestExecutionCoordinator");
         _testLogger.LogError(ex, "Критическая ошибка выполнения тестов");
     }
 
+    /// <summary>
+    /// Пытается начать выполнение тестов.
+    /// </summary>
     private bool TryStart()
     {
         lock (_stateLock)
@@ -44,6 +56,9 @@ public partial class TestExecutionCoordinator
         }
     }
 
+    /// <summary>
+    /// Выполняет тесты с обработкой ошибок.
+    /// </summary>
     private async Task RunWithErrorHandlingAsync()
     {
         try
@@ -60,6 +75,9 @@ public partial class TestExecutionCoordinator
         }
     }
 
+    /// <summary>
+    /// Проверяет возможность запуска.
+    /// </summary>
     private bool CanStart()
     {
         if (!StateManager.IsActive)
@@ -70,6 +88,9 @@ public partial class TestExecutionCoordinator
         return false;
     }
 
+    /// <summary>
+    /// Проверяет наличие загруженных карт.
+    /// </summary>
     private bool ValidateMapsLoaded()
     {
         if (HasMapsLoaded())
@@ -80,17 +101,26 @@ public partial class TestExecutionCoordinator
         return false;
     }
 
+    /// <summary>
+    /// Возвращает true, если карты загружены.
+    /// </summary>
     private bool HasMapsLoaded()
     {
         return _maps.Count > 0;
     }
 
+    /// <summary>
+    /// Логирует отсутствие загруженной последовательности.
+    /// </summary>
     private void LogNoSequenceLoaded()
     {
         _logger.LogError("Последовательность не загружена");
         _testLogger.LogError(null, "Ошибка: последовательность тестов не загружена");
     }
 
+    /// <summary>
+    /// Инициализирует состояние для начала выполнения.
+    /// </summary>
     private void BeginExecution()
     {
         _flowState.ClearStop();
@@ -104,6 +134,9 @@ public partial class TestExecutionCoordinator
         _testLogger.LogInformation("═══ ЗАПУСК ТЕСТИРОВАНИЯ ({Count} блоков) ═══", _maps.Count);
     }
 
+    /// <summary>
+    /// Выполняет все карты последовательно.
+    /// </summary>
     private async Task RunAllMaps()
     {
         var token = GetCancellationToken();
@@ -115,18 +148,27 @@ public partial class TestExecutionCoordinator
         }
     }
 
+    /// <summary>
+    /// Выполняет текущую карту.
+    /// </summary>
     private async Task RunCurrentMap(TestMap map, int totalMaps, CancellationToken token)
     {
         LogMapStart(totalMaps);
         await ExecuteMapOnAllColumns(map, token);
     }
 
+    /// <summary>
+    /// Логирует начало выполнения карты.
+    /// </summary>
     private void LogMapStart(int totalMaps)
     {
         _logger.LogInformation("Map {Index}/{Total}", CurrentMapIndex + 1, totalMaps);
         _testLogger.LogInformation("─── Блок {Index} из {Total} ───", CurrentMapIndex + 1, totalMaps);
     }
 
+    /// <summary>
+    /// Возвращает токен отмены.
+    /// </summary>
     private CancellationToken GetCancellationToken()
     {
         lock (_stateLock)
@@ -135,6 +177,9 @@ public partial class TestExecutionCoordinator
         }
     }
 
+    /// <summary>
+    /// Выполняет карту на всех колонках с параллельной обработкой ошибок.
+    /// </summary>
     private Task ExecuteMapOnAllColumns(TestMap map, CancellationToken token)
     {
         var errorChannel = StartErrorSignalChannel();
@@ -148,12 +193,18 @@ public partial class TestExecutionCoordinator
         return Task.WhenAll(executionTask, errorLoopTask, completionTask);
     }
 
+    /// <summary>
+    /// Запускает выполнение карты на всех колонках.
+    /// </summary>
     private Task RunExecutorsAsync(TestMap map, CancellationToken token)
     {
         var executionTasks = _executors.Select(executor => executor.ExecuteMapAsync(map, token));
         return Task.WhenAll(executionTasks);
     }
 
+    /// <summary>
+    /// Завершает выполнение и освобождает ресурсы.
+    /// </summary>
     private void Complete()
     {
         var flowSnapshot = _flowState.GetSnapshot();
@@ -186,6 +237,9 @@ public partial class TestExecutionCoordinator
         }
     }
 
+    /// <summary>
+    /// Логирует завершение выполнения.
+    /// </summary>
     private void LogExecutionCompleted(bool isSuccessful, (ExecutionStopReason Reason, bool StopAsFailure) flowSnapshot)
     {
         _logger.LogInformation(
@@ -197,17 +251,26 @@ public partial class TestExecutionCoordinator
         _testLogger.LogInformation("═══ ТЕСТИРОВАНИЕ ЗАВЕРШЕНО: {Result} ═══", result);
     }
 
+    /// <summary>
+    /// Останавливает выполнение тестов.
+    /// </summary>
     public void Stop(string reason = "оператором", bool markFailed = false)
     {
         Stop(ExecutionStopReason.Operator, reason, markFailed);
     }
 
+    /// <summary>
+    /// Останавливает выполнение тестов с указанной причиной.
+    /// </summary>
     public void Stop(ExecutionStopReason stopReason, string reason, bool markFailed = false)
     {
         _flowState.RequestStop(stopReason, markFailed);
         CancelExecution(reason);
     }
 
+    /// <summary>
+    /// Отменяет выполнение.
+    /// </summary>
     private void CancelExecution(string reason)
     {
         lock (_stateLock)
@@ -221,6 +284,9 @@ public partial class TestExecutionCoordinator
         }
     }
 
+    /// <summary>
+    /// Логирует запрос на остановку.
+    /// </summary>
     private void LogStopRequested(string reason)
     {
         _logger.LogInformation("Остановка: {Reason}", reason);

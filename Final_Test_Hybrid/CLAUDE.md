@@ -219,6 +219,22 @@ IScanBarcodeStep, IPreExecutionStep (отдельные)
 | `OpcUaTagService` | Read/write (`ReadResult<T>`, `WriteResult`) |
 | `TagWaiter` | Multi-tag conditions |
 
+## Diagnostic Layer (Modbus) ([DiagnosticGuide.md](Docs/DiagnosticGuide.md))
+
+| Сервис | Назначение |
+|--------|------------|
+| `IModbusDispatcher` | Command Queue с приоритетами, auto-reconnect |
+| `IModbusClient` | Read/write регистров через очередь |
+| `RegisterReader/Writer` | Типизированные операции |
+| `PollingService` | Периодический опрос (Low priority) |
+
+```csharp
+// Индикация связи
+dispatcher.IsConnected / IsReconnecting
+dispatcher.Connected += () => { };
+dispatcher.Disconnecting += () => pollingService.StopAllTasksAsync();
+```
+
 ## File Locations
 
 | Category | Path |

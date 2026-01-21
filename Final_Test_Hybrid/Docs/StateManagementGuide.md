@@ -421,7 +421,7 @@ public enum ExecutionState
 - `Processing` существует в enum, но **не используется** — нет TransitionTo(Processing)
 - PreExecution не меняет ExecutionStateManager
 - Пауза управляется через `IInterruptContext.Pause()` → `PauseTokenSource.Pause()`
-- Переход в `PausedOnError` делает `TestExecutionCoordinator.HandleErrorsIfAny()`
+- Переход в `PausedOnError` делает `TestExecutionCoordinator.HandleErrorsIfAny()` — **СРАЗУ** при ошибке через Channel-сигнал (см. секцию "Channel-based Error Handling")
 
 ### API
 
@@ -441,6 +441,98 @@ public enum ExecutionState
 | `MarkErrorSkipped()` | Отметить что ошибка была пропущена |
 | `ResetErrorTracking()` | Сбросить флаг пропущенных ошибок |
 | `OnStateChanged` | Событие смены состояния |
+
+---
+
+## TestExecutionCoordinator: Channel-based Error Handling
+
+**Файлы:**
+- `Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.ErrorHandling.cs`
+- `Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.Execution.cs`
+
+### Проблема (до)
+
+При ошибке в одной колонке система ждала завершения ВСЕХ колонок, и только потом показывала диалог Retry/Skip.
+
+### Решение (после)
+
+Диалог ошибки показывается **СРАЗУ** при обнаружении. Другие колонки **продолжают работать**.
+
+### Архитектура: Channel<bool> как async auto-reset сигнал
+
+```csharp
+private Channel<bool>? _errorSignalChannel;
+```
+
+**Почему Channel:**
+- Ёмкость 1 + DropWrite = async auto-reset сигнал (лишние сигналы не копятся)
+- `ReadAllAsync` корректно обрабатывает отмену
+- Закрытие канала гарантирует выход цикла
+- Thread-safe через `Interlocked`/`Volatile`
+
+### Диаграмма выполнения
+
+```
+ExecuteMapOnAllColumns()
+│
+├─ StartErrorSignalChannel()
+│
+├─ RunErrorHandlingLoopAsync() ────────────────────┐
+│  └─ await foreach (ReadAllAsync)                 │ PARALLEL
+│                                                   │
+├─ RunExecutorsAsync() ────────────────────────────┤
+│  ├─ executor[0].ExecuteMapAsync() ──┐            │
+│  ├─ executor[1].ExecuteMapAsync() ──┼─ PARALLEL  │
+│  ├─ executor[2].ExecuteMapAsync() ──┤            │
+│  └─ executor[3].ExecuteMapAsync() ──┘            │
+│                                                   │
+│  [Column 0 fails]                                │
+│  └─ EnqueueFailedExecutors()                     │
+│     └─ SignalErrorDetected() → channel.TryWrite  │
+│                                                   │
+│  [Error loop receives signal]                    │
+│  └─ HandleErrorsIfAny()                          │
+│     └─ OnErrorOccurred → UI диалог СРАЗУ         │
+│     └─ WaitForResolution                         │
+│     └─ Retry/Skip                                │
+│                                                   │
+│  [Columns 1-3 keep running...]                   │
+│                                                   │
+├─ executionTask completes                         │
+│  └─ ContinueWith → CompleteErrorSignalChannel()  │
+│     └─ TryWrite(true) + TryComplete()            │
+│                                                   │
+└─ Task.WhenAll(execution, errorLoop, completion)  │
+   └─ errorLoop exits via channel completion ──────┘
+```
+
+### Ключевые методы
+
+| Метод | Описание |
+|-------|----------|
+| `StartErrorSignalChannel()` | Создаёт bounded канал (capacity=1, DropWrite) |
+| `SignalErrorDetected()` | Отправляет сигнал в канал через `Volatile.Read` |
+| `CompleteErrorSignalChannel()` | Закрывает канал после завершения выполнения |
+| `EnqueueFailedExecutors()` | Добавляет ошибки в очередь, сигналит если появились новые |
+| `ProcessErrorSignalsAsync()` | Цикл обработки сигналов через `ReadAllAsync` |
+
+### Thread-safety
+
+| Механизм | Применение |
+|----------|------------|
+| `Interlocked.Exchange` | Атомарная замена канала в `Start/Complete` |
+| `Volatile.Read` | Чтение канала в `SignalErrorDetected` |
+| `lock (_enqueueLock)` | Защита очереди ошибок в `EnqueueFailedExecutors` |
+| `BoundedChannelOptions.SingleReader` | Гарантирует один reader |
+
+### Edge Cases
+
+| Сценарий | Поведение |
+|----------|-----------|
+| Две колонки падают одновременно | Обе в очередь, DropWrite отбросит лишний сигнал, `HandleErrorsIfAny` обработает всю очередь |
+| Колонка падает во время диалога | Добавится в очередь (state=PausedOnError разрешён), обработается после текущей |
+| Все колонки успешны | Канал закроется через ContinueWith, цикл выйдет |
+| Отмена во время диалога | `ReadAllAsync` выбросит `OperationCanceledException`, цикл выйдет чисто |
 
 ---
 
