@@ -569,3 +569,14 @@ svg {
 .block-error-dialog-window .rz-dialog-titlebar {
     display: none;
 }
+
+/* ===== ДИАЛОГ ПРОГРЕССА СОХРАНЕНИЯ ===== */
+
+.save-progress-dialog-window .rz-dialog-content {
+    overflow: hidden;
+}
+
+.save-progress-dialog-window .rz-progressbar-circular-lg {
+    width: 80px;
+    height: 80px;
+}

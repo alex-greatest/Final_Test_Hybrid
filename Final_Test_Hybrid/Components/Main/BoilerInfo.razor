@@ -403,12 +403,13 @@
                         null,
                         new DialogOptions
                         {
-                            Width = "400px",
-                            Height = "200px",
+                            Width = "500px",
+                            Height = "280px",
                             ShowTitle = false,
                             ShowClose = false,
                             CloseDialogOnOverlayClick = false,
-                            CloseDialogOnEsc = false
+                            CloseDialogOnEsc = false,
+                            CssClass = "save-progress-dialog-window"
                         });
                     // Не закрываем здесь - это делает второй вызов ProcessSaveProgressStateAsync
                     // от события false (либо обработчики reset в самом SaveProgressDialog)
