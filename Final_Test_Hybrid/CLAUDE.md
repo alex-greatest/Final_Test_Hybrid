@@ -40,7 +40,7 @@ public class MyService(DualLogger<MyService> logger)
 }
 ```
 
-### Pausable vs Non-Pausable ([TagWaiterGuide.md](TagWaiterGuide.md))
+### Pausable vs Non-Pausable ([TagWaiterGuide.md](Docs/TagWaiterGuide.md))
 
 | Контекст | Сервис |
 |----------|--------|
@@ -51,7 +51,9 @@ public class MyService(DualLogger<MyService> logger)
 
 ## Coordinators & State Management
 
-### ErrorCoordinator ([ErrorCoordinatorGuide.md](ErrorCoordinatorGuide.md))
+**Полная документация:** [StateManagementGuide.md](Docs/StateManagementGuide.md)
+
+### ErrorCoordinator ([ErrorCoordinatorGuide.md](Docs/ErrorCoordinatorGuide.md))
 
 | Метод | Действие |
 |-------|----------|
@@ -61,14 +63,14 @@ public class MyService(DualLogger<MyService> logger)
 
 **Новый InterruptReason:** `XxxBehavior : IInterruptBehavior` → DI
 
-### PlcReset ([PlcResetGuide.md](PlcResetGuide.md))
+### PlcReset ([PlcResetGuide.md](Docs/PlcResetGuide.md))
 
 | Тип | Условие | Метод |
 |-----|---------|-------|
 | Мягкий | `wasInScanPhase = true` | `ForceStop()` |
 | Жёсткий | `wasInScanPhase = false` | `Reset()` |
 
-### CycleExitReason ([CycleExitGuide.md](CycleExitGuide.md))
+### CycleExitReason ([CycleExitGuide.md](Docs/CycleExitGuide.md))
 
 | Состояние | Очистка |
 |-----------|---------|
@@ -89,7 +91,7 @@ public class MyService(DualLogger<MyService> logger)
 
 **История:** при включении — копирует активные ошибки; при выключении — закрывает открытые записи.
 
-### StepTiming ([StepTimingGuide.md](StepTimingGuide.md))
+### StepTiming ([StepTimingGuide.md](Docs/StepTimingGuide.md))
 
 | Метод | Поведение |
 |-------|-----------|
@@ -97,14 +99,14 @@ public class MyService(DualLogger<MyService> logger)
 | `StopScanTiming()` | Ставит на паузу (`IsRunning=false`) |
 | `ClearScanTiming()` | Полная очистка |
 
-### Retry/Skip ([RetrySkipGuide.md](RetrySkipGuide.md))
+### Retry/Skip ([RetrySkipGuide.md](Docs/RetrySkipGuide.md))
 
 | Действие | PLC → PC | PC → PLC |
 |----------|----------|----------|
 | Повтор | `Req_Repeat=true` | `AskRepeat=true`, ждёт `Error=false` |
 | Пропуск | `End=true` | — (NOK) |
 
-### Settings Blocking ([SettingsBlockingGuide.md](SettingsBlockingGuide.md))
+### Settings Blocking ([SettingsBlockingGuide.md](Docs/SettingsBlockingGuide.md))
 
 | Сервис | Блокирует |
 |--------|-----------|
@@ -161,6 +163,13 @@ Excel → TestMapBuilder → TestMapResolver → TestMap
                           └── ErrorCoordinator
 ```
 
+### ScanModeController ([ScanModeControllerGuide.md](Docs/ScanModeControllerGuide.md))
+
+| Условие | Состояние |
+|---------|-----------|
+| `IsAuthenticated && IsReady` | Режим сканирования активен |
+| `_isActivated && !_isResetting` | Фаза сканирования (для типа сброса) |
+
 ## Step Execution Flow
 
 ```
@@ -176,7 +185,7 @@ Excel → TestMapBuilder → TestMapResolver → TestMap
                     PipelineFailed
 ```
 
-### ExecutionActivityTracker ([ExecutionActivityTrackerGuide.md](ExecutionActivityTrackerGuide.md))
+### ExecutionActivityTracker ([ExecutionActivityTrackerGuide.md](Docs/ExecutionActivityTrackerGuide.md))
 
 | Свойство | Описание |
 |----------|----------|

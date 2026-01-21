@@ -2,8 +2,8 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Database;
 using Final_Test_Hybrid.Services.Database.Config;
 using Final_Test_Hybrid.Services.DependencyInjection;
-using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Diagnostic.Polling;
+using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
@@ -128,10 +128,10 @@ public partial class Form1 : Form
 
     private static void ConfigureDiagnosticEvents(ServiceProvider serviceProvider)
     {
-        var connectionService = serviceProvider.GetRequiredService<DiagnosticConnectionService>();
         var pollingService = serviceProvider.GetRequiredService<PollingService>();
+        var dispatcher = serviceProvider.GetRequiredService<IModbusDispatcher>();
 
-        connectionService.Disconnecting += () => pollingService.StopAllTasksAsync();
+        dispatcher.Disconnecting += () => pollingService.StopAllTasksAsync();
     }
 
     // async void намеренно: исключения должны попадать в Application.ThreadException

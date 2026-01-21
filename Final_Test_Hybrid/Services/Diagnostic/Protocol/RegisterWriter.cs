@@ -1,5 +1,6 @@
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
+using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Diagnostic.Protocol;
@@ -8,7 +9,7 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Protocol;
 /// Типизированная запись регистров ЭБУ котла.
 /// </summary>
 public class RegisterWriter(
-    ModbusClient modbusClient,
+    IModbusClient modbusClient,
     ILogger<RegisterWriter> logger,
     ITestStepLogger testStepLogger)
 {
@@ -20,7 +21,7 @@ public class RegisterWriter(
     {
         try
         {
-            await modbusClient.WriteSingleRegisterAsync(address, value, ct).ConfigureAwait(false);
+            await modbusClient.WriteSingleRegisterAsync(address, value, CommandPriority.High, ct).ConfigureAwait(false);
             _logger.LogDebug("Запись в регистр {Address}: {Value}", address, value);
             return DiagnosticWriteResult.Ok(address);
         }
@@ -38,7 +39,7 @@ public class RegisterWriter(
     {
         try
         {
-            await modbusClient.WriteSingleRegisterAsync(address, (ushort)value, ct).ConfigureAwait(false);
+            await modbusClient.WriteSingleRegisterAsync(address, (ushort)value, CommandPriority.High, ct).ConfigureAwait(false);
             _logger.LogDebug("Запись в регистр {Address}: {Value}", address, value);
             return DiagnosticWriteResult.Ok(address);
         }
@@ -62,7 +63,7 @@ public class RegisterWriter(
                 (ushort)(value & 0xFFFF) // Lo word
             };
 
-            await modbusClient.WriteMultipleRegistersAsync(addressHi, registers, ct).ConfigureAwait(false);
+            await modbusClient.WriteMultipleRegistersAsync(addressHi, registers, CommandPriority.High, ct).ConfigureAwait(false);
             _logger.LogDebug("Запись в регистр {Address}: {Value}", addressHi, value);
             return DiagnosticWriteResult.Ok(addressHi);
         }
@@ -88,13 +89,13 @@ public class RegisterWriter(
                 Array.Reverse(bytes);
             }
 
-            var registers = new ushort[]
+            var registers = new[]
             {
                 (ushort)((bytes[0] << 8) | bytes[1]), // Hi word
                 (ushort)((bytes[2] << 8) | bytes[3])  // Lo word
             };
 
-            await modbusClient.WriteMultipleRegistersAsync(addressHi, registers, ct).ConfigureAwait(false);
+            await modbusClient.WriteMultipleRegistersAsync(addressHi, registers, CommandPriority.High, ct).ConfigureAwait(false);
             _logger.LogDebug("Запись в регистр {Address}: {Value}", addressHi, value);
             return DiagnosticWriteResult.Ok(addressHi);
         }

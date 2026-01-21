@@ -11,7 +11,6 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Polling;
 /// </summary>
 public class PollingService(
     RegisterReader reader,
-    PollingPauseCoordinator pauseCoordinator,
     ILoggerFactory loggerFactory,
     ILogger<PollingService> logger,
     ITestStepLogger testStepLogger)
@@ -21,11 +20,6 @@ public class PollingService(
     private readonly ConcurrentDictionary<string, PollingTask> _tasks = new();
 
     private bool _disposed;
-
-    /// <summary>
-    /// True если polling приостановлен.
-    /// </summary>
-    public bool IsPaused => pauseCoordinator.IsPaused;
 
     #region Task Creation
 
@@ -63,7 +57,6 @@ public class PollingService(
             interval,
             callback,
             reader,
-            pauseCoordinator,
             loggerFactory.CreateLogger<PollingTask>(),
             testStepLogger);
     }

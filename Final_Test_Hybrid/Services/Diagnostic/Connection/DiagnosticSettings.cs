@@ -60,4 +60,5 @@ public class DiagnosticSettings
     /// По умолчанию 1 (адрес 1005 в документации → 1004 в Modbus).
     /// </remarks>
     public ushort BaseAddressOffset { get; set; } = 1;
+
 }

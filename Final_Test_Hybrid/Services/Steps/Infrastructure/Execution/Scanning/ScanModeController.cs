@@ -60,6 +60,9 @@ public class ScanModeController : IDisposable
         }
     }
 
+    /// <summary>
+    /// Инициализирует контроллер режима сканирования с необходимыми зависимостями.
+    /// </summary>
     public ScanModeController(
         ScanSessionManager sessionManager,
         OperatorState operatorState,
@@ -83,6 +86,9 @@ public class ScanModeController : IDisposable
         SubscribeToEvents();
     }
 
+    /// <summary>
+    /// Подписывается на все необходимые события состояния оператора и автомата.
+    /// </summary>
     private void SubscribeToEvents()
     {
         _operatorState.OnStateChanged += UpdateScanModeState;
@@ -91,6 +97,9 @@ public class ScanModeController : IDisposable
         UpdateScanModeState();
     }
 
+    /// <summary>
+    /// Подписывается на события сброса PLC.
+    /// </summary>
     private void SubscribeToResetEvents()
     {
         _plcResetCoordinator.OnResetStarting += HandleResetStarting;
@@ -115,6 +124,9 @@ public class ScanModeController : IDisposable
         }
     }
 
+    /// <summary>
+    /// Обрабатывает завершение сброса PLC, переводя систему в состояние готовности.
+    /// </summary>
     private void HandleResetCompleted()
     {
         lock (_stateLock)
@@ -123,6 +135,9 @@ public class ScanModeController : IDisposable
         }
     }
 
+    /// <summary>
+    /// Обновляет состояние режима сканирования на основе текущих условий.
+    /// </summary>
     private void UpdateScanModeState()
     {
         lock (_stateLock)
@@ -143,6 +158,9 @@ public class ScanModeController : IDisposable
         OnStateChanged?.Invoke();
     }
 
+    /// <summary>
+    /// Пытается активировать режим сканирования, если условия позволяют.
+    /// </summary>
     private void TryActivateScanMode()
     {
         if (_isResetting)
@@ -158,7 +176,7 @@ public class ScanModeController : IDisposable
     }
 
     /// <summary>
-    /// Пере-захватывает сессию и возобновляет таймеры для уже активного режима.
+    /// Перезахватывает сессию и возобновляет таймеры для уже активного режима.
     /// </summary>
     private void RefreshSessionAndTimingForActiveMode()
     {
@@ -178,18 +196,27 @@ public class ScanModeController : IDisposable
         StartMainLoop();
     }
 
+    /// <summary>
+    /// Запускает таймер для шага сканирования.
+    /// </summary>
     private void StartScanTiming()
     {
         var scanStep = _preExecutionCoordinator.GetScanStep();
         _stepTimingService.StartScanTiming(scanStep.Name, scanStep.Description);
     }
 
+    /// <summary>
+    /// Добавляет шаг сканирования в сетку статусов.
+    /// </summary>
     private void AddScanStepToGrid()
     {
         var scanStep = _preExecutionCoordinator.GetScanStep();
         _statusReporter.EnsureScanStepExists(scanStep.Name, scanStep.Description);
     }
 
+    /// <summary>
+    /// Запускает основной цикл обработки штрих-кодов в фоновом режиме.
+    /// </summary>
     private void StartMainLoop()
     {
         _loopCts?.Cancel();
@@ -201,11 +228,17 @@ public class ScanModeController : IDisposable
                 TaskContinuationOptions.OnlyOnFaulted);
     }
 
+    /// <summary>
+    /// Обрабатывает отсканированный штрих-код, передавая его координатору.
+    /// </summary>
     private void HandleBarcodeScanned(string barcode)
     {
         _preExecutionCoordinator.SubmitBarcode(barcode);
     }
 
+    /// <summary>
+    /// Пытается деактивировать режим сканирования с выбором мягкой или полной деактивации.
+    /// </summary>
     private void TryDeactivateScanMode()
     {
         if (_isResetting)
@@ -216,9 +249,7 @@ public class ScanModeController : IDisposable
         {
             return;
         }
-
         _stepTimingService.PauseAllColumnsTiming();
-
         if (ShouldUseSoftDeactivation())
         {
             PerformSoftDeactivation();
@@ -260,6 +291,9 @@ public class ScanModeController : IDisposable
         }
     }
 
+    /// <summary>
+    /// Выполняет переход в состояние готовности после завершения сброса.
+    /// </summary>
     private void TransitionToReadyInternal()
     {
         _isResetting = false;
@@ -279,6 +313,9 @@ public class ScanModeController : IDisposable
         _sessionManager.AcquireSession(HandleBarcodeScanned);
     }
 
+    /// <summary>
+    /// Освобождает ресурсы и отписывается от всех событий.
+    /// </summary>
     public void Dispose()
     {
         if (_disposed)

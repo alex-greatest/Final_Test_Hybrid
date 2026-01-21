@@ -1,5 +1,6 @@
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol;
+using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Diagnostic.Polling;
@@ -13,7 +14,6 @@ public class PollingTask(
     TimeSpan interval,
     Func<Dictionary<ushort, object>, Task> callback,
     RegisterReader reader,
-    PollingPauseCoordinator pauseCoordinator,
     ILogger<PollingTask> logger,
     ITestStepLogger testStepLogger)
     : IAsyncDisposable
@@ -155,17 +155,7 @@ public class PollingTask(
 
     private async Task ExecuteSinglePollIterationAsync(CancellationToken ct)
     {
-        await pauseCoordinator.WaitIfPausedAsync(ct).ConfigureAwait(false);
-
-        pauseCoordinator.EnterPoll();
-        try
-        {
-            await ExecutePollWithErrorHandlingAsync(ct).ConfigureAwait(false);
-        }
-        finally
-        {
-            pauseCoordinator.ExitPoll();
-        }
+        await ExecutePollWithErrorHandlingAsync(ct).ConfigureAwait(false);
     }
 
     private async Task ExecutePollWithErrorHandlingAsync(CancellationToken ct)
@@ -208,7 +198,7 @@ public class PollingTask(
         Dictionary<ushort, object> results,
         CancellationToken ct)
     {
-        var result = await reader.ReadUInt16Async(address, ct).ConfigureAwait(false);
+        var result = await reader.ReadUInt16Async(address, CommandPriority.Low, ct).ConfigureAwait(false);
 
         if (result.Success)
         {

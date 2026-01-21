@@ -1,4 +1,4 @@
-P# Settings Blocking — Блокировка галочек настроек
+# Settings Blocking — Блокировка галочек настроек
 
 ## Обзор
 
@@ -14,17 +14,10 @@ P# Settings Blocking — Блокировка галочек настроек
 
 ## Условия блокировки
 
-### SwitchMes (4 условия)
+### Все компоненты (4 условия)
 ```csharp
 private bool IsDisabled => PreExecution.IsProcessing
     || !SettingsAccessState.CanInteract
-    || PlcResetCoordinator.IsActive
-    || ErrorCoordinator.CurrentInterrupt != null;
-```
-
-### QR Auth компоненты (3 условия)
-```csharp
-private bool IsDisabled => !SettingsAccessState.CanInteract
     || PlcResetCoordinator.IsActive
     || ErrorCoordinator.CurrentInterrupt != null;
 ```
@@ -33,10 +26,10 @@ private bool IsDisabled => !SettingsAccessState.CanInteract
 
 | Сервис | Свойство | Когда блокирует |
 |--------|----------|-----------------|
+| `PreExecutionCoordinator` | `IsProcessing` | Pre-execution шаги выполняются |
 | `SettingsAccessStateManager` | `!CanInteract` | Тест выполняется И не на scan step |
 | `PlcResetCoordinator` | `IsActive` | Во время сброса PLC |
 | `ErrorCoordinator` | `CurrentInterrupt != null` | Есть активное прерывание |
-| `PreExecutionCoordinator` | `IsProcessing` | Pre-execution шаги выполняются |
 
 ### SettingsAccessState логика
 ```csharp
@@ -51,30 +44,30 @@ State = hasNoTests || isOnScanStep
 ## Подписки на события
 
 Все компоненты подписываются на события изменения состояния:
+- `PreExecution.OnStateChanged`
 - `SettingsAccessState.OnStateChanged`
 - `PlcResetCoordinator.OnActiveChanged`
 - `ErrorCoordinator.OnInterruptChanged`
-- `PreExecution.OnStateChanged` (только SwitchMes)
 
 ## Диаграмма
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Settings Panel                            │
+│                    Settings Panel                           │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌──────────────────┐  ┌────────────────┐  │
 │  │  SwitchMes  │  │ OperatorAuthQr   │  │  AdminAuthQr   │  │
-│  │  (4 cond.)  │  │   (3 cond.)      │  │   (3 cond.)    │  │
+│  │  (4 cond.)  │  │   (4 cond.)      │  │   (4 cond.)    │  │
 │  └──────┬──────┘  └────────┬─────────┘  └───────┬────────┘  │
 └─────────┼──────────────────┼────────────────────┼───────────┘
           │                  │                    │
           ▼                  ▼                    ▼
     ┌─────────────────────────────────────────────────────┐
-    │              Blocking Services                       │
+    │              Blocking Services                      │
     ├─────────────────────────────────────────────────────┤
-    │ SettingsAccessStateManager ←──┐                     │
-    │ PlcResetCoordinator ←─────────┼── Общие для всех    │
+    │ PreExecutionCoordinator ←─────┐                     │
+    │ SettingsAccessStateManager ←──┼── Общие для всех    │
+    │ PlcResetCoordinator ←─────────┤                     │
     │ ErrorCoordinator ←────────────┘                     │
-    │ PreExecutionCoordinator ←──────── Только SwitchMes  │
     └─────────────────────────────────────────────────────┘
 ```
