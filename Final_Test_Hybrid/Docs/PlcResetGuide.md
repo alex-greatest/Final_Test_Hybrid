@@ -129,12 +129,14 @@ RunSingleCycleAsync:
 - `PreExecutionCoordinator.HandleSoftStop()`
 - `ReworkDialogService.HandleForceStop()`
 - `BoilerInfo.CloseDialogs()`
+- `IModbusDispatcher.StopAsync()` — прерывает диагностику
 
 ### OnReset (ErrorCoordinator)
 - `TestExecutionCoordinator.HandleReset()`
 - `PreExecutionCoordinator.HandleHardReset()`
 - `ReworkDialogService.HandleReset()`
 - `BoilerInfo.CloseDialogs()`
+- `IModbusDispatcher.StopAsync()` — прерывает диагностику
 
 ### OnResetCompleted
 - `ScanModeController.TransitionToReadyInternal()`
@@ -197,3 +199,50 @@ private void TransitionToReadyInternal()
 | Reset + AutoReady выключен после | Таймеры на паузе, сессия не захватывается |
 | Reset + AutoReady включён во время | Активация заблокирована, catch-up после завершения |
 | Жёсткий reset (wasInScanPhase=false) | Таймеры паузятся, catch-up активация если нужна |
+
+## Диагностика (Modbus) при PLC Reset
+
+При любом PLC reset (мягком или жёстком) диспетчер диагностики останавливается:
+
+```
+OnForceStop / OnReset
+    ↓
+StopDispatcherSafely(dispatcher)  // fire-and-forget с обработкой ошибок
+    ↓
+dispatcher.StopAsync()
+    ↓
+1. Завершаются каналы команд (TryComplete)
+2. Отменяется CancellationToken
+3. Закрывается COM-порт НЕМЕДЛЕННО (прерывает текущую Modbus команду)
+4. Ожидается завершение worker loop (таймаут 5 сек)
+5. Отменяются все pending команды
+6. Очищается состояние (IsConnected = false, LastPingData = null)
+```
+
+### Поведение при активной операции
+
+| Состояние команды | Что происходит |
+|-------------------|----------------|
+| В очереди (pending) | Отменяется мгновенно |
+| Выполняется на порту | **Прерывается немедленно** через Close() → IOException |
+| Ping keep-alive | Отменяется через CancellationToken |
+
+### Защита от зависания
+
+| Сценарий | Поведение |
+|----------|-----------|
+| Worker завершился < 5 сек | Рестарт разрешён |
+| Worker таймаут > 5 сек | **Рестарт заблокирован**, CRITICAL лог |
+| Ошибка в StopAsync | Логируется через ContinueWith |
+
+### Восстановление после reset
+
+После PLC reset диагностика **не запускается автоматически**. Для восстановления связи нужен явный вызов:
+
+```csharp
+await dispatcher.StartAsync();
+```
+
+**Важно:** Рестарт возможен только если предыдущий `StopAsync()` завершился успешно (без таймаута).
+
+**Примечание:** В текущей реализации диагностика запускается при старте приложения в `Form1.ConfigureDiagnosticEvents()`. После PLC reset пользователь может вручную инициировать рестарт если требуется.

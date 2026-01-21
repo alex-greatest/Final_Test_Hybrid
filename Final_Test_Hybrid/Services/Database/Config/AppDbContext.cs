@@ -19,6 +19,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Result> Results => Set<Result>();
     public DbSet<Error> Errors => Set<Error>();
     public DbSet<StepTime> StepTimes => Set<StepTime>();
+    public DbSet<SuccessCount> SuccessCounts => Set<SuccessCount>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -37,6 +38,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         ConfigureResult(modelBuilder);
         ConfigureError(modelBuilder);
         ConfigureStepTime(modelBuilder);
+        ConfigureSuccessCount(modelBuilder);
     }
 
     private static void ConfigureBoilerType(ModelBuilder modelBuilder)
@@ -411,6 +413,24 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             entity.HasIndex(e => e.OperationId)
                 .HasDatabaseName("IDX_TB_STEP_TIME_OPERATION");
+        });
+    }
+
+    private static void ConfigureSuccessCount(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<SuccessCount>(entity =>
+        {
+            entity.ToTable("TB_SUCCESS_COUNT");
+
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id)
+                .HasColumnName("ID")
+                .ValueGeneratedOnAdd();
+
+            entity.Property(e => e.Count)
+                .HasColumnName("COUNT_")
+                .IsRequired()
+                .HasDefaultValue(0);
         });
     }
 }

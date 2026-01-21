@@ -1,5 +1,6 @@
 using System.Data.Common;
 using Final_Test_Hybrid.Models;
+using Final_Test_Hybrid.Models.Database;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Database.Config;
 using Final_Test_Hybrid.Services.Storage.Interfaces;
@@ -75,6 +76,22 @@ public class DatabaseTestResultStorage(
             }
 
             await context.SaveChangesAsync(ct);
+
+            // Инкремент счётчика успешных тестов
+            if (testResult == 1)
+            {
+                var successCount = await context.SuccessCounts.FirstOrDefaultAsync(ct);
+                if (successCount == null)
+                {
+                    successCount = new SuccessCount { Count = 1 };
+                    context.SuccessCounts.Add(successCount);
+                }
+                else
+                {
+                    successCount.Count++;
+                }
+                await context.SaveChangesAsync(ct);
+            }
 
             logger.LogInformation(
                 "Результаты теста сохранены: Operation={OperationId}, Results={ResultCount}, Errors={ErrorCount}, StepTimes={StepTimeCount}",

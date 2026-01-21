@@ -5,12 +5,11 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Protocol;
 /// <summary>
 /// Реализация IModbusClient через приоритетную очередь команд.
 /// Все операции маршрутизируются через ModbusDispatcher.
-/// Автоматически запускает диспетчер при первом обращении.
+/// Требует ручного запуска диспетчера через StartAsync().
 /// </summary>
 public class QueuedModbusClient(IModbusDispatcher dispatcher) : IModbusClient
 {
-    private readonly object _lock = new();
-    private readonly SemaphoreSlim _startLock = new(1, 1);
+    private readonly Lock _lock = new();
     private bool _disposed;
     private bool _disposing;
 
@@ -22,7 +21,7 @@ public class QueuedModbusClient(IModbusDispatcher dispatcher) : IModbusClient
         CancellationToken ct = default)
     {
         ThrowIfDisposedOrDisposing();
-        await EnsureDispatcherStartedAsync(ct).ConfigureAwait(false);
+        ThrowIfNotStarted();
         var command = new ReadHoldingRegistersCommand(address, count, priority, ct);
         await dispatcher.EnqueueAsync(command, ct).ConfigureAwait(false);
         return await command.Task.ConfigureAwait(false);
@@ -36,7 +35,7 @@ public class QueuedModbusClient(IModbusDispatcher dispatcher) : IModbusClient
         CancellationToken ct = default)
     {
         ThrowIfDisposedOrDisposing();
-        await EnsureDispatcherStartedAsync(ct).ConfigureAwait(false);
+        ThrowIfNotStarted();
         var command = new WriteSingleRegisterCommand(address, value, priority, ct);
         await dispatcher.EnqueueAsync(command, ct).ConfigureAwait(false);
         await command.Task.ConfigureAwait(false);
@@ -50,7 +49,7 @@ public class QueuedModbusClient(IModbusDispatcher dispatcher) : IModbusClient
         CancellationToken ct = default)
     {
         ThrowIfDisposedOrDisposing();
-        await EnsureDispatcherStartedAsync(ct).ConfigureAwait(false);
+        ThrowIfNotStarted();
         var command = new WriteMultipleRegistersCommand(address, values, priority, ct);
         await dispatcher.EnqueueAsync(command, ct).ConfigureAwait(false);
         await command.Task.ConfigureAwait(false);
@@ -100,31 +99,13 @@ public class QueuedModbusClient(IModbusDispatcher dispatcher) : IModbusClient
     }
 
     /// <summary>
-    /// Гарантирует запуск диспетчера.
+    /// Выбрасывает исключение если диспетчер не запущен.
     /// </summary>
-    private async Task EnsureDispatcherStartedAsync(CancellationToken ct)
+    private void ThrowIfNotStarted()
     {
-        if (dispatcher.IsStarted)
+        if (!dispatcher.IsStarted)
         {
-            return;
-        }
-
-        // Проверяем ещё раз перед ожиданием семафора
-        ThrowIfDisposedOrDisposing();
-
-        await _startLock.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            ThrowIfDisposedOrDisposing();
-
-            if (!dispatcher.IsStarted)
-            {
-                await dispatcher.StartAsync(ct).ConfigureAwait(false);
-            }
-        }
-        finally
-        {
-            _startLock.Release();
+            throw new InvalidOperationException("Диспетчер не запущен. Вызовите StartAsync() перед выполнением операций.");
         }
     }
 }

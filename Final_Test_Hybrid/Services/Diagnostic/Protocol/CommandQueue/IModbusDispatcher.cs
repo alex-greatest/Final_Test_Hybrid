@@ -1,3 +1,5 @@
+using Final_Test_Hybrid.Services.Diagnostic.Models;
+
 namespace Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
 
 /// <summary>
@@ -29,6 +31,12 @@ public interface IModbusDispatcher : IAsyncDisposable
     /// True если диспетчер запущен.
     /// </summary>
     bool IsStarted { get; }
+
+    /// <summary>
+    /// Последние данные ping-опроса.
+    /// Null если ping ещё не выполнялся или диспетчер остановлен.
+    /// </summary>
+    DiagnosticPingData? LastPingData { get; }
 
     /// <summary>
     /// Добавляет команду в очередь на выполнение.

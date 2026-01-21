@@ -10,6 +10,9 @@
 [PollingService] ──► [PollingTask] ─────────────────────┘                        │
   (Low priority)                                                          State events
                                                                     (Connected, Disconnecting)
+                                                                              │
+                                                                    [Ping Keep-Alive Task]
+                                                                      (Low priority)
 ```
 
 **Ключевые компоненты:**
@@ -17,56 +20,56 @@
 - `IModbusClient` — клиент для чтения/записи регистров
 - `RegisterReader` / `RegisterWriter` — высокоуровневые операции с типизацией
 - `PollingService` / `PollingTask` — периодический опрос регистров
+- `PingCommand` — keep-alive команда, читает ModeKey + BoilerStatus
 
 ## Установка связи
 
-Связь устанавливается **автоматически** при первом обращении к `IModbusClient`:
+**ВАЖНО:** Связь требует явного вызова `StartAsync()` перед любыми операциями.
 
-```csharp
-public class MyService(RegisterReader reader)
-{
-    public async Task DoSomethingAsync()
-    {
-        // Диспетчер автоматически стартует и подключается
-        var result = await reader.ReadUInt16Async(0x1000);
-
-        if (result.Success)
-        {
-            Console.WriteLine($"Значение: {result.Value}");
-        }
-    }
-}
-```
-
-### Ручной старт (опционально)
+### Обязательный старт
 
 ```csharp
 public class MyService(IModbusDispatcher dispatcher)
 {
-    public async Task StartConnectionAsync()
+    public async Task InitializeAsync()
     {
+        // Необходимо вызвать перед любым чтением/записью
         await dispatcher.StartAsync();
-        // Диспетчер начнёт подключение
     }
 }
 ```
 
-## Разрыв связи
+**Без вызова `StartAsync()`:**
+- `RegisterReader` вернёт `DiagnosticReadResult.Fail` с ошибкой
+- `RegisterWriter` вернёт `DiagnosticWriteResult.Fail` с ошибкой
+- `IModbusClient` напрямую выбросит `InvalidOperationException`
+
+### Инициализация в приложении (Form1.cs)
 
 ```csharp
-public class MyService(IModbusDispatcher dispatcher)
+private static async void ConfigureDiagnosticEvents(ServiceProvider serviceProvider)
 {
-    public async Task StopConnectionAsync()
-    {
-        await dispatcher.StopAsync();
-        // Соединение закрыто, все pending команды отменены
-    }
+    var dispatcher = serviceProvider.GetRequiredService<IModbusDispatcher>();
+
+    // Запускаем диспетчер при старте приложения
+    await dispatcher.StartAsync();
 }
 ```
 
-**Важно:** После `StopAsync()` диспетчер нельзя перезапустить — он предназначен для однократного использования в течение жизни приложения.
+## Состояние связи (IsConnected)
 
-## Индикация состояния связи
+### Новая логика IsConnected
+
+После `StartAsync()` состояние определяется так:
+
+| Состояние | IsConnected | IsReconnecting | Описание |
+|-----------|-------------|----------------|----------|
+| Порт открыт | `false` | `false` | Порт открыт, но устройство не подтвердило связь |
+| Первая успешная команда | `true` | `false` | Устройство ответило — связь подтверждена |
+| Таймаут команды | `false` | `true` | Ошибка связи — переподключение |
+| После StopAsync | `false` | `false` | Диспетчер остановлен |
+
+**Важно:** `IsConnected = true` устанавливается только после первой **успешной** команды (ping или пользовательской).
 
 ### Свойства
 
@@ -78,11 +81,14 @@ public class MyService(IModbusDispatcher dispatcher)
         // Запущен ли диспетчер
         bool isStarted = dispatcher.IsStarted;
 
-        // Есть ли активное соединение
+        // Подтверждена ли связь с устройством
         bool isConnected = dispatcher.IsConnected;
 
         // Идёт ли переподключение
         bool isReconnecting = dispatcher.IsReconnecting;
+
+        // Последние данные ping (ModeKey, BoilerStatus)
+        var pingData = dispatcher.LastPingData;
     }
 }
 ```
@@ -94,7 +100,7 @@ public class MyService(IModbusDispatcher dispatcher)
 {
     public void SubscribeToEvents()
     {
-        // Соединение установлено
+        // Соединение подтверждено (после первой успешной команды)
         dispatcher.Connected += OnConnected;
 
         // Соединение разрывается (вызывается ДО отключения)
@@ -103,7 +109,7 @@ public class MyService(IModbusDispatcher dispatcher)
 
     private void OnConnected()
     {
-        Console.WriteLine("Подключено к ЭБУ");
+        Console.WriteLine("Связь с ЭБУ подтверждена");
     }
 
     private Task OnDisconnectingAsync()
@@ -111,6 +117,19 @@ public class MyService(IModbusDispatcher dispatcher)
         Console.WriteLine("Отключение...");
         return Task.CompletedTask;
     }
+}
+```
+
+**Безопасность событий:**
+
+Оба события вызываются внутри try/catch — исключения в обработчиках **не прерывают** работу диспетчера:
+
+```csharp
+// Внутренняя реализация
+private void NotifyConnectedSafely()
+{
+    try { Connected?.Invoke(); }
+    catch (Exception ex) { _logger.LogError(ex, "..."); }
 }
 ```
 
@@ -123,6 +142,11 @@ public class MyService(IModbusDispatcher dispatcher)
     @if (Dispatcher.IsConnected)
     {
         <span class="connected">Подключено</span>
+        @if (Dispatcher.LastPingData != null)
+        {
+            <span>ModeKey: @Dispatcher.LastPingData.ModeKey.ToString("X8")</span>
+            <span>Status: @Dispatcher.LastPingData.BoilerStatus</span>
+        }
     }
     else if (Dispatcher.IsReconnecting)
     {
@@ -133,6 +157,122 @@ public class MyService(IModbusDispatcher dispatcher)
         <span class="disconnected">Отключено</span>
     }
 </div>
+```
+
+## Разрыв связи и рестарт
+
+### Остановка диспетчера
+
+```csharp
+public class MyService(IModbusDispatcher dispatcher)
+{
+    public async Task StopConnectionAsync()
+    {
+        await dispatcher.StopAsync();
+        // Соединение закрыто, все pending команды отменены
+    }
+}
+```
+
+**Поведение `StopAsync()`:**
+
+1. Завершает каналы команд (новые команды не принимаются)
+2. Отменяет ping task
+3. Отменяет worker task
+4. **Немедленно закрывает COM-порт** — прерывает текущую Modbus команду через IOException
+5. Ожидает завершения worker (таймаут 5 сек)
+6. Отменяет все pending команды в очереди
+7. Сбрасывает состояние (`IsConnected = false`, `LastPingData = null`)
+
+**Защита от зависания:**
+
+| Сценарий | Поведение |
+|----------|-----------|
+| Worker завершился нормально | Рестарт разрешён |
+| Worker таймаут (>5 сек) | **Рестарт заблокирован**, логируется CRITICAL |
+| Текущая команда выполняется | Прерывается через `Close()` → IOException |
+
+### Рестарт после StopAsync
+
+**Поддерживается!** После `StopAsync()` можно снова вызвать `StartAsync()`:
+
+```csharp
+public class MyService(IModbusDispatcher dispatcher)
+{
+    public async Task RestartAsync()
+    {
+        await dispatcher.StopAsync();
+        // ... пауза или другие действия ...
+        await dispatcher.StartAsync(); // Работает!
+    }
+}
+```
+
+При рестарте:
+- Создаются новые каналы команд (очередь пуста)
+- Начинается попытка подключения
+- Запускается ping keep-alive
+
+### Интеграция с PLC Reset
+
+Диагностический сервис автоматически останавливается при сбросе PLC:
+
+| Событие | Источник | Действие |
+|---------|----------|----------|
+| Soft Reset | `PlcResetCoordinator.OnForceStop` | `dispatcher.StopAsync()` |
+| Hard Reset | `ErrorCoordinator.OnReset` | `dispatcher.StopAsync()` |
+
+**Реализация в Form1.cs:**
+
+```csharp
+// Безопасная остановка с обработкой ошибок
+plcResetCoordinator.OnForceStop += () => StopDispatcherSafely(dispatcher);
+errorCoordinator.OnReset += () => StopDispatcherSafely(dispatcher);
+
+private static void StopDispatcherSafely(IModbusDispatcher dispatcher)
+{
+    _ = dispatcher.StopAsync().ContinueWith(t =>
+    {
+        if (t.IsFaulted)
+            Debug.WriteLine($"Ошибка: {t.Exception?.GetBaseException().Message}");
+    }, TaskScheduler.Default);
+}
+```
+
+После reset пользователь может вручную вызвать `StartAsync()` для восстановления связи.
+
+## Ping Keep-Alive
+
+Диспетчер периодически отправляет ping-команду для:
+1. Проверки связи при отсутствии пользовательских команд
+2. Чтения полезных данных (ModeKey, BoilerStatus)
+
+### Данные Ping
+
+| Параметр | Адрес (док) | Modbus | Тип | Описание |
+|----------|-------------|--------|-----|----------|
+| ModeKey | 1000-1001 | 999-1000 | uint32 | Ключ режима |
+| BoilerStatus | 1005 | 1004 | int16 | Статус котла |
+
+**Значения ModeKey:**
+- `0xD7F8DB56` — стендовый режим
+- `0xFA87CD5E` — инженерный режим
+- Другое — обычный режим
+
+**Значения BoilerStatus:**
+- `-1` — тест
+- `0` — включение
+- `1-10` — различные режимы работы
+
+### Доступ к данным ping
+
+```csharp
+var pingData = dispatcher.LastPingData;
+if (pingData != null)
+{
+    var modeKey = pingData.ModeKey;
+    var status = pingData.BoilerStatus;
+}
 ```
 
 ## Чтение регистров
@@ -150,12 +290,10 @@ public class MyService(RegisterReader reader)
         {
             ushort value = result.Value;
         }
-
-        // Чтение нескольких регистров
-        var multiResult = await reader.ReadUInt16ArrayAsync(0x1000, count: 10, ct: ct);
-        if (multiResult.Success)
+        else
         {
-            ushort[] values = multiResult.Value;
+            // result.Error содержит сообщение об ошибке
+            // Включая "Диспетчер не запущен" если не вызван StartAsync()
         }
 
         // Чтение с приоритетом (Low для фоновых задач)
@@ -174,6 +312,7 @@ public class MyService(IModbusClient client)
 {
     public async Task ReadRawAsync(CancellationToken ct)
     {
+        // ВАЖНО: выбросит InvalidOperationException если dispatcher не запущен
         ushort[] registers = await client.ReadHoldingRegistersAsync(
             address: 0x1000,
             count: 5,
@@ -198,31 +337,6 @@ public class MyService(RegisterWriter writer)
         {
             Console.WriteLine($"Ошибка: {result.Error}");
         }
-
-        // Запись нескольких регистров
-        var multiResult = await writer.WriteUInt16ArrayAsync(
-            0x2000,
-            new ushort[] { 1, 2, 3 },
-            ct);
-    }
-}
-```
-
-### Через IModbusClient (низкоуровневый)
-
-```csharp
-public class MyService(IModbusClient client)
-{
-    public async Task WriteRawAsync(CancellationToken ct)
-    {
-        // Запись одного регистра
-        await client.WriteSingleRegisterAsync(0x2000, 42, ct: ct);
-
-        // Запись нескольких регистров
-        await client.WriteMultipleRegistersAsync(
-            0x2000,
-            new ushort[] { 1, 2, 3 },
-            ct: ct);
     }
 }
 ```
@@ -274,24 +388,12 @@ public class MyService(PollingService pollingService)
 }
 ```
 
-### Проверка статуса опроса
-
-```csharp
-public class MyService(PollingService pollingService)
-{
-    public void CheckPollingStatus()
-    {
-        bool isRunning = pollingService.IsPollingRunning("StatusPolling");
-    }
-}
-```
-
 ## Приоритеты команд
 
 | Приоритет | Использование |
 |-----------|---------------|
 | `CommandPriority.High` | One-off операции (чтение/запись по запросу пользователя) |
-| `CommandPriority.Low` | Фоновый polling |
+| `CommandPriority.Low` | Фоновый polling и ping keep-alive |
 
 High-priority команды всегда выполняются раньше Low-priority.
 
@@ -312,10 +414,9 @@ High-priority команды всегда выполняются раньше Lo
     "CommandQueue": {
       "HighPriorityQueueCapacity": 100,
       "LowPriorityQueueCapacity": 10,
-      "InitialReconnectDelayMs": 1000,
-      "MaxReconnectDelayMs": 30000,
-      "ReconnectBackoffMultiplier": 2.0,
-      "CommandWaitTimeoutMs": 100
+      "ReconnectDelayMs": 5000,
+      "CommandWaitTimeoutMs": 100,
+      "PingIntervalMs": 5000
     }
   }
 }
@@ -340,11 +441,10 @@ High-priority команды всегда выполняются раньше Lo
 | Параметр | Тип | Default | Описание |
 |----------|-----|---------|----------|
 | `HighPriorityQueueCapacity` | int | 100 | Размер очереди для one-off команд (UI, read/write по запросу) |
-| `LowPriorityQueueCapacity` | int | 10 | Размер очереди для polling (фоновый опрос) |
-| `InitialReconnectDelayMs` | int | 1000 | Начальная задержка при потере связи |
-| `MaxReconnectDelayMs` | int | 30000 | Максимальная задержка (exponential backoff ceiling) |
-| `ReconnectBackoffMultiplier` | double | 2.0 | Множитель: 1с → 2с → 4с → 8с → ... → 30с |
+| `LowPriorityQueueCapacity` | int | 10 | Размер очереди для polling и ping |
+| `ReconnectDelayMs` | int | 5000 | Фиксированный интервал переподключения (5 сек) |
 | `CommandWaitTimeoutMs` | int | 100 | Как долго воркер ждёт команду перед проверкой состояния |
+| `PingIntervalMs` | int | 5000 | Интервал ping keep-alive (5 сек) |
 
 ## DI регистрация
 
@@ -377,7 +477,7 @@ if (!result.Success)
 
 ### При потере связи
 
-Диспетчер автоматически переподключается с экспоненциальным backoff. Подпишитесь на `Disconnecting` чтобы остановить polling:
+Диспетчер автоматически переподключается с фиксированным интервалом 5 секунд. Подпишитесь на `Disconnecting` чтобы остановить polling:
 
 ```csharp
 // В Form1.cs уже настроено:

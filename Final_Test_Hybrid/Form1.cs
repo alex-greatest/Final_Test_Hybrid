@@ -12,6 +12,7 @@ using Final_Test_Hybrid.Services.OpcUa.Heartbeat;
 using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Final_Test_Hybrid.Services.SpringBoot.Health;
 using Final_Test_Hybrid.Services.SpringBoot.Shift;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;
@@ -130,8 +131,34 @@ public partial class Form1 : Form
     {
         var pollingService = serviceProvider.GetRequiredService<PollingService>();
         var dispatcher = serviceProvider.GetRequiredService<IModbusDispatcher>();
+        var plcResetCoordinator = serviceProvider.GetRequiredService<PlcResetCoordinator>();
+        var errorCoordinator = serviceProvider.GetRequiredService<IErrorCoordinator>();
+        var logger = serviceProvider.GetRequiredService<ILogger<Form1>>();
 
+        // Подписываемся на Disconnecting для остановки polling
         dispatcher.Disconnecting += () => pollingService.StopAllTasksAsync();
+
+        // Подписываемся на PLC Reset события для остановки диагностики
+        plcResetCoordinator.OnForceStop += () => StopDispatcherSafely(dispatcher, logger);
+        errorCoordinator.OnReset += () => StopDispatcherSafely(dispatcher, logger);
+
+        // StartAsync() НЕ вызываем здесь — диагностика запускается из тестовых шагов
+    }
+
+    /// <summary>
+    /// Безопасно останавливает диспетчер с логированием ошибок.
+    /// </summary>
+    private static void StopDispatcherSafely(IModbusDispatcher dispatcher, ILogger logger)
+    {
+        _ = dispatcher.StopAsync().ContinueWith(t =>
+        {
+            if (t is { IsFaulted: true, Exception: not null })
+            {
+                logger.LogError(t.Exception.GetBaseException(),
+                    "Ошибка остановки диспетчера: {Error}",
+                    t.Exception.GetBaseException().Message);
+            }
+        }, TaskScheduler.Default);
     }
 
     // async void намеренно: исключения должны попадать в Application.ThreadException

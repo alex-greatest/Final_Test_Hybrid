@@ -16,22 +16,18 @@ public class ModbusDispatcherOptions
     public int LowPriorityQueueCapacity { get; set; } = 10;
 
     /// <summary>
-    /// Начальный интервал переподключения (мс).
+    /// Интервал переподключения (мс).
+    /// Фиксированный интервал между попытками.
     /// </summary>
-    public int InitialReconnectDelayMs { get; set; } = 1000;
-
-    /// <summary>
-    /// Максимальный интервал переподключения (мс).
-    /// </summary>
-    public int MaxReconnectDelayMs { get; set; } = 30000;
-
-    /// <summary>
-    /// Множитель для exponential backoff при переподключении.
-    /// </summary>
-    public double ReconnectBackoffMultiplier { get; set; } = 2.0;
+    public int ReconnectDelayMs { get; set; } = 5000;
 
     /// <summary>
     /// Таймаут ожидания команды в очереди (мс).
     /// </summary>
     public int CommandWaitTimeoutMs { get; set; } = 100;
+
+    /// <summary>
+    /// Интервал ping keep-alive (мс).
+    /// </summary>
+    public int PingIntervalMs { get; set; } = 5000;
 }

@@ -223,16 +223,23 @@ IScanBarcodeStep, IPreExecutionStep (отдельные)
 
 | Сервис | Назначение |
 |--------|------------|
-| `IModbusDispatcher` | Command Queue с приоритетами, auto-reconnect |
+| `IModbusDispatcher` | Command Queue, ping keep-alive, рестарт |
 | `IModbusClient` | Read/write регистров через очередь |
 | `RegisterReader/Writer` | Типизированные операции |
 | `PollingService` | Периодический опрос (Low priority) |
+| `PingCommand` | Keep-alive, читает ModeKey + BoilerStatus |
+
+**Обязательно:** `await dispatcher.StartAsync()` перед операциями.
 
 ```csharp
-// Индикация связи
-dispatcher.IsConnected / IsReconnecting
-dispatcher.Connected += () => { };
+// Индикация связи (IsConnected = true только после первой успешной команды)
+dispatcher.IsStarted / IsConnected / IsReconnecting / LastPingData
+dispatcher.Connected += () => { };  // Безопасно обёрнуто в try/catch
 dispatcher.Disconnecting += () => pollingService.StopAllTasksAsync();
+
+// PLC Reset интеграция (Form1.cs)
+plcResetCoordinator.OnForceStop += () => StopDispatcherSafely(dispatcher);
+errorCoordinator.OnReset += () => StopDispatcherSafely(dispatcher);
 ```
 
 ## File Locations

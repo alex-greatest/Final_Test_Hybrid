@@ -28,6 +28,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Lifecycle;
 using Final_Test_Hybrid.Services.Storage;
+using Final_Test_Hybrid.Services.Storage.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Final_Test_Hybrid.Services.DependencyInjection;
@@ -70,7 +71,11 @@ public static class StepsServiceExtensions
         services.AddSingleton<TestCompletionCoordinator>();
 
         // Storage
-        services.AddSingleton<ITestResultStorage, TestResultStorageStub>();
+        services.AddSingleton<IOperationStorageService, OperationStorageService>();
+        services.AddSingleton<IResultStorageService, ResultStorageService>();
+        services.AddSingleton<IErrorStorageService, ErrorStorageService>();
+        services.AddSingleton<IStepTimeStorageService, StepTimeStorageService>();
+        services.AddSingleton<ITestResultStorage, DatabaseTestResultStorage>();
 
         // Test sequence
         services.AddSingleton<TestSequenseService>();
