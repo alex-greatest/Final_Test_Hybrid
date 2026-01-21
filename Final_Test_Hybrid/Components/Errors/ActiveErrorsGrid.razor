@@ -59,7 +59,7 @@
         <RadzenDataGridColumn TItem="ActiveError" Property="Description" Title="Описание"/>
         <RadzenDataGridColumn TItem="ActiveError" Property="Source" Title="Источник" Width="100px">
             <Template Context="item">
-                @(item.Source == ErrorSource.Plc ? "ПЛК" : "Приложение")
+                @(item.Source == ErrorSource.Plc ? "PLC" : "Приложение")
             </Template>
         </RadzenDataGridColumn>
         </Columns>

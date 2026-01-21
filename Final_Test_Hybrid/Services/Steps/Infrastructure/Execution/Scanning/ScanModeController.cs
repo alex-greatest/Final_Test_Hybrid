@@ -109,6 +109,7 @@ public class ScanModeController : IDisposable
         {
             var wasInScanPhase = IsInScanningPhaseUnsafe;
             _isResetting = true;
+            _stepTimingService.PauseAllColumnsTiming();
             _sessionManager.ReleaseSession();
             return wasInScanPhase;
         }
@@ -144,6 +145,10 @@ public class ScanModeController : IDisposable
 
     private void TryActivateScanMode()
     {
+        if (_isResetting)
+        {
+            return;
+        }
         if (_isActivated)
         {
             RefreshSessionAndTimingForActiveMode();
@@ -262,6 +267,12 @@ public class ScanModeController : IDisposable
         {
             _loopCts?.Cancel();
             _isActivated = false;
+            _stepTimingService.PauseAllColumnsTiming();
+            return;
+        }
+        if (!_isActivated)
+        {
+            PerformInitialActivation();
             return;
         }
         _stepTimingService.ResetScanTiming();

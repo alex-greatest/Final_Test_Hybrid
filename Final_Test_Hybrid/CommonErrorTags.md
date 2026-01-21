@@ -103,6 +103,14 @@ INSERT INTO tb_error_settings_template (id, address_error, description, version,
 VALUES
 (134, 'О-004-00', 'Ошибка записи в ПЛК', 2, 7, NULL);
 
+INSERT INTO tb_error_settings_template (id, address_error, description, version, station_type_id, step_id)
+VALUES
+    (135, 'О-004-01', 'Потеря связи с ПЛК', 2, 7, NULL);
+
+INSERT INTO tb_error_settings_template (id, address_error, description, version, station_type_id, step_id)
+VALUES
+    (136, 'О-004-02', 'Таймаут чтения тега ПЛК', 2, 7, NULL);
+
 -- Обновить sequence (следующий id = 135)
-ALTER SEQUENCE tb_error_settings_template_id_seq RESTART WITH 135;
+ALTER SEQUENCE tb_error_settings_template_id_seq RESTART WITH 137;
 ```

@@ -138,3 +138,62 @@ RunSingleCycleAsync:
 
 ### OnResetCompleted
 - `ScanModeController.TransitionToReadyInternal()`
+
+## ScanModeController — поведение при reset
+
+### OnResetStarting
+
+```csharp
+private bool HandleResetStarting()
+{
+    lock (_stateLock)
+    {
+        var wasInScanPhase = IsInScanningPhaseUnsafe;
+        _isResetting = true;
+        _stepTimingService.PauseAllColumnsTiming();  // Паузим все таймеры
+        _sessionManager.ReleaseSession();
+        return wasInScanPhase;
+    }
+}
+```
+
+### Блокировка активации во время reset
+
+```csharp
+private void TryActivateScanMode()
+{
+    if (_isResetting) return;  // Блокируем активацию пока reset активен
+    // ...
+}
+```
+
+### OnResetCompleted — catch-up активация
+
+```csharp
+private void TransitionToReadyInternal()
+{
+    _isResetting = false;
+    if (!IsScanModeEnabled)
+    {
+        _loopCts?.Cancel();
+        _isActivated = false;
+        _stepTimingService.PauseAllColumnsTiming();
+        return;
+    }
+    if (!_isActivated)
+    {
+        PerformInitialActivation();  // Catch-up если активация была заблокирована
+        return;
+    }
+    _stepTimingService.ResetScanTiming();
+    _sessionManager.AcquireSession(HandleBarcodeScanned);
+}
+```
+
+### Гарантии при reset
+
+| Сценарий | Поведение |
+|----------|-----------|
+| Reset + AutoReady выключен после | Таймеры на паузе, сессия не захватывается |
+| Reset + AutoReady включён во время | Активация заблокирована, catch-up после завершения |
+| Жёсткий reset (wasInScanPhase=false) | Таймеры паузятся, catch-up активация если нужна |

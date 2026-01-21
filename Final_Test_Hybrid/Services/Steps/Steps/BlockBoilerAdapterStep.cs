@@ -9,7 +9,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 namespace Final_Test_Hybrid.Services.Steps.Steps;
 
 public class BlockBoilerAdapterStep(
-    TagWaiter tagWaiter,
+    PausableTagWaiter tagWaiter,
     ExecutionPhaseState phaseState,
     DualLogger<BlockBoilerAdapterStep> logger) : IPreExecutionStep, IHasPlcBlockPath, IRequiresPlcTags
 {
@@ -47,18 +47,12 @@ public class BlockBoilerAdapterStep(
                 .WaitForTrue(EndTag, () => BlockResult.Success, "End")
                 .WaitForTrue(ErrorTag, () => BlockResult.Error, "Error"),
             ct);
-
-        if (waitResult.Result == BlockResult.Success)
+        return waitResult.Result switch
         {
-            return await HandleSuccessAsync(context);
-        }
-
-        if (waitResult.Result == BlockResult.Error)
-        {
-            return CreateRetryableError();
-        }
-
-        return PreExecutionResult.Fail("Неизвестный результат");
+            BlockResult.Success => await HandleSuccessAsync(context),
+            BlockResult.Error => CreateRetryableError(),
+            _ => PreExecutionResult.Fail("Неизвестный результат")
+        };
     }
 
     private async Task<PreExecutionResult> HandleSuccessAsync(PreExecutionContext context)

@@ -71,10 +71,9 @@ public void ResetScanTiming()
 
 ## Глобальная пауза
 
-При глобальной паузе (`PauseAllTiming`):
+При глобальной паузе (`PauseAllColumnsTiming`):
 - Все активные таймеры ставятся на паузу
-- `_scanPausedByGlobalPauseId` запоминает ID паузы
-- При `ResumeAllTiming` таймеры возобновляются
+- При `ResumeAllColumnsTiming` таймеры возобновляются
 
 ## Методы API
 
@@ -99,6 +98,6 @@ public void ResetScanTiming()
 
 | Метод | Когда вызывать |
 |-------|----------------|
-| `PauseAllTiming(pauseId)` | Глобальная пауза (ошибка, прерывание) |
-| `ResumeAllTiming(pauseId)` | Возобновление после паузы |
+| `PauseAllColumnsTiming()` | Глобальная пауза (ошибка, прерывание) |
+| `ResumeAllColumnsTiming()` | Возобновление после паузы |
 | `Clear()` | Полная очистка всех таймеров |

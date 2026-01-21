@@ -12,6 +12,7 @@
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning
 @using Final_Test_Hybrid.Services.Steps.Validation
 @inject PreExecutionCoordinator PreExecution
+@inject ScanModeController ScanModeController
 @inject ScanDialogCoordinator DialogCoordinator
 @inject BoilerState BoilerState
 @inject TestSequenseService TestSequenseService
@@ -71,6 +72,7 @@
 
     private bool IsOnActiveScanStep => TestSequenseService.IsOnActiveScanStep;
     private bool IsFieldReadOnly => !PreExecution.IsAcceptingInput
+        || !ScanModeController.IsScanModeEnabled
         || !IsOnActiveScanStep
         || PlcResetCoordinator.IsActive
         || ErrorCoordinator.CurrentInterrupt != null;
@@ -97,7 +99,10 @@
         TestCoordinator.OnErrorOccurred += HandleTestErrorOccurred;
         CompletionCoordinator.OnSaveErrorDialogRequested += HandleSaveErrorDialogAsync;
         CompletionCoordinator.OnPrepareErrorDialogRequested += HandlePrepareErrorDialogAsync;
+        ScanModeController.OnStateChanged += OnScanModeStateChanged;
     }
+
+    private void OnScanModeStateChanged() => InvokeIfNotDisposed(StateHasChanged);
 
     private void CloseDialogs()
     {
@@ -377,5 +382,6 @@
         TestCoordinator.OnErrorOccurred -= HandleTestErrorOccurred;
         CompletionCoordinator.OnSaveErrorDialogRequested -= HandleSaveErrorDialogAsync;
         CompletionCoordinator.OnPrepareErrorDialogRequested -= HandlePrepareErrorDialogAsync;
+        ScanModeController.OnStateChanged -= OnScanModeStateChanged;
     }
 }

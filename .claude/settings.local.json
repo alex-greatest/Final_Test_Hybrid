@@ -91,7 +91,8 @@
       "Bash(npx:*)",
       "mcp__codex-cli__help",
       "mcp__codex-cli__listSessions",
-      "mcp__codex-cli__codex-reply"
+      "mcp__codex-cli__codex-reply",
+      "Bash(tree:*)"
     ]
   }
 }

@@ -268,13 +268,15 @@ public enum CycleExitReason
                                           ▼
                               ┌─────────────────────────┐
                               │  HandleCycleExit        │
-                              │  (SoftReset)            │
+                              │  (Soft или HardReset)   │
                               │  → Ждём AskEnd          │
                               │  → Разблокировка поля   │
                               └─────────────────────────┘
 ```
 
 **Ключевой момент:** Linked token (`ct` + `_resetCts.Token`) позволяет прервать бесконечное ожидание `WaitForFalseAsync(End)` при Reset, обеспечивая мгновенную разблокировку поля ввода после AskEnd.
+
+**Для обоих типов сброса:** `OnForceStop` вызывается ВСЕГДА (и для soft, и для hard), что приводит к `_resetCts.Cancel()` ДО PLC коммуникации. Жёсткий сброс дополнительно вызывает `OnReset` → `HandleHardReset()`, но прерывание End уже произошло.
 
 ---
 
