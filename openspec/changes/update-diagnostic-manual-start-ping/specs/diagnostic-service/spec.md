@@ -2,54 +2,117 @@
 
 ## ADDED Requirements
 
-### Requirement: Manual Connection Start
+### Requirement: Manual Connection Lifecycle
 
-The Diagnostic Service SHALL require explicit manual start via `IModbusDispatcher.StartAsync()` before any read/write operations can be performed.
+The Diagnostic Service SHALL require explicit manual start via `IModbusDispatcher.StartAsync()` before any read/write operations.
 
 The system SHALL NOT auto-start the dispatcher on first read/write operation.
 
-If a read/write operation is attempted before `StartAsync()` is called, `QueuedModbusClient` SHALL throw `InvalidOperationException` with a descriptive message before the operation reaches `RegisterReader`.
+The system SHALL support restart after `StopAsync()` — calling `StartAsync()` again SHALL work.
 
-#### Scenario: Operation without StartAsync throws immediately
-- **WHEN** `IModbusClient.ReadHoldingRegistersAsync()` is called without prior `StartAsync()`
-- **THEN** `InvalidOperationException` is thrown with message "Диспетчер не запущен. Вызовите IModbusDispatcher.StartAsync() перед использованием."
-- **AND** the exception propagates to the caller (not caught by RegisterReader)
+#### Scenario: Operation without StartAsync via RegisterReader
+- **WHEN** `RegisterReader.ReadUInt16Async()` is called without prior `StartAsync()`
+- **THEN** `QueuedModbusClient` throws `InvalidOperationException`
+- **AND** `RegisterReader` catches it and returns `DiagnosticReadResult.Fail`
 
-#### Scenario: Manual start success
-- **WHEN** `IModbusDispatcher.StartAsync()` is called
-- **AND** the COM port exists and the boiler responds to ping
+#### Scenario: Operation without StartAsync via direct IModbusClient
+- **WHEN** `IModbusClient.ReadHoldingRegistersAsync()` is called directly without prior `StartAsync()`
+- **THEN** `InvalidOperationException` is thrown to the caller
+
+#### Scenario: Restart after stop
+- **WHEN** `StopAsync()` was called previously
+- **AND** `StartAsync()` is called again
+- **THEN** new channels are created (empty queue)
+- **AND** connection attempt begins
+
+### Requirement: Connection State Based on Command Success
+
+After `StartAsync()` and port opening, `IsConnected` SHALL remain `false` until the first successful Modbus command.
+
+Any successful command (ping or user) SHALL set `IsConnected` to `true`.
+
+Any communication error (timeout) SHALL set `IsConnected` to `false` and trigger reconnect.
+
+#### Scenario: IsConnected false after port opens
+- **WHEN** `StartAsync()` is called
+- **AND** COM port opens successfully
+- **THEN** `IsConnected` remains `false`
+- **AND** `IsReconnecting` is `false`
+
+#### Scenario: IsConnected true after successful command
+- **WHEN** port is open and `IsConnected` is `false`
+- **AND** a Modbus command (ping or user) executes successfully
 - **THEN** `IsConnected` becomes `true`
 - **AND** `Connected` event is raised
 
-#### Scenario: StartAsync after StopAsync is forbidden
-- **WHEN** `IModbusDispatcher.StopAsync()` was called previously
-- **AND** `IModbusDispatcher.StartAsync()` is called again
-- **THEN** `InvalidOperationException` is thrown with message "Рестарт диспетчера после остановки не поддерживается"
+#### Scenario: IsConnected false after timeout
+- **WHEN** `IsConnected` is `true`
+- **AND** a Modbus command times out (communication error)
+- **THEN** `IsConnected` becomes `false`
+- **AND** reconnect loop starts with configured exponential backoff
 
-### Requirement: Connection Health Check (Ping)
+### Requirement: Ping Keep-Alive
 
-After opening the COM port, the Diagnostic Service SHALL verify that the boiler device responds by reading the Firmware Major register.
+The Diagnostic Service SHALL periodically send a low-priority ping command to detect connection loss when idle.
 
-The ping register address SHALL be calculated as `1055 - BaseAddressOffset` to account for different Modbus address configurations.
+Ping SHALL read the Firmware Major register (address `1055 - BaseAddressOffset`).
 
-If the device does not respond within the configured timeout, the system SHALL treat this as a connection failure and enter the reconnect loop with exponential backoff.
+Ping SHALL use `CommandPriority.Low` so user commands always execute first.
 
-#### Scenario: Ping success
-- **WHEN** COM port is opened successfully
-- **AND** boiler responds to ping (Firmware Major register read succeeds)
-- **THEN** `IsConnected` becomes `true`
-- **AND** `Connected` event is raised
-- **AND** log message "Ping успешен: устройство отвечает" is written
+Ping interval SHALL be configurable via `PingIntervalMs` setting.
 
-#### Scenario: Ping timeout (port exists, boiler not connected)
-- **WHEN** COM port is opened successfully
-- **AND** boiler does not respond to ping (TimeoutException)
-- **THEN** `IsConnected` remains `false`
-- **AND** `IsReconnecting` becomes `true`
-- **AND** reconnect loop continues with exponential backoff (1s → 2s → 4s → ... → 30s max)
+#### Scenario: Ping runs when idle
+- **WHEN** no user commands are pending
+- **AND** ping interval has elapsed
+- **THEN** ping command is enqueued with low priority
+- **AND** ping executes and verifies connection
 
-#### Scenario: Port does not exist
-- **WHEN** COM port cannot be opened (e.g., device not present)
-- **THEN** `IsConnected` remains `false`
-- **AND** `IsReconnecting` becomes `true`
-- **AND** reconnect loop continues with exponential backoff
+#### Scenario: User command preempts ping
+- **WHEN** ping is pending in the queue
+- **AND** user sends a high-priority command
+- **THEN** user command executes first
+- **AND** ping executes after user command completes
+
+#### Scenario: Ping detects connection loss
+- **WHEN** ping command times out
+- **THEN** `IsConnected` becomes `false`
+- **AND** reconnect loop starts
+
+### Requirement: Queue Management on Stop
+
+When `StopAsync()` is called, the system SHALL cancel all pending commands in both High and Low priority queues.
+
+New channels SHALL be created on next `StartAsync()` to guarantee empty queue.
+
+#### Scenario: Commands cancelled on stop
+- **WHEN** commands are pending in the queue
+- **AND** `StopAsync()` is called
+- **THEN** all pending commands are cancelled
+
+#### Scenario: Clean queue on restart
+- **WHEN** `StartAsync()` is called after `StopAsync()`
+- **THEN** channels are recreated
+- **AND** queue is guaranteed empty
+
+### Requirement: PLC Reset Integration
+
+The Diagnostic Service SHALL stop when PLC reset occurs.
+
+On both Soft Reset (ForceStop) and Hard Reset, the system SHALL call `StopAsync()`.
+
+#### Scenario: Soft reset stops diagnostic
+- **WHEN** PLC soft reset occurs (`PlcResetCoordinator.OnForceStop` event)
+- **THEN** `IModbusDispatcher.StopAsync()` is called
+- **AND** connection is closed
+- **AND** pending commands are cancelled
+
+#### Scenario: Hard reset stops diagnostic
+- **WHEN** PLC hard reset occurs (`ErrorCoordinator.OnReset` event)
+- **THEN** `IModbusDispatcher.StopAsync()` is called
+- **AND** connection is closed
+- **AND** pending commands are cancelled
+
+#### Scenario: StopAsync is idempotent
+- **WHEN** `StopAsync()` is called multiple times
+- **THEN** only first call performs cleanup
+- **AND** subsequent calls return immediately without error
