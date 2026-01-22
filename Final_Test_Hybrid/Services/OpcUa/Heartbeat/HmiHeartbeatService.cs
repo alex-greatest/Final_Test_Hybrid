@@ -91,7 +91,7 @@ public class HmiHeartbeatService : IDisposable
     {
         try
         {
-            var result = await _tagService.WriteAsync(BaseTags.HmiHeartbeat, true, ct);
+            var result = await _tagService.WriteAsync(BaseTags.HmiHeartbeat, true, ct, silent: true);
             if (!result.Success)
             {
                 _logger.LogWarning("Не удалось записать HMI Heartbeat: {Error}", result.Error);

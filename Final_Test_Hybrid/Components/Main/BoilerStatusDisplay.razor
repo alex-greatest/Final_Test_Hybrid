@@ -18,6 +18,7 @@
         Dispatcher.PingDataUpdated += OnPingDataUpdated;
         Dispatcher.Connected += OnConnected;
         Dispatcher.Disconnecting += OnDisconnecting;
+        Dispatcher.Stopped += OnStopped;
 
         UpdateDisplay();
     }
@@ -48,6 +49,15 @@
             StateHasChanged();
         });
         return Task.CompletedTask;
+    }
+
+    private void OnStopped()
+    {
+        InvokeAsync(() =>
+        {
+            UpdateDisplay();
+            StateHasChanged();
+        });
     }
 
     private void UpdateDisplay()
@@ -82,5 +92,6 @@
         Dispatcher.PingDataUpdated -= OnPingDataUpdated;
         Dispatcher.Connected -= OnConnected;
         Dispatcher.Disconnecting -= OnDisconnecting;
+        Dispatcher.Stopped -= OnStopped;
     }
 }

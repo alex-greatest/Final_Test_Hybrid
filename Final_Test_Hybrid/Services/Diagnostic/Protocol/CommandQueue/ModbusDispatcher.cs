@@ -57,6 +57,9 @@ public class ModbusDispatcher : IModbusDispatcher
     public event Action? Connected;
 
     /// <inheritdoc />
+    public event Action? Stopped;
+
+    /// <inheritdoc />
     public event Action<DiagnosticPingData>? PingDataUpdated;
 
     /// <inheritdoc />
@@ -245,6 +248,7 @@ public class ModbusDispatcher : IModbusDispatcher
         }
 
         _logger.LogInformation("ModbusDispatcher остановлен");
+        NotifyStoppedSafely();
     }
 
     #endregion
@@ -333,6 +337,8 @@ public class ModbusDispatcher : IModbusDispatcher
             _lastPingData = null;
             ctsToDispose?.Dispose();
             pingCtsToDispose?.Dispose();
+
+            NotifyStoppedSafely();
         }
     }
 
@@ -579,6 +585,21 @@ public class ModbusDispatcher : IModbusDispatcher
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка в обработчике Connected: {Error}", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Безопасно уведомляет об остановке диспетчера.
+    /// </summary>
+    private void NotifyStoppedSafely()
+    {
+        try
+        {
+            Stopped?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка в обработчике Stopped: {Error}", ex.Message);
         }
     }
 
