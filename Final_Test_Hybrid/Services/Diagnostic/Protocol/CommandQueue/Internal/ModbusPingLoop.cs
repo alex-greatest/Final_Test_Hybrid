@@ -12,6 +12,7 @@ internal sealed class ModbusPingLoop
 {
     private readonly Func<IModbusCommand, CancellationToken, ValueTask> _enqueueFunc;
     private readonly ModbusDispatcherOptions _options;
+    private readonly ushort _baseAddressOffset;
     private readonly IDualLogger _logger;
 
     /// <summary>
@@ -24,14 +25,17 @@ internal sealed class ModbusPingLoop
     /// </summary>
     /// <param name="enqueueFunc">Функция для отправки команд в очередь.</param>
     /// <param name="options">Настройки диспетчера.</param>
+    /// <param name="baseAddressOffset">Смещение базового адреса из DiagnosticSettings.</param>
     /// <param name="logger">Логгер.</param>
     public ModbusPingLoop(
         Func<IModbusCommand, CancellationToken, ValueTask> enqueueFunc,
         ModbusDispatcherOptions options,
+        ushort baseAddressOffset,
         IDualLogger logger)
     {
         _enqueueFunc = enqueueFunc;
         _options = options;
+        _baseAddressOffset = baseAddressOffset;
         _logger = logger;
     }
 
@@ -57,7 +61,7 @@ internal sealed class ModbusPingLoop
 
                 try
                 {
-                    var command = new PingCommand(CommandPriority.Low, ct);
+                    var command = new PingCommand(CommandPriority.Low, _baseAddressOffset, ct);
                     await _enqueueFunc(command, ct).ConfigureAwait(false);
 
                     var pingData = await command.Task.WaitAsync(ct).ConfigureAwait(false);

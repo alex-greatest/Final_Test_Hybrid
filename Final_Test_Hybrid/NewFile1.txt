@@ -1,0 +1,24 @@
+Показания аналоговых датчиков. Адрес – DB_Measure.Sensor
+
+POG Gas Flow G20 – GAS_POG 
+FS DHW Wtr Flw – DHW_FS
+FR CH Wtr Flw – CH_FR
+CO UMAT – FA_CO
+CO2 UMAT – FA_CO2
+PAG Blr Gas Press – GAS_PAG
+PES DHW In Press – DHW_PES
+PMR CH Flw Press – CH_PMR
+04B1 Blr Supply – BlrSupply
+20B1 RT 24V frm Blr – Gas_POG1 (текст заменить на POG1 Gas Flow)
+O2 UMAT – FA_O2
+POG2 Gas FlowLPG – нет датчика
+CO2 Cascade – Gas_P (заменить текст на Gas Flow Pressure)
+RRR CH Rtn Press – Gas_Pa (заменить текст на Barometer)
+ACC Current Meter – такого датчика нет
+Датчиков из крайней правой верхней колонки нет.
+
+Окно Gas Flow Calculations
+From Sensor – DB_Measure.Sensor.Gas_POG1
+Correction Factor Applied – не знаю, что такое
+Normalised - DB_Measure.Sensor.Gas_POG1_N
+Остальное – нет информации

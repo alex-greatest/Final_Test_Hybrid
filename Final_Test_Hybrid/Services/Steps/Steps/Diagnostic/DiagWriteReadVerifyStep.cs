@@ -8,14 +8,14 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Diagnostic;
 /// <summary>
 /// Проверяет корректность записи и чтения регистра.
 /// Записывает тестовое значение, читает обратно и сверяет.
-/// Использует регистр 1013 (Modbus 1012) — DHW Setpoint (диапазон 35-60°C).
+/// Использует регистр 1060 (Modbus 1059) — время выбега насоса ОС (диапазон 0-600 с).
 /// </summary>
 public class DiagWriteReadVerifyStep(
     DualLogger<DiagWriteReadVerifyStep> logger,
     AccessLevelManager accessLevelManager) : ITestStep
 {
-    private const ushort TestAddress = 1012;  // Modbus адрес (документ. 1013 - offset 1)
-    private const ushort TestValue = 45;      // В пределах диапазона 35-60°C
+    private const ushort TestAddress = 1059;  // Modbus адрес (документ. 1060 - offset 1)
+    private const ushort TestValue = 100;     // В пределах диапазона 0-600 с
 
     public string Id => "diag-write-read-verify";
     public string Name => "DiagWriteReadVerify";

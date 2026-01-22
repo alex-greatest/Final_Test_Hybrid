@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue.Internal;
 using Microsoft.Extensions.Logging;
@@ -42,15 +43,23 @@ public class ModbusDispatcher : IModbusDispatcher
     /// <summary>
     /// Создаёт диспетчер команд.
     /// </summary>
+    /// <param name="connectionManager">Менеджер соединений Modbus.</param>
+    /// <param name="options">Настройки диспетчера.</param>
+    /// <param name="diagnosticSettings">Настройки диагностики (включая BaseAddressOffset).</param>
+    /// <param name="logger">Логгер.</param>
+    /// <param name="testStepLogger">Логгер тестовых шагов.</param>
     public ModbusDispatcher(
         ModbusConnectionManager connectionManager,
         IOptions<ModbusDispatcherOptions> options,
+        IOptions<DiagnosticSettings> diagnosticSettings,
         ILogger<ModbusDispatcher> logger,
         ITestStepLogger testStepLogger)
     {
         _connectionManager = connectionManager;
         _options = options.Value;
         _logger = new DualLogger<ModbusDispatcher>(logger, testStepLogger);
+
+        var baseAddressOffset = diagnosticSettings.Value.BaseAddressOffset;
 
         // Создаём internal компоненты
         _commandQueue = new ModbusCommandQueue();
@@ -71,6 +80,7 @@ public class ModbusDispatcher : IModbusDispatcher
         _pingLoop = new ModbusPingLoop(
             EnqueueAsync,
             _options,
+            baseAddressOffset,
             _logger);
 
         // Настраиваем колбэк ping

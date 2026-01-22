@@ -1,12 +1,92 @@
-﻿<div class="row-item">
+@using Final_Test_Hybrid.Services.OpcUa.Subscription
+@inject OpcUaSubscription Subscription
+@implements IAsyncDisposable
+
+<div class="row-item">
     <span>@Label</span>
-    
-    <RadzenTextBox Value="@Value" 
-                   ReadOnly="true" 
+
+    <RadzenTextBox Value="@_displayValue"
+                   ReadOnly="true"
                    class="scada-radzen-input" />
 </div>
 
 @code {
+    /// <summary>
+    /// Отображаемая метка.
+    /// </summary>
     [Parameter] public string Label { get; set; } = "";
-    [Parameter] public string Value { get; set; } = "0.00";
+
+    /// <summary>
+    /// Статическое значение для отображения (обратная совместимость).
+    /// Игнорируется если указан Tag.
+    /// </summary>
+    [Parameter] public string Value { get; set; } = "";
+
+    /// <summary>
+    /// OPC-UA Node ID для подписки на значение.
+    /// Приоритетнее чем Value.
+    /// </summary>
+    [Parameter] public string Tag { get; set; } = "";
+
+    /// <summary>
+    /// Формат отображения числа (по умолчанию 1 знак после запятой).
+    /// </summary>
+    [Parameter] public string Format { get; set; } = "F1";
+
+    private string _displayValue = "---";
+    private string _subscribedTag = "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Tag != _subscribedTag)
+        {
+            await UnsubscribeCurrentTagAsync();
+
+            if (!string.IsNullOrEmpty(Tag))
+            {
+                await Subscription.SubscribeAsync(Tag, OnValueChanged);
+                _subscribedTag = Tag;
+            }
+            else
+            {
+                _displayValue = !string.IsNullOrEmpty(Value) ? Value : "---";
+            }
+        }
+        else if (string.IsNullOrEmpty(Tag) && !string.IsNullOrEmpty(Value))
+        {
+            _displayValue = Value;
+        }
+    }
+
+    /// <summary>
+    /// Обработчик изменения значения тега.
+    /// </summary>
+    private async Task OnValueChanged(object? value)
+    {
+        _displayValue = value switch
+        {
+            float f => f.ToString(Format),
+            double d => d.ToString(Format),
+            int i => i.ToString(),
+            _ => value?.ToString() ?? "---"
+        };
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Отписка от текущего тега.
+    /// </summary>
+    private async Task UnsubscribeCurrentTagAsync()
+    {
+        if (!string.IsNullOrEmpty(_subscribedTag))
+        {
+            await Subscription.UnsubscribeAsync(_subscribedTag, OnValueChanged, removeTag: false, ct: CancellationToken.None);
+            _subscribedTag = "";
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await UnsubscribeCurrentTagAsync();
+    }
 }

@@ -1,0 +1,22 @@
+@using Final_Test_Hybrid.Models.Plc.Tags
+
+<div style="height: 100%; padding: 0 20px;">
+    <div class="panel-grid" style="grid-template-columns: max-content;">
+        <div class="panel-grid" style="grid-template-columns: max-content;">
+
+            <PanelBox Style="width: 550px; height: 250px">
+                <ValueIndicator Label="TAG Температура входящего газа"
+                                Tag="@RtdScreenTags.GasTag"/>
+                <ValueIndicator Label="TES Температура воды на входе ГВ"
+                                Tag="@RtdScreenTags.DhwTes"/>
+                <ValueIndicator Label="TUS Температура воды на выходе ГВ"
+                                Tag="@RtdScreenTags.DhwTus"/>
+                <ValueIndicator Label="TMR Температура подачи отопления"
+                                Tag="@RtdScreenTags.ChTmr"/>
+                <ValueIndicator Label="TRR Температура возврата отопления"
+                                Tag="@RtdScreenTags.ChTrr"/>
+            </PanelBox>
+
+        </div>
+    </div>
+</div>
