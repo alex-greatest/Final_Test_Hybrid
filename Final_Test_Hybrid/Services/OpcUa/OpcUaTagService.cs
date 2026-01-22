@@ -43,9 +43,10 @@ public class OpcUaTagService(
         }
     }
 
-    public async Task<WriteResult> WriteAsync<T>(string nodeId, T value, CancellationToken ct = default)
+    public async Task<WriteResult> WriteAsync<T>(string nodeId, T value, CancellationToken ct = default, bool silent = false)
     {
-        logger.LogDebug("Запись в NodeId: [{NodeId}], значение: {Value}", nodeId, value);
+        if (!silent)
+            logger.LogDebug("Запись в NodeId: [{NodeId}], значение: {Value}", nodeId, value);
         try
         {
             var nodesToWrite = new WriteValueCollection

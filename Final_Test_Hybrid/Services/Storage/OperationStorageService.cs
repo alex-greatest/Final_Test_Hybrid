@@ -44,7 +44,7 @@ public class OperationStorageService(DualLogger<OperationStorageService> logger)
         }
 
         operation.Status = testResult == 1 ? OperationResultStatus.Ok : OperationResultStatus.Nok;
-        operation.DateEnd = DateTime.Now;
+        operation.DateEnd = DateTime.UtcNow;
 
         logger.LogInformation(
             "Operation {OperationId} обновлена: Status={Status}, DateEnd={DateEnd}",
