@@ -171,29 +171,7 @@ private void NotifyConnectedSafely()
 
 ### Использование в UI (Blazor)
 
-```csharp
-@inject IModbusDispatcher Dispatcher
-
-<div class="status">
-    @if (Dispatcher.IsConnected)
-    {
-        <span class="connected">Подключено</span>
-        @if (Dispatcher.LastPingData != null)
-        {
-            <span>ModeKey: @Dispatcher.LastPingData.ModeKey.ToString("X8")</span>
-            <span>Status: @Dispatcher.LastPingData.BoilerStatus</span>
-        }
-    }
-    else if (Dispatcher.IsReconnecting)
-    {
-        <span class="reconnecting">Переподключение...</span>
-    }
-    else
-    {
-        <span class="disconnected">Отключено</span>
-    }
-</div>
-```
+См. `Components/Main/BoilerStatusDisplay.razor` — использует `IsConnected`, `IsReconnecting`, `LastPingData`.
 
 ## Разрыв связи и рестарт
 
@@ -500,18 +478,12 @@ High-priority команды всегда выполняются раньше Lo
   "Diagnostic": {
     "PortName": "COM3",
     "BaudRate": 115200,
-    "DataBits": 8,
-    "Parity": "None",
-    "StopBits": "One",
     "SlaveId": 1,
     "ReadTimeoutMs": 1000,
     "WriteTimeoutMs": 1000,
     "BaseAddressOffset": 1,
     "CommandQueue": {
-      "HighPriorityQueueCapacity": 100,
-      "LowPriorityQueueCapacity": 10,
       "ReconnectDelayMs": 5000,
-      "CommandWaitTimeoutMs": 100,
       "PingIntervalMs": 5000
     }
   }
@@ -522,53 +494,23 @@ High-priority команды всегда выполняются раньше Lo
 
 | Параметр | Тип | Default | Описание |
 |----------|-----|---------|----------|
-| `PortName` | string | "COM1" | Имя COM-порта (USB-RS485 адаптер) |
-| `BaudRate` | int | 115200 | Скорость передачи (бод). Должна совпадать с ЭБУ |
-| `DataBits` | int | 8 | Биты данных (стандарт для Modbus RTU) |
-| `Parity` | Parity | None | Контроль чётности: None/Odd/Even/Mark/Space |
-| `StopBits` | StopBits | One | Стоповые биты: One/Two/OnePointFive |
-| `SlaveId` | byte | 1 | Modbus Slave ID устройства (адрес ведомого) |
-| `ReadTimeoutMs` | int | 1000 | Таймаут ответа на чтение (мс) |
-| `WriteTimeoutMs` | int | 1000 | Таймаут ответа на запись (мс) |
-| `BaseAddressOffset` | ushort | 1 | Смещение адресов: документация (1005) → Modbus (1004) |
+| `PortName` | string | "COM1" | Имя COM-порта |
+| `BaudRate` | int | 115200 | Скорость (должна совпадать с ЭБУ) |
+| `SlaveId` | byte | 1 | Modbus Slave ID |
+| `ReadTimeoutMs` | int | 1000 | Таймаут чтения (мс) |
+| `WriteTimeoutMs` | int | 1000 | Таймаут записи (мс) |
+| `BaseAddressOffset` | ushort | 1 | Смещение: документация → Modbus |
+
+Остальные настройки: DataBits=8, Parity=None, StopBits=One (стандарт Modbus RTU).
 
 ### ModbusDispatcherOptions — Command Queue
 
-| Параметр | Тип | Default | Описание |
-|----------|-----|---------|----------|
-| `HighPriorityQueueCapacity` | int | 100 | Размер очереди для one-off команд (UI, read/write по запросу) |
-| `LowPriorityQueueCapacity` | int | 10 | Размер очереди для polling и ping |
-| `ReconnectDelayMs` | int | 5000 | Фиксированный интервал переподключения (5 сек) |
-| `CommandWaitTimeoutMs` | int | 100 | Как долго воркер ждёт команду перед проверкой состояния |
-| `PingIntervalMs` | int | 5000 | Интервал ping keep-alive (5 сек) |
+| Параметр | Default | Описание |
+|----------|---------|----------|
+| `ReconnectDelayMs` | 5000 | Интервал переподключения (мс) |
+| `PingIntervalMs` | 5000 | Интервал ping keep-alive (мс) |
 
-## DI регистрация
-
-### DiagnosticServiceExtensions (базовые сервисы)
-
-```csharp
-services.AddDiagnosticServices(configuration);
-```
-
-Это регистрирует:
-- `IModbusDispatcher` → `ModbusDispatcher` (singleton)
-- `IModbusClient` → `QueuedModbusClient` (singleton)
-- `RegisterReader` (singleton) — системные операции, НЕ паузится
-- `RegisterWriter` (singleton) — системные операции, НЕ паузится
-- `PollingService` (singleton)
-
-### StepsServiceExtensions (pausable сервисы)
-
-```csharp
-services.AddStepsServices();
-```
-
-Это регистрирует (среди прочего):
-- `PauseTokenSource` (singleton)
-- `PausableRegisterReader` (singleton) — для тестовых шагов, паузится
-- `PausableRegisterWriter` (singleton) — для тестовых шагов, паузится
-
-**Важно:** Pausable сервисы зависят от `PauseTokenSource`, поэтому регистрируются в `StepsServiceExtensions`.
+Остальные настройки: HighPriorityQueueCapacity=100, LowPriorityQueueCapacity=10, CommandWaitTimeoutMs=100.
 
 ## Обработка ошибок
 
@@ -586,12 +528,15 @@ if (!result.Success)
 
 ### При потере связи
 
-Диспетчер автоматически переподключается с фиксированным интервалом 5 секунд. Подпишитесь на `Disconnecting` чтобы остановить polling:
+Диспетчер автоматически переподключается:
 
-```csharp
-// В Form1.cs уже настроено:
-dispatcher.Disconnecting += () => pollingService.StopAllTasksAsync();
-```
+1. Команда таймаутит (1 сек) → исключение пробрасывается
+2. Диспетчер ловит, логирует "Ошибка связи: ... Переподключение..."
+3. Закрывает порт, уведомляет подписчиков `Disconnecting`
+4. Ждёт 5 сек → пытается переподключиться
+5. При успехе первой команды → `Connected` event
+
+Подпишитесь на `Disconnecting` чтобы остановить polling (в Form1.cs уже настроено).
 
 ## Потокобезопасность
 
@@ -603,3 +548,15 @@ dispatcher.Disconnecting += () => pollingService.StopAllTasksAsync();
 | `RegisterReader` | Да (делегирует в client) |
 | `RegisterWriter` | Да (делегирует в client) |
 | `PollingService` | Да (синхронизирован) |
+
+## Внутренние защиты
+
+### Stack Overflow Prevention
+
+NModbus по умолчанию использует внутренний retry при таймаутах, что может вызвать stack overflow.
+Решение: `master.Transport.Retries = 0` в `ModbusConnectionManager.Connect()`.
+
+### Exception Propagation
+
+Исключения из команд пробрасываются через `throw;` в `ModbusCommandBase.ExecuteAsync`,
+чтобы диспетчер корректно определял разрыв связи и запускал переподключение.

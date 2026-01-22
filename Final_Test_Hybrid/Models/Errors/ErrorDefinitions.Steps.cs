@@ -38,6 +38,11 @@ public static partial class ErrorDefinitions
         RelatedStepId: "dhw-flush-circuit-normal-direction",
         RelatedStepName: "DHW/Flush_DHW_Circuit_Normal_Direction");
 
+    public static readonly ErrorDefinition EarthClipNotConnected = new(
+        "П-009-01", "Клипса заземление не подключена",
+        Severity: ErrorSeverity.Warning,
+        RelatedStepId: "elec-connect-earth-clip",
+        RelatedStepName: "Elec/Connect_Earth_Clip");
 
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [
@@ -45,6 +50,7 @@ public static partial class ErrorDefinitions
         Relay17K5Fault,
         AlNoWaterFlow,
         AlNoWaterPressure,
-        AlFillTime
+        AlFillTime,
+        EarthClipNotConnected
     ];
 }
