@@ -6,14 +6,15 @@ using OpcUa.Subscription;
 
 public class AutoReadySubscription(OpcUaSubscription opcUaSubscription) : INotifyStateChanged
 {
-    public bool IsReady { get; private set; }
+    private volatile bool _isReady;
+    public bool IsReady => _isReady;
     public event Action? OnStateChanged;
 
     public async Task SubscribeAsync()
     {
         await opcUaSubscription.SubscribeAsync(BaseTags.TestAskAuto, async value =>
         {
-            IsReady = value is true;
+            _isReady = value is true;
             OnStateChanged?.Invoke();
             await Task.CompletedTask;
         });

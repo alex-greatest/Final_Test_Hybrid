@@ -127,7 +127,7 @@ public partial class Form1 : Form
         _databaseConnectionService.Start();
     }
 
-    private static void ConfigureDiagnosticEvents(ServiceProvider serviceProvider)
+    private async static void ConfigureDiagnosticEvents(ServiceProvider serviceProvider)
     {
         var pollingService = serviceProvider.GetRequiredService<PollingService>();
         var dispatcher = serviceProvider.GetRequiredService<IModbusDispatcher>();
@@ -141,6 +141,8 @@ public partial class Form1 : Form
         // Подписываемся на PLC Reset события для остановки диагностики
         plcResetCoordinator.OnForceStop += () => StopDispatcherSafely(dispatcher, logger);
         errorCoordinator.OnReset += () => StopDispatcherSafely(dispatcher, logger);
+
+        await dispatcher.StartAsync();
 
         // StartAsync() НЕ вызываем здесь — диагностика запускается из тестовых шагов
     }

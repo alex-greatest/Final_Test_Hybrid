@@ -34,10 +34,21 @@ public class ScanModeController : IDisposable
     /// </summary>
     private bool _isResetting;
     private bool _disposed;
+    /// <summary>
+    /// Кэшированное состояние AutoReady. Обновляется только под _stateLock.
+    /// Используется для внутренних решений чтобы избежать race condition.
+    /// </summary>
+    private bool _cachedIsAutoReady;
 
     public event Action? OnStateChanged;
 
     public bool IsScanModeEnabled => _operatorState.IsAuthenticated && _autoReady.IsReady;
+
+    /// <summary>
+    /// Внутренняя проверка режима сканирования (использует кэш).
+    /// Использовать только внутри lock(_stateLock).
+    /// </summary>
+    private bool IsScanModeEnabledCached => _operatorState.IsAuthenticated && _cachedIsAutoReady;
 
     /// <summary>
     /// Внутренняя проверка без блокировки - использовать только внутри lock(_stateLock).
@@ -131,6 +142,7 @@ public class ScanModeController : IDisposable
     {
         lock (_stateLock)
         {
+            _cachedIsAutoReady = _autoReady.IsReady;  // Обновляем снимок перед решениями
             TransitionToReadyInternal();
         }
     }
@@ -146,7 +158,10 @@ public class ScanModeController : IDisposable
             {
                 return;
             }
-            if (IsScanModeEnabled)
+
+            _cachedIsAutoReady = _autoReady.IsReady;  // Обновляем снимок под lock
+
+            if (IsScanModeEnabledCached)
             {
                 TryActivateScanMode();
             }
@@ -263,7 +278,7 @@ public class ScanModeController : IDisposable
     /// </summary>
     private bool ShouldUseSoftDeactivation()
     {
-        var isAutoModeLost = _operatorState.IsAuthenticated && !_autoReady.IsReady;
+        var isAutoModeLost = _operatorState.IsAuthenticated && !_cachedIsAutoReady;
         var isExecutionActive = _activityTracker.IsAnyActive;
         var isWaitingForScan = _operatorState.IsAuthenticated && _preExecutionCoordinator.IsAcceptingInput;
         return isAutoModeLost || isExecutionActive || isWaitingForScan;
@@ -297,7 +312,7 @@ public class ScanModeController : IDisposable
     private void TransitionToReadyInternal()
     {
         _isResetting = false;
-        if (!IsScanModeEnabled)
+        if (!IsScanModeEnabledCached)
         {
             _loopCts?.Cancel();
             _isActivated = false;
