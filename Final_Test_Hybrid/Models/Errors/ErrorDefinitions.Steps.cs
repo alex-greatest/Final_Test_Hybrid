@@ -21,27 +21,30 @@ public static partial class ErrorDefinitions
         "П-008-00", "Нет протока воды",
         PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Fill_Circuit_Normal\".\"Al_NoWaterFlow\"",
         Severity: ErrorSeverity.Critical,
-        RelatedStepId: "block-boiler-adapter",
-        RelatedStepName: "Block Boiler Adapter");
+        RelatedStepId: "dhw-flush-circuit-normal-direction",
+        RelatedStepName: "DHW/Flush_DHW_Circuit_Normal_Direction");
     
     public static readonly ErrorDefinition AlNoWaterPressure = new(
         "П-008-01", "Нет давления воды",
         PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Fill_Circuit_Normal\".\"Al_NoWaterPressure\"",
         Severity: ErrorSeverity.Critical,
-        RelatedStepId: "block-boiler-adapter",
-        RelatedStepName: "Block Boiler Adapter");
+        RelatedStepId: "dhw-flush-circuit-normal-direction",
+        RelatedStepName: "DHW/Flush_DHW_Circuit_Normal_Direction");
     
     public static readonly ErrorDefinition AlFillTime = new(
         "П-008-02", "Время заполнения превышено",
         PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Fill_Circuit_Normal\".\"Al_FillTime\"",
         Severity: ErrorSeverity.Critical,
-        RelatedStepId: "block-boiler-adapter",
-        RelatedStepName: "Block Boiler Adapter");
+        RelatedStepId: "dhw-flush-circuit-normal-direction",
+        RelatedStepName: "DHW/Flush_DHW_Circuit_Normal_Direction");
 
 
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [
         BoilerNotLocked,
-        Relay17K5Fault
+        Relay17K5Fault,
+        AlNoWaterFlow,
+        AlNoWaterPressure,
+        AlFillTime
     ];
 }

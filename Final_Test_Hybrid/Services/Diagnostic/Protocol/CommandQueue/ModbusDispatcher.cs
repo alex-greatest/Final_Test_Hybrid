@@ -16,7 +16,7 @@ public class ModbusDispatcher : IModbusDispatcher
     private readonly ModbusConnectionManager _connectionManager;
     private readonly ModbusDispatcherOptions _options;
     private readonly DualLogger<ModbusDispatcher> _logger;
-    private readonly object _stateLock = new();
+    private readonly Lock _stateLock = new();
 
     private Channel<IModbusCommand>? _highQueue;
     private Channel<IModbusCommand>? _lowQueue;
@@ -25,7 +25,7 @@ public class ModbusDispatcher : IModbusDispatcher
     private CancellationTokenSource? _pingCts;
     private Task? _workerTask;
     private Task? _pingTask;
-    private bool _isStopping;
+    private volatile bool _isStopping;
     private bool _isStopped;
     private volatile bool _isConnected;
     private volatile bool _isReconnecting;
@@ -366,7 +366,7 @@ public class ModbusDispatcher : IModbusDispatcher
                     NotifyConnectedSafely();
                 }
             }
-            catch (Exception ex) when (IsCommunicationError(ex))
+            catch (Exception ex) when (!_isStopping && IsCommunicationError(ex))
             {
                 command.SetException(ex);
                 _isConnected = false;
@@ -474,10 +474,9 @@ public class ModbusDispatcher : IModbusDispatcher
                 {
                     throw;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    // Ping failure будет обработан dispatcher'ом при выполнении команды
-                    _logger.LogDebug("Ping failed: {Error}", ex.Message);
+                    // Ping failure обрабатывается dispatcher'ом - он залогирует ошибку связи
                 }
             }
         }
@@ -531,6 +530,7 @@ public class ModbusDispatcher : IModbusDispatcher
     {
         _isConnected = false;
         _isPortOpen = false;
+        _lastPingData = null; // Очищаем старые данные при разрыве соединения
 
         _connectionManager.Close();
 
@@ -644,11 +644,36 @@ public class ModbusDispatcher : IModbusDispatcher
 
     #region Error Handling
 
+    /// <summary>
+    /// Определяет, является ли исключение ошибкой связи с устройством.
+    /// Проходит по всей цепочке InnerException для корректной обработки
+    /// исключений NModbus, которые оборачивают реальные ошибки.
+    /// </summary>
     private static bool IsCommunicationError(Exception ex)
     {
-        return ex is TimeoutException
-            || ex is IOException
-            || ex.Message.Contains("port", StringComparison.OrdinalIgnoreCase);
+        var current = ex;
+        while (current != null)
+        {
+            // Типы ошибок связи для Serial Port
+            if (current is TimeoutException or IOException
+                or ObjectDisposedException or UnauthorizedAccessException)
+            {
+                return true;
+            }
+
+            // InvalidOperationException только если связана с портом
+            if (current is InvalidOperationException &&
+                (current.Message.Contains("port", StringComparison.OrdinalIgnoreCase) ||
+                 current.Message.Contains("closed", StringComparison.OrdinalIgnoreCase) ||
+                 current.Message.Contains("open", StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+
+            current = current.InnerException;
+        }
+
+        return false;
     }
 
     private void CancelPendingCommands()

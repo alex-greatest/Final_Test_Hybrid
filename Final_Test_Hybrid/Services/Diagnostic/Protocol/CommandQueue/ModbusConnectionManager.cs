@@ -61,6 +61,7 @@ public class ModbusConnectionManager : IDisposable
             port.Open();
             adapter = new SerialPortAdapter(port);
             var master = new ModbusFactory().CreateRtuMaster(adapter);
+            master.Transport.Retries = 0; // Отключаем внутренний retry NModbus чтобы избежать stack overflow
 
             // Присваиваем поля только после успешного создания всех ресурсов
             _serialPort = port;

@@ -47,10 +47,12 @@ public abstract class ModbusCommandBase<T> : IModbusCommand
         catch (OperationCanceledException)
         {
             _tcs.TrySetCanceled(ct);
+            throw;
         }
         catch (Exception ex)
         {
             _tcs.TrySetException(ex);
+            throw;
         }
     }
 
@@ -105,10 +107,12 @@ public abstract class ModbusCommandBase : IModbusCommand
         catch (OperationCanceledException)
         {
             _tcs.TrySetCanceled(ct);
+            throw;
         }
         catch (Exception ex)
         {
             _tcs.TrySetException(ex);
+            throw;
         }
     }
 
