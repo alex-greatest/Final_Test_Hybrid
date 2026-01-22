@@ -30,4 +30,11 @@ public class ModbusDispatcherOptions
     /// Интервал ping keep-alive (мс).
     /// </summary>
     public int PingIntervalMs { get; set; } = 5000;
+
+    /// <summary>
+    /// Пауза после открытия COM-порта перед началом работы (мс).
+    /// Даёт устройству время на инициализацию после Close → Open.
+    /// 0 = без паузы.
+    /// </summary>
+    public int PortOpenSettlingDelayMs { get; set; } = 100;
 }

@@ -169,6 +169,15 @@ internal sealed class ModbusWorkerLoop
             {
                 // Фасад владеет connect - вызываем через колбэк
                 DoConnect?.Invoke();
+
+                // Settling delay ДО setPortOpen — иначе ping-loop будет ставить команды в очередь
+                // и блокировать отправителей (bounded channel + FullMode=Wait)
+                if (_options.PortOpenSettlingDelayMs > 0)
+                {
+                    _logger.LogDebug("Settling delay {Delay}ms перед активацией порта", _options.PortOpenSettlingDelayMs);
+                    await Task.Delay(_options.PortOpenSettlingDelayMs, ct).ConfigureAwait(false);
+                }
+
                 setPortOpen(true);
                 setReconnecting(false);
                 _logger.LogInformation("COM-порт открыт. Ожидание первой успешной команды...");
@@ -218,6 +227,17 @@ internal sealed class ModbusWorkerLoop
                     _logger.LogInformation("Соединение с устройством подтверждено");
                     OnFirstCommandSucceeded?.Invoke();
                 }
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested || command.CancellationToken.IsCancellationRequested)
+            {
+                // Штатная отмена по нашим токенам - без логирования ошибки
+                command.SetCanceled();
+            }
+            catch (OperationCanceledException ex) when (isStopping())
+            {
+                // Отмена при остановке (не по токену) - Debug для наблюдаемости
+                command.SetCanceled();
+                _logger.LogDebug("Команда отменена при остановке: {Error}", ex.Message);
             }
             catch (Exception ex) when (!isStopping() && CommunicationErrorHelper.IsCommunicationError(ex))
             {

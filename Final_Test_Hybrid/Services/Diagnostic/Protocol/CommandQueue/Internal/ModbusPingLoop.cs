@@ -60,7 +60,7 @@ internal sealed class ModbusPingLoop
                     var command = new PingCommand(CommandPriority.Low, ct);
                     await _enqueueFunc(command, ct).ConfigureAwait(false);
 
-                    var pingData = await command.Task.ConfigureAwait(false);
+                    var pingData = await command.Task.WaitAsync(ct).ConfigureAwait(false);
 
                     // Проверяем порт и остановку перед обновлением данных (race protection)
                     // isPortOpen защищает от in-flight ping при разрыве соединения

@@ -216,7 +216,10 @@ public class ModbusDispatcher : IModbusDispatcher
         _connectionManager.Close();
         _isPortOpen = false;
 
-        // 4. Уведомляем подписчиков с таймаутом
+        // 4. Отменяем команды в очереди СРАЗУ — разблокирует ping loop и другие ожидающие
+        _commandQueue.CancelAllPendingCommands();
+
+        // 5. Уведомляем подписчиков с таймаутом
         try
         {
             await NotifyDisconnectingAsync().WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
@@ -226,7 +229,7 @@ public class ModbusDispatcher : IModbusDispatcher
             _logger.LogWarning("Таймаут ожидания Disconnecting handlers (2 сек)");
         }
 
-        // 5. Ждём завершения ping и worker ПАРАЛЛЕЛЬНО с общим таймаутом 5 сек
+        // 6. Ждём завершения ping и worker ПАРАЛЛЕЛЬНО с общим таймаутом 5 сек
         var tasksToWait = new List<Task>();
         if (pingTaskToWait != null) tasksToWait.Add(pingTaskToWait);
         tasksToWait.Add(taskToWait);
@@ -253,8 +256,7 @@ public class ModbusDispatcher : IModbusDispatcher
             _logger.LogError(ex, "Task завершился с ошибкой: {Error}", ex.Message);
         }
 
-        // 6. Cleanup
-        _commandQueue.CancelAllPendingCommands();
+        // 7. Cleanup
         _connectionManager.Close();
         _isConnected = false;
         _isPortOpen = false;

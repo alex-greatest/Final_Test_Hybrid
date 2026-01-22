@@ -613,7 +613,7 @@ if (!result.Success)
 |-----------|------------|
 | Единственный владелец connect/close | Фасад через `DoConnect`/`DoClose` колбэки |
 | Очистка при "воркер умер сам" | `CleanupWorkerStateIfNeeded` в фасаде |
-| Порядок Stop | CompleteChannels → Cancel CTS → Close port → wait tasks → cleanup |
+| Порядок Stop | CompleteChannels → Cancel CTS → Close port → CancelAllPendingCommands → wait tasks → cleanup |
 | Защита от параллельных Disconnecting | Interlocked gate `_isNotifyingDisconnect` |
 | Race protection ping при Stop | `isStopping` + `isPortOpen` проверки |
 

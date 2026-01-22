@@ -12,7 +12,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Elec;
 /// </summary>
 public class ConnectEarthClipStep(
     DualLogger<ConnectEarthClipStep> logger,
-    IErrorService errorService) : IHasPlcBlockPath, IRequiresPlcSubscriptions
+    IErrorService errorService) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.Elec.Connect_Earth_Clip";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"Elec\".\"Connect_Earth_Clip\".\"Start\"";

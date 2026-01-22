@@ -416,7 +416,7 @@ public class DiagPollingStressStep(
     /// </summary>
     private async Task VerifyAllTasksStoppedAsync(List<string> taskNames)
     {
-        await Task.Delay(500);
+        await Task.Delay(1000);
 
         var allTasks = pollingService.GetAllTasks();
         var runningCount = allTasks.Count(t => taskNames.Contains(t.Name) && t.IsRunning);

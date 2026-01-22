@@ -1,4 +1,3 @@
-using Final_Test_Hybrid.Models;
 using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Main.Messages;
@@ -87,7 +86,7 @@ public class BlockBoilerAdapterStep(
             $"Ошибка записи Start: {error}",
             canSkip: false,
             userMessage: "Ошибка связи с ПЛК",
-            errors: [ErrorDefinitions.PlcWriteError]);
+            errors: []);
     }
 
     private enum BlockResult { Success, Error }
