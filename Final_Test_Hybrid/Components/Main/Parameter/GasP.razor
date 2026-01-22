@@ -1,9 +1,34 @@
+@using Final_Test_Hybrid.Models.Plc.Tags
+@using Final_Test_Hybrid.Services.OpcUa.Subscription
+@inject OpcUaSubscription Subscription
+@implements IAsyncDisposable
+
 <div class="header-block-parameter param-gasp">
     <div class="field-row-parameter">
         <RadzenLabel Text="Gas_P"/>
-        <RadzenTextBox/>
+        <RadzenTextBox Value="@_gasP" ReadOnly/>
     </div>
 </div>
 
 @code {
+    private string _gasP = "N/A";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Subscription.SubscribeAsync(MainScreenTags.GasP, OnGasPChanged);
+    }
+
+    private async Task OnGasPChanged(object? value)
+    {
+        _gasP = FormatValue(value, "  мбар");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private static string FormatValue(object? value, string unit) =>
+        value != null ? $"{value}{unit}" : "N/A";
+
+    public async ValueTask DisposeAsync()
+    {
+        await Subscription.UnsubscribeAsync(MainScreenTags.GasP, OnGasPChanged, removeTag: false, ct: CancellationToken.None);
+    }
 }

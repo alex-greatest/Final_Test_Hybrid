@@ -1,25 +1,110 @@
+@using Final_Test_Hybrid.Models.Plc.Tags
+@using Final_Test_Hybrid.Services.OpcUa.Subscription
+@using Final_Test_Hybrid.Services.Diagnostic.Services
+@inject OpcUaSubscription Subscription
+@inject BoilerTemperatureService BoilerTemperatureService
+@implements IAsyncDisposable
+
 <div class="header-block-parameter param-dhw">
     <div class="field-row-parameter">
         <RadzenLabel Text="Q-DHW"/>
-        <RadzenTextBox/>
+        <RadzenTextBox Value="@_qDhw" ReadOnly/>
     </div>
     <div class="field-row-parameter">
         <RadzenLabel Text="P-DHW"/>
-        <RadzenTextBox/>
+        <RadzenTextBox Value="@_pDhw" ReadOnly/>
     </div>
     <div class="field-row-parameter">
         <RadzenLabel Text="T-DHW IN"/>
-        <RadzenTextBox/>
+        <RadzenTextBox Value="@_tDhwIn" ReadOnly/>
     </div>
     <div class="field-row-parameter">
         <RadzenLabel Text="T-DHW OUT"/>
-        <RadzenTextBox/>
+        <RadzenTextBox Value="@_tDhwOut" ReadOnly/>
     </div>
     <div class="field-row-parameter">
         <RadzenLabel Text="tDHW котла"/>
-        <RadzenTextBox/>
+        <RadzenTextBox Value="@_tDhwBoiler" ReadOnly/>
     </div>
 </div>
 
 @code {
+    private string _qDhw = "N/A";
+    private string _pDhw = "N/A";
+    private string _tDhwIn = "N/A";
+    private string _tDhwOut = "N/A";
+    private string _tDhwBoiler = "N/A";
+    private PeriodicTimer? _modbusTimer;
+    private CancellationTokenSource? _cts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Subscription.SubscribeAsync(MainScreenTags.DhwFs, OnQDhwChanged);
+        await Subscription.SubscribeAsync(MainScreenTags.DhwPes, OnPDhwChanged);
+        await Subscription.SubscribeAsync(MainScreenTags.DhwTes, OnTDhwInChanged);
+        await Subscription.SubscribeAsync(MainScreenTags.DhwTus, OnTDhwOutChanged);
+        StartModbusPolling();
+    }
+
+    private void StartModbusPolling()
+    {
+        _cts = new CancellationTokenSource();
+        _modbusTimer = new PeriodicTimer(TimeSpan.FromSeconds(2));
+        _ = PollModbusAsync(_cts.Token);
+    }
+
+    private async Task PollModbusAsync(CancellationToken ct)
+    {
+        try
+        {
+            while (await _modbusTimer!.WaitForNextTickAsync(ct).ConfigureAwait(false))
+            {
+                var result = await BoilerTemperatureService.ReadDHWTemperatureAsync(ct).ConfigureAwait(false);
+                _tDhwBoiler = result.Success ? $"{result.Value}  °C" : "N/A";
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Нормальное завершение при Dispose
+        }
+    }
+
+    private async Task OnQDhwChanged(object? value)
+    {
+        _qDhw = FormatValue(value, "  л/мин");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnPDhwChanged(object? value)
+    {
+        _pDhw = FormatValue(value, "  бар");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnTDhwInChanged(object? value)
+    {
+        _tDhwIn = FormatValue(value, "  °C");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnTDhwOutChanged(object? value)
+    {
+        _tDhwOut = FormatValue(value, "  °C");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private static string FormatValue(object? value, string unit) =>
+        value != null ? $"{value}{unit}" : "N/A";
+
+    public async ValueTask DisposeAsync()
+    {
+        _cts?.Cancel();
+        _modbusTimer?.Dispose();
+        _cts?.Dispose();
+        await Subscription.UnsubscribeAsync(MainScreenTags.DhwFs, OnQDhwChanged, removeTag: false, ct: CancellationToken.None);
+        await Subscription.UnsubscribeAsync(MainScreenTags.DhwPes, OnPDhwChanged, removeTag: false, ct: CancellationToken.None);
+        await Subscription.UnsubscribeAsync(MainScreenTags.DhwTes, OnTDhwInChanged, removeTag: false, ct: CancellationToken.None);
+        await Subscription.UnsubscribeAsync(MainScreenTags.DhwTus, OnTDhwOutChanged, removeTag: false, ct: CancellationToken.None);
+    }
 }

@@ -1,6 +1,7 @@
 using System.Threading.Channels;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
+using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -13,14 +14,18 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
 /// </summary>
 public class ModbusDispatcher : IModbusDispatcher
 {
+    // === DI зависимости ===
     private readonly ModbusConnectionManager _connectionManager;
     private readonly ModbusDispatcherOptions _options;
     private readonly DualLogger<ModbusDispatcher> _logger;
+
+    // === Internal компоненты ===
+    private readonly ModbusCommandQueue _commandQueue;
+    private readonly ModbusWorkerLoop _workerLoop;
+    private readonly ModbusPingLoop _pingLoop;
+
+    // === Состояние (ЕДИНЫЙ LOCK) ===
     private readonly Lock _stateLock = new();
-
-    private Channel<IModbusCommand>? _highQueue;
-    private Channel<IModbusCommand>? _lowQueue;
-
     private CancellationTokenSource? _cts;
     private CancellationTokenSource? _pingCts;
     private Task? _workerTask;
@@ -47,7 +52,29 @@ public class ModbusDispatcher : IModbusDispatcher
         _options = options.Value;
         _logger = new DualLogger<ModbusDispatcher>(logger, testStepLogger);
 
-        RecreateChannels();
+        // Создаём internal компоненты
+        _commandQueue = new ModbusCommandQueue();
+        _commandQueue.RecreateChannels(_options);
+
+        _workerLoop = new ModbusWorkerLoop(
+            _connectionManager,
+            _commandQueue,
+            _options,
+            _logger);
+
+        // Настраиваем колбэки воркера — фасад владеет connect/close
+        _workerLoop.OnFirstCommandSucceeded = NotifyConnectedSafely;
+        _workerLoop.OnConnectionLost = HandleConnectionLostAsync;
+        _workerLoop.DoConnect = () => _connectionManager.Connect();
+        _workerLoop.DoClose = () => _connectionManager.Close();
+
+        _pingLoop = new ModbusPingLoop(
+            EnqueueAsync,
+            _options,
+            _logger);
+
+        // Настраиваем колбэк ping
+        _pingLoop.OnPingDataReceived = HandlePingDataReceived;
     }
 
     /// <inheritdoc />
@@ -99,7 +126,7 @@ public class ModbusDispatcher : IModbusDispatcher
                 throw new InvalidOperationException("Диспетчер остановлен, новые команды не принимаются");
             }
 
-            channel = command.Priority == CommandPriority.High ? _highQueue : _lowQueue;
+            channel = _commandQueue.GetChannel(command.Priority);
         }
 
         if (channel == null)
@@ -128,7 +155,7 @@ public class ModbusDispatcher : IModbusDispatcher
             // Если останавливались — пересоздаём каналы
             if (_isStopped)
             {
-                RecreateChannels();
+                _commandQueue.RecreateChannels(_options);
                 _isStopped = false;
             }
 
@@ -141,9 +168,9 @@ public class ModbusDispatcher : IModbusDispatcher
             _cts = new CancellationTokenSource();
             _workerTask = RunWorkerLoopAsync(_cts.Token);
 
-            // Запускаем ping task
+            // Запускаем ping task с проверкой isStopping для защиты от race
             _pingCts = new CancellationTokenSource();
-            _pingTask = RunPingLoopAsync(_pingCts.Token);
+            _pingTask = _pingLoop.RunAsync(() => _isPortOpen, () => _isStopping, _pingCts.Token);
         }
 
         _logger.LogInformation("ModbusDispatcher запущен");
@@ -175,22 +202,21 @@ public class ModbusDispatcher : IModbusDispatcher
 
         _logger.LogInformation("Остановка ModbusDispatcher...");
 
-        // Завершаем каналы чтобы новые EnqueueAsync не зависли
-        _highQueue?.Writer.TryComplete();
-        _lowQueue?.Writer.TryComplete();
+        // 1. Завершаем каналы чтобы новые EnqueueAsync не зависли
+        _commandQueue.CompleteChannels();
 
-        // Отменяем tasks
+        // 2. Отменяем tasks
         if (pingCtsToCancel != null)
         {
             await pingCtsToCancel.CancelAsync().ConfigureAwait(false);
         }
         await ctsToCancel.CancelAsync().ConfigureAwait(false);
 
-        // Закрываем порт СРАЗУ — прервёт in-flight NModbus команду (IOException)
+        // 3. Закрываем порт СРАЗУ — прервёт in-flight NModbus команду (IOException)
         _connectionManager.Close();
         _isPortOpen = false;
 
-        // Уведомляем подписчиков с таймаутом — polling уже получил IOException, быстро завершится
+        // 4. Уведомляем подписчиков с таймаутом
         try
         {
             await NotifyDisconnectingAsync().WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
@@ -200,7 +226,7 @@ public class ModbusDispatcher : IModbusDispatcher
             _logger.LogWarning("Таймаут ожидания Disconnecting handlers (2 сек)");
         }
 
-        // Ждём завершения ping и worker ПАРАЛЛЕЛЬНО с общим таймаутом 5 сек
+        // 5. Ждём завершения ping и worker ПАРАЛЛЕЛЬНО с общим таймаутом 5 сек
         var tasksToWait = new List<Task>();
         if (pingTaskToWait != null) tasksToWait.Add(pingTaskToWait);
         tasksToWait.Add(taskToWait);
@@ -227,8 +253,8 @@ public class ModbusDispatcher : IModbusDispatcher
             _logger.LogError(ex, "Task завершился с ошибкой: {Error}", ex.Message);
         }
 
-        // Cleanup
-        CancelPendingCommands();
+        // 6. Cleanup
+        _commandQueue.CancelAllPendingCommands();
         _connectionManager.Close();
         _isConnected = false;
         _isPortOpen = false;
@@ -255,6 +281,9 @@ public class ModbusDispatcher : IModbusDispatcher
 
     #region Worker Loop
 
+    /// <summary>
+    /// Основной цикл воркера. Делегирует логику в ModbusWorkerLoop.
+    /// </summary>
     private async Task RunWorkerLoopAsync(CancellationToken ct)
     {
         // Запоминаем текущую задачу для корректной очистки
@@ -264,19 +293,18 @@ public class ModbusDispatcher : IModbusDispatcher
         {
             while (!ct.IsCancellationRequested)
             {
-                try
-                {
-                    await EnsureConnectedAsync(ct).ConfigureAwait(false);
-                    await ProcessCommandsLoopAsync(ct).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                var shouldContinue = await _workerLoop.RunIterationAsync(
+                    isPortOpen: () => _isPortOpen,
+                    setPortOpen: value => _isPortOpen = value,
+                    isConnected: () => _isConnected,
+                    setConnected: value => _isConnected = value,
+                    setReconnecting: value => _isReconnecting = value,
+                    isStopping: () => _isStopping,
+                    ct).ConfigureAwait(false);
+
+                if (!shouldContinue)
                 {
                     break;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Ошибка в воркере диспетчера: {Error}", ex.Message);
-                    await HandleConnectionErrorAsync(ct).ConfigureAwait(false);
                 }
             }
         }
@@ -289,6 +317,7 @@ public class ModbusDispatcher : IModbusDispatcher
 
     /// <summary>
     /// Очищает состояние воркера если он завершился не через StopAsync.
+    /// КРИТИЧНО: этот метод остаётся в фасаде для сохранения единого lock.
     /// </summary>
     private void CleanupWorkerStateIfNeeded(Task? thisTask)
     {
@@ -327,9 +356,8 @@ public class ModbusDispatcher : IModbusDispatcher
             }
 
             // Полная очистка как в StopAsync
-            _highQueue?.Writer.TryComplete();
-            _lowQueue?.Writer.TryComplete();
-            CancelPendingCommands();
+            _commandQueue.CompleteChannels();
+            _commandQueue.CancelAllPendingCommands();
             _connectionManager.Close();
             _isConnected = false;
             _isPortOpen = false;
@@ -342,211 +370,34 @@ public class ModbusDispatcher : IModbusDispatcher
         }
     }
 
-    private async Task ProcessCommandsLoopAsync(CancellationToken ct)
-    {
-        // Обрабатываем команды пока порт открыт (не пока IsConnected)
-        while (!ct.IsCancellationRequested && _isPortOpen)
-        {
-            var command = await WaitForCommandAsync(ct).ConfigureAwait(false);
-
-            if (command == null)
-            {
-                continue;
-            }
-
-            try
-            {
-                await ExecuteCommandAsync(command, ct).ConfigureAwait(false);
-
-                // Первая успешная команда устанавливает IsConnected
-                if (!_isConnected)
-                {
-                    _isConnected = true;
-                    _logger.LogInformation("Соединение с устройством подтверждено");
-                    NotifyConnectedSafely();
-                }
-            }
-            catch (Exception ex) when (!_isStopping && IsCommunicationError(ex))
-            {
-                command.SetException(ex);
-                _isConnected = false;
-                _logger.LogWarning("Ошибка связи: {Error}. Переподключение...", ex.Message);
-                throw; // Выходим из ProcessCommandsLoopAsync для reconnect
-            }
-            catch (Exception ex)
-            {
-                command.SetException(ex);
-                _logger.LogError(ex, "Ошибка выполнения команды: {Error}", ex.Message);
-            }
-        }
-    }
-
-    private async Task<IModbusCommand?> WaitForCommandAsync(CancellationToken ct)
-    {
-        var highQueue = _highQueue;
-        var lowQueue = _lowQueue;
-
-        if (highQueue == null || lowQueue == null)
-        {
-            return null;
-        }
-
-        // Сначала обрабатываем все высокоприоритетные команды
-        while (highQueue.Reader.TryRead(out var highCmd))
-        {
-            if (!highCmd.CancellationToken.IsCancellationRequested)
-            {
-                return highCmd;
-            }
-            highCmd.SetCanceled();
-        }
-
-        // Затем одну низкоприоритетную
-        if (lowQueue.Reader.TryRead(out var lowCmd))
-        {
-            if (!lowCmd.CancellationToken.IsCancellationRequested)
-            {
-                return lowCmd;
-            }
-            lowCmd.SetCanceled();
-        }
-
-        // Ждём новую команду с таймаутом
-        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeoutCts.CancelAfter(_options.CommandWaitTimeoutMs);
-
-        try
-        {
-            // Ждём любую команду из обоих каналов
-            var highTask = highQueue.Reader.WaitToReadAsync(timeoutCts.Token).AsTask();
-            var lowTask = lowQueue.Reader.WaitToReadAsync(timeoutCts.Token).AsTask();
-
-            await Task.WhenAny(highTask, lowTask).ConfigureAwait(false);
-            return null; // Вернёмся в цикл и прочитаем команду
-        }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        {
-            return null; // Таймаут - проверим снова
-        }
-    }
-
-    private async Task ExecuteCommandAsync(IModbusCommand command, CancellationToken ct)
-    {
-        var master = _connectionManager.ModbusMaster
-            ?? throw new InvalidOperationException("Нет подключения к устройству");
-
-        var slaveId = _connectionManager.SlaveId;
-
-        await Task.Run(() => command.ExecuteAsync(master, slaveId, ct), ct).ConfigureAwait(false);
-    }
-
     #endregion
 
-    #region Ping Keep-Alive
+    #region Event Notifications
 
-    private async Task RunPingLoopAsync(CancellationToken ct)
+    /// <summary>
+    /// Обрабатывает потерю соединения: очищает ping данные и уведомляет подписчиков.
+    /// </summary>
+    private async Task HandleConnectionLostAsync(CancellationToken ct)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(_options.PingIntervalMs));
+        // Очищаем старые ping данные при разрыве соединения
+        _lastPingData = null;
 
-        try
-        {
-            while (await timer.WaitForNextTickAsync(ct).ConfigureAwait(false))
-            {
-                // Только отправляем ping если порт открыт
-                if (!_isPortOpen)
-                {
-                    continue;
-                }
-
-                try
-                {
-                    var command = new PingCommand(CommandPriority.Low, ct);
-                    await EnqueueAsync(command, ct).ConfigureAwait(false);
-
-                    var pingData = await command.Task.ConfigureAwait(false);
-                    _lastPingData = pingData;
-                    NotifyPingDataUpdatedSafely(pingData);
-
-                    _logger.LogDebug("Ping OK: ModeKey={ModeKey:X8}, BoilerStatus={BoilerStatus}",
-                        pingData.ModeKey, pingData.BoilerStatus);
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (Exception)
-                {
-                    // Ping failure обрабатывается dispatcher'ом - он залогирует ошибку связи
-                }
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected при StopAsync
-        }
+        // Уведомляем подписчиков с таймаутом
+        await NotifyDisconnectingAsync().WaitAsync(TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
     }
 
-    #endregion
-
-    #region Connection Management
-
-    private async Task EnsureConnectedAsync(CancellationToken ct)
+    /// <summary>
+    /// Обрабатывает полученные данные ping.
+    /// </summary>
+    private void HandlePingDataReceived(DiagnosticPingData data)
     {
-        if (_isPortOpen && _connectionManager.IsConnected)
-        {
-            return;
-        }
-
-        _isReconnecting = true;
-        var delay = _options.ReconnectDelayMs;
-
-        while (!ct.IsCancellationRequested)
-        {
-            try
-            {
-                _connectionManager.Connect();
-                _isPortOpen = true;
-                _isReconnecting = false;
-                // IsConnected остаётся false пока не выполнится первая команда
-                _logger.LogInformation("COM-порт открыт. Ожидание первой успешной команды...");
-                return;
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning("Не удалось подключиться: {Error}. Повтор через {Delay} мс",
-                    ex.Message, delay);
-
-                await Task.Delay(delay, ct).ConfigureAwait(false);
-                // Фиксированный интервал, без exponential backoff
-            }
-        }
+        _lastPingData = data;
+        NotifyPingDataUpdatedSafely(data);
     }
 
-    private async Task HandleConnectionErrorAsync(CancellationToken ct)
-    {
-        _isConnected = false;
-        _isPortOpen = false;
-        _lastPingData = null; // Очищаем старые данные при разрыве соединения
-
-        _connectionManager.Close();
-
-        // Таймаут на уведомление — защита от зависшего подписчика
-        try
-        {
-            await NotifyDisconnectingAsync().WaitAsync(TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
-        }
-        catch (TimeoutException)
-        {
-            _logger.LogWarning("Таймаут ожидания Disconnecting handlers при reconnect (2 сек)");
-        }
-
-        await Task.Delay(_options.ReconnectDelayMs, ct).ConfigureAwait(false);
-    }
-
+    /// <summary>
+    /// Уведомляет о разрыве соединения с защитой от параллельных вызовов.
+    /// </summary>
     private async Task NotifyDisconnectingAsync()
     {
         // Атомарная проверка и установка: если 0 → устанавливаем 1 и продолжаем
@@ -620,85 +471,11 @@ public class ModbusDispatcher : IModbusDispatcher
 
     #endregion
 
-    #region Channel Management
-
-    /// <summary>
-    /// Пересоздаёт каналы команд.
-    /// </summary>
-    private void RecreateChannels()
-    {
-        _highQueue = Channel.CreateBounded<IModbusCommand>(
-            new BoundedChannelOptions(_options.HighPriorityQueueCapacity)
-            {
-                FullMode = BoundedChannelFullMode.Wait
-            });
-
-        _lowQueue = Channel.CreateBounded<IModbusCommand>(
-            new BoundedChannelOptions(_options.LowPriorityQueueCapacity)
-            {
-                FullMode = BoundedChannelFullMode.Wait
-            });
-    }
-
-    #endregion
-
-    #region Error Handling
-
-    /// <summary>
-    /// Определяет, является ли исключение ошибкой связи с устройством.
-    /// Проходит по всей цепочке InnerException для корректной обработки
-    /// исключений NModbus, которые оборачивают реальные ошибки.
-    /// </summary>
-    private static bool IsCommunicationError(Exception ex)
-    {
-        var current = ex;
-        while (current != null)
-        {
-            // Типы ошибок связи для Serial Port
-            if (current is TimeoutException or IOException
-                or ObjectDisposedException or UnauthorizedAccessException)
-            {
-                return true;
-            }
-
-            // InvalidOperationException только если связана с портом
-            if (current is InvalidOperationException &&
-                (current.Message.Contains("port", StringComparison.OrdinalIgnoreCase) ||
-                 current.Message.Contains("closed", StringComparison.OrdinalIgnoreCase) ||
-                 current.Message.Contains("open", StringComparison.OrdinalIgnoreCase)))
-            {
-                return true;
-            }
-
-            current = current.InnerException;
-        }
-
-        return false;
-    }
-
-    private void CancelPendingCommands()
-    {
-        if (_highQueue != null)
-        {
-            while (_highQueue.Reader.TryRead(out var cmd))
-            {
-                cmd.SetCanceled();
-            }
-        }
-
-        if (_lowQueue != null)
-        {
-            while (_lowQueue.Reader.TryRead(out var cmd))
-            {
-                cmd.SetCanceled();
-            }
-        }
-    }
-
-    #endregion
-
     #region Dispose
 
+    /// <summary>
+    /// Проверяет, что объект не освобождён.
+    /// </summary>
     private void ThrowIfDisposed()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);

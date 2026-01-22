@@ -1,21 +1,64 @@
+@using Final_Test_Hybrid.Models.Plc.Tags
+@using Final_Test_Hybrid.Services.OpcUa.Subscription
+@inject OpcUaSubscription Subscription
+@implements IAsyncDisposable
+
 <div class="header-block-parameter param-gas">
     <div class="field-row-parameter">
         <RadzenLabel Text="Q-GAS(G20)"/>
-        <RadzenTextBox Style="width:100%"/>
+        <RadzenTextBox Value="@_qGasG20" ReadOnly Style="width:100%"/>
     </div>
     <div class="field-row-parameter">
         <RadzenLabel Text="Q-GAS(LPG)"/>
-        <RadzenTextBox Style="width:100%"/>
+        <RadzenTextBox Value="—" ReadOnly Style="width:100%"/>
     </div>
     <div class="field-row-parameter">
         <RadzenLabel Text="P-GAS"/>
-        <RadzenTextBox Style="width:100%"/>
+        <RadzenTextBox Value="@_pGas" ReadOnly Style="width:100%"/>
     </div>
     <div class="field-row-parameter">
         <RadzenLabel Text="BURNER"/>
-        <RadzenTextBox Style="width:100%"/>
+        <RadzenTextBox Value="@_burner" ReadOnly Style="width:100%"/>
     </div>
 </div>
 
 @code {
+    private string _qGasG20 = "N/A";
+    private string _pGas = "N/A";
+    private string _burner = "N/A";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Subscription.SubscribeAsync(MainScreenTags.GasPog, OnQGasG20Changed);
+        await Subscription.SubscribeAsync(MainScreenTags.GasPag, OnPGasChanged);
+        await Subscription.SubscribeAsync(MainScreenTags.GasPgb, OnBurnerChanged);
+    }
+
+    private async Task OnQGasG20Changed(object? value)
+    {
+        _qGasG20 = FormatValue(value, "  м³/ч");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnPGasChanged(object? value)
+    {
+        _pGas = FormatValue(value, "  мбар");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnBurnerChanged(object? value)
+    {
+        _burner = FormatValue(value, "  мбар");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private static string FormatValue(object? value, string unit) =>
+        value != null ? $"{value}{unit}" : "N/A";
+
+    public async ValueTask DisposeAsync()
+    {
+        await Subscription.UnsubscribeAsync(MainScreenTags.GasPog, OnQGasG20Changed, removeTag: false, ct: CancellationToken.None);
+        await Subscription.UnsubscribeAsync(MainScreenTags.GasPag, OnPGasChanged, removeTag: false, ct: CancellationToken.None);
+        await Subscription.UnsubscribeAsync(MainScreenTags.GasPgb, OnBurnerChanged, removeTag: false, ct: CancellationToken.None);
+    }
 }

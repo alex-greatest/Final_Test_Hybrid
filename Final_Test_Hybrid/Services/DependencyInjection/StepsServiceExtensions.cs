@@ -162,6 +162,7 @@ public static class StepsServiceExtensions
         services.AddTransient<DiagStartStopCycleStep>();
         services.AddTransient<DiagReadBoilerErrorsStep>();
         services.AddTransient<DiagPingDataStep>();
+        services.AddTransient<DiagPollingStressStep>();
 
         return services;
     }

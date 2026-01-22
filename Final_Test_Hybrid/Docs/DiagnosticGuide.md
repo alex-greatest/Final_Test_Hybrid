@@ -34,10 +34,57 @@
                                         ▼
                           ┌─────────────────────────┐
                           │    ModbusDispatcher     │──► Ping Keep-Alive (НЕ паузится)
+                          │        (фасад)          │
+                          └─────────────┬───────────┘
+                                        │
+                                        ▼
+                          ┌─────────────────────────┐
+                          │ ModbusConnectionManager │
                           └─────────────┬───────────┘
                                         │
                                         ▼
                                    [SerialPort]
+```
+
+### Внутренняя структура ModbusDispatcher
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  ModbusDispatcher (фасад)                   │
+│  - Публичный API (IModbusDispatcher)                        │
+│  - Единый _stateLock для состояния                          │
+│  - Владеет CTS/Task и соединением                           │
+│  - CleanupWorkerStateIfNeeded                               │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ creates & coordinates
+         ┌──────────────────┼──────────────────┐
+         │                  │                  │
+         ▼                  ▼                  ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│ModbusCommandQueue│ │ModbusWorkerLoop │ │ ModbusPingLoop  │
+│ (пассивная)     │ │ (логика)        │ │ (генератор)     │
+│                 │ │                 │ │                 │
+│ - Хранит каналы │ │ - connect       │ │ - Периодический │
+│ - Нет политики  │ │ - process cmds  │ │   ping          │
+│                 │ │ - wait for cmd  │ │                 │
+└─────────────────┘ └─────────────────┘ └─────────────────┘
+
+Internal/CommunicationErrorHelper ← статический helper для ошибок связи
+```
+
+**Файловая структура:**
+```
+Services/Diagnostic/Protocol/CommandQueue/
+├── IModbusDispatcher.cs              (публичный интерфейс)
+├── ModbusDispatcher.cs               (фасад, ~500 строк)
+├── ModbusDispatcherOptions.cs        (настройки)
+├── ModbusConnectionManager.cs        (управление COM-портом)
+│
+└── Internal/                         (internal компоненты)
+    ├── CommunicationErrorHelper.cs   (определение ошибок связи)
+    ├── ModbusCommandQueue.cs         (пассивная очередь)
+    ├── ModbusWorkerLoop.cs           (логика worker)
+    └── ModbusPingLoop.cs             (генератор ping)
 ```
 
 **Ключевые компоненты:**
@@ -542,14 +589,33 @@ if (!result.Success)
 
 | Компонент | Потокобезопасность |
 |-----------|-------------------|
-| `ModbusDispatcher` | Да (синхронизирован) |
+| `ModbusDispatcher` | Да (единый `_stateLock` для lifecycle) |
 | `QueuedModbusClient` | Да (синхронизирован) |
-| `ModbusConnectionManager` | Нет (используется только воркером) |
+| `ModbusConnectionManager` | Нет (владеет фасад, используется воркером) |
 | `RegisterReader` | Да (делегирует в client) |
 | `RegisterWriter` | Да (делегирует в client) |
 | `PollingService` | Да (синхронизирован) |
 
+**Internal компоненты (не для внешнего использования):**
+
+| Компонент | Потокобезопасность |
+|-----------|-------------------|
+| `ModbusCommandQueue` | Частично (Channel потокобезопасен) |
+| `ModbusWorkerLoop` | Нет (один экземпляр на worker task) |
+| `ModbusPingLoop` | Нет (один экземпляр на ping task) |
+| `CommunicationErrorHelper` | Да (статический, без состояния) |
+
 ## Внутренние защиты
+
+### Инварианты ModbusDispatcher
+
+| Инвариант | Реализация |
+|-----------|------------|
+| Единственный владелец connect/close | Фасад через `DoConnect`/`DoClose` колбэки |
+| Очистка при "воркер умер сам" | `CleanupWorkerStateIfNeeded` в фасаде |
+| Порядок Stop | CompleteChannels → Cancel CTS → Close port → wait tasks → cleanup |
+| Защита от параллельных Disconnecting | Interlocked gate `_isNotifyingDisconnect` |
+| Race protection ping при Stop | `isStopping` + `isPortOpen` проверки |
 
 ### Stack Overflow Prevention
 

@@ -1,44 +1,28 @@
-public class FinalTestResults {
-    @NotBlank
-    private String serialNumber;
-    @NotBlank
-    private String stationName;
-    @NotBlank
-    private String operator;
-    @JsonProperty("Items")
-    private List<Item> items;
-    @JsonProperty("Items_limited")
-    private List<ItemLimited> itemsLimited;
-    private List<TestTime> time;
-    private List<String> errors;
-    @NotNull
-    private Integer result;
-    
-    
-    
-    public class Item {
-        private String name;
-        private String value;
-        private String status;
-        private String test;
-        private String valueType;
-        
-        
-        
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        public class ItemLimited {
-            private String name;
-            private String value;
-            private String min;
-            private String max;
-            private String status;
-            private String test;
-            private String valueType;
-            
-            
-            
-            @JsonIgnoreProperties(ignoreUnknown = true)
-            public class TestTime {
-                private String test;
-                private String time;
+Выводятся актуальные показания датчиков DB_Measure
+.Sensor
+-	Q-Gas (G20) – GAS_POG
+-	Q-Gas (LPG) – нет датчика
+-	P-Gas – GAS_PAG
+-	Burner – GAS_PGB
+-	Q-DHW – DHW_FS
+-	P-DHW – DHW_PES
+-	Q-CH – CH_FR
+-	P_CH – CH-PMR
+-	CO – FA_CO
+-	CO2 – FA_CO2
+-	Gas_POG1 – GAS_POG1
+-	Pатм – Gas_Pa
+-	Gas_P – Gas_P
 
+.Temper
+T_Gas – GAS_TAG
+T_DHW_IN – DHW_TES
+T_DHW_OUT – DHW_TUS
+tDHW котла – Температура в контуре DHW от котла 
+T-CH RTN – CH_TRR
+T-CH FLOW – CH_TMR
+tCH котла – Температура в контуре CH от котла
+
+DB_Parameter
+CH.DeltaTemp – CH.DeltaTemp
+DHW.DeltaTemp – DHW.DeltaTemp

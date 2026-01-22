@@ -13,7 +13,7 @@ public class DiagStartStopCycleStep(
     IModbusDispatcher dispatcher,
     DualLogger<DiagStartStopCycleStep> logger) : ITestStep
 {
-    private const int Cycles = 5;
+    private const int Cycles = 100;
     private const int DelayMs = 1000;
 
     public string Id => "diag-start-stop-cycle";

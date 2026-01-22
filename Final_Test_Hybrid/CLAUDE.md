@@ -2,7 +2,8 @@
 
 ## Codex Review Protocol (ОБЯЗАТЕЛЬНО)
 
-**ПЕРЕД изменениями:** `codex "Критически проанализируй план: [план]"` → правьте до консенсуса
+**ПЕРЕД изменениями:** `codex "Критически проанализируй план: [план]"` → правьте до консенсуса. 
+относись критически к его правкам
 **ПОСЛЕ изменений:** `git diff` → `codex "Проверь diff: [diff]"` → исправляйте до одобрения
 
 ## Project Overview
@@ -29,6 +30,7 @@
 - `var` везде, `{}` обязательны, **max 300 строк** → partial classes
 - **PascalCase:** типы, методы | **camelCase:** локальные, параметры
 - **Blazor:** CSS в `.razor.css`, `::deep` для Radzen, `IAsyncDisposable` для cleanup
+- предпочитаей if - switch, когда это разумно и тернарный оператор.
 
 ## Key Patterns
 
@@ -128,6 +130,7 @@ public class MyService(DualLogger<MyService> logger)
 | `?.TrySetResult()` без синхронизации | Идемпотентна |
 | Fire-and-forget в singleton | `.ContinueWith` или внутренний try-catch |
 | `TryStartInBackground()` | Исключения в `RunWithErrorHandlingAsync` |
+| `Task.WhenAny` race с таймером и ожиданием | Даже при "ложном" таймауте `await waitTask` вернёт правильный результат, ошибка снимется в `finally`. Максимум — кратковременный "мигнёт" ошибкой в UI |
 
 ## Safety Patterns
 

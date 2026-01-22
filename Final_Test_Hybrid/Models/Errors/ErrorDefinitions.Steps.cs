@@ -41,8 +41,16 @@ public static partial class ErrorDefinitions
     public static readonly ErrorDefinition EarthClipNotConnected = new(
         "П-009-01", "Клипса заземление не подключена",
         Severity: ErrorSeverity.Warning,
+        ActivatesResetButton: true,
         RelatedStepId: "elec-connect-earth-clip",
         RelatedStepName: "Elec/Connect_Earth_Clip");
+
+    public static readonly ErrorDefinition PowerCableNotConnected = new(
+        "П-009-02", "Присоедините силовой кабель",
+        Severity: ErrorSeverity.Warning,
+        ActivatesResetButton: true,
+        RelatedStepId: "elec-connect-power-cable",
+        RelatedStepName: "Elec/Connect_Power_Cable");
 
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [
@@ -51,6 +59,7 @@ public static partial class ErrorDefinitions
         AlNoWaterFlow,
         AlNoWaterPressure,
         AlFillTime,
-        EarthClipNotConnected
+        EarthClipNotConnected,
+        PowerCableNotConnected
     ];
 }
