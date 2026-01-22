@@ -1,11 +1,45 @@
-﻿<div class="row-item">
+@using Final_Test_Hybrid.Models.Plc.Tags
+@using Final_Test_Hybrid.Services.OpcUa.Subscription
+@using Final_Test_Hybrid.Services.Common
+@inject OpcUaSubscription Subscription
+@implements IAsyncDisposable
+
+<div class="row-item">
     <span>@Label</span>
-    
-    <img src="images/RedLamp.png" 
-         alt="Lamp" 
-         class="lamp-img"/>
+    <img src="@_lampImage" alt="Lamp" class="lamp-img"/>
 </div>
 
 @code {
+    /// <summary>
+    /// Отображаемая метка. Также используется для Node ID, если Tag не указан.
+    /// </summary>
     [Parameter] public string Label { get; set; } = "";
+
+    /// <summary>
+    /// Явный OPC-UA Node ID. Если не указан, строится из Label.
+    /// </summary>
+    [Parameter] public string? Tag { get; set; }
+
+    private string _lampImage = "images/RedLamp.png";
+    private string NodeId => Tag ?? InputsTags.BuildNodeId(Label);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Subscription.SubscribeAsync(NodeId, OnValueChanged);
+    }
+
+    /// <summary>
+    /// Обработчик изменения значения тега.
+    /// </summary>
+    private async Task OnValueChanged(object? value)
+    {
+        var isOn = value is true;
+        _lampImage = IndicatorHelper.GetLampImagePath(isOn);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await Subscription.UnsubscribeAsync(NodeId, OnValueChanged, removeTag: false, ct: CancellationToken.None);
+    }
 }

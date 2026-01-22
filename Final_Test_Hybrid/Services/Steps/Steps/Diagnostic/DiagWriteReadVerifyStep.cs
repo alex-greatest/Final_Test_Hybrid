@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Diagnostic.Access;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
@@ -7,12 +8,14 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Diagnostic;
 /// <summary>
 /// Проверяет корректность записи и чтения регистра.
 /// Записывает тестовое значение, читает обратно и сверяет.
-/// Использует регистр 1060 (Modbus 1059) — время выбега насоса (диапазон 0-600 с).
+/// Использует регистр 1013 (Modbus 1012) — DHW Setpoint (диапазон 35-60°C).
 /// </summary>
-public class DiagWriteReadVerifyStep(DualLogger<DiagWriteReadVerifyStep> logger) : ITestStep
+public class DiagWriteReadVerifyStep(
+    DualLogger<DiagWriteReadVerifyStep> logger,
+    AccessLevelManager accessLevelManager) : ITestStep
 {
-    private const ushort TestAddress = 1059;  // Modbus адрес (документ. 1060 - offset 1)
-    private const ushort TestValue = 100;     // В пределах диапазона 0-600
+    private const ushort TestAddress = 1012;  // Modbus адрес (документ. 1013 - offset 1)
+    private const ushort TestValue = 45;      // В пределах диапазона 35-60°C
 
     public string Id => "diag-write-read-verify";
     public string Name => "DiagWriteReadVerify";
@@ -27,6 +30,13 @@ public class DiagWriteReadVerifyStep(DualLogger<DiagWriteReadVerifyStep> logger)
     public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
     {
         logger.LogInformation("▶ Старт теста записи/чтения для адреса 0x{Address:X4}", TestAddress);
+
+        // Установить режим Stand для получения прав на запись
+        var standResult = await accessLevelManager.SetStandModeAsync(ct);
+        if (!standResult)
+        {
+            return TestStepResult.Fail("Не удалось установить режим Stand");
+        }
 
         var originalValue = await ReadOriginalValueAsync(context, ct);
 

@@ -141,12 +141,7 @@ public class DiagConcurrentReadStep(DualLogger<DiagConcurrentReadStep> logger) :
             return TestStepResult.Fail($"Исключения при параллельном чтении: {exceptions.Count}. {summary}");
         }
 
-        if (fail > 0)
-        {
-            return TestStepResult.Fail($"Ошибки при параллельном чтении: {fail}. {summary}");
-        }
-
-        return TestStepResult.Pass(summary);
+        return fail > 0 ? TestStepResult.Fail($"Ошибки при параллельном чтении: {fail}. {summary}") : TestStepResult.Pass(summary);
     }
 
     /// <summary>

@@ -1,6 +1,8 @@
+using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Final_Test_Hybrid.Services.Diagnostic.Access;
 
@@ -9,10 +11,13 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Access;
 /// </summary>
 public class AccessLevelManager(
     RegisterWriter registerWriter,
+    IOptions<DiagnosticSettings> settings,
     ILogger<AccessLevelManager> logger)
 {
-    // Регистры для записи ключа доступа
-    private const ushort AccessKeyAddressHi = 1000;
+    private readonly DiagnosticSettings _settings = settings.Value;
+
+    // Адрес ключа доступа из документации (Doc address)
+    private const ushort AccessKeyAddressDoc = 1000;
 
     // Ключи доступа из протокола
     private const uint EngineeringKey = 0xFA87_CD5E;
@@ -65,12 +70,19 @@ public class AccessLevelManager(
     private async Task<bool> SetAccessLevelAsync(AccessLevel level, uint key, CancellationToken ct)
     {
         logger.LogInformation("Установка уровня доступа: {Level}", level);
-        var result = await registerWriter.WriteUInt32Async(AccessKeyAddressHi, key, ct).ConfigureAwait(false);
+
+        // Вычисляем Modbus адрес с учётом смещения
+        var modbusAddress = (ushort)(AccessKeyAddressDoc - _settings.BaseAddressOffset);
+        logger.LogDebug("Запись в регистр {ModbusAddress}: 0x{Key:X8} (Doc: {DocAddress})",
+            modbusAddress, key, AccessKeyAddressDoc);
+
+        var result = await registerWriter.WriteUInt32Async(modbusAddress, key, ct).ConfigureAwait(false);
         if (!result.Success)
         {
             logger.LogError("Не удалось установить уровень доступа {Level}: {Error}", level, result.Error);
             return false;
         }
+
         CurrentLevel = level;
         LevelChanged?.Invoke(level);
         logger.LogInformation("Уровень доступа установлен: {Level}", level);
