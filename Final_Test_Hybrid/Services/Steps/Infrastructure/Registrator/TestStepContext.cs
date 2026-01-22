@@ -13,7 +13,8 @@ public class TestStepContext(
     IRecipeProvider recipeProvider,
     PauseTokenSource pauseToken,
     PausableRegisterReader diagReader,
-    PausableRegisterWriter diagWriter)
+    PausableRegisterWriter diagWriter,
+    PausableTagWaiter tagWaiter)
 {
     public int ColumnIndex { get; } = columnIndex;
     public PausableOpcUaTagService OpcUa { get; } = opcUa;
@@ -23,6 +24,7 @@ public class TestStepContext(
     public PauseTokenSource PauseToken { get; } = pauseToken;
     public PausableRegisterReader DiagReader { get; } = diagReader;
     public PausableRegisterWriter DiagWriter { get; } = diagWriter;
+    public PausableTagWaiter TagWaiter { get; } = tagWaiter;
 
     /// <summary>
     /// Pausable версия Task.Delay — останавливается при Auto OFF.

@@ -308,13 +308,22 @@ public interface ITestStep
 ```csharp
 public class TestStepContext
 {
-    public int ColumnIndex { get; }                    // Индекс столбца в TestMap
-    public PausableOpcUaTagService OpcUa { get; }      // OPC UA сервис
-    public ILogger Logger { get; }                     // Логирование в файл
-    public IRecipeProvider RecipeProvider { get; }     // Доступ к рецептам
+    public int ColumnIndex { get; }                      // Индекс столбца в TestMap
+    public PausableOpcUaTagService OpcUa { get; }        // OPC UA сервис (паузится при Auto OFF)
+    public ILogger Logger { get; }                       // Логирование в файл
+    public IRecipeProvider RecipeProvider { get; }       // Доступ к рецептам
     public Dictionary<string, object> Variables { get; } // Локальные переменные
+    public PauseTokenSource PauseToken { get; }          // Токен паузы
+    public PausableRegisterReader DiagReader { get; }    // Modbus чтение (паузится)
+    public PausableRegisterWriter DiagWriter { get; }    // Modbus запись (паузится)
+    public PausableTagWaiter TagWaiter { get; }          // Ожидание PLC сигналов (паузится)
+
+    // Pausable версия Task.Delay — останавливается при Auto OFF
+    public Task DelayAsync(TimeSpan delay, CancellationToken ct);
 }
 ```
+
+**Важно:** Все `Pausable*` сервисы автоматически приостанавливаются при выключении Auto режима.
 
 ### 2.3 Результат TestStepResult
 
@@ -363,7 +372,7 @@ private List<ITestStep> LoadSteps()
 
 **Важно:** Достаточно создать класс, реализующий `ITestStep` — он будет найден автоматически.
 
-### 2.5 Пример: Создание Test Step
+### 2.5 Пример: Простой Test Step
 
 ```csharp
 // Services/Steps/Steps/MeasureVoltageStep.cs
@@ -394,17 +403,106 @@ public class MeasureVoltageStep : ITestStep
 }
 ```
 
+### 2.6 Пример: Test Step с ожиданием PLC сигналов
+
+Для шагов, которые взаимодействуют с PLC блоками (Start/End/Error), используйте `context.TagWaiter`:
+
+```csharp
+// Services/Steps/Steps/CH/FlushCircuitStep.cs
+using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
+
+namespace Final_Test_Hybrid.Services.Steps.Steps.CH;
+
+public class FlushCircuitStep(
+    DualLogger<FlushCircuitStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+{
+    private const string BlockPath = "DB_VI.CH.Flush_Circuit";
+    private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Flush_Circuit\".\"Start\"";
+    private const string EndTag = "ns=3;s=\"DB_VI\".\"CH\".\"Flush_Circuit\".\"End\"";
+    private const string ErrorTag = "ns=3;s=\"DB_VI\".\"CH\".\"Flush_Circuit\".\"Error\"";
+
+    public string Id => "ch-flush-circuit";
+    public string Name => "CH/Flush_Circuit";
+    public string Description => "Контур Отопления. Продувка контура.";
+    public string PlcBlockPath => BlockPath;
+    public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
+
+    public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
+    {
+        logger.LogInformation("Запуск продувки контура отопления");
+
+        // 1. Записать Start = true
+        var writeResult = await context.OpcUa.WriteAsync(StartTag, true, ct);
+        if (writeResult.Error != null)
+        {
+            return TestStepResult.Fail($"Ошибка записи Start: {writeResult.Error}");
+        }
+
+        // 2. Ждать End или Error через context.TagWaiter
+        return await WaitForCompletionAsync(context, ct);
+    }
+
+    private async Task<TestStepResult> WaitForCompletionAsync(TestStepContext context, CancellationToken ct)
+    {
+        var waitResult = await context.TagWaiter.WaitAnyAsync(
+            context.TagWaiter.CreateWaitGroup<FlushResult>()
+                .WaitForTrue(EndTag, () => FlushResult.Success, "End")
+                .WaitForTrue(ErrorTag, () => FlushResult.Error, "Error"),
+            ct);
+
+        return waitResult.Result switch
+        {
+            FlushResult.Success => await HandleSuccessAsync(context),
+            FlushResult.Error => TestStepResult.Fail("Ошибка продувки контура"),
+            _ => TestStepResult.Fail("Неизвестный результат")
+        };
+    }
+
+    private async Task<TestStepResult> HandleSuccessAsync(TestStepContext context)
+    {
+        logger.LogInformation("Продувка контура завершена успешно");
+
+        // 3. Сбросить Start = false
+        var writeResult = await context.OpcUa.WriteAsync(StartTag, false);
+        return writeResult.Error != null
+            ? TestStepResult.Fail($"Ошибка сброса Start: {writeResult.Error}")
+            : TestStepResult.Pass();
+    }
+
+    private enum FlushResult { Success, Error }
+}
+```
+
+**Ключевые моменты:**
+- `context.TagWaiter` — pausable версия, автоматически приостанавливается при Auto OFF
+- `IHasPlcBlockPath` — для установки Selected тега при ошибках
+- `IRequiresPlcTags` — валидация тегов при старте приложения
+
 ---
 
 ## Часть 3: Работа с PLC сигналами
 
-### 3.1 TagWaiter — ожидание сигналов
+### 3.1 TagWaiter vs PausableTagWaiter
 
-**Путь:** `Services/OpcUa/TagWaiter.cs`
+| Сервис | Использование | Паузится при Auto OFF |
+|--------|---------------|----------------------|
+| `TagWaiter` | Pre-execution шаги (инъекция в конструктор) | Нет |
+| `PausableTagWaiter` | Test шаги (через `context.TagWaiter`) | Да |
+
+**Путь:** `Services/OpcUa/TagWaiter.cs`, `Services/OpcUa/PausableTagWaiter.cs`
 
 ```csharp
-// Инъекция в конструктор
-public class MyStep(TagWaiter tagWaiter) { ... }
+// Pre-execution шаги: инъекция TagWaiter или PausableTagWaiter в конструктор
+public class MyPreExecutionStep(PausableTagWaiter tagWaiter) { ... }
+
+// Test шаги: использовать context.TagWaiter
+public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
+{
+    await context.TagWaiter.WaitForTrueAsync(EndTag, ct: ct);
+}
 ```
 
 **Простое ожидание:**
@@ -539,11 +637,13 @@ await context.OpcUa.WriteAsync(tag, "text", ct);          // STRING
 | StepsServiceExtensions | `Services/DependencyInjection/StepsServiceExtensions.cs` |
 | **Ожидание сигналов** | |
 | TagWaiter | `Services/OpcUa/TagWaiter.cs` |
+| PausableTagWaiter | `Services/OpcUa/PausableTagWaiter.cs` |
 | WaitGroupBuilder | `Services/OpcUa/WaitGroup/WaitGroupBuilder.cs` |
 | **Примеры шагов** | |
 | ScanBarcodeStep | `Services/Steps/Steps/ScanBarcodeStep.cs` |
 | BlockBoilerAdapterStep | `Services/Steps/Steps/BlockBoilerAdapterStep.cs` |
 | WriteRecipesToPlcStep | `Services/Steps/Steps/WriteRecipesToPlcStep.cs` |
+| FlushCircuitStep | `Services/Steps/Steps/CH/FlushCircuitStep.cs` |
 
 ---
 

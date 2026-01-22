@@ -28,6 +28,7 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly IErrorService _errorService;
     private readonly IStepTimingService _stepTimingService;
     private readonly TagWaiter _tagWaiter;
+    private readonly PausableTagWaiter _pausableTagWaiter;
     private readonly ExecutionFlowState _flowState;
     private readonly PausableRegisterReader _pausableRegisterReader;
     private readonly PausableRegisterWriter _pausableRegisterWriter;
@@ -66,6 +67,7 @@ public partial class TestExecutionCoordinator : IDisposable
         IErrorService errorService,
         IStepTimingService stepTimingService,
         TagWaiter tagWaiter,
+        PausableTagWaiter pausableTagWaiter,
         ExecutionFlowState flowState,
         PausableRegisterReader pausableRegisterReader,
         PausableRegisterWriter pausableRegisterWriter)
@@ -81,6 +83,7 @@ public partial class TestExecutionCoordinator : IDisposable
         _errorService = errorService;
         _stepTimingService = stepTimingService;
         _tagWaiter = tagWaiter;
+        _pausableTagWaiter = pausableTagWaiter;
         _flowState = flowState;
         _pausableRegisterReader = pausableRegisterReader;
         _pausableRegisterWriter = pausableRegisterWriter;
@@ -131,7 +134,8 @@ public partial class TestExecutionCoordinator : IDisposable
         return Enumerable.Range(0, ColumnCount)
             .Select(index => CreateExecutor(
                 index, opcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider,
-                _pauseToken, _errorService, _stepTimingService, _pausableRegisterReader, _pausableRegisterWriter))
+                _pauseToken, _errorService, _stepTimingService, _pausableRegisterReader, _pausableRegisterWriter,
+                _pausableTagWaiter))
             .ToArray();
     }
 
@@ -146,11 +150,12 @@ public partial class TestExecutionCoordinator : IDisposable
         IErrorService errorService,
         IStepTimingService stepTimingService,
         PausableRegisterReader pausableRegisterReader,
-        PausableRegisterWriter pausableRegisterWriter)
+        PausableRegisterWriter pausableRegisterWriter,
+        PausableTagWaiter pausableTagWaiter)
     {
         var context = new TestStepContext(
             index, opcUa, loggerFactory.CreateLogger($"Column{index}"), recipeProvider, pauseToken,
-            pausableRegisterReader, pausableRegisterWriter);
+            pausableRegisterReader, pausableRegisterWriter, pausableTagWaiter);
         var executorLogger = loggerFactory.CreateLogger<ColumnExecutor>();
         return new ColumnExecutor(index, context, testLogger, executorLogger, statusReporter, pauseToken, errorService, stepTimingService);
     }

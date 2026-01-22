@@ -32,6 +32,24 @@ public static partial class ErrorDefinitions
         PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[6]",
         Severity: ErrorSeverity.Critical,
         ActivatesResetButton: true);
+    
+    public static readonly ErrorDefinition Message_AutomatNotOn = new(
+        "О-001-05", "Не включен один из автоматов питания",
+        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[7]",
+        Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true);
+    
+    public static readonly ErrorDefinition Message_PressButtonStopGas = new(
+        "О-001-06", "Нажата кнопка \"Стоп подачи газа\"",
+        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[8]",
+        Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true);
+    
+    public static readonly ErrorDefinition Message_PressButtonStopAutoCycle = new(
+        "О-001-07", "Нажата кнопка \"Выключение автоматического цикла\"",
+        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[9]",
+        Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true);
 
     // DB_Common (О-002-xx)
     public static readonly ErrorDefinition Relay17K4Fault = new(
@@ -78,6 +96,9 @@ public static partial class ErrorDefinitions
         Message_ModeSelector,
         Message_ProfibusError,
         Message_NoAirSupply,
+        Message_AutomatNotOn,
+        Message_PressButtonStopGas,
+        Message_PressButtonStopAutoCycle,
         Relay17K4Fault,
         Common_BoilerNotUnlocked,
         Coms_NoWaterFlow,
