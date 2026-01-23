@@ -253,12 +253,28 @@ public partial class TestExecutionCoordinator
     }
 
     /// <summary>
+    /// Безопасно вызывает событие OnRetryStarted.
+    /// </summary>
+    private void InvokeRetryStartedSafely()
+    {
+        try
+        {
+            OnRetryStarted?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Ошибка в обработчике OnRetryStarted");
+        }
+    }
+
+    /// <summary>
     /// Обрабатывает повтор шага.
     /// </summary>
     private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
     {
         var blockErrorTag = GetBlockErrorTag(error.FailedStep);
         await _errorCoordinator.SendAskRepeatAsync(blockErrorTag, ct);
+        InvokeRetryStartedSafely();
         await executor.RetryLastFailedStepAsync(ct);
         if (!executor.HasFailed)
         {

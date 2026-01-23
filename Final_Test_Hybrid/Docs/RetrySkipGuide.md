@@ -256,6 +256,32 @@ private async Task ResetFaultIfNoBlockAsync(ITestStep? step)
 | "Один шаг" | `End = true` | Skip шага (NOK) |
 | "СТОП" | — | Остановка теста |
 
+### Закрытие панели ошибки (FloatingErrorPanel)
+
+Панель ошибки закрывается **после подтверждения PLC**, а не сразу при нажатии кнопки:
+
+```
+1. Оператор нажимает "Повтор"
+2. PLC → PC: Req_Repeat = true
+3. PC → PLC: AskRepeat = true
+4. PLC: Сбрасывает Block.Error = false
+5. PC ждёт: Block.Error = false  ← подтверждение получено
+6. UI: Панель закрывается       ← OnRetryStarted событие
+7. PC: Выполняет retry шага
+```
+
+**Реализация:**
+- `TestExecutionCoordinator.OnRetryStarted` — событие после `SendAskRepeatAsync`
+- `BoilerInfo.razor` подписан на событие → вызывает `CloseErrorPanel()`
+
+**Почему не сразу при нажатии:**
+- Если запись `AskRepeat` в PLC не удалась — панель остаётся открытой
+- Пользователь видит что система ждёт подтверждения от PLC
+
+**Почему не после завершения retry:**
+- Retry может выполняться долго
+- Пользователь должен видеть прогресс в гриде, а не заблокированную панель
+
 ## Особенности
 
 ### canSkip для PreExecution шагов

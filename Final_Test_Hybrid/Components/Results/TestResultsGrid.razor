@@ -1,7 +1,9 @@
+@using Final_Test_Hybrid.Models
 @using Final_Test_Hybrid.Models.Results
 @using Final_Test_Hybrid.Services.Results
 
 @inject ITestResultsService TestResultsService
+@inject BoilerState BoilerState
 
 @implements IDisposable
 
@@ -13,6 +15,13 @@
 }
 else
 {
+    @if (!string.IsNullOrEmpty(BoilerState.LastSerialNumber))
+    {
+        <div class="last-test-header">
+            <div>@BoilerState.LastTestCompletedAt?.ToString("dd.MM.yyyy HH:mm:ss")</div>
+            <div>@BoilerState.LastSerialNumber</div>
+        </div>
+    }
     <RadzenDataGrid Data="@_results" TItem="TestResultItem"
                     AllowFiltering="true" AllowSorting="true"
                     FilterText="@DataGridRu.Filter"
@@ -42,8 +51,8 @@ else
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestResultItem" Property="ParameterName" Title="Параметр" />
-            <RadzenDataGridColumn TItem="TestResultItem" Property="Value" Title="Значение" Width="150px" />
             <RadzenDataGridColumn TItem="TestResultItem" Property="Min" Title="Мин" Width="100px" />
+            <RadzenDataGridColumn TItem="TestResultItem" Property="Value" Title="Значение" Width="150px" />
             <RadzenDataGridColumn TItem="TestResultItem" Property="Max" Title="Макс" Width="100px" />
             <RadzenDataGridColumn TItem="TestResultItem" Property="IsRanged" Title="Тип" Width="120px">
                 <Template Context="item">
@@ -69,6 +78,7 @@ else
     protected override void OnInitialized()
     {
         TestResultsService.OnChanged += OnResultsChanged;
+        BoilerState.OnCleared += OnBoilerStateChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -95,9 +105,15 @@ else
         });
     }
 
+    private void OnBoilerStateChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
     public void Dispose()
     {
         _disposed = true;
         TestResultsService.OnChanged -= OnResultsChanged;
+        BoilerState.OnCleared -= OnBoilerStateChanged;
     }
 }

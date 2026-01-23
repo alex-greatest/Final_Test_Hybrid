@@ -101,6 +101,7 @@
         PlcResetCoordinator.OnActiveChanged += OnBlockingStateChanged;
         ErrorCoordinator.OnInterruptChanged += OnBlockingStateChanged;
         TestCoordinator.OnErrorOccurred += HandleTestErrorOccurred;
+        TestCoordinator.OnRetryStarted += CloseErrorPanel;
         CompletionCoordinator.OnSaveErrorDialogRequested += HandleSaveErrorDialogAsync;
         CompletionCoordinator.OnPrepareErrorDialogRequested += HandlePrepareErrorDialogAsync;
         CompletionCoordinator.OnSaveProgressChanged += HandleSaveProgressChanged;
@@ -286,10 +287,21 @@
 
     private void CloseErrorPanel()
     {
-        _showErrorPanel = false;
-        _errorStepName = null;
-        _errorMessage = null;
-        InvokeIfNotDisposed(StateHasChanged);
+        if (_disposed)
+        {
+            return;
+        }
+        _ = InvokeAsync(() =>
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            _showErrorPanel = false;
+            _errorStepName = null;
+            _errorMessage = null;
+            StateHasChanged();
+        });
     }
 
     private void HandleTestErrorOccurred(StepError error)
@@ -451,6 +463,7 @@
         PlcResetCoordinator.OnActiveChanged -= OnBlockingStateChanged;
         ErrorCoordinator.OnInterruptChanged -= OnBlockingStateChanged;
         TestCoordinator.OnErrorOccurred -= HandleTestErrorOccurred;
+        TestCoordinator.OnRetryStarted -= CloseErrorPanel;
         CompletionCoordinator.OnSaveErrorDialogRequested -= HandleSaveErrorDialogAsync;
         CompletionCoordinator.OnPrepareErrorDialogRequested -= HandlePrepareErrorDialogAsync;
         CompletionCoordinator.OnSaveProgressChanged -= HandleSaveProgressChanged;

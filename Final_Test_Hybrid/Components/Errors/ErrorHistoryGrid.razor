@@ -1,9 +1,19 @@
+@using Final_Test_Hybrid.Models
 @using Final_Test_Hybrid.Models.Errors
 @using Final_Test_Hybrid.Services.Errors
 
 @inject IErrorService ErrorService
+@inject BoilerState BoilerState
 
 @implements IAsyncDisposable
+
+@if (!string.IsNullOrEmpty(BoilerState.LastSerialNumber))
+{
+    <div class="last-test-header">
+        <div>@BoilerState.LastTestCompletedAt?.ToString("dd.MM.yyyy HH:mm:ss")</div>
+        <div>@BoilerState.LastSerialNumber</div>
+    </div>
+}
 
 <RadzenDataGrid Data="@_history" TItem="ErrorHistoryItem"
                 AllowFiltering="true" AllowSorting="true"
@@ -83,6 +93,7 @@
     protected override void OnInitialized()
     {
         ErrorService.OnHistoryChanged += OnHistoryChanged;
+        BoilerState.OnCleared += OnBoilerStateChanged;
         _history = ErrorService.GetHistory();
     }
 
@@ -99,6 +110,11 @@
         });
     }
 
+    private void OnBoilerStateChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
     private static string FormatDuration(ErrorHistoryItem item)
     {
         var endTime = item.EndTime ?? DateTime.Now;
@@ -112,6 +128,7 @@
     {
         _disposed = true;
         ErrorService.OnHistoryChanged -= OnHistoryChanged;
+        BoilerState.OnCleared -= OnBoilerStateChanged;
         return ValueTask.CompletedTask;
     }
 }

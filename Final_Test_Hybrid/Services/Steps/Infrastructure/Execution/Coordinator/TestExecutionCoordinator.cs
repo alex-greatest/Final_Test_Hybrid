@@ -40,6 +40,7 @@ public partial class TestExecutionCoordinator : IDisposable
     public event Action? OnStateChanged;
     public event Action? OnSequenceCompleted;
     public event Action<StepError>? OnErrorOccurred;
+    public event Action? OnRetryStarted;
     public IReadOnlyList<ColumnExecutor> Executors => _executors;
     public int CurrentMapIndex { get; private set; }
     public int TotalMaps => _maps.Count;

@@ -21,6 +21,7 @@ public class BoilerState
     private BoilerTypeCycle? _boilerTypeCycle;
     private IReadOnlyList<RecipeResponseDto>? _recipes;
     private string? _lastSerialNumber;
+    private DateTime? _lastTestCompletedAt;
     private bool _isTestRunning;
     private int _testResult;
     private DateTime? _testStartTime;
@@ -96,6 +97,21 @@ public class BoilerState
             lock (_lock)
             {
                 return _lastSerialNumber;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Время завершения предыдущего теста.
+    /// Сохраняется при вызове Clear() вместе с LastSerialNumber.
+    /// </summary>
+    public DateTime? LastTestCompletedAt
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _lastTestCompletedAt;
             }
         }
     }
@@ -195,6 +211,7 @@ public class BoilerState
         lock (_lock)
         {
             _lastSerialNumber = _serialNumber;
+            _lastTestCompletedAt = DateTime.Now;
             _isTestRunning = false;
             _testTimer?.Dispose();
             _testTimer = null;
@@ -204,6 +221,19 @@ public class BoilerState
         _recipeProvider.Clear();
         NotifyChanged();
         OnCleared?.Invoke();
+    }
+
+    /// <summary>
+    /// Очищает информацию о предыдущем тесте.
+    /// Вызывается перед стартом нового теста.
+    /// </summary>
+    public void ClearLastTestInfo()
+    {
+        lock (_lock)
+        {
+            _lastSerialNumber = null;
+            _lastTestCompletedAt = null;
+        }
     }
 
     private void UpdateState(

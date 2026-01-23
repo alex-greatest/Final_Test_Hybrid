@@ -5,6 +5,14 @@
     flex: 1;
 }
 
+.last-test-header {
+    text-align: center;
+    color: black;
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
 ::deep .rz-data-grid {
     flex: 1;
     min-height: 0;
@@ -55,4 +63,10 @@
     text-overflow: clip !important;
     white-space: nowrap !important;
     height: auto !important;
+}
+
+/* Увеличенный размер Badge (OK/NOK) */
+::deep .rz-badge {
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
 }
