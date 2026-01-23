@@ -97,7 +97,9 @@
       "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\bin\\\\psql.exe\" -h localhost -p 5432 -U postgres -d final_test -c \"SELECT \"\"ADDRESS_VALUE\"\", \"\"AUDIT_TYPE\"\", COUNT\\(*\\) FROM \"\"TB_RESULT_SETTING_HISTORY\"\" WHERE \"\"IS_ACTIVE\"\" = true GROUP BY \"\"ADDRESS_VALUE\"\", \"\"AUDIT_TYPE\"\" HAVING COUNT\\(*\\) > 1;\")",
       "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\bin\\\\psql.exe\":*)",
       "Bash(cmd /c \"set PGPASSWORD=ManLiv123 && \"\"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\bin\\\\psql.exe\"\" -h localhost -p 5432 -U postgres -d final_test -c \"\"SELECT ADDRESS_VALUE, AUDIT_TYPE, COUNT\\(*\\) FROM TB_RESULT_SETTING_HISTORY WHERE IS_ACTIVE = true GROUP BY ADDRESS_VALUE, AUDIT_TYPE HAVING COUNT\\(*\\) > 1;\"\"\")",
-      "Bash(PGPASSWORD=ManLiv123 \"C:/Program Files/PostgreSQL/17/bin/psql.exe\":*)"
+      "Bash(PGPASSWORD=ManLiv123 \"C:/Program Files/PostgreSQL/17/bin/psql.exe\":*)",
+      "Bash(xargs -I {} sh -c 'echo \"\"=== {} ===\"\" && grep \"\"Text=\"\" \"\"{}\"\"')",
+      "Bash(xargs cat:*)"
     ]
   }
 }
