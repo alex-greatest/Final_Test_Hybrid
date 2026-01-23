@@ -1,0 +1,140 @@
+.tab-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 8px;
+    gap: 8px;
+}
+
+.grid-toolbar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.filter-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.filter-section ::deep .rz-datepicker {
+    width: 250px;
+}
+
+.filter-section ::deep .rz-datepicker .rz-inputtext {
+    font-size: 20px;
+}
+
+.filter-section ::deep .rz-datepicker .rz-datepicker-trigger {
+    vertical-align: middle;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.filter-section ::deep .rz-label {
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.toolbar-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.record-count {
+    font-size: 18px;
+    font-weight: 500;
+    color: black;
+}
+
+/* Кнопки в toolbar */
+.toolbar-buttons ::deep .rz-button {
+    font-size: 20px;
+    padding: 12px 24px;
+}
+
+.filter-section ::deep .rz-button {
+    font-size: 20px;
+    padding: 12px 24px;
+}
+
+::deep .rz-data-grid {
+    flex: 1;
+    min-height: 0;
+}
+
+/* Заголовки колонок */
+::deep .rz-data-grid .rz-column-title {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+/* Ячейки таблицы */
+::deep .rz-data-grid .rz-cell-data {
+    font-size: 19px;
+    color: black !important;
+    white-space: nowrap;
+}
+
+/* Скролл для всей таблицы */
+::deep .rz-data-grid .rz-data-grid-data {
+    overflow-x: auto;
+}
+
+::deep .rz-grid-table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: collapse;
+}
+
+/* Поля ввода при редактировании */
+::deep .rz-data-grid .rz-textbox {
+    font-size: 19px;
+    color: black !important;
+}
+
+/* Выпадающие списки в таблице */
+::deep .rz-data-grid .rz-dropdown {
+    font-size: 19px;
+}
+
+::deep .rz-data-grid th,
+::deep .rz-data-grid td {
+    border: 1px solid #ccc !important;
+}
+
+/* Заголовки */
+::deep .rz-data-grid th {
+    padding: 10px 8px !important;
+    overflow: visible !important;
+    line-height: 1.2 !important;
+    height: auto !important;
+}
+
+::deep .rz-data-grid th .rz-cell-data,
+::deep .rz-data-grid th .rz-column-title-content,
+::deep .rz-data-grid th .rz-sortable-column,
+::deep .rz-data-grid .rz-column-title {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    height: auto !important;
+}
+
+/* Кнопки в строках */
+::deep .rz-data-grid td .rz-button {
+    width: 35px;
+    height: 35px;
+    min-width: 35px;
+    font-size: 18px;
+}
+
+::deep .rz-data-grid td .rz-button .rzi {
+    font-size: 21px;
+}
