@@ -38,6 +38,23 @@ public sealed class TestResultsService : ITestResultsService
         OnChanged?.Invoke();
     }
 
+    /// <summary>
+    /// Удаляет результат по имени параметра.
+    /// </summary>
+    /// <param name="parameterName">Имя параметра для удаления.</param>
+    public void Remove(string parameterName)
+    {
+        bool removed;
+        lock (_lock)
+        {
+            removed = _results.RemoveAll(r => r.ParameterName == parameterName) > 0;
+        }
+        if (removed)
+        {
+            OnChanged?.Invoke();
+        }
+    }
+
     public void Clear()
     {
         bool hadItems;

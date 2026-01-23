@@ -43,9 +43,22 @@ public class TestSequenseService
         return moduleName is ScanModuleNames.BarcodeScanner or ScanModuleNames.BarcodeScannerMes;
     }
 
+    /// <summary>
+    /// Добавляет шаг в последовательность.
+    /// </summary>
     public Guid AddStep(ITestStep step)
     {
-        var stepData = CreateStepData(step);
+        return AddStep(step, limits: null);
+    }
+
+    /// <summary>
+    /// Добавляет шаг в последовательность с предзаданными пределами.
+    /// </summary>
+    /// <param name="step">Шаг теста.</param>
+    /// <param name="limits">Предзаданные пределы для отображения в гриде.</param>
+    public Guid AddStep(ITestStep step, string? limits)
+    {
+        var stepData = CreateStepData(step, limits);
         lock (_lock)
         {
             _steps.Add(stepData);
@@ -71,6 +84,10 @@ public class TestSequenseService
         return stepData.Id;
     }
 
+    /// <summary>
+    /// Устанавливает статус "Выполняется" для шага.
+    /// Range НЕ сбрасывается для сохранения предзаданных пределов при retry.
+    /// </summary>
     public void SetRunning(Guid id)
     {
         UpdateStepAndNotify(id, step =>
@@ -78,12 +95,17 @@ public class TestSequenseService
             step.Status = "Выполняется";
             step.StepStatus = TestStepStatus.Running;
             step.Result = "";
-            step.Range = "";
             step.StartTime = DateTime.Now;
             step.EndTime = null;
         });
     }
 
+    /// <summary>
+    /// Устанавливает статус "Готово" для шага.
+    /// </summary>
+    /// <param name="id">Идентификатор шага.</param>
+    /// <param name="message">Сообщение результата.</param>
+    /// <param name="limits">Пределы. Если null - сохраняются предзаданные пределы.</param>
     public void SetSuccess(Guid id, string message = "", string? limits = null)
     {
         UpdateStepAndNotify(id, step =>
@@ -91,11 +113,20 @@ public class TestSequenseService
             step.Status = "Готово";
             step.StepStatus = TestStepStatus.Success;
             step.Result = message;
-            step.Range = limits ?? "";
+            if (limits != null)
+            {
+                step.Range = limits;
+            }
             step.EndTime = DateTime.Now;
         });
     }
 
+    /// <summary>
+    /// Устанавливает статус "Ошибка" для шага.
+    /// </summary>
+    /// <param name="id">Идентификатор шага.</param>
+    /// <param name="errorMessage">Сообщение об ошибке.</param>
+    /// <param name="limits">Пределы. Если null - сохраняются предзаданные пределы.</param>
     public void SetError(Guid id, string errorMessage, string? limits = null)
     {
         UpdateStepAndNotify(id, step =>
@@ -103,7 +134,10 @@ public class TestSequenseService
             step.Status = "Ошибка";
             step.StepStatus = TestStepStatus.Error;
             step.Result = errorMessage;
-            step.Range = limits ?? "";
+            if (limits != null)
+            {
+                step.Range = limits;
+            }
             step.EndTime = DateTime.Now;
         });
     }
@@ -226,13 +260,17 @@ public class TestSequenseService
         }
     }
 
-    private TestSequenseData CreateStepData(ITestStep step)
+    /// <summary>
+    /// Создаёт данные шага для отображения в гриде.
+    /// </summary>
+    private static TestSequenseData CreateStepData(ITestStep step, string? limits)
     {
         return new TestSequenseData
         {
             Module = step.Name,
             Description = step.Description,
             Status = "Выполняется",
+            Range = limits ?? "",
             StartTime = DateTime.Now
         };
     }

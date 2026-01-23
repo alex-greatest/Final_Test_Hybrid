@@ -125,6 +125,7 @@ PreExecutionResult.FailRetryable(
 |-----------|------|------------|
 | `IHasPlcBlockPath` | `Interfaces/Plc/` | Указывает PLC блок шага |
 | `IRequiresPlcTags` | `Interfaces/Plc/` | Список тегов для валидации при старте |
+| `IRequiresRecipes` | `Interfaces/Recipe/` | Список рецептов для валидации перед тестом |
 
 ```csharp
 public interface IHasPlcBlockPath
@@ -135,6 +136,11 @@ public interface IHasPlcBlockPath
 public interface IRequiresPlcTags
 {
     IReadOnlyList<string> RequiredPlcTags { get; }  // Теги для проверки при старте
+}
+
+public interface IRequiresRecipes : ITestStep
+{
+    IReadOnlyList<string> RequiredRecipeAddresses { get; }  // Рецепты для валидации перед тестом
 }
 ```
 
@@ -482,6 +488,243 @@ public class FlushCircuitStep(
 - `IRequiresPlcTags` — валидация тегов при старте приложения
 - **Всегда передавайте `ct` в `HandleSuccessAsync`** — для корректной отмены записи `Start=false` при shutdown/stop
 
+### 2.7 Пример: Test Step с валидацией и сохранением результата
+
+Шаги, которые измеряют значения и сравнивают с порогами из рецептов, используют:
+- `IRequiresRecipes` — валидация рецептов перед тестом
+- `ITestResultsService` — сохранение результата измерения для MES
+
+```csharp
+// Services/Steps/Steps/CH/SlowFillCircuitStep.cs
+using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Results;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
+
+namespace Final_Test_Hybrid.Services.Steps.Steps.CH;
+
+/// <summary>
+/// Тестовый шаг медленного заполнения контура с измерением и валидацией давления.
+/// </summary>
+public class SlowFillCircuitStep(
+    DualLogger<SlowFillCircuitStep> logger,
+    ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags, IRequiresRecipes
+{
+    private const string BlockPath = "DB_VI.CH.Slow_Fill_Circuit";
+    private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Slow_Fill_Circuit\".\"Start\"";
+    private const string EndTag = "ns=3;s=\"DB_VI\".\"CH\".\"Slow_Fill_Circuit\".\"End\"";
+    private const string ErrorTag = "ns=3;s=\"DB_VI\".\"CH\".\"Slow_Fill_Circuit\".\"Error\"";
+    private const string FlowPressTag = "ns=3;s=\"DB_Parameter\".\"CH\".\"Flow_Press\"";
+    private const string PressTestValueRecipe = "ns=3;s=\"DB_Recipe\".\"CH\".\"PresTestValue\"";
+
+    public string Id => "ch-slow-fill-circuit";
+    public string Name => "CH/Slow_Fill_Circuit";
+    public string Description => "Контур Отопления. Медленное заполнение контура.";
+    public string PlcBlockPath => BlockPath;
+    public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, FlowPressTag];
+    public IReadOnlyList<string> RequiredRecipeAddresses => [PressTestValueRecipe];
+
+    public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
+    {
+        logger.LogInformation("Запуск медленного заполнения контура");
+
+        // 1. Удалить предыдущий результат (при повторном входе в шаг)
+        testResultsService.Remove("CH_Flow_Press");
+
+        // 2. Записать Start = true
+        var writeResult = await context.OpcUa.WriteAsync(StartTag, true, ct);
+        if (writeResult.Error != null)
+        {
+            return TestStepResult.Fail($"Ошибка записи Start: {writeResult.Error}");
+        }
+
+        // 3. Ждать End или Error
+        return await WaitForCompletionAsync(context, ct);
+    }
+
+    private async Task<TestStepResult> WaitForCompletionAsync(TestStepContext context, CancellationToken ct)
+    {
+        var waitResult = await context.TagWaiter.WaitAnyAsync(
+            context.TagWaiter.CreateWaitGroup<FillResult>()
+                .WaitForTrue(EndTag, () => FillResult.Success, "End")
+                .WaitForTrue(ErrorTag, () => FillResult.Error, "Error"),
+            ct);
+
+        return waitResult.Result switch
+        {
+            FillResult.Success => await HandleCompletionAsync(context, isSuccess: true, ct),
+            FillResult.Error => await HandleCompletionAsync(context, isSuccess: false, ct),
+            _ => TestStepResult.Fail("Неизвестный результат")
+        };
+    }
+
+    private async Task<TestStepResult> HandleCompletionAsync(
+        TestStepContext context, bool isSuccess, CancellationToken ct)
+    {
+        // 4. Прочитать измеренное значение из PLC
+        var readResult = await context.OpcUa.ReadAsync<float>(FlowPressTag, ct);
+        var flowPress = readResult.Value;
+
+        // 5. Сбросить Start = false
+        var resetResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
+        if (resetResult.Error != null)
+        {
+            return TestStepResult.Fail($"Ошибка сброса Start: {resetResult.Error}");
+        }
+
+        // 6. Получить порог из рецепта и сравнить
+        var pressTestValue = context.RecipeProvider.GetValue<float>(PressTestValueRecipe)!.Value;
+        var status = flowPress >= pressTestValue ? 1 : 2;  // 1 = OK, 2 = NOK
+
+        // 7. Сохранить результат в TestResultsService (для MES)
+        testResultsService.Add(
+            parameterName: "CH_Flow_Press",
+            value: $"{flowPress:F3}",
+            min: $"{pressTestValue:F3}",
+            max: "",
+            status: status,
+            isRanged: false,
+            unit: "");
+
+        logger.LogInformation("Давление: {FlowPress:F3}, порог: {Threshold:F3}, статус: {Status}",
+            flowPress, pressTestValue, status == 1 ? "OK" : "NOK");
+
+        // 8. Результат шага зависит ТОЛЬКО от End/Error PLC, НЕ от сравнения!
+        if (isSuccess)
+        {
+            logger.LogInformation("Медленное заполнение завершено успешно");
+            return TestStepResult.Pass();
+        }
+
+        return TestStepResult.Fail("Ошибка медленного заполнения контура");
+    }
+
+    private enum FillResult { Success, Error }
+}
+```
+
+**Ключевые моменты:**
+- `IRequiresRecipes` — система проверяет наличие рецептов перед запуском теста
+- `testResultsService.Remove()` — очистка предыдущего результата при повторном входе
+- `testResultsService.Add()` — сохранение результата измерения для MES
+- `context.RecipeProvider.GetValue<T>()` — получение значения рецепта
+- **Результат шага (Pass/Fail) определяется только PLC сигналами**, результат сравнения влияет только на статус в MES
+
+### 2.8 IProvideLimits — предзагрузка пределов в грид
+
+**Путь:** `Services/Steps/Infrastructure/Interfaces/Limits/IProvideLimits.cs`
+
+Интерфейс для шагов, которые хотят показывать пределы в гриде **сразу при старте** (до завершения выполнения).
+
+```csharp
+/// <summary>
+/// ВАЖНО: GetLimits вызывается параллельно из 4 колонок.
+/// Реализация ДОЛЖНА быть thread-safe и pure (без side-effects).
+/// НЕ делать IO/PLC операции - только in-memory (рецепты).
+/// </summary>
+public interface IProvideLimits : ITestStep
+{
+    /// <summary>
+    /// Получает пределы для отображения в гриде.
+    /// Вызывается ПЕРЕД выполнением шага.
+    /// </summary>
+    string? GetLimits(LimitsContext context);
+}
+
+public class LimitsContext
+{
+    public required int ColumnIndex { get; init; }
+    public required IRecipeProvider RecipeProvider { get; init; }
+}
+```
+
+**Как это работает:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ColumnExecutor.StartNewStep(step)                              │
+├─────────────────────────────────────────────────────────────────┤
+│  1. step is IProvideLimits? ────► GetLimits(context) ──► limits │
+│  2. ReportStepStarted(step, limits) ──► Грид показывает limits  │
+│  3. ExecuteAsync(context, ct) ──► Шаг выполняется               │
+│  4. SetSuccess/SetError(limits: null) ──► Limits НЕ меняются    │
+│     SetSuccess/SetError(limits: "X")  ──► Limits переопределены │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Пример: шаг с предзагрузкой пределов**
+
+```csharp
+public class PressureTestStep(
+    DualLogger<PressureTestStep> logger,
+    ITestResultsService testResultsService) : ITestStep, IProvideLimits, IRequiresRecipes
+{
+    private const string PressureMinRecipe = "ns=3;s=\"DB_Recipe\".\"Pressure_Min\"";
+    private const string PressureMaxRecipe = "ns=3;s=\"DB_Recipe\".\"Pressure_Max\"";
+
+    public string Id => "pressure-test";
+    public string Name => "Тест давления";
+    public string Description => "Измерение и проверка давления";
+    public IReadOnlyList<string> RequiredRecipeAddresses => [PressureMinRecipe, PressureMaxRecipe];
+
+    /// <summary>
+    /// Возвращает пределы из рецептов для отображения в гриде.
+    /// Вызывается ПЕРЕД ExecuteAsync, параллельно из 4 колонок.
+    /// ДОЛЖЕН быть thread-safe и pure (только чтение из RecipeProvider).
+    /// </summary>
+    public string? GetLimits(LimitsContext context)
+    {
+        var min = context.RecipeProvider.GetValue<float>(PressureMinRecipe);
+        var max = context.RecipeProvider.GetValue<float>(PressureMaxRecipe);
+        return min != null && max != null
+            ? $"{min:F2} - {max:F2} bar"
+            : null;
+    }
+
+    public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
+    {
+        testResultsService.Remove("Pressure");
+
+        var pressure = await MeasurePressureAsync(context, ct);
+        var min = context.RecipeProvider.GetValue<float>(PressureMinRecipe)!.Value;
+        var max = context.RecipeProvider.GetValue<float>(PressureMaxRecipe)!.Value;
+
+        var status = (pressure >= min && pressure <= max) ? 1 : 2;
+        testResultsService.Add("Pressure", $"{pressure:F2}", $"{min:F2}", $"{max:F2}", status, true, "bar");
+
+        logger.LogInformation("Давление: {Pressure:F2} bar, пределы: {Min:F2} - {Max:F2}",
+            pressure, min, max);
+
+        // Возвращаем результат БЕЗ limits — предзаданные из GetLimits() сохранятся
+        return status == 1
+            ? TestStepResult.Pass($"{pressure:F2} bar")
+            : TestStepResult.Fail($"{pressure:F2} bar (вне пределов)");
+    }
+}
+```
+
+**Ключевые моменты:**
+
+| Аспект | Требование |
+|--------|------------|
+| Thread-safety | `GetLimits` вызывается из 4 колонок параллельно |
+| Pure function | Без side-effects, только чтение из `RecipeProvider` |
+| Нет IO | НЕ делать PLC/Modbus/HTTP запросы |
+| Nullable | Возвращать `null` если пределы недоступны |
+
+**Когда использовать:**
+
+- ✅ Шаги с измерениями и пределами из рецептов
+- ✅ Шаги где пределы известны до выполнения
+- ❌ Шаги где пределы вычисляются во время выполнения
+- ❌ Шаги без пределов (не реализовывать интерфейс)
+
+**Поведение при Retry:**
+
+При повторном выполнении шага (Retry) пределы из `GetLimits()` сохраняются — `SetRunning()` не сбрасывает `Range`.
+
 ---
 
 ## Часть 3: Работа с PLC сигналами
@@ -611,6 +854,10 @@ await context.OpcUa.WriteAsync(tag, "text", ct);          // STRING
 
 - [ ] Создать файл `Services/Steps/Steps/МойШаг.cs`
 - [ ] Реализовать `ITestStep`
+- [ ] Добавить `IProvideLimits` если нужны пределы в гриде до выполнения
+- [ ] Добавить `IRequiresRecipes` если шаг использует рецепты
+- [ ] Добавить `IHasPlcBlockPath` если есть PLC блок
+- [ ] Добавить `IRequiresPlcTags` если нужна валидация тегов
 - [ ] Шаг автоматически зарегистрируется через рефлексию
 - [ ] Протестировать
 
@@ -625,6 +872,9 @@ await context.OpcUa.WriteAsync(tag, "text", ct);          // STRING
 | ITestStep | `Services/Steps/Infrastructure/Interfaces/Test/ITestStep.cs` |
 | IHasPlcBlockPath | `Services/Steps/Infrastructure/Interfaces/Plc/IHasPlcBlockPath.cs` |
 | IRequiresPlcTags | `Services/Steps/Infrastructure/Interfaces/Plc/IRequiresPlcTags.cs` |
+| IRequiresRecipes | `Services/Steps/Infrastructure/Interfaces/Recipe/IRequiresRecipes.cs` |
+| IProvideLimits | `Services/Steps/Infrastructure/Interfaces/Limits/IProvideLimits.cs` |
+| LimitsContext | `Services/Steps/Infrastructure/Interfaces/Limits/LimitsContext.cs` |
 | **Контексты** | |
 | PreExecutionContext | `Services/Steps/Infrastructure/Interfaces/PreExecution/PreExecutionContext.cs` |
 | TestStepContext | `Services/Steps/Infrastructure/Registrator/TestStepContext.cs` |
@@ -640,11 +890,15 @@ await context.OpcUa.WriteAsync(tag, "text", ct);          // STRING
 | TagWaiter | `Services/OpcUa/TagWaiter.cs` |
 | PausableTagWaiter | `Services/OpcUa/PausableTagWaiter.cs` |
 | WaitGroupBuilder | `Services/OpcUa/WaitGroup/WaitGroupBuilder.cs` |
+| **Результаты тестов (MES)** | |
+| ITestResultsService | `Services/Results/ITestResultsService.cs` |
+| TestResultsService | `Services/Results/TestResultsService.cs` |
 | **Примеры шагов** | |
 | ScanBarcodeStep | `Services/Steps/Steps/ScanBarcodeStep.cs` |
 | BlockBoilerAdapterStep | `Services/Steps/Steps/BlockBoilerAdapterStep.cs` |
 | WriteRecipesToPlcStep | `Services/Steps/Steps/WriteRecipesToPlcStep.cs` |
 | FlushCircuitStep | `Services/Steps/Steps/CH/FlushCircuitStep.cs` |
+| SlowFillCircuitStep | `Services/Steps/Steps/CH/SlowFillCircuitStep.cs` |
 
 ---
 
@@ -696,6 +950,53 @@ private PreExecutionResult HandleSuccess()
 {
     messageState.Clear();  // Очищаем!
     return PreExecutionResult.Continue();
+}
+```
+
+### 6. Дублирование результатов при повторном входе в шаг
+
+```csharp
+// ❌ НЕПРАВИЛЬНО — при Retry появятся дубликаты
+public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
+{
+    // ... выполнение ...
+    testResultsService.Add("CH_Flow_Press", value, ...);
+}
+
+// ✅ ПРАВИЛЬНО — удаляем старый результат перед добавлением
+public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
+{
+    testResultsService.Remove("CH_Flow_Press");  // Очищаем!
+    // ... выполнение ...
+    testResultsService.Add("CH_Flow_Press", value, ...);
+}
+```
+
+### 7. IO операции в GetLimits (IProvideLimits)
+
+```csharp
+// ❌ НЕПРАВИЛЬНО — GetLimits вызывается параллельно из 4 колонок!
+public string? GetLimits(LimitsContext context)
+{
+    // IO операции НЕ thread-safe и блокируют все колонки
+    var value = await plcService.ReadAsync<float>(tag);  // ЗАПРЕЩЕНО!
+    return $"{value:F2}";
+}
+
+// ❌ НЕПРАВИЛЬНО — side-effects нарушают pure function
+public string? GetLimits(LimitsContext context)
+{
+    _counter++;  // Side-effect!
+    logger.LogInformation("GetLimits called");  // Side-effect!
+    return "...";
+}
+
+// ✅ ПРАВИЛЬНО — только чтение из RecipeProvider (in-memory, thread-safe)
+public string? GetLimits(LimitsContext context)
+{
+    var min = context.RecipeProvider.GetValue<float>(MinRecipe);
+    var max = context.RecipeProvider.GetValue<float>(MaxRecipe);
+    return min != null && max != null ? $"{min:F2} - {max:F2}" : null;
 }
 ```
 

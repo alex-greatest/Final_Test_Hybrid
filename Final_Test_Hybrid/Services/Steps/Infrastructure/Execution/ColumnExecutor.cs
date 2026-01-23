@@ -3,18 +3,17 @@ using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Errors;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Limits;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 
 public class ColumnExecutor(
     int columnIndex,
     TestStepContext context,
-    ITestStepLogger testLogger,
-    ILogger logger,
+    IDualLogger logger,
     StepStatusReporter statusReporter,
     PauseTokenSource pauseToken,
     IErrorService errorService,
@@ -91,10 +90,41 @@ public class ColumnExecutor(
         }
     }
 
+    /// <summary>
+    /// Запускает новый шаг и регистрирует его в UI.
+    /// </summary>
     private void StartNewStep(ITestStep step)
     {
-        var uiId = statusReporter.ReportStepStarted(step);
+        var limits = GetPreExecutionLimits(step);
+        var uiId = statusReporter.ReportStepStarted(step, limits);
         ApplyRunningState(step, uiId);
+    }
+
+    /// <summary>
+    /// Получает пределы от шага если он реализует IProvideLimits.
+    /// Безопасно - при ошибке возвращает null и логирует.
+    /// </summary>
+    private string? GetPreExecutionLimits(ITestStep step)
+    {
+        if (step is not IProvideLimits limitsProvider)
+        {
+            return null;
+        }
+
+        try
+        {
+            var limitsContext = new LimitsContext
+            {
+                ColumnIndex = ColumnIndex,
+                RecipeProvider = context.RecipeProvider
+            };
+            return limitsProvider.GetLimits(limitsContext);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("Ошибка получения limits для {StepName}: {Exception}", step.Name, ex);
+            return null;
+        }
     }
 
     private void RestartFailedStep()
@@ -106,7 +136,7 @@ public class ColumnExecutor(
     private void ApplyRunningState(ITestStep step, Guid uiId)
     {
         _state = new StepState(step.Name, step.Description, "Выполняется", null, null, false, uiId, null, DateTime.Now);
-        testLogger.LogStepStart(step.Name);
+        logger.LogStepStart(step.Name);
         OnStateChanged?.Invoke();
     }
 
@@ -131,10 +161,10 @@ public class ColumnExecutor(
         var statusText = result.Skipped ? "Пропуск" : "Готово";
         statusReporter.ReportSuccess(_state.UiStepId, result.Message, limits);
         _state = _state with { Status = statusText, ResultValue = result.Message, FailedStep = null };
-        testLogger.LogStepEnd(step.Name);
+        logger.LogStepEnd(step.Name);
         if (!string.IsNullOrEmpty(result.Message))
         {
-            testLogger.LogInformation("  Результат: {Message}", result.Message);
+            logger.LogInformation("  Результат: {Message}", result.Message);
         }
         OnStateChanged?.Invoke();
     }
@@ -158,7 +188,7 @@ public class ColumnExecutor(
     private void LogError(ITestStep step, string message, Exception? ex)
     {
         logger.LogError(ex, "Шаг {Step} в колонке {Col}: {Error}", step.Name, ColumnIndex, message);
-        testLogger.LogError(ex, "ОШИБКА в шаге '{Step}': {Message}", step.Name, message);
+        logger.LogError(ex, "ОШИБКА в шаге '{Step}': {Message}", step.Name, message);
     }
 
     private void ClearStatusIfNotFailed()

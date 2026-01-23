@@ -157,7 +157,8 @@ public partial class TestExecutionCoordinator : IDisposable
             index, opcUa, loggerFactory.CreateLogger($"Column{index}"), recipeProvider, pauseToken,
             pausableRegisterReader, pausableRegisterWriter, pausableTagWaiter);
         var executorLogger = loggerFactory.CreateLogger<ColumnExecutor>();
-        return new ColumnExecutor(index, context, testLogger, executorLogger, statusReporter, pauseToken, errorService, stepTimingService);
+        var dualLogger = new DualLogger<ColumnExecutor>(executorLogger, testLogger);
+        return new ColumnExecutor(index, context, dualLogger, statusReporter, pauseToken, errorService, stepTimingService);
     }
 
     private void SubscribeToExecutorEvents()

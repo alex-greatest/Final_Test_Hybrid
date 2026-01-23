@@ -31,9 +31,22 @@ public class StepStatusReporter
         _sequenseService.MutateScanStep(step.Name, step.Description);
     }
 
+    /// <summary>
+    /// Сообщает о старте шага без предзаданных пределов.
+    /// </summary>
     public Guid ReportStepStarted(ITestStep step)
     {
         return _sequenseService.AddStep(step);
+    }
+
+    /// <summary>
+    /// Сообщает о старте шага с предзаданными пределами.
+    /// </summary>
+    /// <param name="step">Шаг теста.</param>
+    /// <param name="limits">Предзаданные пределы для отображения в гриде.</param>
+    public Guid ReportStepStarted(ITestStep step, string? limits)
+    {
+        return _sequenseService.AddStep(step, limits);
     }
 
     public Guid ReportStepStarted(IPreExecutionStep step)
