@@ -113,10 +113,10 @@ public class SlowFillCircuitStep(
         if (isSuccess)
         {
             logger.LogInformation("Медленное заполнение контура завершено успешно");
-            return TestStepResult.Pass();
+            return TestStepResult.Pass($"{flowPress:F3}");
         }
 
-        return TestStepResult.Fail("Ошибка медленного заполнения контура");
+        return TestStepResult.Fail($"Ошибка медленного заполнения контура: {flowPress:F3}");
     }
 
     private enum FillResult { Success, Error }

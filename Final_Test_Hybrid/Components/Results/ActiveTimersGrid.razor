@@ -1,0 +1,119 @@
+@using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing
+@inject ITimerService TimerService
+@implements IAsyncDisposable
+
+<div class="active-timers-wrapper">
+    <RadzenDataGrid Data="@_timers" TItem="TimerDisplayItem"
+                    KeyProperty="Key"
+                    AllowSorting="true"
+                    EmptyText="Нет активных таймеров">
+        <Columns>
+            <RadzenDataGridColumn TItem="TimerDisplayItem" Property="Key" Title="Ключ таймера" />
+            <RadzenDataGridColumn TItem="TimerDisplayItem" Title="Прошло времени" Width="150px">
+                <Template Context="item">@item.ElapsedFormatted</Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+</div>
+
+@code {
+    private const int RefreshIntervalMs = 500;
+    private volatile bool _disposed;
+    private int _isRefreshing;
+    private List<TimerDisplayItem> _timers = [];
+    private System.Threading.Timer? _refreshTimer;
+
+    /// <summary>
+    /// Инициализирует компонент, подписывается на изменения и запускает периодическое обновление.
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        TimerService.OnChanged += OnTimersChanged;
+        RefreshTimers();
+        StartPeriodicRefresh();
+    }
+
+    /// <summary>
+    /// Запускает периодический таймер для обновления отображения.
+    /// </summary>
+    private void StartPeriodicRefresh()
+    {
+        _refreshTimer = new System.Threading.Timer(_ =>
+        {
+            if (_disposed) return;
+            if (Interlocked.CompareExchange(ref _isRefreshing, 1, 0) != 0) return;
+            _ = InvokeAsync(RefreshAndRenderWithUnlock);
+        }, null, RefreshIntervalMs, RefreshIntervalMs);
+    }
+
+    /// <summary>
+    /// Обработчик события изменения таймеров.
+    /// </summary>
+    private void OnTimersChanged()
+    {
+        if (_disposed) return;
+        _ = InvokeAsync(RefreshAndRender);
+    }
+
+    /// <summary>
+    /// Обновляет данные и перерисовывает компонент (с разблокировкой флага).
+    /// </summary>
+    private void RefreshAndRenderWithUnlock()
+    {
+        try
+        {
+            RefreshAndRender();
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _isRefreshing, 0);
+        }
+    }
+
+    /// <summary>
+    /// Обновляет данные и перерисовывает компонент.
+    /// </summary>
+    private void RefreshAndRender()
+    {
+        if (_disposed) return;
+        RefreshTimers();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Обновляет список таймеров из сервиса.
+    /// </summary>
+    private void RefreshTimers()
+    {
+        var active = TimerService.GetAllActive();
+        _timers = active
+            .Select(kvp => new TimerDisplayItem(kvp.Key, kvp.Value))
+            .OrderBy(t => t.Key)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Освобождает ресурсы компонента.
+    /// </summary>
+    public ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        TimerService.OnChanged -= OnTimersChanged;
+        _refreshTimer?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+
+    /// <summary>
+    /// Элемент отображения таймера.
+    /// </summary>
+    /// <param name="Key">Ключ таймера.</param>
+    /// <param name="Elapsed">Прошедшее время.</param>
+    private sealed record TimerDisplayItem(string Key, TimeSpan Elapsed)
+    {
+        /// <summary>
+        /// Форматированное время в формате total_minutes:ss.d.
+        /// </summary>
+        public string ElapsedFormatted =>
+            $"{(int)Elapsed.TotalMinutes}:{Elapsed.Seconds:D2}.{Elapsed.Milliseconds / 100}";
+    }
+}
