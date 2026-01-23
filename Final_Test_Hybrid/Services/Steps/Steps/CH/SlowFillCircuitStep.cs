@@ -96,7 +96,7 @@ public class SlowFillCircuitStep(
         }
 
         var pressTestValue = context.RecipeProvider.GetValue<float>(PressTestValueRecipe)!.Value;
-        var status = flowPress >= pressTestValue ? 1 : 2;
+        var status = isSuccess ? 1 : 2;
 
         testResultsService.Add(
             parameterName: "CH_Flow_Press",

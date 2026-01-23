@@ -96,7 +96,7 @@ public class PowerSupplyTestStep(
 
         var min = context.RecipeProvider.GetValue<float>(VoltageMinRecipe)!.Value;
         var max = context.RecipeProvider.GetValue<float>(VoltageMaxRecipe)!.Value;
-        var status = (supply > min && supply <= max) ? 1 : 2;
+        var status = isSuccess ? 1 : 2;
 
         testResultsService.Add(
             parameterName: "Blr_Supply",
