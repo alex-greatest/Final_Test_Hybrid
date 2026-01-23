@@ -17,21 +17,21 @@ public static partial class ErrorDefinitions
         RelatedStepId: "block-boiler-adapter",
         RelatedStepName: "Block Boiler Adapter");
     
-    public static readonly ErrorDefinition AlNoWaterFlow = new(
+    public static readonly ErrorDefinition AlNoWaterFlowDhw = new(
         "П-008-00", "Нет протока воды",
         PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Fill_Circuit_Normal\".\"Al_NoWaterFlow\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "dhw-fill-circuit-normal-direction",
         RelatedStepName: "DHW/Fill_Circuit_Normal_Direction");
     
-    public static readonly ErrorDefinition AlNoWaterPressure = new(
+    public static readonly ErrorDefinition AlNoWaterPressureDhw = new(
         "П-008-01", "Нет давления воды",
         PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Fill_Circuit_Normal\".\"Al_NoWaterPressure\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "dhw-fill-circuit-normal-direction",
         RelatedStepName: "DHW/Fill_Circuit_Normal_Direction");
     
-    public static readonly ErrorDefinition AlFillTime = new(
+    public static readonly ErrorDefinition AlFillTimeDhw = new(
         "П-008-02", "Время заполнения превышено",
         PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Fill_Circuit_Normal\".\"Al_FillTime\"",
         Severity: ErrorSeverity.Critical,
@@ -51,15 +51,56 @@ public static partial class ErrorDefinitions
         ActivatesResetButton: true,
         RelatedStepId: "elec-connect-power-cable",
         RelatedStepName: "Elec/Connect_Power_Cable");
+    
+    public static readonly ErrorDefinition AlLeackGas = new(
+        "П-010-00", "Утечка газа",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Leak_Test\".\"Al_LeackGas\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-leak-test",
+        RelatedStepName: "Gas/Leak_Test");
+    
+    public static readonly ErrorDefinition AlNoPressureGas = new(
+        "П-010-01", "Нет давления газа",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Leak_Test\".\"Al_NoPressureGas\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-leak-test",
+        RelatedStepName: "Gas/Leak_Test");
+    
+    public static readonly ErrorDefinition AlNoWaterFlowCh = new(
+        "П-011-00", "Нет протока воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Fast_Fill_Circuit\".\"Al_NoWaterFlow\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-fast-fill-circuit",
+        RelatedStepName: "CH/Fast_Fill_Circuit ");
+    
+    public static readonly ErrorDefinition AlNoWaterPressureСh = new(
+        "П-011-01", "Нет давления воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Fast_Fill_Circuit\".\"Al_NoWaterPressure\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-fast-fill-circuit",
+        RelatedStepName: "CH/Fast_Fill_Circuit ");
+    
+    public static readonly ErrorDefinition AlFillTimeСh = new(
+        "П-011-02", "Время заполнения превышено",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Fast_Fill_Circuit\".\"Al_FillTime\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-fast-fill-circuit",
+        RelatedStepName: "CH/Fast_Fill_Circuit ");
+    
 
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [
         BoilerNotLocked,
         Relay17K5Fault,
-        AlNoWaterFlow,
-        AlNoWaterPressure,
-        AlFillTime,
+        AlNoWaterFlowDhw,
+        AlNoWaterPressureDhw,
+        AlFillTimeDhw,
         EarthClipNotConnected,
-        PowerCableNotConnected
+        PowerCableNotConnected,
+        AlLeackGas,
+        AlNoPressureGas,
+        AlNoWaterFlowCh,
+        AlNoWaterPressureСh,
+        AlFillTimeСh
     ];
 }

@@ -3,34 +3,34 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
-namespace Final_Test_Hybrid.Services.Steps.Steps.CH;
+namespace Final_Test_Hybrid.Services.Steps.Steps.Gas;
 
 /// <summary>
-/// Тестовый шаг открытия контура отопления.
+/// Тестовый шаг проверки утечки контура газа.
 /// </summary>
-public class OpenCircuitNormalStep(
-    DualLogger<OpenCircuitNormalStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+public class LeakTestStep(
+    DualLogger<LeakTestStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
 {
-    private const string BlockPath = "DB_VI.CH.Open_Circuit_Normal";
-    private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Open_Circuit_Normal\".\"Start\"";
-    private const string EndTag = "ns=3;s=\"DB_VI\".\"CH\".\"Open_Circuit_Normal\".\"End\"";
-    private const string ErrorTag = "ns=3;s=\"DB_VI\".\"CH\".\"Open_Circuit_Normal\".\"Error\"";
+    private const string BlockPath = "DB_VI.Gas.Leak_Test";
+    private const string StartTag = "ns=3;s=\"DB_VI\".\"Gas\".\"Leak_Test\".\"Start\"";
+    private const string EndTag = "ns=3;s=\"DB_VI\".\"Gas\".\"Leak_Test\".\"End\"";
+    private const string ErrorTag = "ns=3;s=\"DB_VI\".\"Gas\".\"Leak_Test\".\"Error\"";
 
-    public string Id => "ch-open-circuit-normal";
-    public string Name => "CH/Open_Circuit_Normal";
-    public string Description => "Открытие контура Отопления.";
+    public string Id => "gas-leak-test";
+    public string Name => "Gas/Leak_Test";
+    public string Description => "Проверка утечки контура газа.";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 
     /// <summary>
-    /// Выполняет шаг открытия контура отопления.
+    /// Выполняет шаг проверки утечки контура газа.
     /// </summary>
     /// <param name="context">Контекст выполнения шага.</param>
     /// <param name="ct">Токен отмены.</param>
     /// <returns>Результат выполнения шага.</returns>
     public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
     {
-        logger.LogInformation("Запуск открытия контура отопления");
+        logger.LogInformation("Запуск проверки утечки контура газа");
 
         var writeResult = await context.OpcUa.WriteAsync(StartTag, true, ct);
         if (writeResult.Error != null)
@@ -42,34 +42,34 @@ public class OpenCircuitNormalStep(
     }
 
     /// <summary>
-    /// Ожидает завершения операции открытия контура.
+    /// Ожидает завершения операции проверки утечки.
     /// </summary>
     private async Task<TestStepResult> WaitForCompletionAsync(TestStepContext context, CancellationToken ct)
     {
         var waitResult = await context.TagWaiter.WaitAnyAsync(
-            context.TagWaiter.CreateWaitGroup<OpenCircuitResult>()
-                .WaitForTrue(EndTag, () => OpenCircuitResult.Success, "End")
-                .WaitForTrue(ErrorTag, () => OpenCircuitResult.Error, "Error"),
+            context.TagWaiter.CreateWaitGroup<LeakTestResult>()
+                .WaitForTrue(EndTag, () => LeakTestResult.Success, "End")
+                .WaitForTrue(ErrorTag, () => LeakTestResult.Error, "Error"),
             ct);
 
         return waitResult.Result switch
         {
-            OpenCircuitResult.Success => await HandleSuccessAsync(context, ct),
-            OpenCircuitResult.Error => TestStepResult.Fail("Ошибка открытия контура отопления"),
+            LeakTestResult.Success => await HandleSuccessAsync(context, ct),
+            LeakTestResult.Error => TestStepResult.Fail("Ошибка проверки утечки контура газа"),
             _ => TestStepResult.Fail("Неизвестный результат")
         };
     }
 
     /// <summary>
-    /// Обрабатывает успешное завершение открытия контура.
+    /// Обрабатывает успешное завершение проверки утечки.
     /// </summary>
     private async Task<TestStepResult> HandleSuccessAsync(TestStepContext context, CancellationToken ct)
     {
-        logger.LogInformation("Открытие контура отопления завершено успешно");
+        logger.LogInformation("Проверка утечки контура газа завершена успешно");
 
         var writeResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
         return writeResult.Error != null ? TestStepResult.Fail($"Ошибка сброса Start: {writeResult.Error}") : TestStepResult.Pass();
     }
 
-    private enum OpenCircuitResult { Success, Error }
+    private enum LeakTestResult { Success, Error }
 }

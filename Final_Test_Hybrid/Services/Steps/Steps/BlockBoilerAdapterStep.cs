@@ -48,17 +48,17 @@ public class BlockBoilerAdapterStep(
             ct);
         return waitResult.Result switch
         {
-            BlockResult.Success => await HandleSuccessAsync(context),
+            BlockResult.Success => await HandleSuccessAsync(context, ct),
             BlockResult.Error => CreateRetryableError(),
             _ => PreExecutionResult.Fail("Неизвестный результат")
         };
     }
 
-    private async Task<PreExecutionResult> HandleSuccessAsync(PreExecutionContext context)
+    private async Task<PreExecutionResult> HandleSuccessAsync(PreExecutionContext context, CancellationToken ct)
     {
         logger.LogInformation("Адаптер заблокирован успешно");
 
-        var writeResult = await context.OpcUa.WriteAsync(StartTag, false);
+        var writeResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
         if (writeResult.Error != null)
         {
             return CreateWriteError(writeResult.Error);

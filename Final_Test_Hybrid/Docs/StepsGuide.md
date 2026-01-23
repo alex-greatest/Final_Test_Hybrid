@@ -455,18 +455,18 @@ public class FlushCircuitStep(
 
         return waitResult.Result switch
         {
-            FlushResult.Success => await HandleSuccessAsync(context),
+            FlushResult.Success => await HandleSuccessAsync(context, ct),
             FlushResult.Error => TestStepResult.Fail("Ошибка продувки контура"),
             _ => TestStepResult.Fail("Неизвестный результат")
         };
     }
 
-    private async Task<TestStepResult> HandleSuccessAsync(TestStepContext context)
+    private async Task<TestStepResult> HandleSuccessAsync(TestStepContext context, CancellationToken ct)
     {
         logger.LogInformation("Продувка контура завершена успешно");
 
-        // 3. Сбросить Start = false
-        var writeResult = await context.OpcUa.WriteAsync(StartTag, false);
+        // 3. Сбросить Start = false (с ct для корректной отмены при shutdown)
+        var writeResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
         return writeResult.Error != null
             ? TestStepResult.Fail($"Ошибка сброса Start: {writeResult.Error}")
             : TestStepResult.Pass();
@@ -480,6 +480,7 @@ public class FlushCircuitStep(
 - `context.TagWaiter` — pausable версия, автоматически приостанавливается при Auto OFF
 - `IHasPlcBlockPath` — для установки Selected тега при ошибках
 - `IRequiresPlcTags` — валидация тегов при старте приложения
+- **Всегда передавайте `ct` в `HandleSuccessAsync`** — для корректной отмены записи `Start=false` при shutdown/stop
 
 ---
 
@@ -697,3 +698,114 @@ private PreExecutionResult HandleSuccess()
     return PreExecutionResult.Continue();
 }
 ```
+
+---
+
+## Часть 7: Контракт CancellationToken
+
+> **КРИТИЧЕСКИ ВАЖНО:** Шаги несут полную ответственность за корректную обработку отмены.
+> Система НЕ имеет защиты от зависших шагов — если шаг не реагирует на `CancellationToken`, система зависнет.
+
+### 7.1 Почему это важно
+
+| Сценарий | Без проверки ct | С проверкой ct |
+|----------|-----------------|----------------|
+| Оператор нажал "Стоп" | Система зависла | Корректная остановка |
+| PLC Reset | Система зависла | Корректная остановка |
+| Выход из приложения | Приложение не закрывается | Быстрый выход |
+
+### 7.2 Обязательные правила
+
+#### ✅ В циклах — проверять ct
+
+```csharp
+while (condition)
+{
+    ct.ThrowIfCancellationRequested();  // ← ОБЯЗАТЕЛЬНО
+    // работа
+}
+
+for (int i = 0; i < count; i++)
+{
+    ct.ThrowIfCancellationRequested();  // ← ОБЯЗАТЕЛЬНО
+    // работа
+}
+```
+
+#### ✅ Для задержек — использовать context.DelayAsync или передавать ct
+
+```csharp
+// Test steps — использовать context.DelayAsync (pause-aware)
+await context.DelayAsync(TimeSpan.FromSeconds(5), ct);
+
+// Pre-execution steps — передавать ct в Task.Delay
+await Task.Delay(TimeSpan.FromSeconds(5), ct);
+```
+
+#### ✅ I/O операции — всегда передавать ct
+
+```csharp
+// OPC-UA
+await context.OpcUa.WriteAsync(tag, value, ct);
+await context.OpcUa.ReadAsync<float>(tag, ct);
+
+// TagWaiter
+await context.TagWaiter.WaitForTrueAsync(tag, ct);
+await context.TagWaiter.WaitAnyAsync(group, ct);
+```
+
+### 7.3 Запрещённые паттерны
+
+```csharp
+// ❌ ЗАПРЕЩЕНО — блокирует поток, игнорирует отмену
+var result = someTask.Result;
+someTask.Wait();
+
+// ❌ ЗАПРЕЩЕНО — не реагирует на отмену
+await Task.Delay(TimeSpan.FromSeconds(30));  // без ct!
+Thread.Sleep(5000);
+
+// ❌ ЗАПРЕЩЕНО — бесконечный цикл без проверки
+while (true)
+{
+    await Task.Delay(100);  // Никогда не выйдет при отмене
+}
+```
+
+### 7.4 Правильные примеры
+
+```csharp
+// ✅ ПРАВИЛЬНО — полный пример шага
+public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
+{
+    // 1. Запись в PLC с ct
+    var writeResult = await context.OpcUa.WriteAsync(StartTag, true, ct);
+    if (writeResult.Error != null)
+        return TestStepResult.Fail(writeResult.Error);
+
+    // 2. Ожидание сигнала с ct
+    var waitResult = await context.TagWaiter.WaitAnyAsync(
+        context.TagWaiter.CreateWaitGroup<MyResult>()
+            .WaitForTrue(EndTag, () => MyResult.Success, "End")
+            .WaitForTrue(ErrorTag, () => MyResult.Error, "Error"),
+        ct);  // ← ct передан
+
+    // 3. Обработка результата
+    return waitResult.Result switch
+    {
+        MyResult.Success => TestStepResult.Pass(),
+        MyResult.Error => TestStepResult.Fail("Ошибка"),
+        _ => TestStepResult.Fail("Неизвестный результат")
+    };
+}
+```
+
+### 7.5 Code Review чеклист
+
+При ревью новых шагов проверять:
+
+- [ ] Все `while`/`for` циклы содержат `ct.ThrowIfCancellationRequested()`
+- [ ] Все задержки используют `context.DelayAsync()` или `Task.Delay(..., ct)`
+- [ ] Все I/O операции передают `ct`
+- [ ] Нет `.Result` или `.Wait()` вызовов
+- [ ] Нет `Thread.Sleep()`

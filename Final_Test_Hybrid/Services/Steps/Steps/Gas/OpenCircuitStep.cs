@@ -54,7 +54,7 @@ public class OpenCircuitStep(
 
         return waitResult.Result switch
         {
-            OpenCircuitResult.Success => await HandleSuccessAsync(context),
+            OpenCircuitResult.Success => await HandleSuccessAsync(context, ct),
             OpenCircuitResult.Error => TestStepResult.Fail("Ошибка открытия клапанов контура газа"),
             _ => TestStepResult.Fail("Неизвестный результат")
         };
@@ -63,11 +63,11 @@ public class OpenCircuitStep(
     /// <summary>
     /// Обрабатывает успешное завершение открытия клапанов.
     /// </summary>
-    private async Task<TestStepResult> HandleSuccessAsync(TestStepContext context)
+    private async Task<TestStepResult> HandleSuccessAsync(TestStepContext context, CancellationToken ct)
     {
         logger.LogInformation("Открытие клапанов контура газа завершено успешно");
 
-        var writeResult = await context.OpcUa.WriteAsync(StartTag, false);
+        var writeResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
         return writeResult.Error != null ? TestStepResult.Fail($"Ошибка сброса Start: {writeResult.Error}") : TestStepResult.Pass();
     }
 

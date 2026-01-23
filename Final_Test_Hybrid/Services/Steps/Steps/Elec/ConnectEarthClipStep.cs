@@ -61,7 +61,7 @@ public class ConnectEarthClipStep(
 
         return result.Result switch
         {
-            Phase1Result.End => await HandleSuccessAsync(context),
+            Phase1Result.End => await HandleSuccessAsync(context, ct),
             Phase1Result.Error => TestStepResult.Fail(""),
             Phase1Result.Ready1 => await WaitPhase2WithTimeoutAsync(context, ct),
             _ => TestStepResult.Fail("Неизвестный результат")
@@ -110,7 +110,7 @@ public class ConnectEarthClipStep(
 
             return result.Result switch
             {
-                Phase2Result.End => await HandleSuccessAsync(context),
+                Phase2Result.End => await HandleSuccessAsync(context, ct),
                 Phase2Result.Error => TestStepResult.Fail(""),
                 _ => TestStepResult.Fail("Неизвестный результат")
             };
@@ -128,11 +128,11 @@ public class ConnectEarthClipStep(
     /// <summary>
     /// Обрабатывает успешное завершение.
     /// </summary>
-    private async Task<TestStepResult> HandleSuccessAsync(TestStepContext context)
+    private async Task<TestStepResult> HandleSuccessAsync(TestStepContext context, CancellationToken ct)
     {
         logger.LogInformation("Проверка подключения клипсы заземления завершена успешно");
 
-        var writeResult = await context.OpcUa.WriteAsync(StartTag, false);
+        var writeResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
         return writeResult.Error != null
             ? TestStepResult.Fail($"Ошибка сброса Start: {writeResult.Error}")
             : TestStepResult.Pass();

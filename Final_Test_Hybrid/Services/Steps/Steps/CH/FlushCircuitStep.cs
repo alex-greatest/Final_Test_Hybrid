@@ -54,7 +54,7 @@ public class FlushCircuitStep(
 
         return waitResult.Result switch
         {
-            FlushResult.Success => await HandleSuccessAsync(context),
+            FlushResult.Success => await HandleSuccessAsync(context, ct),
             FlushResult.Error => TestStepResult.Fail("Ошибка продувки контура"),
             _ => TestStepResult.Fail("Неизвестный результат")
         };
@@ -63,11 +63,11 @@ public class FlushCircuitStep(
     /// <summary>
     /// Обрабатывает успешное завершение продувки.
     /// </summary>
-    private async Task<TestStepResult> HandleSuccessAsync(TestStepContext context)
+    private async Task<TestStepResult> HandleSuccessAsync(TestStepContext context, CancellationToken ct)
     {
         logger.LogInformation("Продувка контура завершена успешно");
 
-        var writeResult = await context.OpcUa.WriteAsync(StartTag, false);
+        var writeResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
         return writeResult.Error != null ? TestStepResult.Fail($"Ошибка сброса Start: {writeResult.Error}") : TestStepResult.Pass();
     }
 

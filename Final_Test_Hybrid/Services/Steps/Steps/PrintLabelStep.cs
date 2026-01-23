@@ -11,7 +11,8 @@ public class PrintLabelStep : ITestStep
 
     public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
     {
-        await context.DelayAsync(TimeSpan.FromSeconds(10), ct);
+        Thread.Sleep(30000);
+        //await context.DelayAsync(TimeSpan.FromSeconds(10), ct);
         return TestStepResult.Pass();
     }
 }
