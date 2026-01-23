@@ -71,21 +71,42 @@ public static partial class ErrorDefinitions
         PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Fast_Fill_Circuit\".\"Al_NoWaterFlow\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "ch-fast-fill-circuit",
-        RelatedStepName: "CH/Fast_Fill_Circuit ");
+        RelatedStepName: "CH/Fast_Fill_Circuit");
     
     public static readonly ErrorDefinition AlNoWaterPressureСh = new(
         "П-011-01", "Нет давления воды",
         PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Fast_Fill_Circuit\".\"Al_NoWaterPressure\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "ch-fast-fill-circuit",
-        RelatedStepName: "CH/Fast_Fill_Circuit ");
+        RelatedStepName: "CH/Fast_Fill_Circuit");
     
     public static readonly ErrorDefinition AlFillTimeСh = new(
         "П-011-02", "Время заполнения превышено",
         PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Fast_Fill_Circuit\".\"Al_FillTime\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "ch-fast-fill-circuit",
-        RelatedStepName: "CH/Fast_Fill_Circuit ");
+        RelatedStepName: "CH/Fast_Fill_Circuit");
+    
+    public static readonly ErrorDefinition AlNoWaterFlowChSlow = new(
+        "П-013-00", "Нет протока воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Slow_Fill_Circuit\".\"Al_NoWaterFlow\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-slow-fill-circuit",
+        RelatedStepName: "CH/Slow_Fill_Circuit");
+    
+    public static readonly ErrorDefinition AlNoWaterPressureСhSlow = new(
+        "П-013-01", "Нет давления воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Slow_Fill_Circuit\".\"Al_NoWaterPressure\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-slow-fill-circuit",
+        RelatedStepName: "CH/Slow_Fill_Circuit");
+    
+    public static readonly ErrorDefinition AlFillTimeСhSlow = new(
+        "П-013-02", "Время заполнения превышено",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Slow_Fill_Circuit\".\"Al_FillTime\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-slow-fill-circuit",
+        RelatedStepName: "CH/Slow_Fill_Circuit");
     
 
     internal static IEnumerable<ErrorDefinition> StepErrors =>
@@ -101,6 +122,9 @@ public static partial class ErrorDefinitions
         AlNoPressureGas,
         AlNoWaterFlowCh,
         AlNoWaterPressureСh,
-        AlFillTimeСh
+        AlFillTimeСh,
+        AlNoWaterFlowChSlow,
+        AlNoWaterPressureСhSlow,
+        AlFillTimeСhSlow
     ];
 }
