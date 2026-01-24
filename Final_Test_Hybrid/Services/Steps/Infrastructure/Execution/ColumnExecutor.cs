@@ -19,6 +19,8 @@ public class ColumnExecutor(
     IErrorService errorService,
     IStepTimingService stepTimingService)
 {
+    private readonly AsyncManualResetEvent _continueGate = new(true);
+    private readonly SemaphoreSlim _retrySemaphore = new(1, 1);
     private ErrorScope? _errorScope;
 
     private record StepState(
@@ -48,13 +50,30 @@ public class ColumnExecutor(
 
     public async Task ExecuteMapAsync(TestMap map, CancellationToken ct)
     {
-        var stepsToExecute = map.Rows
-            .TakeWhile(_ => !ct.IsCancellationRequested && !_state.HasFailed)
-            .Select(row => row.Steps[ColumnIndex])
-            .Where(step => step != null);
-
-        foreach (var step in stepsToExecute)
+        if (!_state.HasFailed)
         {
+            _continueGate.Set();
+        }
+
+        var steps = map.Rows
+            .Select(row => row.Steps[ColumnIndex])
+            .Where(step => step != null)
+            .ToList();
+
+        foreach (var step in steps)
+        {
+            if (ct.IsCancellationRequested)
+            {
+                break;
+            }
+
+            await _continueGate.WaitAsync(ct);
+
+            if (ct.IsCancellationRequested)
+            {
+                break;
+            }
+
             await pauseToken.WaitWhilePausedAsync(ct);
             await ExecuteStep(step!, ct);
         }
@@ -175,6 +194,7 @@ public class ColumnExecutor(
         ClearStepErrors();
         _errorScope = new ErrorScope(errorService);
         _errorScope.Raise(errors, step.Id, step.Name);
+        _continueGate.Reset();
         _state = _state with { Status = "Ошибка", ErrorMessage = message, HasFailed = true, FailedStep = step };
         OnStateChanged?.Invoke();
     }
@@ -217,18 +237,42 @@ public class ColumnExecutor(
         }
 
         ClearStepErrors();
+        _continueGate.Set();
         _state = _state with { HasFailed = false, FailedStep = null, Status = null };
         OnStateChanged?.Invoke();
     }
 
+    /// <summary>
+    /// Открывает gate для продолжения выполнения после успешного Retry.
+    /// Вызывается из координатора после cleanup.
+    /// </summary>
+    public void OpenGate()
+    {
+        _continueGate.Set();
+    }
+
     public async Task RetryLastFailedStepAsync(CancellationToken ct)
     {
-        var step = _state.FailedStep;
-        if (step == null)
+        var acquired = false;
+        try
         {
-            return;
+            await _retrySemaphore.WaitAsync(ct);
+            acquired = true;
+
+            var step = _state.FailedStep;
+            if (step == null)
+            {
+                return;
+            }
+            RestartFailedStep();
+            await ExecuteStepCoreAsync(step, ct);
         }
-        RestartFailedStep();
-        await ExecuteStepCoreAsync(step, ct);
+        finally
+        {
+            if (acquired)
+            {
+                _retrySemaphore.Release();
+            }
+        }
     }
 }

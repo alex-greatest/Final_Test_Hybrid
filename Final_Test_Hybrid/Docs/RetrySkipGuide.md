@@ -8,231 +8,188 @@
 | **ErrorSkip** | `DB_Station.Test.End` | PLC → PC | Оператор нажал "Один шаг" |
 | **AskRepeat** | `DB_Station.Test.Ask_Repeat` | PC → PLC | PC готов к повтору |
 | **Fault** | `DB_Station.Test.Fault` | PC → PLC | Ошибка шага без блока |
-| **Test_End_Step** | `DB_Station.Test.Test_End_Step` | PLC → PC | PLC сигнал завершения (для шагов без блока) |
+| **Test_End_Step** | `DB_Station.Test.Test_End_Step` | PLC → PC | PLC сигнал завершения |
 | **Block.Selected** | `DB_VI.Block_X.Selected` | PC → PLC | Какой блок в ошибке |
 | **Block.Error** | `DB_VI.Block_X.Error` | PLC → PC | Флаг ошибки блока |
 
 ## Retry Flow (Повтор)
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  ЭТАП 1: Ошибка                                                 │
-├─────────────────────────────────────────────────────────────────┤
-│  PLC: Block.Error = true                                        │
-│  PC:  Обнаружил ошибку                                          │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│  ЭТАП 2: Подготовка к диалогу                                   │
-├─────────────────────────────────────────────────────────────────┤
-│  PC → PLC: Block.Selected = true   (указывает какой блок)       │
-│  PC:       Показывает диалог ErrorHandlingDialog                │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│  ЭТАП 3: Ожидание решения оператора                             │
-├─────────────────────────────────────────────────────────────────┤
-│  PC ждёт: Req_Repeat=true ИЛИ End=true                          │
-│  Оператор нажимает "Повтор"                                     │
-│  PLC → PC: Req_Repeat = true                                    │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│  ЭТАП 4: Сигнал готовности к повтору                            │
-├─────────────────────────────────────────────────────────────────┤
-│  PC → PLC: AskRepeat = true   ("готов повторять")               │
-│  PLC:      Сбрасывает Block.Error = false                       │
-│  PC ждёт:  Block.Error = false (подтверждение)                  │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│  ЭТАП 5: Повтор шага                                            │
-├─────────────────────────────────────────────────────────────────┤
-│  PC → PLC: Block.Start = true                                   │
-│  PLC:      Выполняет блок заново                                │
-│  Результат: Block.End=true (успех) или Block.Error=true (снова) │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│  ЭТАП 5.5: Ожидание сброса Req_Repeat                           │
-├─────────────────────────────────────────────────────────────────┤
-│  PC ждёт: Req_Repeat = false (макс 5 сек)                       │
-│  Нужно чтобы следующая ошибка не получила сразу тот же сигнал   │
-└─────────────────────────────────────────────────────────────────┘
+[1] Ошибка
+    PLC: Block.Error = true
+    PC:  SetErrorState() → gate.Reset()
+                ↓
+[2] Подготовка диалога
+    PC → PLC: Block.Selected = true
+    PC:       Показывает диалог
+                ↓
+[3] Ожидание оператора
+    PC ждёт: Req_Repeat=true ИЛИ End=true
+    Оператор: "Повтор"
+    PLC → PC: Req_Repeat = true
+                ↓
+[4] Сигнал готовности
+    PC → PLC: AskRepeat = true
+    PLC:      Block.Error = false
+    PC ждёт:  Block.Error = false
+                ↓
+[5] Fire-and-forget retry
+    PC: InvokeRetryStartedSafely() → панель закрывается
+    PC: WaitForRetrySignalResetAsync() → Req_Repeat = false
+    PC: DequeueError() → освобождает очередь
+    PC: ExecuteRetryInBackgroundAsync() → fire-and-forget
+                ↓
+[6] Следующая ошибка (если есть)
+    while цикл продолжается → диалог для следующей ошибки
+    (не ждёт завершения retry!)
 ```
-
-**Шаги:**
-1. PLC: `Block.Error = true`
-2. PC → PLC: `Block.Selected = true`
-3. PC: Показывает диалог
-4. Оператор нажимает "Повтор"
-5. PLC → PC: `Req_Repeat = true`
-6. PC → PLC: `AskRepeat = true`
-7. PLC: Сбрасывает `Block.Error = false`
-8. PC: Повторяет шаг (`Block.Start = true`)
-9. PC ждёт: `Req_Repeat = false` (макс 5 сек)
 
 ## Skip Flow (Пропуск)
 
-### Условия срабатывания Skip
-
 | Тип шага | Условие Skip |
 |----------|--------------|
-| **С блоком** (IHasPlcBlockPath) | `End=true AND Block.Error=true` |
+| **С блоком** | `End=true AND Block.Error=true` |
 | **Без блока** | `End=true` |
 
-> **Почему AND-логика для шагов с блоком?**
-> Предотвращает случайный Skip когда оператор нажимает "Один шаг" без реальной ошибки блока.
-
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  ЭТАП 1-2: Ошибка + Диалог (как в Retry)                        │
-├─────────────────────────────────────────────────────────────────┤
-│  PLC: Block.Error = true                                        │
-│  PC:  Block.Selected = true, показывает диалог                  │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│  ЭТАП 3: Оператор выбирает пропуск                              │
-├─────────────────────────────────────────────────────────────────┤
-│  Оператор нажимает "Один шаг"                                   │
-│  PLC → PC: End = true                                           │
-│  PC проверяет: Block.Error = true? (для шагов с блоком)         │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│  ЭТАП 4: Пропуск                                                │
-├─────────────────────────────────────────────────────────────────┤
-│  PC: ClearFailedState()                                         │
-│  PC: Переходит к следующему шагу                                │
-│  ❌ НЕ отправляет AskRepeat                                     │
-│  ❌ НЕ ждёт подтверждения от PLC                                │
-│  Block.Error остаётся = true в PLC                              │
-└─────────────────────────────────────────────────────────────────┘
+[1-2] Ошибка + Диалог (как в Retry)
+                ↓
+[3] Оператор: "Один шаг"
+    PLC → PC: End = true
+    PC: проверяет Block.Error = true (для шагов с блоком)
+                ↓
+[4] Пропуск
+    PC: ResetBlockStartAsync()
+    PC: ResetFaultIfNoBlockAsync()
+    PC: ClearFailedState() → gate.Set()
+    PC: DequeueError()
+    ❌ НЕ отправляет AskRepeat
 ```
 
-**Шаги:**
-1. PLC: `Block.Error = true`
-2. PC → PLC: `Block.Selected = true`
-3. PC: Показывает диалог
-4. Оператор нажимает "Один шаг"
-5. PLC → PC: `End = true`
-6. PC: `ClearFailedState()`, переход к следующему шагу
-7. НЕ отправляет AskRepeat, Block.Error остаётся true
+## Gate Mechanism (ColumnExecutor)
+
+Gate контролирует выполнение шагов в колонке:
+
+| Событие | Gate | Эффект |
+|---------|------|--------|
+| Старт теста | `Set()` | Шаги выполняются |
+| Ошибка шага | `Reset()` | Шаги ждут |
+| Skip | `Set()` | Следующий шаг запускается |
+| Retry успешен | `OpenGate()` | Следующий шаг запускается |
+| Retry упал | — | Gate закрыт, новая ошибка в очереди |
+
+```csharp
+// ExecuteMapAsync ждёт gate перед каждым шагом
+foreach (var step in steps)
+{
+    await _continueGate.WaitAsync(ct);
+    await ExecuteStep(step, ct);
+}
+
+// SetErrorState закрывает gate
+_continueGate.Reset();
+
+// ClearFailedState (Skip) открывает gate
+_continueGate.Set();
+
+// OpenGate() вызывается из координатора после успешного retry
+public void OpenGate() => _continueGate.Set();
+```
+
+## Retry Serialization (SemaphoreSlim)
+
+Предотвращает конкурентные retry на одной колонке:
+
+```csharp
+private readonly SemaphoreSlim _retrySemaphore = new(1, 1);
+
+public async Task RetryLastFailedStepAsync(CancellationToken ct)
+{
+    var acquired = false;
+    try
+    {
+        await _retrySemaphore.WaitAsync(ct);
+        acquired = true;
+        // ... retry logic
+    }
+    finally
+    {
+        if (acquired) _retrySemaphore.Release();
+    }
+}
+```
 
 ## Различия Retry vs Skip
 
-| Параметр | Retry | Skip (с блоком) | Skip (без блока) |
-|----------|-------|-----------------|------------------|
-| **Условие** | `Req_Repeat = true` | `End=true AND Block.Error=true` | `End = true` |
-| **PC → PLC** | `AskRepeat = true` | Ничего | Ничего |
-| **Ждёт подтверждения** | `Block.Error = false` | Нет | Нет |
-| **Шаг выполняется** | Заново | Нет | Нет |
-| **Block.Error** | Сбрасывается PLC | Остаётся true | — |
-| **Fault сброс** | `Fault = false` (для не-PLC) | — | `Fault = false` |
-| **Статус шага в UI** | Может стать OK | NOK (Ошибка) | NOK (Ошибка) |
+| Параметр | Retry | Skip |
+|----------|-------|------|
+| **Условие** | `Req_Repeat = true` | `End=true (AND Block.Error)` |
+| **AskRepeat** | Да | Нет |
+| **Ждёт PLC** | `Block.Error = false` | Нет |
+| **Шаг выполняется** | Заново | Нет |
+| **Gate** | `OpenGate()` после успеха | `Set()` сразу |
+| **Статус UI** | OK или NOK | NOK |
+
+## Fire-and-Forget Retry
+
+Диалог следующей ошибки появляется сразу (~100мс):
+
+```
+[00:00] Col 0 + Col 1: ошибки → в очередь
+[00:01] Диалог Col 0
+[00:10] Оператор: "Повтор"
+[00:11] SendAskRepeatAsync → Block.Error=false
+[00:12] InvokeRetryStartedSafely → панель закрывается
+[00:13] WaitForRetrySignalResetAsync → Req_Repeat=false
+[00:14] DequeueError
+[00:15] ExecuteRetryInBackgroundAsync (fire-and-forget)
+[00:16] while → HasPendingErrors = true
+[00:17] Диалог Col 1 ← СРАЗУ!
+```
 
 ## Ключевые методы
 
-### ErrorCoordinator.Interrupts.cs
+### ProcessRetryAsync
 
 ```csharp
-// Ожидание решения оператора (с blockErrorTag для AND-логики Skip)
-public Task<ErrorResolution> WaitForResolutionAsync(CancellationToken ct)
-    => WaitForResolutionAsync(null, ct);
-
-public async Task<ErrorResolution> WaitForResolutionAsync(string? blockErrorTag, CancellationToken ct)
+private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
 {
-    return await WaitForOperatorSignalAsync(blockErrorTag, ct);
-}
+    try
+    {
+        await _errorCoordinator.SendAskRepeatAsync(blockErrorTag, ct);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Ошибка SendAskRepeatAsync");
+        return;  // Диалог покажется снова
+    }
 
-// Ожидание сигналов от PLC
-private async Task<ErrorResolution> WaitForOperatorSignalAsync(string? blockErrorTag, CancellationToken ct)
-{
-    var builder = _resolution.TagWaiter.CreateWaitGroup<ErrorResolution>()
-        .WaitForTrue(BaseTags.ErrorRetry, () => ErrorResolution.Retry, "Retry");
-
-    // Skip: AND-логика для шагов с блоком
-    if (blockErrorTag != null)
-        builder.WaitForAllTrue([BaseTags.ErrorSkip, blockErrorTag], () => ErrorResolution.Skip, "Skip");
-    else
-        builder.WaitForTrue(BaseTags.ErrorSkip, () => ErrorResolution.Skip, "Skip");
-
-    builder.WithTimeout(ResolutionTimeout);
-    return (await _resolution.TagWaiter.WaitAnyAsync(builder, ct)).Result;
-}
-
-// Отправка сигнала готовности к повтору
-public async Task SendAskRepeatAsync(string? blockErrorTag, CancellationToken ct)
-{
-    await _resolution.PlcService.WriteAsync(BaseTags.AskRepeat, true, ct);
-    await WaitForPlcAcknowledgeAsync(blockErrorTag, ct);  // Ждёт Block.Error = false
-}
-
-// Ожидание сброса Req_Repeat (защита от race condition)
-public async Task WaitForRetrySignalResetAsync(CancellationToken ct)
-{
-    // Ждёт Req_Repeat = false (таймаут 5 сек)
-    // Нужно чтобы следующая ошибка не получила сразу тот же сигнал
-    var currentValue = _resolution.Subscription.GetValue<bool>(BaseTags.ErrorRetry);
-    if (currentValue != true) return;  // Уже сброшен
-
-    await _resolution.TagWaiter.WaitForFalseAsync(BaseTags.ErrorRetry,
-        timeout: TimeSpan.FromSeconds(5), ct);
+    InvokeRetryStartedSafely();
+    await _errorCoordinator.WaitForRetrySignalResetAsync(ct);
+    StateManager.DequeueError();
+    _ = ExecuteRetryInBackgroundAsync(error, executor, ct);
 }
 ```
 
-### TestExecutionCoordinator.ErrorHandling.cs
+### ExecuteRetryInBackgroundAsync
 
 ```csharp
-// Обработка решения
-private async Task ProcessErrorResolution(StepError error, ErrorResolution resolution, CancellationToken ct)
+private async Task ExecuteRetryInBackgroundAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
 {
-    if (resolution == ErrorResolution.Retry)
+    try
     {
-        await ProcessRetryAsync(error, executor, ct);
+        await executor.RetryLastFailedStepAsync(ct);
+        await ResetFaultIfNoBlockAsync(error.FailedStep, ct);
+        if (!executor.HasFailed)
+        {
+            executor.OpenGate();
+        }
     }
-    else
+    catch (OperationCanceledException) { }
+    catch (Exception ex)
     {
-        await ProcessSkipAsync(error, executor, ct);
+        _logger.LogError(ex, "Ошибка Retry в фоне");
     }
-}
-
-// Повтор
-private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
-{
-    var blockErrorTag = GetBlockErrorTag(error.FailedStep);
-    await _errorCoordinator.SendAskRepeatAsync(blockErrorTag, ct);
-    await executor.RetryLastFailedStepAsync(ct);
-    if (!executor.HasFailed)
-    {
-        StateManager.DequeueError();
-    }
-
-    await ResetFaultIfNoBlockAsync(error.FailedStep);  // Сброс Fault для шагов без блока
-    await _errorCoordinator.WaitForRetrySignalResetAsync(ct);
-}
-
-// Пропуск
-private async Task ProcessSkipAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
-{
-    await ResetBlockStartAsync(error.FailedStep);
-    await ResetFaultIfNoBlockAsync(error.FailedStep);  // Сброс Fault для шагов без блока
-
-    await WaitForSkipSignalsResetAsync(error.FailedStep, ct);
-
-    StateManager.MarkErrorSkipped();
-    executor.ClearFailedState();
-    StateManager.DequeueError();
-}
-
-// Сброс Fault для шагов БЕЗ блока (PLC сбросит Test_End_Step)
-private async Task ResetFaultIfNoBlockAsync(ITestStep? step)
-{
-    if (step is IHasPlcBlockPath)
-        return;
-
-    await _plcService.WriteAsync(BaseTags.Fault, false);
 }
 ```
 
@@ -240,123 +197,22 @@ private async Task ResetFaultIfNoBlockAsync(ITestStep? step)
 
 | Файл | Назначение |
 |------|------------|
-| `ErrorCoordinator.Interrupts.cs` | WaitForResolutionAsync, SendAskRepeatAsync, WaitForRetrySignalResetAsync |
-| `TestExecutionCoordinator.ErrorHandling.cs` | ProcessRetryAsync, ProcessSkipAsync, ResetFaultIfNoBlockAsync |
-| `PreExecutionCoordinator.Retry.cs` | RetryStepAsync для PreExecution шагов |
-| `BaseTags.cs` | Константы PLC тегов (Fault, Test_End_Step) |
-| `PlcBlockTagHelper.cs` | Формирование тегов Block.Selected, Block.Error |
+| `ColumnExecutor.cs` | Gate, SemaphoreSlim, RetryLastFailedStepAsync |
+| `TestExecutionCoordinator.ErrorHandling.cs` | ProcessRetryAsync, ExecuteRetryInBackgroundAsync |
+| `ErrorCoordinator.Interrupts.cs` | WaitForResolutionAsync, SendAskRepeatAsync |
+| `AsyncManualResetEvent.cs` | Gate implementation |
 
-## UI Диалог
+## Edge Cases
 
-**Файл:** `Components/Errors/ErrorHandlingDialog.razor`
+### Ошибка SendAskRepeatAsync
 
-| Кнопка | PLC сигнал | Действие |
-|--------|------------|----------|
-| "Повтор" | `Req_Repeat = true` | Retry шага |
-| "Один шаг" | `End = true` | Skip шага (NOK) |
-| "СТОП" | — | Остановка теста |
+При ошибке связи с PLC → return → диалог показывается снова.
 
-### Закрытие панели ошибки (FloatingErrorPanel)
+### Retry снова упал
 
-Панель ошибки закрывается **после подтверждения PLC**, а не сразу при нажатии кнопки:
+SetErrorState() → gate.Reset() → новая ошибка в очередь → новый диалог.
 
-```
-1. Оператор нажимает "Повтор"
-2. PLC → PC: Req_Repeat = true
-3. PC → PLC: AskRepeat = true
-4. PLC: Сбрасывает Block.Error = false
-5. PC ждёт: Block.Error = false  ← подтверждение получено
-6. UI: Панель закрывается       ← OnRetryStarted событие
-7. PC: Выполняет retry шага
-```
+### Fault для non-PLC шагов
 
-**Реализация:**
-- `TestExecutionCoordinator.OnRetryStarted` — событие после `SendAskRepeatAsync`
-- `BoilerInfo.razor` подписан на событие → вызывает `CloseErrorPanel()`
-
-**Почему не сразу при нажатии:**
-- Если запись `AskRepeat` в PLC не удалась — панель остаётся открытой
-- Пользователь видит что система ждёт подтверждения от PLC
-
-**Почему не после завершения retry:**
-- Retry может выполняться долго
-- Пользователь должен видеть прогресс в гриде, а не заблокированную панель
-
-## Особенности
-
-### canSkip для PreExecution шагов
-
-Некоторые PreExecution шаги (например `BlockBoilerAdapterStep`) имеют `canSkip: false`:
-
-```csharp
-return PreExecutionResult.FailRetryable(
-    error,
-    canSkip: false,  // Skip отключен для этого шага
-    userMessage: error,
-    errors: []);
-```
-
-При `canSkip: false` даже если оператор нажмёт "Один шаг", пропуск не сработает.
-
-### Race condition при нескольких ошибках
-
-При нескольких ошибках в очереди возможен race condition с сигналом `Req_Repeat`:
-
-```
-Проблема:
-1. Ошибка 1 (col 2) + Ошибка 2 (col 3) в очереди
-2. Оператор нажимает Retry → Req_Repeat = true
-3. PC обрабатывает ошибку 1, отправляет AskRepeat
-4. PLC начинает сбрасывать Req_Repeat...
-5. PC обрабатывает ошибку 2 → CheckCurrentValues() видит Req_Repeat ВСЁ ЕЩЁ true!
-6. Ошибка 2 сразу получает Retry без нажатия оператором
-
-Решение:
-После retry PC ждёт Req_Repeat = false (WaitForRetrySignalResetAsync)
-чтобы следующая ошибка не получила сразу тот же сигнал.
-```
-
-### Retry: PLC vs не-PLC шаги
-
-При Retry поведение зависит от типа шага:
-
-| Этап | PLC шаг (IHasPlcBlockPath) | Не-PLC шаг |
-|------|------------------------|------------|
-| `GetBlockErrorTag()` | `DB_VI.Block_X.Error` | `null` |
-| `WaitForPlcAcknowledgeAsync` | **Ждёт** Block.Error=false | Пропускает (return) |
-| `RetryLastFailedStepAsync` | После сброса Block.Error | Сразу |
-| `ResetFaultIfNoBlockAsync` | Пропускает (return) | **Сбрасывает** Fault=false |
-| `WaitForRetrySignalResetAsync` | Ждёт Req_Repeat=false | Ждёт Req_Repeat=false |
-
-**Для PLC шагов — двойная защита:**
-1. **Block.Error=false** — PLC готов к новому запуску блока
-2. **Req_Repeat=false** — следующая ошибка не получит сразу тот же сигнал
-
-**Для не-PLC шагов — тройная защита:**
-1. **Fault=false** → PLC сбрасывает Test_End_Step=false
-2. **Test_End_Step=false** — следующая ошибка не получит сразу Skip
-3. **Req_Repeat=false** — следующая ошибка не получит сразу Retry
-
-### Сброс Fault для шагов без блока
-
-Для шагов **без PLC блока** используется тег `Fault` вместо `Block.Error`:
-
-```
-Проблема (до исправления):
-1. PC ставит Fault = true при ошибке шага без блока
-2. Оператор нажимает Skip → PLC: Test_End_Step = true
-3. PC НЕ сбрасывал Fault = false
-4. PLC ждёт сброс Fault чтобы сбросить Test_End_Step
-5. На следующей ошибке CheckCurrentValues видит Test_End_Step = true → сразу Skip!
-
-Решение:
-При Skip и Retry для шагов без блока PC сбрасывает Fault = false
-→ PLC автоматически сбрасывает Test_End_Step = false
-```
-
-| Этап | PLC шаг (IHasPlcBlockPath) | Не-PLC шаг |
-|------|------------------------|------------|
-| Ошибка | PC: `Block.Selected = true` | PC: `Fault = true` |
-| Skip/Retry | — | PC: `Fault = false` |
-| PLC реакция | Сам сбрасывает `Block.Error` | Сбрасывает `Test_End_Step = false` |
-| Ожидание сброса | `Block.End = false` | `Test_End_Step = false` |
+`ResetFaultIfNoBlockAsync` сбрасывает `Fault=false` только для шагов без PLC-блока.
+При нескольких non-PLC ошибках возможен кратковременный сброс Fault — самовосстанавливается при обработке следующей ошибки.

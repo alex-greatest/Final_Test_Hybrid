@@ -288,19 +288,54 @@ public partial class TestExecutionCoordinator
 
     /// <summary>
     /// Обрабатывает повтор шага.
+    /// Fire-and-forget для retry, чтобы диалог следующей ошибки появился сразу.
     /// </summary>
     private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
     {
-        var blockErrorTag = GetBlockErrorTag(error.FailedStep);
-        await _errorCoordinator.SendAskRepeatAsync(blockErrorTag, ct);
-        InvokeRetryStartedSafely();
-        await executor.RetryLastFailedStepAsync(ct);
-        if (!executor.HasFailed)
+        try
         {
-            StateManager.DequeueError();
+            var blockErrorTag = GetBlockErrorTag(error.FailedStep);
+            await _errorCoordinator.SendAskRepeatAsync(blockErrorTag, ct);
         }
-        await ResetFaultIfNoBlockAsync(error.FailedStep, ct);
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка SendAskRepeatAsync для колонки {Column}", error.ColumnIndex);
+            return;
+        }
+
+        InvokeRetryStartedSafely();
+
         await _errorCoordinator.WaitForRetrySignalResetAsync(ct);
+
+        StateManager.DequeueError();
+
+        _ = ExecuteRetryInBackgroundAsync(error, executor, ct);
+    }
+
+    /// <summary>
+    /// Выполняет retry шага в фоне.
+    /// Открывает gate после успешного завершения.
+    /// </summary>
+    private async Task ExecuteRetryInBackgroundAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
+    {
+        try
+        {
+            await executor.RetryLastFailedStepAsync(ct);
+
+            await ResetFaultIfNoBlockAsync(error.FailedStep, ct);
+
+            if (!executor.HasFailed)
+            {
+                executor.OpenGate();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка Retry в фоне для колонки {Column}", error.ColumnIndex);
+        }
     }
 
     /// <summary>
