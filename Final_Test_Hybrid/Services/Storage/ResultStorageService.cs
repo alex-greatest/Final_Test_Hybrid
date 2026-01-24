@@ -33,7 +33,16 @@ public class ResultStorageService(
             return [];
         }
 
-        var settingsDict = await LoadSettingsAsync(context, ct);
+        var boilerTypeId = await GetBoilerTypeIdAsync(context, operation.BoilerId, ct);
+        if (boilerTypeId == null)
+        {
+            logger.LogWarning(
+                "Не удалось определить BoilerTypeId для Boiler {BoilerId}",
+                operation.BoilerId);
+            return [];
+        }
+
+        var settingsDict = await LoadSettingsAsync(context, boilerTypeId.Value, ct);
         var results = CreateResultEntities(testResults, operation, settingsDict);
 
         logger.LogInformation(
@@ -44,17 +53,32 @@ public class ResultStorageService(
     }
 
     /// <summary>
-    /// Загружает все активные настройки результатов в словарь.
+    /// Получает BoilerTypeId через цепочку Boiler → BoilerTypeCycle.
     /// </summary>
-    private static async Task<Dictionary<(string AddressValue, AuditType AuditType), ResultSettingHistory>> LoadSettingsAsync(
+    private static async Task<long?> GetBoilerTypeIdAsync(
         AppDbContext context,
+        long boilerId,
+        CancellationToken ct)
+    {
+        return await context.Boilers
+            .Where(b => b.Id == boilerId)
+            .Select(b => (long?)b.BoilerTypeCycle!.BoilerTypeId)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    /// <summary>
+    /// Загружает активные настройки результатов для указанного типа котла в словарь.
+    /// </summary>
+    private static async Task<Dictionary<string, ResultSettingHistory>> LoadSettingsAsync(
+        AppDbContext context,
+        long boilerTypeId,
         CancellationToken ct)
     {
         var settings = await context.ResultSettingHistories
-            .Where(h => h.IsActive)
+            .Where(h => h.IsActive && h.BoilerTypeId == boilerTypeId)
             .ToListAsync(ct);
 
-        return settings.ToDictionary(h => (h.AddressValue, h.AuditType));
+        return settings.ToDictionary(h => h.AddressValue);
     }
 
     /// <summary>
@@ -63,21 +87,17 @@ public class ResultStorageService(
     private List<Result> CreateResultEntities(
         IReadOnlyList<Models.Results.TestResultItem> testResults,
         Operation operation,
-        Dictionary<(string AddressValue, AuditType AuditType), ResultSettingHistory> settingsDict)
+        Dictionary<string, ResultSettingHistory> settingsDict)
     {
         var results = new List<Result>(testResults.Count);
 
         foreach (var item in testResults)
         {
-            var auditType = item.IsRanged ? AuditType.NumericWithRange : AuditType.SimpleStatus;
-            var key = (item.ParameterName, auditType);
-
-            if (!settingsDict.TryGetValue(key, out var settingHistory))
+            if (!settingsDict.TryGetValue(item.ParameterName, out var settingHistory))
             {
                 logger.LogWarning(
-                    "ResultSettingHistory не найдена для параметра {ParameterName} с AuditType={AuditType}",
-                    item.ParameterName,
-                    auditType);
+                    "ResultSettingHistory не найдена для параметра {ParameterName}",
+                    item.ParameterName);
                 continue;
             }
 

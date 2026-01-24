@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Services.Archive;
 using Final_Test_Hybrid.Services.Database;
 using Final_Test_Hybrid.Services.Database.Config;
 using Final_Test_Hybrid.Settings.Database;
@@ -34,6 +35,8 @@ public static class DatabaseServiceExtensions
         services.AddScoped<ResultSettingsService>();
         services.AddScoped<StepFinalTestService>();
         services.AddScoped<ErrorSettingsTemplateService>();
+        services.AddScoped<OperationDetailsService>();
+        services.AddScoped<ArchiveExcelExportService>();
 
         return services;
     }

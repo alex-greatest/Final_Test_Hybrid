@@ -1,0 +1,17 @@
+@using Final_Test_Hybrid.Models.Archive
+
+<div class="tab-content">
+    <RadzenDataGrid Data="@Data" TItem="ArchiveStepTimeItem"
+                AllowFiltering="false" AllowSorting="true"
+                EmptyText="Нет данных">
+    <Columns>
+        <RadzenDataGridColumn TItem="ArchiveStepTimeItem" Property="StepName" Title="Шаг" />
+        <RadzenDataGridColumn TItem="ArchiveStepTimeItem" Property="Duration" Title="Время" />
+    </Columns>
+    </RadzenDataGrid>
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<ArchiveStepTimeItem> Data { get; set; } = [];
+}

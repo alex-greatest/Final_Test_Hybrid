@@ -77,7 +77,7 @@
 
 /* Ячейки таблицы */
 ::deep .rz-data-grid .rz-cell-data {
-    font-size: 19px;
+    font-size: 21px;
     color: black !important;
     white-space: nowrap;
 }

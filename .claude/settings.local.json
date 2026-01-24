@@ -93,7 +93,8 @@
       "mcp__codex-cli__listSessions",
       "mcp__codex-cli__codex-reply",
       "Bash(tree:*)",
-      "Bash(dotnet ef database update:*)"
+      "Bash(dotnet ef database update:*)",
+      "WebFetch(domain:forum.radzen.com)"
     ]
   }
 }
