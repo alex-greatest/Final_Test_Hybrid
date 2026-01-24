@@ -224,6 +224,20 @@ public class BoilerState
     }
 
     /// <summary>
+    /// Сохраняет текущий серийный номер и время как "последний тест".
+    /// Вызывается перед очисткой шагов для сохранения истории.
+    /// </summary>
+    public void SaveLastTestInfo()
+    {
+        lock (_lock)
+        {
+            _lastSerialNumber = _serialNumber;
+            _lastTestCompletedAt = DateTime.Now;
+        }
+        NotifyChanged();
+    }
+
+    /// <summary>
     /// Очищает информацию о предыдущем тесте.
     /// Вызывается перед стартом нового теста.
     /// </summary>
@@ -234,6 +248,7 @@ public class BoilerState
             _lastSerialNumber = null;
             _lastTestCompletedAt = null;
         }
+        NotifyChanged();
     }
 
     private void UpdateState(

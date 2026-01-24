@@ -64,7 +64,21 @@
                                             Placeholder="Выберите шаг..."
                                             AllowClear="true"
                                             Style="width: 100%"
-                                            Disabled="@(!_isFileActive)" />
+                                            Disabled="@(!_isFileActive)">
+                                <Template Context="step">
+                                    <span title="@step.Name">
+                                        @step.Name
+                                    </span>
+                                </Template>
+                                <ValueTemplate Context="step">
+                                    @if (step != null)
+                                    {
+                                        <span title="@step.Name">
+                                            @step.Name
+                                        </span>
+                                    }
+                                </ValueTemplate>
+                            </RadzenDropDown>
                         </Template>
                     </RadzenDataGridColumn>
                 }

@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Models;
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 
@@ -11,9 +12,17 @@ public class TestSequenseService
         public const string BarcodeScannerMes = "Сканирование штрихкода MES";
     }
 
+    private readonly StepHistoryService _stepHistoryService;
+    private readonly BoilerState _boilerState;
     private readonly List<TestSequenseData> _steps = [];
     private readonly Lock _lock = new();
     public event Action? OnDataChanged;
+
+    public TestSequenseService(StepHistoryService stepHistoryService, BoilerState boilerState)
+    {
+        _stepHistoryService = stepHistoryService;
+        _boilerState = boilerState;
+    }
     public IEnumerable<TestSequenseData> Data => GetStepsCopy();
     public int Count => GetCount();
 
@@ -153,6 +162,9 @@ public class TestSequenseService
 
     public void ClearAllExceptScan()
     {
+        _boilerState.SaveLastTestInfo();
+        _stepHistoryService.CaptureSnapshot(GetStepsCopy());
+
         lock (_lock)
         {
             _steps.RemoveAll(s => !IsScanModule(s.Module));

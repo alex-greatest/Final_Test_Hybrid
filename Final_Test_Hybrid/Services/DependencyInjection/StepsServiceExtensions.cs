@@ -83,6 +83,7 @@ public static class StepsServiceExtensions
         services.AddSingleton<ITestResultStorage>(sp => sp.GetRequiredService<TestResultStorageRouter>());
 
         // Test sequence
+        services.AddSingleton<StepHistoryService>();
         services.AddSingleton<TestSequenseService>();
         services.AddSingleton<ITestSequenceLoader, TestSequenceLoader>();
         services.AddSingleton<ITestMapBuilder, TestMapBuilder>();

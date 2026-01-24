@@ -276,3 +276,10 @@
     color: #999 !important;
 }
 
+/* Ellipsis для обрезанного текста в dropdown */
+.editor-layout ::deep .rz-dropdown-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
