@@ -57,11 +57,7 @@ public partial class PreExecutionCoordinator
         }
 
         state.PhaseState.Clear();
-        if (!StartTestExecution(context))
-        {
-            return PreExecutionResult.Fail("Test execution did not start");
-        }
-        return PreExecutionResult.TestStarted();
+        return !StartTestExecution(context) ? PreExecutionResult.Fail("Test execution did not start") : PreExecutionResult.TestStarted();
     }
 
     private async Task<PreExecutionResult> ExecuteRepeatPipelineAsync(CancellationToken ct)
@@ -97,11 +93,7 @@ public partial class PreExecutionCoordinator
         }
 
         state.PhaseState.Clear();
-        if (!StartTestExecution(context))
-        {
-            return PreExecutionResult.Fail("Test execution did not start");
-        }
-        return PreExecutionResult.TestStarted();
+        return !StartTestExecution(context) ? PreExecutionResult.Fail("Test execution did not start") : PreExecutionResult.TestStarted();
     }
 
     private async Task<PreExecutionResult> ExecuteNokRepeatPipelineAsync(CancellationToken ct)
@@ -119,7 +111,7 @@ public partial class PreExecutionCoordinator
             // Выполнить полный pipeline с сохранённым штрихкодом
             var result = await ExecutePreExecutionPipelineAsync(CurrentBarcode, ct);
 
-            if (result.Status == PreExecutionStatus.TestStarted || result.Status == PreExecutionStatus.Cancelled)
+            if (result.Status is PreExecutionStatus.TestStarted or PreExecutionStatus.Cancelled)
             {
                 return result;
             }

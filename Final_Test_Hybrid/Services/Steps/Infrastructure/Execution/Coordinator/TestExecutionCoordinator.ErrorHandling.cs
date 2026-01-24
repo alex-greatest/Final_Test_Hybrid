@@ -147,7 +147,7 @@ public partial class TestExecutionCoordinator
             }
             StateManager.TransitionTo(ExecutionState.PausedOnError);
             await SetSelectedAsync(error, true);
-            await SetFaultIfNoBlockAsync(error.FailedStep);
+            await SetFaultIfNoBlockAsync(error.FailedStep, cts.Token);
             OnErrorOccurred?.Invoke(error);
             ErrorResolution resolution;
             try
@@ -168,8 +168,7 @@ public partial class TestExecutionCoordinator
             }
             if (resolution == ErrorResolution.Timeout)
             {
-                await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout, cts.Token);
-                await cts.CancelAsync();
+                await HandleTagTimeoutAsync("ожидание решения оператора", cts.Token);
                 break;
             }
             await ProcessErrorResolution(error, resolution, cts.Token);
@@ -179,6 +178,26 @@ public partial class TestExecutionCoordinator
         {
             StateManager.TransitionTo(ExecutionState.Running);
         }
+    }
+
+    /// <summary>
+    /// Устанавливает тег Selected для PLC-блока.
+    /// </summary>
+    /// <summary>
+    /// Обрабатывает таймаут ожидания PLC-тегов как жёсткий стоп теста.
+    /// </summary>
+    private async Task HandleTagTimeoutAsync(string context, CancellationToken ct)
+    {
+        var cts = _cts;
+        if (cts == null)
+        {
+            _logger.LogWarning("TagTimeout во время {Context}, но нет активного CancellationTokenSource", context);
+            return;
+        }
+
+        _logger.LogWarning("TagTimeout во время {Context} — жёсткий стоп теста", context);
+        await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout, ct);
+        await cts.CancelAsync();
     }
 
     /// <summary>
@@ -206,29 +225,29 @@ public partial class TestExecutionCoordinator
     /// <summary>
     /// Устанавливает Fault для шагов без PLC-блока.
     /// </summary>
-    private async Task SetFaultIfNoBlockAsync(ITestStep? step)
+    private async Task SetFaultIfNoBlockAsync(ITestStep? step, CancellationToken ct)
     {
-        if (step is IHasPlcBlock)
+        if (step is IHasPlcBlockPath)
         {
             return;
         }
 
         _logger.LogDebug("Установка Fault=true для шага без блока");
-        await _plcService.WriteAsync(BaseTags.Fault, true);
+        await _plcService.WriteAsync(BaseTags.Fault, true, ct);
     }
 
     /// <summary>
     /// Сбрасывает Fault для шагов без PLC-блока.
     /// </summary>
-    private async Task ResetFaultIfNoBlockAsync(ITestStep? step)
+    private async Task ResetFaultIfNoBlockAsync(ITestStep? step, CancellationToken ct)
     {
-        if (step is IHasPlcBlock)
+        if (step is IHasPlcBlockPath)
         {
             return;
         }
 
         _logger.LogDebug("Сброс Fault=false для шага без блока");
-        await _plcService.WriteAsync(BaseTags.Fault, false);
+        await _plcService.WriteAsync(BaseTags.Fault, false, ct);
     }
 
     /// <summary>
@@ -280,7 +299,7 @@ public partial class TestExecutionCoordinator
         {
             StateManager.DequeueError();
         }
-        await ResetFaultIfNoBlockAsync(error.FailedStep);
+        await ResetFaultIfNoBlockAsync(error.FailedStep, ct);
         await _errorCoordinator.WaitForRetrySignalResetAsync(ct);
     }
 
@@ -289,11 +308,20 @@ public partial class TestExecutionCoordinator
     /// </summary>
     private async Task ProcessSkipAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
     {
-        await ResetBlockStartAsync(error.FailedStep);
-        await ResetFaultIfNoBlockAsync(error.FailedStep);
+        await ResetBlockStartAsync(error.FailedStep, ct);
+        await ResetFaultIfNoBlockAsync(error.FailedStep, ct);
 
         _logger.LogWarning(">>> ProcessSkipAsync: НАЧАЛО ожидания сброса сигналов");
-        await WaitForSkipSignalsResetAsync(error.FailedStep, ct);
+        try
+        {
+            await WaitForSkipSignalsResetAsync(error.FailedStep, ct);
+        }
+        catch (TimeoutException)
+        {
+            _logger.LogWarning(">>> ProcessSkipAsync: TIMEOUT РѕР¶РёРґР°РЅРёСЏ СЃР±СЂРѕСЃР° СЃРёРіРЅР°Р»РѕРІ");
+            await HandleTagTimeoutAsync("сброс сигналов Skip", ct);
+            return;
+        }
         _logger.LogWarning(">>> ProcessSkipAsync: КОНЕЦ ожидания сброса сигналов");
 
         StateManager.MarkErrorSkipped();
@@ -306,32 +334,24 @@ public partial class TestExecutionCoordinator
     /// </summary>
     private async Task WaitForSkipSignalsResetAsync(ITestStep? step, CancellationToken ct)
     {
-        if (step is IHasPlcBlockPath plcStep)
+        if (step is IHasPlcBlockPath)
         {
-            var endTag = PlcBlockTagHelper.GetEndTag(plcStep);
-            var errorTag = PlcBlockTagHelper.GetErrorTag(plcStep);
-            if (endTag != null)
-            {
-                _logger.LogDebug("Ожидание сброса Block.End для {BlockPath}", plcStep.PlcBlockPath);
-                await _tagWaiter.WaitForFalseAsync(endTag, timeout: TimeSpan.FromSeconds(5), ct);
-            }
-            if (errorTag != null)
-            {
-                _logger.LogDebug("Ожидание сброса Block.Error для {BlockPath}", plcStep.PlcBlockPath);
-                await _tagWaiter.WaitForFalseAsync(errorTag, timeout: TimeSpan.FromSeconds(5), ct);
-            }
+            // Для шагов С блоком: НЕ ждём сброса сигналов
+            // Триггер Skip (End=true AND Error=true) уже был в WaitForResolutionAsync
+            // Block.Error и Block.End сбросится plc
+            return;
         }
-        else
-        {
-            _logger.LogDebug("Ожидание сброса Test_End_Step");
-            await _tagWaiter.WaitForFalseAsync(BaseTags.TestEndStep, timeout: TimeSpan.FromSeconds(5), ct);
-        }
+
+        // Для шагов БЕЗ блока: ждём Test_End_Step=false с таймаутом
+        // (PLC сбросит после того как PC сбросит Fault)
+        _logger.LogDebug("Ожидание сброса Test_End_Step");
+        await _tagWaiter.WaitForFalseAsync(BaseTags.TestEndStep, timeout: TimeSpan.FromSeconds(5), ct);
     }
 
     /// <summary>
     /// Сбрасывает сигнал Start для PLC-блока.
     /// </summary>
-    private async Task ResetBlockStartAsync(ITestStep? step)
+    private async Task ResetBlockStartAsync(ITestStep? step, CancellationToken ct)
     {
         if (step is not IHasPlcBlockPath plcStep)
         {
@@ -343,7 +363,7 @@ public partial class TestExecutionCoordinator
             return;
         }
         _logger.LogDebug("Сброс Start для {BlockPath}", plcStep.PlcBlockPath);
-        await _plcService.WriteAsync(startTag, false);
+        await _plcService.WriteAsync(startTag, false, ct);
     }
 
     /// <summary>

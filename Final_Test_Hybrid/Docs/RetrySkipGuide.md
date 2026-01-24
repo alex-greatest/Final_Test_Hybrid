@@ -78,7 +78,7 @@
 
 | Тип шага | Условие Skip |
 |----------|--------------|
-| **С блоком** (IHasPlcBlock) | `End=true AND Block.Error=true` |
+| **С блоком** (IHasPlcBlockPath) | `End=true AND Block.Error=true` |
 | **Без блока** | `End=true` |
 
 > **Почему AND-логика для шагов с блоком?**
@@ -229,7 +229,7 @@ private async Task ProcessSkipAsync(StepError error, ColumnExecutor executor, Ca
 // Сброс Fault для шагов БЕЗ блока (PLC сбросит Test_End_Step)
 private async Task ResetFaultIfNoBlockAsync(ITestStep? step)
 {
-    if (step is IHasPlcBlock)
+    if (step is IHasPlcBlockPath)
         return;
 
     await _plcService.WriteAsync(BaseTags.Fault, false);
@@ -320,7 +320,7 @@ return PreExecutionResult.FailRetryable(
 
 При Retry поведение зависит от типа шага:
 
-| Этап | PLC шаг (IHasPlcBlock) | Не-PLC шаг |
+| Этап | PLC шаг (IHasPlcBlockPath) | Не-PLC шаг |
 |------|------------------------|------------|
 | `GetBlockErrorTag()` | `DB_VI.Block_X.Error` | `null` |
 | `WaitForPlcAcknowledgeAsync` | **Ждёт** Block.Error=false | Пропускает (return) |
@@ -354,7 +354,7 @@ return PreExecutionResult.FailRetryable(
 → PLC автоматически сбрасывает Test_End_Step = false
 ```
 
-| Этап | PLC шаг (IHasPlcBlock) | Не-PLC шаг |
+| Этап | PLC шаг (IHasPlcBlockPath) | Не-PLC шаг |
 |------|------------------------|------------|
 | Ошибка | PC: `Block.Selected = true` | PC: `Fault = true` |
 | Skip/Retry | — | PC: `Fault = false` |
