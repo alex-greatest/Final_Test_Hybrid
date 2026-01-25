@@ -292,18 +292,23 @@ public class TagWaiter(
             var condition = builder.Conditions[i];
             var current = subscription.GetValue(condition.NodeId);
 
-            // ОТЛАДКА: Логируем что видит CheckCurrentValues
-            logger.LogWarning(">>> CheckCurrentValues: {NodeId} = {Value}",
-                condition.NodeId, current);
+            // Для WaitForAllTrue: проверяем ВСЕ теги группы
+            if (condition.AdditionalNodeIds != null)
+            {
+                if (!CheckAllConditionTags(condition))
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                // Для обычных условий: проверяем основной тег
+                if (current == null || !condition.Condition(current))
+                {
+                    continue;
+                }
+            }
 
-            if (current == null || !condition.Condition(current))
-            {
-                continue;
-            }
-            if (!CheckAdditionalTags(condition))
-            {
-                continue;
-            }
             var result = builder.ResultCallbacks[i](current);
             logger.LogInformation("WaitGroup: условие [{Index}] {Name} уже выполнено, тег {NodeId} = {Value}",
                 i, condition.Name ?? "unnamed", condition.NodeId, current);
@@ -321,6 +326,10 @@ public class TagWaiter(
         return null;
     }
 
+    /// <summary>
+    /// Проверяет только дополнительные теги.
+    /// Используется для простых условий без AND-логики.
+    /// </summary>
     private bool CheckAdditionalTags(TagWaitCondition condition)
     {
         if (condition.AdditionalNodeIds == null)
@@ -336,6 +345,23 @@ public class TagWaiter(
             }
         }
         return true;
+    }
+
+    /// <summary>
+    /// Проверяет ВСЕ теги группы: основной NodeId И все AdditionalNodeIds.
+    /// Используется для WaitForAllTrue где handler срабатывает от любого тега группы.
+    /// </summary>
+    private bool CheckAllConditionTags(TagWaitCondition condition)
+    {
+        // Проверяем основной NodeId
+        var mainValue = subscription.GetValue<bool>(condition.NodeId);
+        if (mainValue != true)
+        {
+            return false;
+        }
+
+        // Проверяем дополнительные теги
+        return CheckAdditionalTags(condition);
     }
 
     private void RecheckAfterSubscribe<TResult>(
@@ -399,14 +425,26 @@ public class TagWaiter(
             {
                 return Task.CompletedTask;
             }
-            if (!condition.Condition(value))
+
+            // Для WaitForAllTrue (есть AdditionalNodeIds): проверяем ВСЕ теги группы
+            // Это критически важно: handler срабатывает от любого тега, но мы должны
+            // убедиться что ВСЕ теги true, а не только тот что триггернул handler
+            if (condition.AdditionalNodeIds != null)
             {
-                return Task.CompletedTask;
+                if (!CheckAllConditionTags(condition))
+                {
+                    return Task.CompletedTask;
+                }
             }
-            if (!CheckAdditionalTags(condition))
+            else
             {
-                return Task.CompletedTask;
+                // Для обычных условий: проверяем входящее значение
+                if (!condition.Condition(value))
+                {
+                    return Task.CompletedTask;
+                }
             }
+
             var result = resultCallback(value);
             logger.LogInformation("WaitGroup: условие [{Index}] {Name} сработало, тег {NodeId} = {Value}, результат = {Result}",
                 index, condition.Name ?? "unnamed", condition.NodeId, value, result);

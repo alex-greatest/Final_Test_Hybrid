@@ -1,4 +1,242 @@
- целом — да, план стал корректнее: гонка закрыта, DisposeAsync теперь ждёт оба типа операций. Два нюанса, которые я бы учёл:
-
-Лучше привязать PauseIfStillNeeded именно к AutoModeDisabled, чтобы в будущем PauseAndWait по другой причине не начал зависеть от _autoReady. Самый надёжный вариант — сделать раннюю проверку в ProcessInterruptAsync по reason (до NotifyInterrupt) и return, либо передать reason в ExecuteInterruptActionAsync.
-Сейчас предупреждение/сообщение всё равно покажутся, даже если _autoReady уже восстановлен. Это не ломает логику, но может давать ложное предупреждение. Если хочешь избежать — перенеси проверку _autoReady.IsReady раньше NotifyInterrupt.
+19:22:14 [INF] [Начало шага] Gas/Open_Circuit
+19:22:14 [INF] Запуск открытия клапанов контура газа
+19:22:14 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."Gas"."Open_Circuit"."Start"], значение: true
+19:22:14 [INF] [Начало шага] CH/Flush_Circuit
+19:22:14 [INF] Запуск продувки контура отопления
+19:22:14 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."CH"."Flush_Circuit"."Start"], значение: true
+19:22:14 [INF] [Начало шага] DHW/Flush_DHW_Circuit_Normal_Direction
+19:22:14 [INF] Запуск продувки контура ГВС в прямом направлении
+19:22:14 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."DHW"."Flush_Circuit_Normal_Direction"."Start"], значение: true
+19:22:14 [INF] [Начало шага] Elec/Connect_Earth_Clip
+19:22:14 [INF] Запуск проверки подключения клипсы заземления
+19:22:14 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."Elec"."Connect_Earth_Clip"."Start"], значение: true
+19:22:14 [INF]   Сигнал уже активен: End → "Success"
+19:22:14 [INF] Открытие клапанов контура газа завершено успешно
+19:22:14 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."Gas"."Open_Circuit"."Start"], значение: false
+19:22:14 [INF]   Сигнал уже активен: End → "Success"
+19:22:14 [INF] Продувка контура ГВС в прямом направлении завершена успешно
+19:22:14 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."DHW"."Flush_Circuit_Normal_Direction"."Start"], значение: false
+19:22:14 [INF] [Конец шага] Gas/Open_Circuit
+19:22:14 [INF] [Начало шага] Gas/Leak_Test
+19:22:14 [INF] Запуск проверки утечки контура газа
+19:22:14 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."Gas"."Leak_Test"."Start"], значение: true
+19:22:14 [INF] [Конец шага] DHW/Flush_DHW_Circuit_Normal_Direction
+19:22:14 [INF] [Начало шага] DHW/Fill_Circuit_Normal_Direction
+19:22:14 [INF] Запуск заполнения контура ГВС в прямом направлении
+19:22:14 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."DHW"."Fill_Circuit_Normal_Direction"."Start"], значение: true
+19:22:15 [INF] Тег ns=3;s="DB_VI"."Elec"."Connect_Earth_Clip"."Start" = true
+19:22:16 [INF] Тег ns=3;s="DB_VI"."Elec"."Connect_Earth_Clip"."Start" = false
+19:22:25 [INF] Тег ns=3;s="DB_VI"."CH"."Flush_Circuit"."Error" = true
+19:22:25 [INF]   Получен сигнал: Error → "Error"
+19:22:25 [ERR] Шаг CH/Flush_Circuit в колонке 1: Ошибка продувки контура
+19:22:25 [ERR] ОШИБКА в шаге 'CH/Flush_Circuit': Ошибка продувки контура
+19:22:25 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."CH"."Flush_Circuit"."Selected"], значение: true
+19:22:25 [INF] Ожидание решения оператора (без таймаута)...
+19:22:26 [INF] Тег ns=3;s="DB_VI"."CH"."Flush_Circuit"."Error" = false
+19:22:35 [INF] Тег ns=3;s="DB_VI"."Gas"."Leak_Test"."End" = true
+19:22:35 [INF]   Получен сигнал: End → "Success"
+19:22:35 [INF] Проверка утечки контура газа завершена успешно
+19:22:35 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."Gas"."Leak_Test"."Start"], значение: false
+19:22:35 [INF] [Конец шага] Gas/Leak_Test
+19:22:35 [INF] [Начало шага] AlwaysFailStep1
+19:22:35 [ERR] Шаг AlwaysFailStep1 в колонке 0: Тестовая ошибка для проверки
+19:22:35 [ERR] ОШИБКА в шаге 'AlwaysFailStep1': Тестовая ошибка для проверки
+19:22:36 [INF] Тег ns=3;s="DB_VI"."Gas"."Leak_Test"."End" = false
+19:22:48 [INF] Тег ns=3;s="DB_VI"."DHW"."Fill_Circuit_Normal_Direction"."Error" = true
+19:22:48 [INF]   Получен сигнал: Error → "Error"
+19:22:48 [ERR] Шаг DHW/Fill_Circuit_Normal_Direction в колонке 2: Ошибка заполнения контура ГВС
+19:22:48 [ERR] ОШИБКА в шаге 'DHW/Fill_Circuit_Normal_Direction': Ошибка заполнения контура ГВС
+19:22:51 [INF] Тег ns=3;s="DB_VI"."DHW"."Fill_Circuit_Normal_Direction"."Error" = false
+19:22:54 [INF] Тег ns=3;s="DB_Station"."Test"."Req_Repeat" = true
+19:22:54 [INF]   Получен сигнал: Retry → "Retry"
+19:22:54 [INF] Получен сигнал: "Retry"
+19:22:54 [INF] Отправка AskRepeat в PLC
+19:22:54 [DBG] Запись в NodeId: [ns=3;s="DB_Station"."Test"."Ask_Repeat"], значение: true
+19:22:54 [DBG] Ожидание сброса Error блока: ns=3;s="DB_VI"."CH"."Flush_Circuit"."Error"
+19:22:54 [DBG] Error блока сброшен
+19:22:54 [DBG] Ожидание сброса Req_Repeat...
+19:22:55 [INF] Тег ns=3;s="DB_Station"."Test"."Req_Repeat" = false
+19:22:55 [INF]   Получен сигнал: false
+19:22:55 [DBG] Req_Repeat сброшен
+19:22:55 [INF] [Начало шага] CH/Flush_Circuit
+19:22:55 [INF] Запуск продувки контура отопления
+19:22:55 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."CH"."Flush_Circuit"."Start"], значение: true
+19:22:55 [DBG] Запись в NodeId: [ns=3;s="DB_Station"."Test"."Fault"], значение: true
+19:22:55 [INF] Ожидание решения оператора (без таймаута)...
+19:22:56 [INF] Тег ns=3;s="DB_Station"."Test"."Fault" = true
+19:23:07 [INF] Тег ns=3;s="DB_Station"."Test"."Req_Repeat" = true
+19:23:07 [INF]   Получен сигнал: Retry → "Retry"
+19:23:07 [INF] Получен сигнал: "Retry"
+19:23:07 [INF] Отправка AskRepeat в PLC
+19:23:07 [DBG] Запись в NodeId: [ns=3;s="DB_Station"."Test"."Ask_Repeat"], значение: true
+19:23:07 [DBG] Ожидание сброса Req_Repeat...
+19:23:08 [INF] Тег ns=3;s="DB_Station"."Test"."Req_Repeat" = false
+19:23:08 [INF]   Получен сигнал: false
+19:23:08 [DBG] Req_Repeat сброшен
+19:23:08 [INF] [Начало шага] AlwaysFailStep1
+19:23:08 [INF] [Конец шага] AlwaysFailStep1
+19:23:08 [DBG] Запись в NodeId: [ns=3;s="DB_Station"."Test"."Fault"], значение: false
+19:23:08 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."DHW"."Fill_Circuit_Normal_Direction"."Selected"], значение: true
+19:23:08 [INF] Ожидание решения оператора (без таймаута)...
+19:23:08 [INF] [Начало шага] Измерение напряжения
+19:23:08 [INF] [Конец шага] Измерение напряжения
+19:23:10 [INF] Тег ns=3;s="DB_Station"."Test"."Fault" = false
+19:23:26 [INF] Тег ns=3;s="DB_VI"."CH"."Flush_Circuit"."Error" = true
+19:23:26 [INF]   Получен сигнал: Error → "Error"
+19:23:26 [ERR] Шаг CH/Flush_Circuit в колонке 1: Ошибка продувки контура
+19:23:26 [ERR] ОШИБКА в шаге 'CH/Flush_Circuit': Ошибка продувки контура
+19:23:27 [INF] Тег ns=3;s="DB_VI"."CH"."Flush_Circuit"."Error" = false
+19:23:39 [INF] Тег ns=3;s="DB_VI"."Elec"."Connect_Earth_Clip"."End" = true
+19:23:39 [INF]   Получен сигнал: End → "End"
+19:23:39 [INF] Проверка подключения клипсы заземления завершена успешно
+19:23:39 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."Elec"."Connect_Earth_Clip"."Start"], значение: false
+19:23:39 [INF] [Конец шага] Elec/Connect_Earth_Clip
+19:23:39 [INF] [Начало шага] Elec/Connect_Power_Cable
+19:23:39 [INF] Запуск шага подключения силового кабеля
+19:23:39 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."Elec"."Connect_Power_Cable"."Start"], значение: true
+19:23:39 [INF] Запуск таймера 30 сек для ожидания подключения кабеля
+19:23:40 [INF] Тег ns=3;s="DB_VI"."Elec"."Connect_Earth_Clip"."End" = false
+19:23:48 [INF] Тег ns=3;s="DB_Station"."Test"."Req_Repeat" = true
+19:23:48 [INF]   Получен сигнал: Retry → "Retry"
+19:23:48 [INF] Получен сигнал: "Retry"
+19:23:48 [INF] Отправка AskRepeat в PLC
+19:23:48 [DBG] Запись в NodeId: [ns=3;s="DB_Station"."Test"."Ask_Repeat"], значение: true
+19:23:48 [DBG] Ожидание сброса Error блока: ns=3;s="DB_VI"."DHW"."Fill_Circuit_Normal_Direction"."Error"
+19:23:48 [DBG] Error блока сброшен
+19:23:48 [DBG] Ожидание сброса Req_Repeat...
+19:23:50 [INF] Тег ns=3;s="DB_Station"."Test"."Req_Repeat" = false
+19:23:50 [INF]   Получен сигнал: false
+19:23:50 [DBG] Req_Repeat сброшен
+19:23:50 [INF] [Начало шага] DHW/Fill_Circuit_Normal_Direction
+19:23:50 [INF] Запуск заполнения контура ГВС в прямом направлении
+19:23:50 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."DHW"."Fill_Circuit_Normal_Direction"."Start"], значение: true
+19:23:50 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."CH"."Flush_Circuit"."Selected"], значение: true
+19:23:50 [INF] Ожидание решения оператора (без таймаута)...
+19:24:05 [INF] Тег ns=3;s="DB_VI"."DHW"."Fill_Circuit_Normal_Direction"."End" = true
+19:24:05 [INF]   Получен сигнал: End → "Success"
+19:24:05 [INF] Заполнение контура ГВС в прямом направлении завершено успешно
+19:24:05 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."DHW"."Fill_Circuit_Normal_Direction"."Start"], значение: false
+19:24:05 [INF] [Конец шага] DHW/Fill_Circuit_Normal_Direction
+19:24:05 [INF] [Начало шага] DHW/Fill_Circuit_Reverse_Direction
+19:24:05 [INF] Запуск заполнения контура ГВС в обратном направлении
+19:24:05 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."DHW"."Fill_Circuit_Reverse_Direction"."Start"], значение: true
+19:24:05 [INF] Тег ns=3;s="DB_VI"."DHW"."Fill_Circuit_Reverse_Direction"."End" добавлен в подписку
+19:24:05 [INF] Тег ns=3;s="DB_VI"."DHW"."Fill_Circuit_Reverse_Direction"."Error" добавлен в подписку
+19:24:06 [INF] Тег ns=3;s="DB_VI"."DHW"."Fill_Circuit_Normal_Direction"."End" = false
+19:24:06 [INF] Тег ns=3;s="DB_VI"."DHW"."Fill_Circuit_Reverse_Direction"."End" = false
+19:24:06 [INF] Тег ns=3;s="DB_VI"."DHW"."Fill_Circuit_Reverse_Direction"."Error" = false
+19:24:09 [WRN] Таймаут 30 сек — силовой кабель не подключен
+19:24:25 [INF] Тег ns=3;s="DB_Station"."Test"."Req_Repeat" = true
+19:24:25 [INF]   Получен сигнал: Retry → "Retry"
+19:24:25 [INF] Получен сигнал: "Retry"
+19:24:25 [INF] Отправка AskRepeat в PLC
+19:24:25 [DBG] Запись в NodeId: [ns=3;s="DB_Station"."Test"."Ask_Repeat"], значение: true
+19:24:25 [DBG] Ожидание сброса Error блока: ns=3;s="DB_VI"."CH"."Flush_Circuit"."Error"
+19:24:25 [DBG] Error блока сброшен
+19:24:25 [DBG] Ожидание сброса Req_Repeat...
+19:24:26 [INF] Тег ns=3;s="DB_Station"."Test"."Req_Repeat" = false
+19:24:26 [INF]   Получен сигнал: false
+19:24:26 [DBG] Req_Repeat сброшен
+19:24:26 [INF] [Начало шага] CH/Flush_Circuit
+19:24:26 [INF] Запуск продувки контура отопления
+19:24:26 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."CH"."Flush_Circuit"."Start"], значение: true
+19:24:41 [INF] Тег ns=3;s="DB_VI"."CH"."Flush_Circuit"."End" = true
+19:24:41 [INF]   Получен сигнал: End → "Success"
+19:24:41 [INF] Продувка контура завершена успешно
+19:24:41 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."CH"."Flush_Circuit"."Start"], значение: false
+19:24:41 [INF] [Конец шага] CH/Flush_Circuit
+19:24:41 [INF] [Начало шага] CH/Open_Circuit_Normal
+19:24:41 [INF] Запуск открытия контура отопления
+19:24:41 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."CH"."Open_Circuit_Normal"."Start"], значение: true
+19:24:41 [INF] Тег ns=3;s="DB_VI"."CH"."Open_Circuit_Normal"."End" добавлен в подписку
+19:24:41 [INF] Тег ns=3;s="DB_VI"."CH"."Open_Circuit_Normal"."Error" добавлен в подписку
+19:24:42 [INF] Тег ns=3;s="DB_VI"."CH"."Open_Circuit_Normal"."End" = true
+19:24:42 [INF]   Получен сигнал: End → "Success"
+19:24:42 [INF] Тег ns=3;s="DB_VI"."CH"."Open_Circuit_Normal"."Error" = true
+19:24:42 [INF]   Получен сигнал: Error → "Error"
+19:24:42 [INF] Открытие контура отопления завершено успешно
+19:24:42 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."CH"."Open_Circuit_Normal"."Start"], значение: false
+19:24:42 [INF] [Конец шага] CH/Open_Circuit_Normal
+19:24:42 [INF] [Начало шага] CH/Fast_Fill_Circuit
+19:24:42 [INF] Запуск быстрого заполнения контура отопления
+19:24:42 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."CH"."Fast_Fill_Circuit"."Start"], значение: true
+19:24:42 [INF] Тег ns=3;s="DB_VI"."CH"."Fast_Fill_Circuit"."End" добавлен в подписку
+19:24:42 [INF] Тег ns=3;s="DB_VI"."CH"."Fast_Fill_Circuit"."Error" добавлен в подписку
+19:24:43 [INF] Тег ns=3;s="DB_VI"."CH"."Fast_Fill_Circuit"."End" = true
+19:24:43 [INF]   Получен сигнал: End → "Success"
+19:24:43 [INF] Тег ns=3;s="DB_VI"."CH"."Fast_Fill_Circuit"."Error" = true
+19:24:43 [INF]   Получен сигнал: Error → "Error"
+19:24:43 [INF] Быстрое заполнение контура завершено успешно
+19:24:43 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."CH"."Fast_Fill_Circuit"."Start"], значение: false
+19:24:43 [INF] [Конец шага] CH/Fast_Fill_Circuit
+19:24:43 [INF] [Начало шага] CH/Slow_Fill_Circuit
+19:24:43 [INF] Запуск медленного заполнения контура отопления
+19:24:43 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."CH"."Slow_Fill_Circuit"."Start"], значение: true
+19:24:43 [INF] Тег ns=3;s="DB_VI"."CH"."Slow_Fill_Circuit"."End" добавлен в подписку
+19:24:43 [INF] Тег ns=3;s="DB_VI"."CH"."Slow_Fill_Circuit"."Error" добавлен в подписку
+19:24:44 [INF] Тег ns=3;s="DB_VI"."CH"."Flush_Circuit"."End" = false
+19:24:44 [INF] Тег ns=3;s="DB_VI"."CH"."Slow_Fill_Circuit"."End" = false
+19:24:44 [INF] Тег ns=3;s="DB_VI"."CH"."Slow_Fill_Circuit"."Error" = false
+19:25:01 [INF] Тег ns=3;s="DB_VI"."Elec"."Connect_Power_Cable"."End" = true
+19:25:01 [INF]   Получен сигнал: End → "End"
+19:25:01 [INF] Шаг подключения силового кабеля завершён успешно
+19:25:01 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."Elec"."Connect_Power_Cable"."Start"], значение: false
+19:25:01 [INF] [Конец шага] Elec/Connect_Power_Cable
+19:25:01 [INF] [Начало шага] Elec/Boiler_Power_ON
+19:25:01 [INF] Запуск включения котла
+19:25:01 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."Elec"."Boiler_Power_ON"."Start"], значение: true
+19:25:01 [INF] Тег ns=3;s="DB_VI"."Elec"."Boiler_Power_ON"."End" добавлен в подписку
+19:25:01 [INF] Тег ns=3;s="DB_VI"."Elec"."Boiler_Power_ON"."Error" добавлен в подписку
+19:25:02 [INF] Тег ns=3;s="DB_VI"."Elec"."Boiler_Power_ON"."End" = false
+19:25:02 [INF] Тег ns=3;s="DB_VI"."Elec"."Boiler_Power_ON"."Error" = false
+19:25:03 [INF] Тег ns=3;s="DB_VI"."Elec"."Connect_Power_Cable"."End" = false
+19:25:14 [INF] Тег ns=3;s="DB_VI"."DHW"."Fill_Circuit_Reverse_Direction"."End" = true
+19:25:14 [INF]   Получен сигнал: End → "Success"
+19:25:14 [INF] Заполнение контура ГВС в обратном направлении завершено успешно
+19:25:14 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."DHW"."Fill_Circuit_Reverse_Direction"."Start"], значение: false
+19:25:14 [INF] [Конец шага] DHW/Fill_Circuit_Reverse_Direction
+19:25:14 [INF] [Начало шага] AlwaysFailStep2
+19:25:14 [ERR] Шаг AlwaysFailStep2 в колонке 2: Тестовая ошибка для проверки
+19:25:14 [ERR] ОШИБКА в шаге 'AlwaysFailStep2': Тестовая ошибка для проверки
+19:25:14 [DBG] Запись в NodeId: [ns=3;s="DB_Station"."Test"."Fault"], значение: true
+19:25:14 [INF] Ожидание решения оператора (без таймаута)...
+19:25:15 [INF] Тег ns=3;s="DB_Station"."Test"."Fault" = true
+19:25:16 [INF] Тег ns=3;s="DB_VI"."DHW"."Fill_Circuit_Reverse_Direction"."End" = false
+19:25:27 [INF] Тег ns=3;s="DB_VI"."CH"."Slow_Fill_Circuit"."Error" = true
+19:25:27 [INF]   Получен сигнал: Error → "Error"
+19:25:27 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."CH"."Slow_Fill_Circuit"."Start"], значение: false
+19:25:27 [INF] Давление потока: 55.220, порог: 2.500, статус: NOK
+19:25:27 [ERR] Шаг CH/Slow_Fill_Circuit в колонке 1: Ошибка медленного заполнения контура: 55,220
+19:25:27 [ERR] ОШИБКА в шаге 'CH/Slow_Fill_Circuit': Ошибка медленного заполнения контура: 55,220
+19:25:30 [INF] Тег ns=3;s="DB_VI"."CH"."Slow_Fill_Circuit"."Error" = false
+19:25:39 [INF] Тег ns=3;s="DB_VI"."Elec"."Boiler_Power_ON"."End" = true
+19:25:39 [INF]   Получен сигнал: End → "Success"
+19:25:39 [INF] Котёл включен успешно
+19:25:39 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."Elec"."Boiler_Power_ON"."Start"], значение: false
+19:25:39 [INF] [Конец шага] Elec/Boiler_Power_ON
+19:25:39 [INF] [Начало шага] Elec/Power_Supply_Test
+19:25:39 [INF] Запуск проверки напряжения питания котла
+19:25:39 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."Elec"."Power_Supply_Test"."Start"], значение: true
+19:25:39 [INF] Тег ns=3;s="DB_VI"."Elec"."Power_Supply_Test"."End" добавлен в подписку
+19:25:39 [INF] Тег ns=3;s="DB_VI"."Elec"."Power_Supply_Test"."Error" добавлен в подписку
+19:25:40 [INF] Тег ns=3;s="DB_VI"."Elec"."Power_Supply_Test"."End" = false
+19:25:40 [INF] Тег ns=3;s="DB_VI"."Elec"."Power_Supply_Test"."Error" = false
+19:25:41 [INF] Тег ns=3;s="DB_VI"."Elec"."Boiler_Power_ON"."End" = false
+19:25:50 [INF] Тег ns=3;s="DB_Station"."Test"."Req_Repeat" = true
+19:25:50 [INF]   Получен сигнал: Retry → "Retry"
+19:25:50 [INF] Получен сигнал: "Retry"
+19:25:50 [INF] Отправка AskRepeat в PLC
+19:25:50 [DBG] Запись в NodeId: [ns=3;s="DB_Station"."Test"."Ask_Repeat"], значение: true
+19:25:50 [DBG] Ожидание сброса Req_Repeat...
+19:25:51 [INF] Тег ns=3;s="DB_Station"."Test"."Req_Repeat" = false
+19:25:51 [INF]   Получен сигнал: false
+19:25:51 [DBG] Req_Repeat сброшен
+19:25:51 [INF] [Начало шага] AlwaysFailStep2
+19:25:51 [INF] [Конец шага] AlwaysFailStep2
+19:25:51 [DBG] Запись в NodeId: [ns=3;s="DB_Station"."Test"."Fault"], значение: false
+19:25:51 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."CH"."Slow_Fill_Circuit"."Selected"], значение: true
+19:25:51 [INF] Ожидание решения оператора (без таймаута)...
+19:25:51 [INF] [Начало шага] CH/Flush_Circuit
+19:25:51 [INF] Запуск продувки контура отопления
+19:25:51 [DBG] Запись в NodeId: [ns=3;s="DB_VI"."CH"."Flush_Circuit"."Start"], значение: true
+19:25:52 [INF] Тег ns=3;s="DB_Station"."Test"."Fault" = false

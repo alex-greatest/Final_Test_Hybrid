@@ -61,7 +61,7 @@
 [4] Ожидание сброса сигналов (защита от stale)
     PC ждёт: Block.Error=false И Block.End=false (для шагов С блоком)
              ИЛИ Test_End_Step=false (для шагов БЕЗ блока)
-    Таймаут: 5 сек → жёсткий стоп теста
+    Таймаут: 60 сек → жёсткий стоп теста
                 ↓
 [5] Пропуск (порядок важен!)
     PC: ResetBlockStartAsync()
@@ -164,7 +164,7 @@ private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, C
     {
         await _errorCoordinator.SendAskRepeatAsync(blockErrorTag, ct);
     }
-    catch (TimeoutException)  // Block.Error не сброшен за 5 сек
+    catch (TimeoutException)  // Block.Error не сброшен за 60 сек
     {
         await HandleTagTimeoutAsync("Block.Error не сброшен", ct);
         return;
@@ -181,7 +181,7 @@ private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, C
     {
         await _errorCoordinator.WaitForRetrySignalResetAsync(ct);
     }
-    catch (TimeoutException)  // Req_Repeat не сброшен за 5 сек
+    catch (TimeoutException)  // Req_Repeat не сброшен за 60 сек
     {
         await HandleTagTimeoutAsync("Req_Repeat не сброшен", ct);
         return;
@@ -245,9 +245,9 @@ SetErrorState() → gate.Reset() → новая ошибка в очередь �
 `ResetFaultIfNoBlockAsync` сбрасывает `Fault=false` только для шагов без PLC-блока.
 При нескольких non-PLC ошибках возможен кратковременный сброс Fault — самовосстанавливается при обработке следующей ошибки.
 
-### Таймаут Block.Error/Req_Repeat (5 сек)
+### Таймаут Block.Error/Req_Repeat (60 сек)
 
-Если PLC не сбросит сигнал за 5 секунд → `HandleTagTimeoutAsync()` → жёсткий стоп теста.
+Если PLC не сбросит сигнал за 60 секунд → `HandleTagTimeoutAsync()` → жёсткий стоп теста.
 Это защита от залипших сигналов, которые могут вызвать автоматический Retry/Skip для другой колонки.
 
 ### Cancel во время fire-and-forget Retry

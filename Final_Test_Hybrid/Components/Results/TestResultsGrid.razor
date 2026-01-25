@@ -1,5 +1,6 @@
 @using Final_Test_Hybrid.Models.Results
 @using Final_Test_Hybrid.Services.Results
+@inject BoilerState BoilerState
 
 @inject ITestResultsService TestResultsService
 
@@ -66,7 +67,7 @@ else
                 <Template Context="item">
                     <RadzenBadge BadgeStyle="@(item.Status == 1 ? BadgeStyle.Success : BadgeStyle.Danger)"
                                  Text="@(item.Status == 1 ? "OK" : "NOK")"
-                                 Style="padding: 5px;" />
+                                 Style="padding: 10px;" />
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestResultItem" Property="Unit" Title="Ед. изм." Width="100px" />

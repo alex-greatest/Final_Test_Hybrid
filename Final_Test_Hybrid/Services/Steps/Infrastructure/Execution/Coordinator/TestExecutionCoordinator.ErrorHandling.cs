@@ -122,7 +122,7 @@ public partial class TestExecutionCoordinator
             executor.CurrentStepDescription ?? "",
             executor.ErrorMessage ?? "Неизвестная ошибка",
             DateTime.Now,
-            Guid.Empty,
+            executor.UiStepId,
             executor.FailedStep);
     }
 
@@ -299,7 +299,7 @@ public partial class TestExecutionCoordinator
         }
         catch (TimeoutException)
         {
-            _logger.LogError("Block.Error не сброшен за 5 сек — жёсткий стоп");
+            _logger.LogError("Block.Error не сброшен за 60 сек — жёсткий стоп");
             await HandleTagTimeoutAsync("Block.Error не сброшен", ct);
             return;
         }
@@ -317,7 +317,7 @@ public partial class TestExecutionCoordinator
         }
         catch (TimeoutException)
         {
-            _logger.LogError("Req_Repeat не сброшен за 5 сек — жёсткий стоп");
+            _logger.LogError("Req_Repeat не сброшен за 60 сек — жёсткий стоп");
             await HandleTagTimeoutAsync("Req_Repeat не сброшен", ct);
             return;
         }
@@ -379,6 +379,7 @@ public partial class TestExecutionCoordinator
         }
         _logger.LogWarning(">>> ProcessSkipAsync: КОНЕЦ ожидания сброса сигналов");
 
+        _statusReporter.ReportSkipped(error.UiStepId);
         StateManager.MarkErrorSkipped();
         StateManager.DequeueError();     // СНАЧАЛА удаляем из очереди (защита от race condition)
         executor.ClearFailedState();     // ПОТОМ открываем gate
@@ -387,7 +388,7 @@ public partial class TestExecutionCoordinator
     /// <summary>
     /// Ожидает сброса сигналов после пропуска.
     /// </summary>
-    /// <exception cref="TimeoutException">Сигнал не сброшен за 5 секунд.</exception>
+    /// <exception cref="TimeoutException">Сигнал не сброшен за 60 секунд.</exception>
     private async Task WaitForSkipSignalsResetAsync(ITestStep? step, CancellationToken ct)
     {
         if (step is IHasPlcBlockPath plcStep)
@@ -401,12 +402,12 @@ public partial class TestExecutionCoordinator
             if (errorTag != null)
             {
                 _logger.LogDebug("Ожидание сброса Block.Error: {Tag}", errorTag);
-                await _tagWaiter.WaitForFalseAsync(errorTag, TimeSpan.FromSeconds(5), ct);
+                await _tagWaiter.WaitForFalseAsync(errorTag, TimeSpan.FromSeconds(60), ct);
             }
             if (endTag != null)
             {
                 _logger.LogDebug("Ожидание сброса Block.End: {Tag}", endTag);
-                await _tagWaiter.WaitForFalseAsync(endTag, TimeSpan.FromSeconds(5), ct);
+                await _tagWaiter.WaitForFalseAsync(endTag, TimeSpan.FromSeconds(60), ct);
             }
             return;
         }
@@ -414,7 +415,7 @@ public partial class TestExecutionCoordinator
         // Для шагов БЕЗ блока: ждём Test_End_Step=false с таймаутом
         // (PLC сбросит после того как PC сбросит Fault)
         _logger.LogDebug("Ожидание сброса Test_End_Step");
-        await _tagWaiter.WaitForFalseAsync(BaseTags.TestEndStep, timeout: TimeSpan.FromSeconds(5), ct);
+        await _tagWaiter.WaitForFalseAsync(BaseTags.TestEndStep, timeout: TimeSpan.FromSeconds(60), ct);
     }
 
     /// <summary>

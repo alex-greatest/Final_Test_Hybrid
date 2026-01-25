@@ -32,6 +32,7 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly ExecutionFlowState _flowState;
     private readonly PausableRegisterReader _pausableRegisterReader;
     private readonly PausableRegisterWriter _pausableRegisterWriter;
+    private readonly StepStatusReporter _statusReporter;
     private readonly Lock _stateLock = new();
     private readonly object _enqueueLock = new();
     private readonly Action _onExecutorStateChanged;
@@ -88,6 +89,7 @@ public partial class TestExecutionCoordinator : IDisposable
         _flowState = flowState;
         _pausableRegisterReader = pausableRegisterReader;
         _pausableRegisterWriter = pausableRegisterWriter;
+        _statusReporter = statusReporter;
         _onExecutorStateChanged = HandleExecutorStateChanged;
         _executors = CreateAllExecutors(pausableOpcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider);
         SubscribeToExecutorEvents();

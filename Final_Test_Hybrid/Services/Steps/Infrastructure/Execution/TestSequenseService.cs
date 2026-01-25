@@ -148,6 +148,19 @@ public class TestSequenseService(
         });
     }
 
+    /// <summary>
+    /// Устанавливает статус "Ошибка (Пропущен)" для шага.
+    /// </summary>
+    /// <param name="id">Идентификатор шага.</param>
+    public void MarkAsSkipped(Guid id)
+    {
+        UpdateStepAndNotify(id, step =>
+        {
+            step.Status = "Ошибка (Пропущен)";
+            step.IsSkipped = true;
+        });
+    }
+
     public void ClearAll()
     {
         lock (_lock)
@@ -315,7 +328,8 @@ public class TestSequenseService(
                 Range = s.Range,
                 StepStatus = s.StepStatus,
                 StartTime = s.StartTime,
-                EndTime = s.EndTime
+                EndTime = s.EndTime,
+                IsSkipped = s.IsSkipped
             }).ToList();
         }
     }

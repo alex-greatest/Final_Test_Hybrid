@@ -60,6 +60,19 @@ public class AccessLevelManager(
     }
 
     /// <summary>
+    /// Устанавливает режим стенда через Pausable writer (для тестовых шагов).
+    /// Поддерживает паузу при Auto OFF.
+    /// </summary>
+    /// <param name="writer">Pausable writer из TestStepContext.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>Результат записи с детальной ошибкой.</returns>
+    public async Task<DiagnosticWriteResult> SetStandModeAsync(
+        PausableRegisterWriter writer, CancellationToken ct)
+    {
+        return await SetAccessLevelAsync(AccessLevel.Stand, StandKey, writer, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Сбрасывает в обычный режим (любой ключ != Engineering/Stand).
     /// </summary>
     public async Task ResetToNormalModeAsync(CancellationToken ct = default)
@@ -69,23 +82,49 @@ public class AccessLevelManager(
 
     private async Task<bool> SetAccessLevelAsync(AccessLevel level, uint key, CancellationToken ct)
     {
+        var result = await SetAccessLevelCoreAsync(level, key, registerWriter, ct).ConfigureAwait(false);
+        return result.Success;
+    }
+
+    private async Task<DiagnosticWriteResult> SetAccessLevelAsync(
+        AccessLevel level, uint key, PausableRegisterWriter writer, CancellationToken ct)
+    {
+        return await SetAccessLevelCoreAsync(level, key, writer, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Общая логика установки уровня доступа.
+    /// </summary>
+    private async Task<DiagnosticWriteResult> SetAccessLevelCoreAsync<TWriter>(
+        AccessLevel level, uint key, TWriter writer, CancellationToken ct)
+        where TWriter : class
+    {
         logger.LogInformation("Установка уровня доступа: {Level}", level);
 
         // Вычисляем Modbus адрес с учётом смещения
         var modbusAddress = (ushort)(AccessKeyAddressDoc - _settings.BaseAddressOffset);
-        logger.LogDebug("Запись в регистр {ModbusAddress}: 0x{Key:X8} (Doc: {DocAddress})",
-            modbusAddress, key, AccessKeyAddressDoc);
+        logger.LogDebug(
+            "Запись в регистры {ModbusHi}-{ModbusLo}: ключ 0x{Key:X8} (Doc: {DocHi}-{DocLo})",
+            modbusAddress, modbusAddress + 1, key, AccessKeyAddressDoc, AccessKeyAddressDoc + 1);
 
-        var result = await registerWriter.WriteUInt32Async(modbusAddress, key, ct).ConfigureAwait(false);
-        if (!result.Success)
+        var result = writer switch
+        {
+            RegisterWriter rw => await rw.WriteUInt32Async(modbusAddress, key, ct).ConfigureAwait(false),
+            PausableRegisterWriter prw => await prw.WriteUInt32Async(modbusAddress, key, ct).ConfigureAwait(false),
+            _ => throw new ArgumentException($"Unsupported writer type: {writer.GetType()}", nameof(writer))
+        };
+
+        if (result.Success)
+        {
+            CurrentLevel = level;
+            LevelChanged?.Invoke(level);
+            logger.LogInformation("Уровень доступа установлен: {Level}", level);
+        }
+        else
         {
             logger.LogError("Не удалось установить уровень доступа {Level}: {Error}", level, result.Error);
-            return false;
         }
 
-        CurrentLevel = level;
-        LevelChanged?.Invoke(level);
-        logger.LogInformation("Уровень доступа установлен: {Level}", level);
-        return true;
+        return result;
     }
 }

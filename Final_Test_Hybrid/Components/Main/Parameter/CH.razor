@@ -1,8 +1,10 @@
 @using Final_Test_Hybrid.Models.Plc.Tags
 @using Final_Test_Hybrid.Services.OpcUa.Subscription
 @using Final_Test_Hybrid.Services.Diagnostic.Services
+@using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue
 @inject OpcUaSubscription Subscription
 @inject BoilerTemperatureService BoilerTemperatureService
+@inject IModbusDispatcher Dispatcher
 @implements IAsyncDisposable
 
 <div class="header-block-parameter param-ch">
@@ -36,6 +38,8 @@
     private string _tChBoiler = "N/A";
     private PeriodicTimer? _modbusTimer;
     private CancellationTokenSource? _cts;
+    private Task? _pollingTask;
+    private volatile bool _disposed;
 
     protected override async Task OnInitializedAsync()
     {
@@ -43,21 +47,87 @@
         await Subscription.SubscribeAsync(MainScreenTags.ChPmr, OnPChChanged);
         await Subscription.SubscribeAsync(MainScreenTags.ChTrr, OnTChRtnChanged);
         await Subscription.SubscribeAsync(MainScreenTags.ChTmr, OnTChFlowChanged);
-        StartModbusPolling();
+
+        Dispatcher.Connected += OnDispatcherConnected;
+        Dispatcher.Disconnecting += OnDispatcherDisconnecting;
+
+        if (Dispatcher.IsStarted && Dispatcher.IsConnected)
+        {
+            StartModbusPolling();
+        }
     }
 
+    /// <summary>
+    /// Обработчик события подключения диспетчера.
+    /// </summary>
+    private void OnDispatcherConnected()
+    {
+        if (_disposed) return;
+        _ = InvokeAsync(() =>
+        {
+            if (_disposed) return;
+            StartModbusPolling();
+            StateHasChanged();
+        });
+    }
+
+    /// <summary>
+    /// Обработчик события отключения диспетчера.
+    /// </summary>
+    private Task OnDispatcherDisconnecting()
+    {
+        if (_disposed) return Task.CompletedTask;
+        _ = InvokeAsync(() =>
+        {
+            if (_disposed) return;
+            StopModbusPolling();
+            ResetModbusValues();
+            StateHasChanged();
+        });
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Сбрасывает значения Modbus в начальное состояние.
+    /// </summary>
+    private void ResetModbusValues()
+    {
+        _tChBoiler = "N/A";
+    }
+
+    /// <summary>
+    /// Останавливает polling Modbus.
+    /// </summary>
+    private void StopModbusPolling()
+    {
+        _cts?.Cancel();
+    }
+
+    /// <summary>
+    /// Запускает polling Modbus.
+    /// </summary>
     private void StartModbusPolling()
     {
+        if (!Dispatcher.IsConnected) return;
+        if (_pollingTask != null && !_pollingTask.IsCompleted) return;
+
+        _cts?.Dispose();
         _cts = new CancellationTokenSource();
+        _modbusTimer?.Dispose();
         _modbusTimer = new PeriodicTimer(TimeSpan.FromSeconds(2));
-        _ = PollModbusAsync(_cts.Token);
+        _pollingTask = PollModbusAsync(_cts.Token);
     }
 
+    /// <summary>
+    /// Цикл периодического опроса Modbus.
+    /// </summary>
     private async Task PollModbusAsync(CancellationToken ct)
     {
+        var timer = _modbusTimer;
+        var cts = _cts;
         try
         {
-            while (await _modbusTimer!.WaitForNextTickAsync(ct).ConfigureAwait(false))
+            while (timer != null && await timer.WaitForNextTickAsync(ct).ConfigureAwait(false))
             {
                 var result = await BoilerTemperatureService.ReadSupplyLineTemperatureAsync(ct).ConfigureAwait(false);
                 _tChBoiler = result.Success ? $"{result.Value}  °C" : "N/A";
@@ -66,7 +136,25 @@
         }
         catch (OperationCanceledException)
         {
-            // Нормальное завершение при Dispose
+            // Нормальное завершение при отмене
+        }
+        catch (Exception)
+        {
+            ResetModbusValues();
+            await InvokeAsync(StateHasChanged);
+        }
+        finally
+        {
+            if (ReferenceEquals(timer, _modbusTimer))
+            {
+                _modbusTimer?.Dispose();
+                _modbusTimer = null;
+            }
+            if (ReferenceEquals(cts, _cts))
+            {
+                _cts?.Dispose();
+                _cts = null;
+            }
         }
     }
 
@@ -99,9 +187,20 @@
 
     public async ValueTask DisposeAsync()
     {
-        _cts?.Cancel();
+        _disposed = true;
+        Dispatcher.Connected -= OnDispatcherConnected;
+        Dispatcher.Disconnecting -= OnDispatcherDisconnecting;
+
+        StopModbusPolling();
+
+        if (_pollingTask != null)
+        {
+            try { await _pollingTask; } catch { /* ignored */ }
+        }
+
         _modbusTimer?.Dispose();
         _cts?.Dispose();
+
         await Subscription.UnsubscribeAsync(MainScreenTags.ChFr, OnQChChanged, removeTag: false, ct: CancellationToken.None);
         await Subscription.UnsubscribeAsync(MainScreenTags.ChPmr, OnPChChanged, removeTag: false, ct: CancellationToken.None);
         await Subscription.UnsubscribeAsync(MainScreenTags.ChTrr, OnTChRtnChanged, removeTag: false, ct: CancellationToken.None);

@@ -85,6 +85,15 @@ public class StepStatusReporter
         _sequenseService.SetSuccess(id, message, limits);
     }
 
+    /// <summary>
+    /// Обновляет статус шага на "Ошибка (Пропущен)".
+    /// </summary>
+    /// <param name="id">Идентификатор шага.</param>
+    public void ReportSkipped(Guid id)
+    {
+        _sequenseService.MarkAsSkipped(id);
+    }
+
     public void ClearAll()
     {
         _sequenseService.ClearAll();
