@@ -44,6 +44,10 @@
     background-color: #28a745;
 }
 
+.test-sequense-grid ::deep .cell-container.running {
+    background-color: #ffdd00;
+}
+
 .test-sequense-grid ::deep .cell-text {
     font-size: 17px;
     font-weight: bold;

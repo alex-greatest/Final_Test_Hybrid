@@ -1,4 +1,4 @@
-.last-test-header {
+.step-history-grid .last-test-header {
     text-align: center;
     color: black;
     font-size: 1.5rem;
@@ -6,32 +6,32 @@
     margin-bottom: 0.5rem;
 }
 
-::deep .rz-data-grid {
+.step-history-grid ::deep .rz-data-grid {
     display: flex;
     flex: 1;
     min-height: 0;
 }
 
-::deep .rz-data-grid-data {
+.step-history-grid ::deep .rz-data-grid-data {
     overflow-x: hidden !important;
 }
 
-::deep .rz-grid-table td {
+.step-history-grid ::deep .rz-grid-table td {
     height: 40px;
     padding: 0 !important;
     border: 1px solid #dee2e6 !important;
 }
 
-::deep .rz-grid-table th {
+.step-history-grid ::deep .rz-grid-table th {
     border: 1px solid #dee2e6 !important;
 }
 
-::deep .rz-cell-data {
+.step-history-grid ::deep .rz-cell-data {
     height: 100%;
     padding: 0 !important;
 }
 
-::deep .cell-container {
+.step-history-grid ::deep .cell-container {
     display: flex;
     align-items: center;
     height: 100%;
@@ -39,15 +39,19 @@
     box-sizing: border-box;
 }
 
-::deep .cell-container.error {
+.step-history-grid ::deep .cell-container.error {
     background-color: red;
 }
 
-::deep .cell-container.success {
+.step-history-grid ::deep .cell-container.success {
     background-color: #28a745;
 }
 
-::deep .cell-text {
+.step-history-grid ::deep .cell-container.running {
+    background-color: #ffdd00;
+}
+
+.step-history-grid ::deep .cell-text {
     font-size: 17px;
     font-weight: bold;
     color: #000000;

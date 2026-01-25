@@ -3,7 +3,6 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Preparation;
-using Final_Test_Hybrid.Services.Results;
 using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.SpringBoot.Shift;
@@ -32,7 +31,6 @@ public class ScanBarcodeStep(
     IScanPreparationFacade preparationFacade,
     OperatorState operatorState,
     ShiftState shiftState,
-    ITestResultsService testResultsService,
     ILogger<ScanBarcodeStep> logger,
     ITestStepLogger testStepLogger)
     : ScanStepBase(barcodeScanService, sequenceLoader, mapBuilder, mapResolver,
@@ -123,13 +121,6 @@ public class ScanBarcodeStep(
 
         // 11. Инициализация провайдера рецептов
         InitializeRecipeProvider();
-
-        // 12. Запись App_Version в результаты
-        var appVersion = RecipeProvider.GetStringValue("App_Version");
-        if (!string.IsNullOrEmpty(appVersion))
-        {
-            testResultsService.Add("App_Version", appVersion, "", "", 1, false, "");
-        }
 
         _logger.LogStepEnd(Name);
         return PreExecutionResult.Continue(context.Barcode);

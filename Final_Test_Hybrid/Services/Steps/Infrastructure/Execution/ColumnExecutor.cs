@@ -31,10 +31,9 @@ public class ColumnExecutor(
         string? ResultValue,
         bool HasFailed,
         Guid UiStepId,
-        ITestStep? FailedStep,
-        DateTime StartTime);
+        ITestStep? FailedStep);
 
-    private static readonly StepState EmptyState = new(null, null, null, null, null, false, Guid.Empty, null, default);
+    private static readonly StepState EmptyState = new(null, null, null, null, null, false, Guid.Empty, null);
     private StepState _state = EmptyState;
 
     public int ColumnIndex { get; } = columnIndex;
@@ -183,7 +182,7 @@ public class ColumnExecutor(
 
     private void ApplyRunningState(ITestStep step, Guid uiId)
     {
-        _state = new StepState(step.Name, step.Description, "Выполняется", null, null, false, uiId, null, DateTime.Now);
+        _state = new StepState(step.Name, step.Description, "Выполняется", null, null, false, uiId, null);
         logger.LogStepStart(step.Name);
         OnStateChanged?.Invoke();
     }

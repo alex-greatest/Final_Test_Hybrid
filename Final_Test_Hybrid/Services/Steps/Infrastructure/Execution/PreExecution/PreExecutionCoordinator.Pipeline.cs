@@ -36,6 +36,7 @@ public partial class PreExecutionCoordinator
 
         // Очистить данные от предыдущего теста перед включением истории
         ClearForNewTestStart();
+        AddAppVersionToResults();
 
         // Включаем после успешного сканирования
         infra.ErrorService.IsHistoryEnabled = true;
@@ -72,6 +73,7 @@ public partial class PreExecutionCoordinator
         // Пропускаем ScanStep - данные уже загружены
         // Очистить данные от предыдущего теста перед включением истории
         ClearForNewTestStart();
+        AddAppVersionToResults();
 
         // Включаем флаги для теста
         infra.ErrorService.IsHistoryEnabled = true;

@@ -95,6 +95,18 @@ public partial class PreExecutionCoordinator(
         infra.Logger.LogInformation("История и результаты очищены для нового теста");
     }
 
+    /// <summary>
+    /// Добавляет версию приложения в результаты теста.
+    /// </summary>
+    private void AddAppVersionToResults()
+    {
+        var appVersion = infra.RecipeProvider.GetStringValue("App_Version");
+        if (!string.IsNullOrEmpty(appVersion))
+        {
+            infra.TestResultsService.Add("App_Version", appVersion, "", "", 1, false, "");
+        }
+    }
+
     private void ClearForRepeat()
     {
         infra.ErrorService.IsHistoryEnabled = false;
