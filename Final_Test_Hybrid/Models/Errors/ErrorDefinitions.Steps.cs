@@ -113,6 +113,12 @@ public static partial class ErrorDefinitions
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-check-comms",
         RelatedStepName: "Coms/Check_Comms");
+    
+    public static readonly ErrorDefinition WriteBytesOn = new(
+        "П-016-01", "Ошибка при смене режима котла",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "coms-write-test-byte-on",
+        RelatedStepName: "Coms/Write_Test_Byte_ON");
 
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [
@@ -131,6 +137,7 @@ public static partial class ErrorDefinitions
         AlNoWaterFlowChSlow,
         AlNoWaterPressureСhSlow,
         AlFillTimeСhSlow,
-        NoDiagnosticConnection
+        NoDiagnosticConnection,
+        WriteBytesOn
     ];
 }

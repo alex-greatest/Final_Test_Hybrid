@@ -71,13 +71,13 @@
 
             <RadzenDataGridColumn TItem="Operation" Property="DateStart" Title="Начало">
                 <Template Context="item">
-                    @item.DateStart.ToString("dd.MM.yyyy HH:mm:ss")
+                    @FormatUtcToLocal(item.DateStart)
                 </Template>
             </RadzenDataGridColumn>
 
             <RadzenDataGridColumn TItem="Operation" Property="DateEnd" Title="Окончание">
                 <Template Context="item">
-                    @(item.DateEnd?.ToString("dd.MM.yyyy HH:mm:ss") ?? "-")
+                    @FormatUtcToLocal(item.DateEnd)
                 </Template>
             </RadzenDataGridColumn>
 
@@ -108,14 +108,28 @@
 </div>
 
 @code {
-    private DateTime? _dateFrom = DateTime.UtcNow.AddDays(-7);
-    private DateTime? _dateTo = DateTime.UtcNow.AddDays(1);
+    private DateTime? _dateFrom = DateTime.Now.AddDays(-7);
+    private DateTime? _dateTo = DateTime.Now.AddDays(1);
     private List<Operation> _operations = [];
     private bool _isExporting;
 
     /// <summary>
+    /// Конвертирует UTC DateTime (с Kind=Unspecified от Npgsql) в строку локального времени.
+    /// </summary>
+    private static string FormatUtcToLocal(DateTime utcDateTime) =>
+        DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc)
+                .ToLocalTime()
+                .ToString("dd.MM.yyyy HH:mm:ss");
+
+    /// <summary>
+    /// Конвертирует nullable UTC DateTime в строку локального времени или прочерк если null.
+    /// </summary>
+    private static string FormatUtcToLocal(DateTime? utcDateTime) =>
+        utcDateTime.HasValue ? FormatUtcToLocal(utcDateTime.Value) : "-";
+
+    /// <summary>
     /// Загружает операции из базы данных с учетом фильтров по дате.
-    /// Операции со статусом InWork (DateEnd == null) всегда включаются в выборку.
+    /// Операции со статусом InWork (DateEnd == null) фильтруются по DateStart.
     /// </summary>
     private async Task LoadDataAsync()
     {
@@ -131,7 +145,7 @@
                 var fromUtc = _dateFrom.Value.Kind == DateTimeKind.Utc
                     ? _dateFrom.Value
                     : _dateFrom.Value.ToUniversalTime();
-                query = query.Where(o => o.DateEnd == null || o.DateEnd >= fromUtc);
+                query = query.Where(o => o.DateEnd != null ? o.DateEnd >= fromUtc : o.DateStart >= fromUtc);
             }
 
             if (_dateTo.HasValue)
@@ -139,7 +153,7 @@
                 var toUtc = _dateTo.Value.Kind == DateTimeKind.Utc
                     ? _dateTo.Value
                     : _dateTo.Value.ToUniversalTime();
-                query = query.Where(o => o.DateEnd == null || o.DateEnd <= toUtc);
+                query = query.Where(o => o.DateEnd != null ? o.DateEnd <= toUtc : o.DateStart <= toUtc);
             }
 
             _operations = await query

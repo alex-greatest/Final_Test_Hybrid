@@ -93,7 +93,9 @@
       "mcp__codex-cli__listSessions",
       "mcp__codex-cli__codex-reply",
       "Bash(tree:*)",
-      "Bash(dotnet ef database update:*)"
+      "Bash(dotnet ef database update:*)",
+      "Bash(PGPASSWORD=ManLiv123 psql:*)",
+      "Bash(curl:*)"
     ]
   }
 }

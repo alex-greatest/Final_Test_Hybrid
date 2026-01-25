@@ -25,8 +25,10 @@ public class WriteTestByteOnStep(
 
         if (!result.Success)
         {
-            // Детальное сообщение уже залогировано в AccessLevelManager
-            return TestStepResult.Fail("Сбой при работе с котлом");
+            // Все ошибки (timeout, нет связи, Modbus error) уже в result.Error
+            var errorMsg = $"Ошибка при записи ключа 0xD7F8DB56 в регистры 1000-1001. {result.Error}";
+            logger.LogError(errorMsg);
+            return TestStepResult.Fail(errorMsg);
         }
 
         logger.LogInformation("Режим Стенд установлен успешно");
