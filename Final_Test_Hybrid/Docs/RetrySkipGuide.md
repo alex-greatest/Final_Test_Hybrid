@@ -58,11 +58,17 @@
     PLC → PC: End = true
     PC: проверяет Block.Error = true (для шагов с блоком)
                 ↓
-[4] Пропуск
+[4] Ожидание сброса сигналов (защита от stale)
+    PC ждёт: Block.Error=false И Block.End=false (для шагов С блоком)
+             ИЛИ Test_End_Step=false (для шагов БЕЗ блока)
+    Таймаут: 5 сек → жёсткий стоп теста
+                ↓
+[5] Пропуск (порядок важен!)
     PC: ResetBlockStartAsync()
     PC: ResetFaultIfNoBlockAsync()
-    PC: ClearFailedState() → gate.Set()
-    PC: DequeueError()
+    PC: MarkErrorSkipped()
+    PC: DequeueError()       ← СНАЧАЛА удаляем из очереди
+    PC: ClearFailedState()   ← ПОТОМ открываем gate
     ❌ НЕ отправляет AskRepeat
 ```
 
@@ -158,6 +164,11 @@ private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, C
     {
         await _errorCoordinator.SendAskRepeatAsync(blockErrorTag, ct);
     }
+    catch (TimeoutException)  // Block.Error не сброшен за 5 сек
+    {
+        await HandleTagTimeoutAsync("Block.Error не сброшен", ct);
+        return;
+    }
     catch (Exception ex)
     {
         _logger.LogError(ex, "Ошибка SendAskRepeatAsync");
@@ -165,7 +176,17 @@ private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, C
     }
 
     InvokeRetryStartedSafely();
-    await _errorCoordinator.WaitForRetrySignalResetAsync(ct);
+
+    try
+    {
+        await _errorCoordinator.WaitForRetrySignalResetAsync(ct);
+    }
+    catch (TimeoutException)  // Req_Repeat не сброшен за 5 сек
+    {
+        await HandleTagTimeoutAsync("Req_Repeat не сброшен", ct);
+        return;
+    }
+
     StateManager.DequeueError();
     _ = ExecuteRetryInBackgroundAsync(error, executor, ct);
 }
@@ -185,7 +206,14 @@ private async Task ExecuteRetryInBackgroundAsync(StepError error, ColumnExecutor
             executor.OpenGate();
         }
     }
-    catch (OperationCanceledException) { }
+    catch (OperationCanceledException)
+    {
+        // Защита от зависания колонки при Cancel
+        if (!executor.HasFailed)
+        {
+            executor.OpenGate();
+        }
+    }
     catch (Exception ex)
     {
         _logger.LogError(ex, "Ошибка Retry в фоне");
@@ -216,3 +244,18 @@ SetErrorState() → gate.Reset() → новая ошибка в очередь �
 
 `ResetFaultIfNoBlockAsync` сбрасывает `Fault=false` только для шагов без PLC-блока.
 При нескольких non-PLC ошибках возможен кратковременный сброс Fault — самовосстанавливается при обработке следующей ошибки.
+
+### Таймаут Block.Error/Req_Repeat (5 сек)
+
+Если PLC не сбросит сигнал за 5 секунд → `HandleTagTimeoutAsync()` → жёсткий стоп теста.
+Это защита от залипших сигналов, которые могут вызвать автоматический Retry/Skip для другой колонки.
+
+### Cancel во время fire-and-forget Retry
+
+При отмене теста во время фонового Retry: если `executor.HasFailed=false`, открываем gate.
+Это предотвращает зависание колонки (gate закрыт, HasFailed=false, нет ошибки в очереди).
+
+### Race Condition при Skip
+
+Порядок важен: `DequeueError()` ПЕРЕД `ClearFailedState()`.
+Иначе возможен сценарий: gate открылся → новая ошибка → EnqueueError отклонена (дубликат) → ошибка потеряна.

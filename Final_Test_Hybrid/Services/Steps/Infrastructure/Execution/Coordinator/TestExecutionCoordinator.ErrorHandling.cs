@@ -297,6 +297,12 @@ public partial class TestExecutionCoordinator
             var blockErrorTag = GetBlockErrorTag(error.FailedStep);
             await _errorCoordinator.SendAskRepeatAsync(blockErrorTag, ct);
         }
+        catch (TimeoutException)
+        {
+            _logger.LogError("Block.Error не сброшен за 5 сек — жёсткий стоп");
+            await HandleTagTimeoutAsync("Block.Error не сброшен", ct);
+            return;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка SendAskRepeatAsync для колонки {Column}", error.ColumnIndex);
@@ -305,7 +311,16 @@ public partial class TestExecutionCoordinator
 
         InvokeRetryStartedSafely();
 
-        await _errorCoordinator.WaitForRetrySignalResetAsync(ct);
+        try
+        {
+            await _errorCoordinator.WaitForRetrySignalResetAsync(ct);
+        }
+        catch (TimeoutException)
+        {
+            _logger.LogError("Req_Repeat не сброшен за 5 сек — жёсткий стоп");
+            await HandleTagTimeoutAsync("Req_Repeat не сброшен", ct);
+            return;
+        }
 
         StateManager.DequeueError();
 
@@ -331,6 +346,11 @@ public partial class TestExecutionCoordinator
         }
         catch (OperationCanceledException)
         {
+            // Гарантируем что колонка не зависнет при Cancel
+            if (!executor.HasFailed)
+            {
+                executor.OpenGate();
+            }
         }
         catch (Exception ex)
         {
@@ -360,20 +380,34 @@ public partial class TestExecutionCoordinator
         _logger.LogWarning(">>> ProcessSkipAsync: КОНЕЦ ожидания сброса сигналов");
 
         StateManager.MarkErrorSkipped();
-        executor.ClearFailedState();
-        StateManager.DequeueError();
+        StateManager.DequeueError();     // СНАЧАЛА удаляем из очереди (защита от race condition)
+        executor.ClearFailedState();     // ПОТОМ открываем gate
     }
 
     /// <summary>
     /// Ожидает сброса сигналов после пропуска.
     /// </summary>
+    /// <exception cref="TimeoutException">Сигнал не сброшен за 5 секунд.</exception>
     private async Task WaitForSkipSignalsResetAsync(ITestStep? step, CancellationToken ct)
     {
-        if (step is IHasPlcBlockPath)
+        if (step is IHasPlcBlockPath plcStep)
         {
-            // Для шагов С блоком: НЕ ждём сброса сигналов
-            // Триггер Skip (End=true AND Error=true) уже был в WaitForResolutionAsync
-            // Block.Error и Block.End сбросится plc
+            // Для шагов С блоком: ждём сброс Block.Error И Block.End
+            // Skip детектируется по (End=true AND Error=true), нужно сбросить оба
+            // Защита от stale сигналов при следующей ошибке в том же блоке
+            var errorTag = PlcBlockTagHelper.GetErrorTag(plcStep);
+            var endTag = PlcBlockTagHelper.GetEndTag(plcStep);
+
+            if (errorTag != null)
+            {
+                _logger.LogDebug("Ожидание сброса Block.Error: {Tag}", errorTag);
+                await _tagWaiter.WaitForFalseAsync(errorTag, TimeSpan.FromSeconds(5), ct);
+            }
+            if (endTag != null)
+            {
+                _logger.LogDebug("Ожидание сброса Block.End: {Tag}", endTag);
+                await _tagWaiter.WaitForFalseAsync(endTag, TimeSpan.FromSeconds(5), ct);
+            }
             return;
         }
 

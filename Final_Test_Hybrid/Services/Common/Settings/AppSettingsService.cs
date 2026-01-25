@@ -11,8 +11,10 @@ public class AppSettingsService(IOptions<AppSettings> options)
     public bool UseMes { get; private set; } = options.Value.UseMes;
     public bool UseOperatorQrAuth { get; private set; } = options.Value.UseOperatorQrAuth;
     public bool UseAdminQrAuth { get; private set; } = options.Value.UseAdminQrAuth;
+    public bool ExportStepsToExcel { get; private set; } = options.Value.ExportStepsToExcel;
     public string EngineerPassword { get; } = options.Value.EngineerPassword;
     public string NameStation { get; } = options.Value.NameStation;
+    public string ExportPath { get; } = options.Value.ExportPath;
     public event Action<bool>? UseMesChanged;
 
     public void SaveUseMes(bool value)
@@ -32,6 +34,12 @@ public class AppSettingsService(IOptions<AppSettings> options)
     {
         UseAdminQrAuth = value;
         SaveSettingToFile(nameof(UseAdminQrAuth), value);
+    }
+
+    public void SaveExportStepsToExcel(bool value)
+    {
+        ExportStepsToExcel = value;
+        SaveSettingToFile(nameof(ExportStepsToExcel), value);
     }
 
     private void SaveSettingToFile(string settingName, bool value)

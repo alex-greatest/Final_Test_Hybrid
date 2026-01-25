@@ -1,20 +1,33 @@
-@using Final_Test_Hybrid.Models
 @using Final_Test_Hybrid.Models.Steps
+@using Final_Test_Hybrid.Services.Export
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution
 
 @inject StepHistoryService StepHistoryService
+@inject StepHistoryExcelExporter Exporter
 @inject BoilerState BoilerState
+@inject NotificationService NotificationService
 
 @implements IAsyncDisposable
 
 <div class="step-history-grid">
-    @if (!string.IsNullOrEmpty(BoilerState.LastSerialNumber))
-    {
-        <div class="last-test-header">
-            <div>@BoilerState.LastTestCompletedAt?.ToString("dd.MM.yyyy HH:mm:ss")</div>
-            <div>@BoilerState.LastSerialNumber</div>
+    <div class="grid-header">
+        @if (!string.IsNullOrEmpty(BoilerState.LastSerialNumber))
+        {
+            <div class="last-test-header">
+                <div>@BoilerState.LastTestCompletedAt?.ToString("dd.MM.yyyy HH:mm:ss")</div>
+                <div>@BoilerState.LastSerialNumber</div>
+            </div>
+        }
+        else
+        {
+            <div></div>
+        }
+        <div class="toolbar-buttons">
+            <RadzenButton Icon="file_download" Text="Выгрузить в Excel"
+                          Click="@ExportToExcel"
+                          Disabled="@(!_data.Any())" />
         </div>
-    }
+    </div>
 
     <RadzenDataGrid TItem="TestSequenseData"
         Data="_data"
@@ -97,6 +110,19 @@
     private void OnBoilerStateChanged()
     {
         _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void ExportToExcel()
+    {
+        var (success, error) = Exporter.Export(_data);
+        if (!success)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Ошибка экспорта", error);
+        }
+        else
+        {
+            NotificationService.Notify(NotificationSeverity.Success, "Экспорт завершён");
+        }
     }
 
     public ValueTask DisposeAsync()

@@ -1,9 +1,25 @@
+.step-history-grid .grid-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
 .step-history-grid .last-test-header {
     text-align: center;
     color: black;
     font-size: 1.5rem;
     font-weight: 700;
-    margin-bottom: 0.5rem;
+}
+
+.step-history-grid .toolbar-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.step-history-grid .toolbar-buttons ::deep .rz-button {
+    font-size: 20px;
+    padding: 12px 24px;
 }
 
 .step-history-grid ::deep .rz-data-grid {

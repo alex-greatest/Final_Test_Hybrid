@@ -1,10 +1,14 @@
 using Final_Test_Hybrid.Models;
 using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.Export;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 
-public class TestSequenseService
+public class TestSequenseService(
+    StepHistoryService stepHistoryService,
+    StepHistoryExcelExporter stepHistoryExcelExporter,
+    BoilerState boilerState)
 {
     private static class ScanModuleNames
     {
@@ -12,17 +16,10 @@ public class TestSequenseService
         public const string BarcodeScannerMes = "Сканирование штрихкода MES";
     }
 
-    private readonly StepHistoryService _stepHistoryService;
-    private readonly BoilerState _boilerState;
     private readonly List<TestSequenseData> _steps = [];
     private readonly Lock _lock = new();
     public event Action? OnDataChanged;
 
-    public TestSequenseService(StepHistoryService stepHistoryService, BoilerState boilerState)
-    {
-        _stepHistoryService = stepHistoryService;
-        _boilerState = boilerState;
-    }
     public IEnumerable<TestSequenseData> Data => GetStepsCopy();
     public int Count => GetCount();
 
@@ -162,8 +159,11 @@ public class TestSequenseService
 
     public void ClearAllExceptScan()
     {
-        _boilerState.SaveLastTestInfo();
-        _stepHistoryService.CaptureSnapshot(GetStepsCopy());
+        boilerState.SaveLastTestInfo();
+        var stepsCopy = GetStepsCopy();
+        var testSequenseDatas = stepsCopy as TestSequenseData[] ?? stepsCopy.ToArray();
+        stepHistoryService.CaptureSnapshot(testSequenseDatas);
+        stepHistoryExcelExporter.ExportIfEnabledAsync(testSequenseDatas);
 
         lock (_lock)
         {

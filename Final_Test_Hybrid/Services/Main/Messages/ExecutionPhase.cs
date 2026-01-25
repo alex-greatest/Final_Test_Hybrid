@@ -7,5 +7,6 @@ public enum ExecutionPhase
     ValidatingRecipes,
     LoadingRecipes,
     CreatingDbRecords,
-    WaitingForAdapter
+    WaitingForAdapter,
+    WaitingForDiagnosticConnection
 }

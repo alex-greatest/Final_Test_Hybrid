@@ -127,7 +127,18 @@ public partial class PreExecutionCoordinator
                 {
                     infra.Logger.LogInformation("Отправляем SendAskRepeatAsync...");
                     var errorTag = GetBlockErrorTag(step);
-                    await coordinators.ErrorCoordinator.SendAskRepeatAsync(errorTag, ct);
+                    try
+                    {
+                        await coordinators.ErrorCoordinator.SendAskRepeatAsync(errorTag, ct);
+                    }
+                    catch (TimeoutException)
+                    {
+                        infra.Logger.LogError("Block.Error не сброшен за 5 сек — жёсткий стоп pre-execution");
+                        coordinators.DialogCoordinator.CloseBlockErrorDialog();
+                        await coordinators.ErrorCoordinator.HandleInterruptAsync(
+                            ErrorCoordinator.InterruptReason.TagTimeout, ct);
+                        return PreExecutionResult.Fail("Таймаут ожидания Block.Error");
+                    }
                     coordinators.DialogCoordinator.CloseBlockErrorDialog();
                     infra.Logger.LogInformation("SendAskRepeatAsync отправлен, повторяем шаг");
                     errorScope.Clear();

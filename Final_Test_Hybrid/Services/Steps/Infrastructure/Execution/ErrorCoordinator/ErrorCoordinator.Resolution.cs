@@ -73,6 +73,12 @@ public sealed partial class ErrorCoordinator
 
     public Task SendAskRepeatAsync(CancellationToken ct) => SendAskRepeatAsync(null, ct);
 
+    /// <summary>
+    /// Отправляет сигнал AskRepeat в PLC и ожидает сброса Block.Error.
+    /// </summary>
+    /// <param name="blockErrorTag">Тег Block.Error для ожидания сброса (null для шагов без блока).</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <exception cref="TimeoutException">Block.Error не сброшен за 5 секунд.</exception>
     public async Task SendAskRepeatAsync(string? blockErrorTag, CancellationToken ct)
     {
         _logger.LogInformation("Отправка AskRepeat в PLC");
@@ -87,23 +93,21 @@ public sealed partial class ErrorCoordinator
         if (blockErrorTag != null)
         {
             _logger.LogDebug("Ожидание сброса Error блока: {Tag}", blockErrorTag);
-            await _resolution.TagWaiter.WaitForFalseAsync(blockErrorTag, timeout: null, ct);
+            await _resolution.TagWaiter.WaitForFalseAsync(blockErrorTag, timeout: TimeSpan.FromSeconds(5), ct);
             _logger.LogDebug("Error блока сброшен");
         }
     }
 
+    /// <summary>
+    /// Ожидает сброса сигнала Req_Repeat.
+    /// </summary>
+    /// <param name="ct">Токен отмены.</param>
+    /// <exception cref="TimeoutException">Req_Repeat не сброшен за 5 секунд.</exception>
     public async Task WaitForRetrySignalResetAsync(CancellationToken ct)
     {
         _logger.LogDebug("Ожидание сброса Req_Repeat...");
-        try
-        {
-            await _resolution.TagWaiter.WaitForFalseAsync(BaseTags.ErrorRetry, timeout: TimeSpan.FromSeconds(5), ct);
-            _logger.LogDebug("Req_Repeat сброшен");
-        }
-        catch (TimeoutException)
-        {
-            _logger.LogWarning("Таймаут ожидания сброса Req_Repeat (5 сек)");
-        }
+        await _resolution.TagWaiter.WaitForFalseAsync(BaseTags.ErrorRetry, timeout: TimeSpan.FromSeconds(5), ct);
+        _logger.LogDebug("Req_Repeat сброшен");
     }
 
     #endregion

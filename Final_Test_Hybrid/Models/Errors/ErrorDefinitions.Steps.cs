@@ -37,6 +37,13 @@ public static partial class ErrorDefinitions
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "dhw-fill-circuit-normal-direction",
         RelatedStepName: "DHW/Fill_Circuit_Normal_Direction");
+    
+    public static readonly ErrorDefinition PowerCableNotConnected = new(
+        "П-009-00", "Не подключен силовой кабель",
+        Severity: ErrorSeverity.Warning,
+        ActivatesResetButton: true,
+        RelatedStepId: "elec-connect-power-cable",
+        RelatedStepName: "Elec/Connect_Power_Cable");
 
     public static readonly ErrorDefinition EarthClipNotConnected = new(
         "П-009-01", "Клипса заземление не подключена",
@@ -44,13 +51,6 @@ public static partial class ErrorDefinitions
         ActivatesResetButton: true,
         RelatedStepId: "elec-connect-earth-clip",
         RelatedStepName: "Elec/Connect_Earth_Clip");
-
-    public static readonly ErrorDefinition PowerCableNotConnected = new(
-        "П-009-02", "Присоедините силовой кабель",
-        Severity: ErrorSeverity.Warning,
-        ActivatesResetButton: true,
-        RelatedStepId: "elec-connect-power-cable",
-        RelatedStepName: "Elec/Connect_Power_Cable");
     
     public static readonly ErrorDefinition AlLeackGas = new(
         "П-010-00", "Утечка газа",
@@ -107,7 +107,12 @@ public static partial class ErrorDefinitions
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "ch-slow-fill-circuit",
         RelatedStepName: "CH/Slow_Fill_Circuit");
-    
+
+    public static readonly ErrorDefinition NoDiagnosticConnection = new(
+        "П-016-00", "Нет связи с котлом",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "coms-check-comms",
+        RelatedStepName: "Coms/Check_Comms");
 
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [
@@ -125,6 +130,7 @@ public static partial class ErrorDefinitions
         AlFillTimeСh,
         AlNoWaterFlowChSlow,
         AlNoWaterPressureСhSlow,
-        AlFillTimeСhSlow
+        AlFillTimeСhSlow,
+        NoDiagnosticConnection
     ];
 }

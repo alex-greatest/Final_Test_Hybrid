@@ -94,6 +94,7 @@ public class MessageService
         ExecutionPhase.LoadingRecipes => "Загрузка рецептов...",
         ExecutionPhase.CreatingDbRecords => "Создание записей в БД...",
         ExecutionPhase.WaitingForAdapter => "Подсоедините адаптер к котлу и нажмите \"Блок\"",
+        ExecutionPhase.WaitingForDiagnosticConnection => "Подключите кабель связи с котлом",
         _ => ""
     };
 

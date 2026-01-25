@@ -3,6 +3,7 @@ using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol;
 using Final_Test_Hybrid.Services.Errors;
+using Final_Test_Hybrid.Services.Export;
 using Final_Test_Hybrid.Services.Results;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.Messages;
@@ -21,6 +22,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Final_Test_Hybrid.Services.Steps.Steps;
+using Final_Test_Hybrid.Services.Steps.Steps.Coms;
 using Final_Test_Hybrid.Services.Steps.Steps.Diagnostic;
 using Final_Test_Hybrid.Services.Steps.Steps.Misc;
 using Final_Test_Hybrid.Services.Steps.Validation;
@@ -85,6 +87,7 @@ public static class StepsServiceExtensions
         // Test sequence
         services.AddSingleton<StepHistoryService>();
         services.AddSingleton<TestSequenseService>();
+        services.AddSingleton<StepHistoryExcelExporter>();
         services.AddSingleton<ITestSequenceLoader, TestSequenceLoader>();
         services.AddSingleton<ITestMapBuilder, TestMapBuilder>();
         services.AddSingleton<ITestMapResolver, TestMapResolver>();
@@ -157,6 +160,9 @@ public static class StepsServiceExtensions
         services.AddSingleton<PreExecutionCoordinators>();
         services.AddSingleton<PreExecutionState>();
         services.AddSingleton<PreExecutionCoordinator>();
+
+        // Coms steps
+        services.AddTransient<CheckCommsStep>();
 
         // Diagnostic steps (публичные — можно запускать отдельно)
         services.AddTransient<DiagStressReadStep>();

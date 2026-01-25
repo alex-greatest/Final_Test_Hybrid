@@ -103,7 +103,12 @@
       "Bash(for file in \"D:\\\\projects\\\\Final_Test_Hybrid\\\\Final_Test_Hybrid\\\\Services\\\\Steps\\\\Steps\\\\Diagnostic\"/*.cs)",
       "Bash(do grep -H \"^public class\" \"$file\")",
       "Bash(echo:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(git -C \"D:\\\\projects\\\\Final_Test_Hybrid\" log --oneline -20)",
+      "Bash(git -C \"D:\\\\projects\\\\Final_Test_Hybrid\" log --all --oneline --grep=\"gate\\\\|Gate\\\\|пропуск\\\\|skip\")",
+      "Bash(git -C \"D:\\\\projects\\\\Final_Test_Hybrid\" show 0457f94 --stat)",
+      "mcp__ide__getDiagnostics",
+      "Bash(git -C \"D:\\\\projects\\\\Final_Test_Hybrid\" show 0457f94)"
     ]
   }
 }
