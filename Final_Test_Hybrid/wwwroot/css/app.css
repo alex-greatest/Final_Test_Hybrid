@@ -322,6 +322,11 @@ svg {
     z-index: 10000 !important;
 }
 
+/* ===== DATEPICKER POPUP ===== */
+.rz-datepicker-popup {
+    z-index: 10000 !important;
+}
+
 /* Ячейки редактирования в DataGrid */
 .rz-data-grid td,
 .rz-data-grid td > *,

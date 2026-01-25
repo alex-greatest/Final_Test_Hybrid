@@ -2,7 +2,6 @@
 @using Final_Test_Hybrid.Services.Results
 
 @inject ITestResultsService TestResultsService
-@inject BoilerState BoilerState
 
 @implements IDisposable
 
@@ -23,6 +22,11 @@ else
     }
     <RadzenDataGrid Data="@_results" TItem="TestResultItem"
                     AllowFiltering="true" AllowSorting="true"
+                    AllowPaging="true"
+                    PageSize="50"
+                    PagerHorizontalAlign="HorizontalAlign.Center"
+                    ShowPagingSummary="true"
+                    PagingSummaryFormat="Показано {0}-{1} из {2}"
                     FilterText="@DataGridRu.Filter"
                     ApplyFilterText="@DataGridRu.ApplyFilter"
                     ClearFilterText="@DataGridRu.ClearFilter"
@@ -60,8 +64,9 @@ else
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestResultItem" Property="Status" Title="Статус" Width="80px">
                 <Template Context="item">
-                    <RadzenBadge Style="padding: 5px" BadgeStyle="@(item.Status == 1 ? BadgeStyle.Success : BadgeStyle.Danger)"
-                                 Text="@(item.Status == 1 ? "OK" : "NOK")" />
+                    <RadzenBadge BadgeStyle="@(item.Status == 1 ? BadgeStyle.Success : BadgeStyle.Danger)"
+                                 Text="@(item.Status == 1 ? "OK" : "NOK")"
+                                 Style="padding: 5px;" />
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestResultItem" Property="Unit" Title="Ед. изм." Width="100px" />
@@ -77,7 +82,6 @@ else
     protected override void OnInitialized()
     {
         TestResultsService.OnChanged += OnResultsChanged;
-        BoilerState.OnCleared += OnBoilerStateChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

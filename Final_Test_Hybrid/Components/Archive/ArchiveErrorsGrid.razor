@@ -1,0 +1,17 @@
+@using Final_Test_Hybrid.Models.Archive
+
+<div class="tab-content">
+    <RadzenDataGrid Data="@Data" TItem="ArchiveErrorItem"
+                AllowFiltering="false" AllowSorting="true"
+                EmptyText="Нет данных">
+    <Columns>
+        <RadzenDataGridColumn TItem="ArchiveErrorItem" Property="Code" Title="Код" />
+        <RadzenDataGridColumn TItem="ArchiveErrorItem" Property="Description" Title="Описание" />
+    </Columns>
+    </RadzenDataGrid>
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<ArchiveErrorItem> Data { get; set; } = [];
+}

@@ -1,0 +1,313 @@
+@using System.IO
+@using Final_Test_Hybrid.Models.Archive
+@using Final_Test_Hybrid.Models.Database
+@using Final_Test_Hybrid.Services.Archive
+@using Microsoft.Extensions.Logging
+
+@inject OperationDetailsService OperationDetailsService
+@inject ArchiveExcelExportService ExcelExportService
+@inject NotificationService NotificationService
+@inject ILogger<OperationDetailsDialog> Logger
+
+<div class="stand-database-container">
+    <div class="dialog-toolbar">
+        <RadzenButton Icon="file_download" Text="Сохранить в Excel"
+                      Click="@ExportToExcelAsync"
+                      ButtonStyle="ButtonStyle.Success"
+                      Size="ButtonSize.Medium"
+                      Disabled="@(!CanExport)" />
+    </div>
+    <div class="tabs-shell">
+        <RadzenTabs RenderMode="TabRenderMode.Client" @bind-SelectedIndex="_selectedTabIndex" Change="OnTabChangeAsync" class="database-tabs">
+            <Tabs>
+                <RadzenTabsItem Text="С диапазоном">
+                    @if (_isLoadingNumericWithRange)
+                    {
+                        <div class="loading-container">
+                            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                        </div>
+                    }
+                    else
+                    {
+                        <ArchiveResultsGrid Data="_numericWithRangeResults" ShowRange="true" />
+                    }
+                </RadzenTabsItem>
+
+                <RadzenTabsItem Text="Без диапазона">
+                    @if (_isLoadingSimpleStatus)
+                    {
+                        <div class="loading-container">
+                            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                        </div>
+                    }
+                    else
+                    {
+                        <ArchiveResultsGrid Data="_simpleStatusResults" ShowRange="false" />
+                    }
+                </RadzenTabsItem>
+
+                <RadzenTabsItem Text="Плата">
+                    @if (_isLoadingBoardParameters)
+                    {
+                        <div class="loading-container">
+                            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                        </div>
+                    }
+                    else
+                    {
+                        <ArchiveResultsGrid Data="_boardParametersResults" ShowRange="true" />
+                    }
+                </RadzenTabsItem>
+
+                <RadzenTabsItem Text="Ошибки">
+                    @if (_isLoadingErrors)
+                    {
+                        <div class="loading-container">
+                            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                        </div>
+                    }
+                    else
+                    {
+                        <ArchiveErrorsGrid Data="_errors" />
+                    }
+                </RadzenTabsItem>
+
+                <RadzenTabsItem Text="Время шагов">
+                    @if (_isLoadingStepTimes)
+                    {
+                        <div class="loading-container">
+                            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                        </div>
+                    }
+                    else
+                    {
+                        <ArchiveStepTimesGrid Data="_stepTimes" />
+                    }
+                </RadzenTabsItem>
+            </Tabs>
+        </RadzenTabs>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Operation Operation { get; set; } = null!;
+
+    private int _selectedTabIndex;
+    private bool _isExporting;
+
+    private IReadOnlyList<ArchiveResultItem> _numericWithRangeResults = [];
+    private IReadOnlyList<ArchiveResultItem> _simpleStatusResults = [];
+    private IReadOnlyList<ArchiveResultItem> _boardParametersResults = [];
+    private IReadOnlyList<ArchiveErrorItem> _errors = [];
+    private IReadOnlyList<ArchiveStepTimeItem> _stepTimes = [];
+
+    private bool _isLoadingNumericWithRange;
+    private bool _isLoadingSimpleStatus;
+    private bool _isLoadingBoardParameters;
+    private bool _isLoadingErrors;
+    private bool _isLoadingStepTimes;
+
+    private bool _numericWithRangeLoaded;
+    private bool _simpleStatusLoaded;
+    private bool _boardParametersLoaded;
+    private bool _errorsLoaded;
+    private bool _stepTimesLoaded;
+
+    /// <summary>
+    /// Экспорт доступен только для завершённых операций (OK/NOK).
+    /// </summary>
+    private bool CanExport => !_isExporting &&
+        (Operation.Status == OperationResultStatus.Ok || Operation.Status == OperationResultStatus.Nok);
+
+    /// <summary>
+    /// Загружает данные первой вкладки при инициализации.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadNumericWithRangeAsync();
+    }
+
+    /// <summary>
+    /// Обрабатывает смену вкладки и загружает данные при необходимости.
+    /// </summary>
+    private async Task OnTabChangeAsync(int index)
+    {
+        switch (index)
+        {
+            case 0 when !_numericWithRangeLoaded:
+                await LoadNumericWithRangeAsync();
+                break;
+            case 1 when !_simpleStatusLoaded:
+                await LoadSimpleStatusAsync();
+                break;
+            case 2 when !_boardParametersLoaded:
+                await LoadBoardParametersAsync();
+                break;
+            case 3 when !_errorsLoaded:
+                await LoadErrorsAsync();
+                break;
+            case 4 when !_stepTimesLoaded:
+                await LoadStepTimesAsync();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Загружает результаты с диапазоном.
+    /// </summary>
+    private async Task LoadNumericWithRangeAsync()
+    {
+        _isLoadingNumericWithRange = true;
+        StateHasChanged();
+
+        _numericWithRangeResults = await OperationDetailsService.GetResultsAsync(
+            Operation.Id, AuditType.NumericWithRange);
+        _numericWithRangeLoaded = true;
+
+        _isLoadingNumericWithRange = false;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Загружает результаты без диапазона.
+    /// </summary>
+    private async Task LoadSimpleStatusAsync()
+    {
+        _isLoadingSimpleStatus = true;
+        StateHasChanged();
+
+        _simpleStatusResults = await OperationDetailsService.GetResultsAsync(
+            Operation.Id, AuditType.SimpleStatus);
+        _simpleStatusLoaded = true;
+
+        _isLoadingSimpleStatus = false;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Загружает параметры платы.
+    /// </summary>
+    private async Task LoadBoardParametersAsync()
+    {
+        _isLoadingBoardParameters = true;
+        StateHasChanged();
+
+        _boardParametersResults = await OperationDetailsService.GetResultsAsync(
+            Operation.Id, AuditType.BoardParameters);
+        _boardParametersLoaded = true;
+
+        _isLoadingBoardParameters = false;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Загружает ошибки.
+    /// </summary>
+    private async Task LoadErrorsAsync()
+    {
+        _isLoadingErrors = true;
+        StateHasChanged();
+
+        _errors = await OperationDetailsService.GetErrorsAsync(Operation.Id);
+        _errorsLoaded = true;
+
+        _isLoadingErrors = false;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Загружает время шагов.
+    /// </summary>
+    private async Task LoadStepTimesAsync()
+    {
+        _isLoadingStepTimes = true;
+        StateHasChanged();
+
+        _stepTimes = await OperationDetailsService.GetStepTimesAsync(Operation.Id);
+        _stepTimesLoaded = true;
+
+        _isLoadingStepTimes = false;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Экспортирует данные операции в Excel файл.
+    /// </summary>
+    private async Task ExportToExcelAsync()
+    {
+        if (_isExporting || !CanExport)
+        {
+            return;
+        }
+
+        _isExporting = true;
+        StateHasChanged();
+
+        try
+        {
+            if (!_numericWithRangeLoaded)
+            {
+                await LoadNumericWithRangeAsync();
+            }
+            if (!_simpleStatusLoaded)
+            {
+                await LoadSimpleStatusAsync();
+            }
+            if (!_boardParametersLoaded)
+            {
+                await LoadBoardParametersAsync();
+            }
+            if (!_errorsLoaded)
+            {
+                await LoadErrorsAsync();
+            }
+            if (!_stepTimesLoaded)
+            {
+                await LoadStepTimesAsync();
+            }
+
+            var data = new ArchiveExportData
+            {
+                DateStart = Operation.DateStart,
+                SerialNumber = Operation.Boiler?.SerialNumber ?? "-",
+                NumericWithRange = _numericWithRangeResults,
+                SimpleStatus = _simpleStatusResults,
+                BoardParameters = _boardParametersResults,
+                Errors = _errors,
+                StepTimes = _stepTimes
+            };
+
+            var serialNumber = SanitizeFileName(Operation.Boiler?.SerialNumber ?? "Unknown");
+            var fileName = $"{serialNumber}_Выгрузка от {DateTime.Now:dd.MM.yyyy HH-mm-ss}.xlsx";
+            await Task.Run(() => ExcelExportService.Export(data, fileName));
+            NotificationService.Notify(NotificationSeverity.Success, "Готово", $"Файл сохранён");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Ошибка экспорта архива в Excel для операции {OperationId}", Operation.Id);
+            NotificationService.Notify(NotificationSeverity.Error, "Ошибка", "Ошибка при создании отчёта");
+        }
+        finally
+        {
+            _isExporting = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Очищает строку от недопустимых символов для имени файла.
+    /// </summary>
+    private static string SanitizeFileName(string input)
+    {
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var sanitized = string.Concat(input.Where(c => !invalidChars.Contains(c)));
+
+        if (sanitized.Length > 50)
+        {
+            sanitized = sanitized[..50];
+        }
+
+        return string.IsNullOrWhiteSpace(sanitized) ? "Export" : sanitized;
+    }
+}

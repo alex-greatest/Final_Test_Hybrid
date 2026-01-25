@@ -1,0 +1,39 @@
+@using Final_Test_Hybrid.Models.Archive
+
+<div class="tab-content">
+    <RadzenDataGrid Data="@Data" TItem="ArchiveResultItem"
+                AllowFiltering="false" AllowSorting="true"
+                EmptyText="Нет данных">
+    <Columns>
+        <RadzenDataGridColumn TItem="ArchiveResultItem" Property="ParameterName" Title="Параметр" />
+        <RadzenDataGridColumn TItem="ArchiveResultItem" Property="Value" Title="Значение" />
+        @if (ShowRange)
+        {
+            <RadzenDataGridColumn TItem="ArchiveResultItem" Property="Min" Title="Мин" />
+            <RadzenDataGridColumn TItem="ArchiveResultItem" Property="Max" Title="Макс" />
+        }
+        <RadzenDataGridColumn TItem="ArchiveResultItem" Property="Status" Title="Статус" Width="100px">
+            <Template Context="item">
+                @if (item.Status.HasValue)
+                {
+                    <RadzenBadge Style="padding: 5px" BadgeStyle="@(item.Status == 1 ? BadgeStyle.Success : BadgeStyle.Danger)"
+                                 Text="@(item.Status == 1 ? "OK" : "NOK")" />
+                }
+                else
+                {
+                    <span>-</span>
+                }
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ArchiveResultItem" Property="Unit" Title="Ед.изм." Width="100px" />
+    </Columns>
+    </RadzenDataGrid>
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<ArchiveResultItem> Data { get; set; } = [];
+
+    [Parameter]
+    public bool ShowRange { get; set; } = true;
+}
