@@ -81,10 +81,49 @@ public class ColumnExecutor(
         ClearStatusIfNotFailed();
     }
 
+    /// <summary>
+    /// Выполняет один шаг теста с защитой от исключений на этапе инициализации.
+    /// </summary>
     private async Task ExecuteStep(ITestStep step, CancellationToken ct)
     {
-        StartNewStep(step);
+        if (!TryStartNewStep(step))
+        {
+            return;
+        }
+
         await ExecuteStepCoreAsync(step, ct);
+    }
+
+    /// <summary>
+    /// Пытается запустить новый шаг. При ошибке логирует и устанавливает состояние ошибки.
+    /// </summary>
+    /// <returns>true если шаг успешно запущен, false при ошибке.</returns>
+    private bool TryStartNewStep(ITestStep step)
+    {
+        Guid uiId;
+        try
+        {
+            var limits = GetPreExecutionLimits(step);
+            uiId = statusReporter.ReportStepStarted(step, limits);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка регистрации шага {Step} в UI", step.Name);
+            return false;
+        }
+
+        try
+        {
+            ApplyRunningState(step, uiId);
+        }
+        catch (Exception ex)
+        {
+            SetErrorState(step, ex.Message, null);
+            LogError(step, ex.Message, ex);
+            return false;
+        }
+
+        return true;
     }
 
     private async Task ExecuteStepCoreAsync(ITestStep step, CancellationToken ct)
@@ -107,16 +146,6 @@ public class ColumnExecutor(
             SetErrorState(step, ex.Message, null);
             LogError(step, ex.Message, ex);
         }
-    }
-
-    /// <summary>
-    /// Запускает новый шаг и регистрирует его в UI.
-    /// </summary>
-    private void StartNewStep(ITestStep step)
-    {
-        var limits = GetPreExecutionLimits(step);
-        var uiId = statusReporter.ReportStepStarted(step, limits);
-        ApplyRunningState(step, uiId);
     }
 
     /// <summary>

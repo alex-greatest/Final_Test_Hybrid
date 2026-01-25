@@ -60,7 +60,7 @@ else
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestResultItem" Property="Status" Title="Статус" Width="80px">
                 <Template Context="item">
-                    <RadzenBadge BadgeStyle="@(item.Status == 1 ? BadgeStyle.Success : BadgeStyle.Danger)"
+                    <RadzenBadge Style="padding: 5px" BadgeStyle="@(item.Status == 1 ? BadgeStyle.Success : BadgeStyle.Danger)"
                                  Text="@(item.Status == 1 ? "OK" : "NOK")" />
                 </Template>
             </RadzenDataGridColumn>

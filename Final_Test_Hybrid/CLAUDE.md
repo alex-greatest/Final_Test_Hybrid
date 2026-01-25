@@ -132,6 +132,24 @@ public class MyService(DualLogger<MyService> logger)
 | `TryStartInBackground()` | Исключения в `RunWithErrorHandlingAsync` |
 | `Task.WhenAny` race с таймером и ожиданием | Даже при "ложном" таймауте `await waitTask` вернёт правильный результат, ошибка снимется в `finally`. Максимум — кратковременный "мигнёт" ошибкой в UI |
 
+### Cancellation & Threading ([CancellationGuide.md](Docs/CancellationGuide.md))
+
+| Паттерн | Почему OK |
+|---------|-----------|
+| Gate ждёт только при HasFailed | Проверка ct ДО WaitAsync, при HasFailed=true ClearStatus ничего не делает |
+| Task.WhenAll без linked CTS | Исключения ловятся внутри ExecuteStepCoreAsync |
+| Шаги без timeout защиты | Контракт: шаги ОБЯЗАНЫ уважать CancellationToken |
+| DequeueError до retry | При Stop/Reset вызывается Reset() который очищает всё |
+| Двойной Stop (OnForceStop + OnReset) | First-wins семантика, StopReason только для логов |
+| Диалоги без CancellationToken | Закрываются через события OnReset/OnForceStop |
+| Проверка step ПОСЛЕ семафора | Защита от TOCTOU — step может измениться пока ждём |
+| CTS.Dispose() без строгой синхронизации | Идемпотентен, double dispose безопасен |
+
+**Правила для шагов:**
+- ВСЕГДА проверяй `ct.IsCancellationRequested` в циклах
+- ВСЕГДА передавай ct в async операции
+- НИКОГДА не игнорируй CancellationToken
+
 ## Safety Patterns
 
 ### Hang Protection
