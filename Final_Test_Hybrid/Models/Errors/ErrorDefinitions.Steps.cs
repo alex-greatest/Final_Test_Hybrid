@@ -119,6 +119,12 @@ public static partial class ErrorDefinitions
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-write-test-byte-on",
         RelatedStepName: "Coms/Write_Test_Byte_ON");
+    
+    public static readonly ErrorDefinition BoilerNotStandMode = new(
+        "П-016-02", "Котел не в стендовом режиме",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "coms-write-test-byte-on",
+        RelatedStepName: "Coms/Write_Test_Byte_ON");
 
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [
@@ -138,6 +144,7 @@ public static partial class ErrorDefinitions
         AlNoWaterPressureСhSlow,
         AlFillTimeСhSlow,
         NoDiagnosticConnection,
-        WriteBytesOn
+        WriteBytesOn,
+        BoilerNotStandMode
     ];
 }

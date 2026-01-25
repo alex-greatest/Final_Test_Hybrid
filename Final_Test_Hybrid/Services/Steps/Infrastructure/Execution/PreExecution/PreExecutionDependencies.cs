@@ -48,6 +48,7 @@ public class PreExecutionInfrastructure(
     ITestResultsService testResultsService,
     IRecipeProvider recipeProvider,
     StepHistoryService stepHistory,
+    ITimerService timerService,
     DualLogger<PreExecutionCoordinator> logger)
 {
     public PausableOpcUaTagService OpcUa => opcUa;
@@ -60,6 +61,7 @@ public class PreExecutionInfrastructure(
     public ITestResultsService TestResultsService => testResultsService;
     public IRecipeProvider RecipeProvider => recipeProvider;
     public StepHistoryService StepHistory => stepHistory;
+    public ITimerService TimerService => timerService;
     public DualLogger<PreExecutionCoordinator> Logger => logger;
 }
 

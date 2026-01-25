@@ -90,6 +90,7 @@ public partial class PreExecutionCoordinator(
         infra.ErrorService.ClearHistory();
         infra.TestResultsService.Clear();
         infra.StepHistory.Clear();
+        infra.TimerService.Clear();
         state.BoilerState.ClearLastTestInfo();
 
         infra.Logger.LogInformation("История и результаты очищены для нового теста");

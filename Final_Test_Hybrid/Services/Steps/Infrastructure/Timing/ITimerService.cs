@@ -8,5 +8,6 @@ public interface ITimerService
     TimeSpan? GetElapsed(string key);
     bool IsRunning(string key);
     IReadOnlyDictionary<string, TimeSpan> GetAllActive();
+    void StopAll();
     void Clear();
 }

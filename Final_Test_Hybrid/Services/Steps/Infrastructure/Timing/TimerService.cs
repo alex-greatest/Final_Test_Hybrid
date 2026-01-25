@@ -6,17 +6,22 @@ public class TimerService : ITimerService
 {
     private readonly Lock _lock = new();
     private readonly Dictionary<string, DateTime> _timers = [];
+    private readonly Dictionary<string, TimeSpan> _frozenTimers = [];
 
     public event Action? OnChanged;
 
     public TimerService(BoilerState boilerState)
     {
-        boilerState.OnCleared += Clear;
+        boilerState.OnCleared += StopAll;
     }
 
     public void Start(string key)
     {
-        lock (_lock) { _timers[key] = DateTime.UtcNow; }
+        lock (_lock)
+        {
+            _timers[key] = DateTime.UtcNow;
+            _frozenTimers.Remove(key);
+        }
         OnChanged?.Invoke();
     }
 
@@ -25,10 +30,20 @@ public class TimerService : ITimerService
         TimeSpan? elapsed;
         lock (_lock)
         {
-            if (!_timers.TryGetValue(key, out var startTime))
+            if (_timers.TryGetValue(key, out var startTime))
+            {
+                elapsed = DateTime.UtcNow - startTime;
+                _timers.Remove(key);
+            }
+            else if (_frozenTimers.TryGetValue(key, out var frozen))
+            {
+                elapsed = frozen;
+                _frozenTimers.Remove(key);
+            }
+            else
+            {
                 return null;
-            elapsed = DateTime.UtcNow - startTime;
-            _timers.Remove(key);
+            }
         }
         OnChanged?.Invoke();
         return elapsed;
@@ -38,6 +53,9 @@ public class TimerService : ITimerService
     {
         lock (_lock)
         {
+            if (_frozenTimers.TryGetValue(key, out var frozen))
+                return frozen;
+
             return _timers.TryGetValue(key, out var startTime)
                 ? DateTime.UtcNow - startTime
                 : null;
@@ -53,9 +71,34 @@ public class TimerService : ITimerService
     {
         lock (_lock)
         {
+            var result = new Dictionary<string, TimeSpan>(_frozenTimers);
             var now = DateTime.UtcNow;
-            return _timers.ToDictionary(kvp => kvp.Key, kvp => now - kvp.Value);
+            foreach (var (key, startTime) in _timers)
+            {
+                result[key] = now - startTime;
+            }
+            return result;
         }
+    }
+
+    /// <summary>
+    /// Замораживает все активные таймеры, сохраняя их текущие значения.
+    /// Вызывается при завершении теста для отображения финальных значений оператору.
+    /// </summary>
+    public void StopAll()
+    {
+        lock (_lock)
+        {
+            if (_timers.Count == 0) return;
+
+            var now = DateTime.UtcNow;
+            foreach (var (key, startTime) in _timers)
+            {
+                _frozenTimers[key] = now - startTime;
+            }
+            _timers.Clear();
+        }
+        OnChanged?.Invoke();
     }
 
     public void Clear()
@@ -63,8 +106,9 @@ public class TimerService : ITimerService
         bool hadTimers;
         lock (_lock)
         {
-            hadTimers = _timers.Count > 0;
+            hadTimers = _timers.Count > 0 || _frozenTimers.Count > 0;
             _timers.Clear();
+            _frozenTimers.Clear();
         }
         if (hadTimers) OnChanged?.Invoke();
     }

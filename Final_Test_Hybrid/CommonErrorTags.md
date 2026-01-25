@@ -19,6 +19,9 @@
 | О-001-02 | Alarm4[4] | `ns=3;s="DB_Message"."Alarm4"[4]` | Селектор выбора режима |
 | О-001-03 | Alarm4[5] | `ns=3;s="DB_Message"."Alarm4"[5]` | Ошибка Profibus |
 | О-001-04 | Alarm4[6] | `ns=3;s="DB_Message"."Alarm4"[6]` | Нет подачи воздуха |
+| О-001-05 | Alarm4[7] | `ns=3;s="DB_Message"."Alarm4"[7]` | Не включен один из автоматов питания |
+| О-001-06 | Alarm4[8] | `ns=3;s="DB_Message"."Alarm4"[8]` | Нажата кнопка "Стоп подачи газа" |
+| О-001-07 | Alarm4[9] | `ns=3;s="DB_Message"."Alarm4"[9]` | Нажата кнопка "Выключение автоматического цикла" |
 
 ---
 
@@ -49,6 +52,8 @@
 | Код БД | Описание |
 |--------|----------|
 | О-004-00 | Ошибка записи в ПЛК |
+| О-004-01 | Потеря связи с ПЛК |
+| О-004-02 | Таймаут чтения тега ПЛК |
 
 ---
 
@@ -76,7 +81,10 @@ VALUES
 (120, 'О-001-01', 'DB_Message. Неисправность нет режима', 2, 7, NULL),
 (121, 'О-001-02', 'DB_Message. Неисправность селектора выбора режима', 2, 7, NULL),
 (122, 'О-001-03', 'DB_Message. Неисправность ошибка Profibus', 2, 7, NULL),
-(123, 'О-001-04', 'DB_Message. Неисправность Нет подачи воздуха', 2, 7, NULL);
+(123, 'О-001-04', 'DB_Message. Неисправность Нет подачи воздуха', 2, 7, NULL),
+(624, 'О-001-05', 'DB_Message. Неисправность Не включен один из автоматов питания', 2, 7, NULL),
+(625, 'О-001-06', 'DB_Message. Неисправность. Нажата кнопка "Стоп подачи газа"', 2, 7, NULL),
+(626, 'О-001-07', 'DB_Message. Неисправность. Нажата кнопка "Выключение автоматического цикла"', 2, 7, NULL);
 
 -- DB_Common (О-002-xx) - общие ошибки
 INSERT INTO tb_error_settings_template (id, address_error, description, version, station_type_id, step_id)
@@ -111,6 +119,6 @@ INSERT INTO tb_error_settings_template (id, address_error, description, version,
 VALUES
     (136, 'О-004-02', 'Таймаут чтения тега ПЛК', 2, 7, NULL);
 
--- Обновить sequence (следующий id = 135)
-ALTER SEQUENCE tb_error_settings_template_id_seq RESTART WITH 137;
+-- Обновить sequence (следующий id = 627)
+ALTER SEQUENCE tb_error_settings_template_id_seq RESTART WITH 627;
 ```
