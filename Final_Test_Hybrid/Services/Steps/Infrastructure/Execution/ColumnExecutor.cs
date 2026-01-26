@@ -30,10 +30,11 @@ public class ColumnExecutor(
         string? ErrorMessage,
         string? ResultValue,
         bool HasFailed,
+        bool CanSkip,
         Guid UiStepId,
         ITestStep? FailedStep);
 
-    private static readonly StepState EmptyState = new(null, null, null, null, null, false, Guid.Empty, null);
+    private static readonly StepState EmptyState = new(null, null, null, null, null, false, true, Guid.Empty, null);
     private StepState _state = EmptyState;
 
     public int ColumnIndex { get; } = columnIndex;
@@ -43,6 +44,7 @@ public class ColumnExecutor(
     public string? ErrorMessage => _state.ErrorMessage;
     public string? ResultValue => _state.ResultValue;
     public bool HasFailed => _state.HasFailed;
+    public bool CanSkip => _state.CanSkip;
     public bool IsVisible => _state.Status != null;
     public ITestStep? FailedStep => _state.FailedStep;
     public Guid UiStepId => _state.UiStepId;
@@ -118,7 +120,7 @@ public class ColumnExecutor(
         }
         catch (Exception ex)
         {
-            SetErrorState(step, ex.Message, null);
+            SetErrorState(step, ex.Message, null, canSkip: step is not INonSkippable);
             LogError(step, ex.Message, ex);
             return false;
         }
@@ -143,7 +145,7 @@ public class ColumnExecutor(
         catch (Exception ex)
         {
             stepTimingService.StopColumnStepTiming(ColumnIndex);
-            SetErrorState(step, ex.Message, null);
+            SetErrorState(step, ex.Message, null, canSkip: step is not INonSkippable);
             LogError(step, ex.Message, ex);
         }
     }
@@ -183,7 +185,7 @@ public class ColumnExecutor(
 
     private void ApplyRunningState(ITestStep step, Guid uiId)
     {
-        _state = new StepState(step.Name, step.Description, "Выполняется", null, null, false, uiId, null);
+        _state = new StepState(step.Name, step.Description, "Выполняется", null, null, false, true, uiId, null);
         logger.LogStepStart(step.Name);
         OnStateChanged?.Invoke();
     }
@@ -195,7 +197,8 @@ public class ColumnExecutor(
             : null;
         if (!result.Success)
         {
-            SetErrorState(step, result.Message, limits, result.Errors);
+            var canSkip = result.CanSkip && step is not INonSkippable;
+            SetErrorState(step, result.Message, limits, result.Errors, canSkip);
             LogError(step, result.Message, null);
             return;
         }
@@ -217,14 +220,26 @@ public class ColumnExecutor(
         OnStateChanged?.Invoke();
     }
 
-    private void SetErrorState(ITestStep step, string message, string? limits, List<ErrorDefinition>? errors = null)
+    private void SetErrorState(
+        ITestStep step,
+        string message,
+        string? limits,
+        List<ErrorDefinition>? errors = null,
+        bool canSkip = true)
     {
         statusReporter.ReportError(_state.UiStepId, message, limits);
         ClearStepErrors();
         _errorScope = new ErrorScope(errorService);
         _errorScope.Raise(errors, step.Id, step.Name);
         _continueGate.Reset();
-        _state = _state with { Status = "Ошибка", ErrorMessage = message, HasFailed = true, FailedStep = step };
+        _state = _state with
+        {
+            Status = "Ошибка",
+            ErrorMessage = message,
+            HasFailed = true,
+            CanSkip = canSkip,
+            FailedStep = step
+        };
         OnStateChanged?.Invoke();
     }
 

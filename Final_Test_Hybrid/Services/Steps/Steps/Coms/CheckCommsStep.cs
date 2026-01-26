@@ -11,11 +11,12 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
 /// <summary>
 /// Шаг проверки связи с котлом через Modbus.
 /// Оператор подключает кабель связи, шаг запускает диагностическое соединение и ждёт установки связи.
+/// Реализует INonSkippable — пропуск запрещён (связь обязательна для теста).
 /// </summary>
 public class CheckCommsStep(
     IModbusDispatcher dispatcher,
     ExecutionPhaseState phaseState,
-    DualLogger<CheckCommsStep> logger) : ITestStep
+    DualLogger<CheckCommsStep> logger) : ITestStep, INonSkippable
 {
     private static readonly TimeSpan ConnectionTimeout = TimeSpan.FromMinutes(2);
     private const int PollIntervalMs = 500;

@@ -157,7 +157,7 @@
             }
 
             _operations = await query
-                .OrderByDescending(o => o.DateEnd)
+                .OrderByDescending(o => o.DateStart)
                 .ToListAsync();
         }
         catch (Exception ex)

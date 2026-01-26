@@ -35,7 +35,10 @@ public class OperationStorageService(DualLogger<OperationStorageService> logger)
         }
 
         var operation = await context.Operations
-            .FirstOrDefaultAsync(o => o.BoilerId == boiler.Id && o.Status == OperationResultStatus.InWork, ct);
+            .Where(o => o.BoilerId == boiler.Id && o.Status == OperationResultStatus.InWork)
+            .OrderByDescending(o => o.DateStart)
+            .ThenByDescending(o => o.Id)
+            .FirstOrDefaultAsync(ct);
 
         if (operation == null)
         {

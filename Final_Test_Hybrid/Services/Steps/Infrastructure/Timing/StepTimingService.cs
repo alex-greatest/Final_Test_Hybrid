@@ -190,7 +190,7 @@ public partial class StepTimingService : IStepTimingService, IDisposable
     private void OnTimerTick(object? state) => OnChanged?.Invoke();
 
     private static StepTimingRecord CreateRecord(TimingState state) =>
-        new(state.Id, state.Name!, state.Description!, FormatDuration(state.CalculateDuration()));
+        new(state.Id, state.Name!, state.Description!, FormatDuration(state.CalculateDuration()), state.IsRunning);
 
     private static string FormatDuration(TimeSpan duration) =>
         $"{(int)duration.TotalMinutes:D2}.{duration.Seconds:D2}";

@@ -26,7 +26,7 @@ public partial class StepTimingService
             }
 
             var duration = state.CalculateDuration();
-            _records.Add(new StepTimingRecord(state.Id, state.Name!, state.Description!, FormatDuration(duration)));
+            _records.Add(new StepTimingRecord(state.Id, state.Name!, state.Description!, FormatDuration(duration), false));
 
             state.Clear();
             _columnsPausedByGlobalPauseIds[columnIndex] = null;

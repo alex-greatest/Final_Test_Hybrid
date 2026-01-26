@@ -1,3 +1,4 @@
+using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Access;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
@@ -28,7 +29,7 @@ public class WriteTestByteOnStep(
             // Все ошибки (timeout, нет связи, Modbus error) уже в result.Error
             var errorMsg = $"Ошибка при записи ключа 0xD7F8DB56 в регистры 1000-1001. {result.Error}";
             logger.LogError(errorMsg);
-            return TestStepResult.Fail(errorMsg);
+            return TestStepResult.Fail(errorMsg, errors: [ErrorDefinitions.WriteBytesOn]);
         }
 
         logger.LogInformation("Режим Стенд установлен успешно");

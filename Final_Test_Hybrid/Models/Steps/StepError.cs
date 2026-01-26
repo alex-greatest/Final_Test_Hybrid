@@ -12,7 +12,8 @@ public record StepError(
     string ErrorMessage,
     DateTime OccurredAt,
     Guid UiStepId,
-    ITestStep? FailedStep
+    ITestStep? FailedStep,
+    bool CanSkip = true
 );
 
 /// <summary>

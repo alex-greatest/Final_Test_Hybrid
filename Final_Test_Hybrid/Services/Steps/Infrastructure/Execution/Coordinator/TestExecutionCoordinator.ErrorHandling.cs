@@ -123,7 +123,8 @@ public partial class TestExecutionCoordinator
             executor.ErrorMessage ?? "Неизвестная ошибка",
             DateTime.Now,
             executor.UiStepId,
-            executor.FailedStep);
+            executor.FailedStep,
+            executor.CanSkip);
     }
 
     /// <summary>
@@ -154,7 +155,8 @@ public partial class TestExecutionCoordinator
             {
                 var options = new WaitForResolutionOptions(
                     BlockEndTag: GetBlockEndTag(error.FailedStep),
-                    BlockErrorTag: GetBlockErrorTag(error.FailedStep));
+                    BlockErrorTag: GetBlockErrorTag(error.FailedStep),
+                    EnableSkip: error.CanSkip);
                 resolution = await _errorCoordinator.WaitForResolutionAsync(options, cts.Token);
             }
             catch (OperationCanceledException)

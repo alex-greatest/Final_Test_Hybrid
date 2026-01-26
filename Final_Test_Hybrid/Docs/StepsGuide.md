@@ -126,6 +126,7 @@ PreExecutionResult.FailRetryable(
 | `IHasPlcBlockPath` | `Interfaces/Plc/` | Указывает PLC блок шага |
 | `IRequiresPlcTags` | `Interfaces/Plc/` | Список тегов для валидации при старте |
 | `IRequiresRecipes` | `Interfaces/Recipe/` | Список рецептов для валидации перед тестом |
+| `INonSkippable` | `Interfaces/Test/` | Запрещает пропуск шага (кнопка Skip недоступна) |
 
 ```csharp
 public interface IHasPlcBlockPath
@@ -142,6 +143,11 @@ public interface IRequiresRecipes : ITestStep
 {
     IReadOnlyList<string> RequiredRecipeAddresses { get; }  // Рецепты для валидации перед тестом
 }
+
+/// <summary>
+/// Маркерный интерфейс — шаг нельзя пропустить (включая исключения).
+/// </summary>
+public interface INonSkippable;
 ```
 
 ### 1.5 Пример: Создание Pre-Execution шага
@@ -341,6 +347,7 @@ public class TestStepResult
     public bool Success { get; init; }
     public bool Skipped { get; init; }
     public string Message { get; init; }
+    public bool CanSkip { get; init; } = true;  // Можно ли пропустить при ошибке
     public Dictionary<string, object>? OutputData { get; init; }
     public List<ErrorDefinition>? Errors { get; init; }
 }
@@ -351,12 +358,44 @@ public class TestStepResult
 ```csharp
 TestStepResult.Pass();                    // Успех
 TestStepResult.Pass("Значение: 220V");    // Успех с сообщением
-TestStepResult.Fail("Ошибка измерения");  // Неудача
+TestStepResult.Fail("Ошибка измерения");  // Неудача (Skip разрешён)
+TestStepResult.Fail("Критическая ошибка", canSkip: false);  // Неудача (Skip запрещён)
 TestStepResult.Skip();                    // Пропущен
 TestStepResult.Skip("Не применимо");      // Пропущен с причиной
 ```
 
-### 2.4 Регистрация Test Steps
+### 2.4 Запрет пропуска шага (INonSkippable)
+
+Для критичных шагов, которые **нельзя пропускать ни при каких условиях** (включая исключения), используйте маркерный интерфейс `INonSkippable`:
+
+```csharp
+public class CheckCommsStep : ITestStep, INonSkippable
+{
+    // ...
+    public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
+    {
+        // При любой ошибке (Fail или исключение) кнопка Skip будет недоступна
+        if (!connected)
+        {
+            return TestStepResult.Fail("Нет связи с котлом");
+        }
+        return TestStepResult.Pass();
+    }
+}
+```
+
+**Два способа запретить Skip:**
+
+| Способ | Применение | Исключения |
+|--------|------------|------------|
+| `INonSkippable` | Шаг ВСЕГДА non-skippable | ✅ Учитываются |
+| `Fail(canSkip: false)` | Конкретная ошибка non-skippable | ❌ Не учитываются |
+
+**Рекомендация:** Для критичных шагов используйте `INonSkippable` — он гарантирует запрет Skip даже при неожиданных исключениях.
+
+**Приоритет:** `INonSkippable` имеет приоритет над `canSkip` в `Fail()`. Если шаг реализует `INonSkippable`, Skip всегда запрещён.
+
+### 2.5 Регистрация Test Steps
 
 Test steps регистрируются **автоматически** через рефлексию в `TestStepRegistry`:
 
@@ -378,7 +417,7 @@ private List<ITestStep> LoadSteps()
 
 **Важно:** Достаточно создать класс, реализующий `ITestStep` — он будет найден автоматически.
 
-### 2.5 Пример: Простой Test Step
+### 2.6 Пример: Простой Test Step
 
 ```csharp
 // Services/Steps/Steps/MeasureVoltageStep.cs
@@ -409,7 +448,7 @@ public class MeasureVoltageStep : ITestStep
 }
 ```
 
-### 2.6 Пример: Test Step с ожиданием PLC сигналов
+### 2.7 Пример: Test Step с ожиданием PLC сигналов
 
 Для шагов, которые взаимодействуют с PLC блоками (Start/End/Error), используйте `context.TagWaiter`:
 
@@ -488,7 +527,7 @@ public class FlushCircuitStep(
 - `IRequiresPlcTags` — валидация тегов при старте приложения
 - **Всегда передавайте `ct` в `HandleSuccessAsync`** — для корректной отмены записи `Start=false` при shutdown/stop
 
-### 2.7 Пример: Test Step с валидацией и сохранением результата
+### 2.8 Пример: Test Step с валидацией и сохранением результата
 
 Шаги, которые измеряют значения и сравнивают с порогами из рецептов, используют:
 - `IRequiresRecipes` — валидация рецептов перед тестом
@@ -612,7 +651,7 @@ public class SlowFillCircuitStep(
 - `context.RecipeProvider.GetValue<T>()` — получение значения рецепта
 - **Результат шага (Pass/Fail) определяется только PLC сигналами**, результат сравнения влияет только на статус в MES
 
-### 2.8 IProvideLimits — предзагрузка пределов в грид
+### 2.9 IProvideLimits — предзагрузка пределов в грид
 
 **Путь:** `Services/Steps/Infrastructure/Interfaces/Limits/IProvideLimits.cs`
 
@@ -875,6 +914,7 @@ await context.OpcUa.WriteAsync(tag, "text", ct);          // STRING
 | IRequiresRecipes | `Services/Steps/Infrastructure/Interfaces/Recipe/IRequiresRecipes.cs` |
 | IProvideLimits | `Services/Steps/Infrastructure/Interfaces/Limits/IProvideLimits.cs` |
 | LimitsContext | `Services/Steps/Infrastructure/Interfaces/Limits/LimitsContext.cs` |
+| INonSkippable | `Services/Steps/Infrastructure/Interfaces/Test/INonSkippable.cs` |
 | **Контексты** | |
 | PreExecutionContext | `Services/Steps/Infrastructure/Interfaces/PreExecution/PreExecutionContext.cs` |
 | TestStepContext | `Services/Steps/Infrastructure/Registrator/TestStepContext.cs` |
@@ -899,6 +939,7 @@ await context.OpcUa.WriteAsync(tag, "text", ct);          // STRING
 | WriteRecipesToPlcStep | `Services/Steps/Steps/WriteRecipesToPlcStep.cs` |
 | FlushCircuitStep | `Services/Steps/Steps/CH/FlushCircuitStep.cs` |
 | SlowFillCircuitStep | `Services/Steps/Steps/CH/SlowFillCircuitStep.cs` |
+| CheckCommsStep | `Services/Steps/Steps/Coms/CheckCommsStep.cs` (INonSkippable) |
 
 ---
 

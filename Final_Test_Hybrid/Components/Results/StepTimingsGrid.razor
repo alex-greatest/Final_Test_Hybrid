@@ -30,9 +30,27 @@
                     OrOperatorText="@DataGridRu.Or"
                     EmptyText="Нет данных">
         <Columns>
-            <RadzenDataGridColumn TItem="StepTimingRecord" Property="Name" Title="Шаг" />
-            <RadzenDataGridColumn TItem="StepTimingRecord" Property="Description" Title="Описание" />
-            <RadzenDataGridColumn TItem="StepTimingRecord" Property="Duration" Title="Время" Width="120px" />
+            <RadzenDataGridColumn TItem="StepTimingRecord" Property="Name" Title="Шаг">
+                <Template Context="data">
+                    <div class="cell-container @GetCellClass(data)">
+                        <span class="cell-text" title="@data.Name">@data.Name</span>
+                    </div>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="StepTimingRecord" Property="Description" Title="Описание">
+                <Template Context="data">
+                    <div class="cell-container @GetCellClass(data)">
+                        <span class="cell-text" title="@data.Description">@data.Description</span>
+                    </div>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="StepTimingRecord" Property="Duration" Title="Время" Width="120px">
+                <Template Context="data">
+                    <div class="cell-container @GetCellClass(data)">
+                        <span class="cell-text">@data.Duration</span>
+                    </div>
+                </Template>
+            </RadzenDataGridColumn>
         </Columns>
     </RadzenDataGrid>
 </div>
@@ -40,6 +58,9 @@
 @code {
     private bool _disposed;
     private IReadOnlyList<StepTimingRecord> _timings = [];
+
+    private static string GetCellClass(StepTimingRecord data) =>
+        data.IsRunning ? "running" : "";
 
     protected override void OnInitialized()
     {

@@ -7,6 +7,7 @@ public class TestStepResult
     public bool Success { get; init; }
     public bool Skipped { get; init; }
     public string Message { get; init; } = "";
+    public bool CanSkip { get; init; } = true;
     public Dictionary<string, object>? OutputData { get; init; }
     public List<ErrorDefinition>? Errors { get; init; }
 
@@ -20,12 +21,17 @@ public class TestStepResult
         };
     }
 
-    public static TestStepResult Fail(string value, string? limits = null, List<ErrorDefinition>? errors = null)
+    public static TestStepResult Fail(
+        string value,
+        string? limits = null,
+        List<ErrorDefinition>? errors = null,
+        bool canSkip = true)
     {
         return new TestStepResult
         {
             Success = false,
             Message = value,
+            CanSkip = canSkip,
             OutputData = CreateLimitsData(limits),
             Errors = errors
         };
