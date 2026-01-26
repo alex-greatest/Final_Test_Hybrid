@@ -1,2 +1,28 @@
-Low: DiagnosticConnectionService.cs (line 161) / DiagnosticConnectionService.cs (line 166) / DiagnosticConnectionService.cs (line 170) — если ModbusFactory.CreateRtuMaster падает после создания _serialPortAdapter, в catch освобождается только port, а адаптер остаётся жить до следующего CloseConnection/Dispose; при отменённой попытке без последующих вызовов это может оставить «висящий» адаптер (возможная утечка ресурса в зависимости от реализации NModbus).
-Low: DiagnosticConnectionService.cs (line 83) / DiagnosticConnectionService.cs (line 219) — StartReconnect ставит в очередь новый fire‑and‑forget при каждом сбое; семафор не даёт параллелизма, но серия ошибок может накопить очередь ожиданий и вызвать лишние циклы переподключения (временное давление на память/ресурсы).
+Обзор. Выходы 1.
+
+Управление вкл. – 51H1
+Автомат вкл. – 30Н6
+Тест выполняется – 51Н2
+Одиночный шаг – 32Н7
+EV0.3 подача газа в котел – DB_PneuValve.GAS.EV0_3.HMI.xOutOpen
+EV3.1 подача воздуха - DB_PneuValve.EV3_1.AirOn
+EV3.2 блокировка котла – DB_PneuValve.EV3_2.HMI.xOut_Work – выход на вкл. блокировки
+							       xSB_Work – кнопка заблокировать
+							       xEn_Work – разрешение заблокир.
+							       xPos_Work – котел заблокирован
+EV3.2 разблокировать котел – DB_PneuValve.EV3_2.HMI.xOut_Home – выход на разблокировку
+							       xSB_Home – кнопка разблокировать
+							       xEn_Home – разрешение разблокир.
+							       xPos_Home – котел разблокирован
+Pump 1.1 насос подачи воды - DB_PneuValve.CH.PUMP1_1.xOut_Open
+
+
+Для следующих выходов:
+Управление – взвести бит в структуре DB_HMI.Button.SB (только Set, reset в PLC)
+Состояние – бит в структуре DB_HMI.Button.Stat_SB
+
+Питание котла вкл. – 7K1_BoilerON
+Компаратор вкл. – 7K2_CompOn
+Токовые клещи вкл. – 7K3_CurTongsOn
+Заземление котла вкл. – 7К4_NeitralOn
+Переключатель вилка/адаптер – 7K5_SelShukoAdapter

@@ -1,0 +1,30 @@
+@using Final_Test_Hybrid.Models.Plc.Tags
+
+<div style="height: 100%; padding: 0 20px;">
+    <div class="panel-grid"
+         style="grid-template-columns: repeat(2, 0.1fr);">
+
+        <PanelBox Style="width: 385px; height: 325px">
+            <LampOutput Label="Управление вкл." Tag="@OutputsTags.H51_1"/>
+            <LampOutput Label="Автомат включен" Tag="@OutputsTags.H30_6"/>
+            <LampOutput Label="Тест выполняется" Tag="@OutputsTags.H51_2"/>
+            <LampOutput Label="Один шаг" Tag="@OutputsTags.H32_7"/>
+            <LampOutput Label="7К2 Компаратор вкл." Tag="@OutputsTags.K7_2_CompOn"/>
+            <LampOutput Label="7К1 Питание котла вкл." Tag="@OutputsTags.K7_1_BoilerOn"/>
+        </PanelBox>
+
+        <PanelBox Style="width: 385px; height: 325px">
+            <LampOutput Label="Pump 1.1 насос подачи воды" Tag="@OutputsTags.Pump1_1_WaterSupply"/>
+        </PanelBox>
+
+        <PanelBox Style="width: 385px; height: 325px">
+            <LampOutput Label="Заземление котла вкл." Tag="@OutputsTags.K7_4_NeitralOn"/>
+            <LampOutput Label="Токовые клещи вкл." Tag="@OutputsTags.K7_3_CurTongsOn"/>
+            <LampOutput Label="Переключатель вилка/адаптер" Tag="@OutputsTags.K7_5_SelShukoAdapter"/>
+            <LampOutput Label="EV0.3 подача газа в котел" Tag="@OutputsTags.Ev0_3_BoilerGasOn"/>
+            <LampOutput Label="EV3.1 подача воздуха" Tag="@OutputsTags.Ev3_1_AirOn"/>
+            <LampOutput Label="EV3.2 Блокировка котла" Tag="@OutputsTags.Ev3_2_BlockBoiler"/>
+        </PanelBox>
+
+    </div>
+</div>
