@@ -41,24 +41,24 @@ public partial class WriteSoftCodePlugStep(
     private const ushort RegisterMaxFlowTemperature = 1052;
     private const int ArticleMaxLength = 14;
 
-    // Рецепты (формат: ns=3;s="DB_Recipe"."SoftCodePlug"."Name")
-    private const string NumberOfContoursRecipe = "ns=3;s=\"DB_Recipe\".\"SoftCodePlug\".\"NumberOfContours\"";
-    private const string BoilerTypeRecipe = "ns=3;s=\"DB_Recipe\".\"SoftCodePlug\".\"Boiler_Type\"";
-    private const string PumpPowerRecipe = "ns=3;s=\"DB_Recipe\".\"SoftCodePlug\".\"PumpPower\"";
-    private const string PumpTypeRecipe = "ns=3;s=\"DB_Recipe\".\"SoftCodePlug\".\"Pump_Type\"";
-    private const string PresSenTypeRecipe = "ns=3;s=\"DB_Recipe\".\"SoftCodePlug\".\"Pres_Sen_Type\"";
-    private const string GasValveTypeRecipe = "ns=3;s=\"DB_Recipe\".\"SoftCodePlug\".\"Gas_Valve_Type\"";
-    private const string MaxChHeatOutMaxRecipe = "ns=3;s=\"DB_Recipe\".\"SoftCodePlug\".\"Max_CH_HeatOut_Max\"";
-    private const string MaxDhwHeatOutMaxRecipe = "ns=3;s=\"DB_Recipe\".\"SoftCodePlug\".\"Max_DHW_HeatOut_Max\"";
-    private const string MinChHeatOutMinRecipe = "ns=3;s=\"DB_Recipe\".\"SoftCodePlug\".\"Min_CH_HeatOut_Min\"";
-    private const string PumpModeRecipe = "ns=3;s=\"DB_Recipe\".\"SoftCodePlug\".\"Pump_Mode\"";
-    private const string GasTypeRecipe = "ns=3;s=\"DB_Recipe\".\"SoftCodePlug\".\"Gas_Type\"";
-    private const string CurrentOffsetRecipe = "ns=3;s=\"DB_Recipe\".\"SoftCodePlug\".\"Current_Offset\"";
-    private const string FlowCoefficientRecipe = "ns=3;s=\"DB_Recipe\".\"SoftCodePlug\".\"Flow_Coefficient\"";
-    private const string PumpPowerMaxRecipe = "ns=3;s=\"DB_Recipe\".\"SoftCodePlug\".\"Pump_Power_Max\"";
-    private const string PumpPowerMinRecipe = "ns=3;s=\"DB_Recipe\".\"SoftCodePlug\".\"Pump_Power_Min\"";
-    private const string ComfortHysteresisRecipe = "ns=3;s=\"DB_Recipe\".\"SoftCodePlug\".\"Comfort_Hysteresis\"";
-    private const string MaxFlowTemperatureRecipe = "ns=3;s=\"DB_Recipe\".\"SoftCodePlug\".\"Max_Flow_Temperature\"";
+    // Рецепты (простые ключи — Coms шаг без PLC)
+    private const string NumberOfContoursRecipe = "NumberOfContours";
+    private const string BoilerTypeRecipe = "Boiler_Type";
+    private const string PumpPowerRecipe = "Pump_Power";
+    private const string PumpTypeRecipe = "Pump_Type";
+    private const string PresSenTypeRecipe = "Pres_Sen_Type";
+    private const string GasValveTypeRecipe = "Gas_Valve_Type";
+    private const string MaxChHeatOutMaxRecipe = "Max_CH_HeatOut_Max";
+    private const string MaxDhwHeatOutMaxRecipe = "Max_DHW_HeatOut_Max";
+    private const string MinChHeatOutMinRecipe = "Min_CH_HeatOut_Min";
+    private const string PumpModeRecipe = "Pump_Mode";
+    private const string GasTypeRecipe = "Gas_Type";
+    private const string CurrentOffsetRecipe = "Current_Offset";
+    private const string FlowCoefficientRecipe = "Flow_Coefficient";
+    private const string PumpPowerMaxRecipe = "Pump_Power_Max";
+    private const string PumpPowerMinRecipe = "Pump_Power_Min";
+    private const string ComfortHysteresisRecipe = "Comfort_Hysteresis";
+    private const string MaxFlowTemperatureRecipe = "Max_Flow_Temperature";
 
     private readonly DiagnosticSettings _settings = settings.Value;
 

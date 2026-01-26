@@ -17,12 +17,14 @@ public partial class PreExecutionCoordinator
         switch (scanResult.Status)
         {
             case PreExecutionStatus.Failed:
+                state.PhaseState.Clear();
                 infra.StatusReporter.UpdateScanStepStatus(
                     TestStepStatus.Error,
                     scanResult.ErrorMessage ?? "Ошибка",
                     scanResult.Limits);
                 return scanResult;
             case PreExecutionStatus.Cancelled:
+                state.PhaseState.Clear();
                 return scanResult;
         }
 
@@ -48,12 +50,14 @@ public partial class PreExecutionCoordinator
         var timerResult = await ExecuteStartTimer1Async(context, ct);
         if (timerResult.Status != PreExecutionStatus.Continue)
         {
+            state.PhaseState.Clear();
             return timerResult;
         }
 
         var blockResult = await ExecuteBlockBoilerAdapterAsync(context, ct);
         if (blockResult.Status != PreExecutionStatus.Continue)
         {
+            state.PhaseState.Clear();
             return HandleNonContinueResult(blockResult);
         }
 
@@ -66,6 +70,7 @@ public partial class PreExecutionCoordinator
         var context = _lastSuccessfulContext;
         if (context?.Maps == null)
         {
+            state.PhaseState.Clear();
             infra.Logger.LogError("Нет сохранённого контекста для повтора");
             return PreExecutionResult.Fail("Нет данных для повтора");
         }
@@ -85,12 +90,14 @@ public partial class PreExecutionCoordinator
         var timerResult = await ExecuteStartTimer1Async(context, ct);
         if (timerResult.Status != PreExecutionStatus.Continue)
         {
+            state.PhaseState.Clear();
             return timerResult;
         }
 
         var blockResult = await ExecuteBlockBoilerAdapterAsync(context, ct);
         if (blockResult.Status != PreExecutionStatus.Continue)
         {
+            state.PhaseState.Clear();
             return HandleNonContinueResult(blockResult);
         }
 
@@ -102,6 +109,7 @@ public partial class PreExecutionCoordinator
     {
         if (CurrentBarcode == null)
         {
+            state.PhaseState.Clear();
             infra.Logger.LogError("NOK повтор: CurrentBarcode is null");
             return PreExecutionResult.Fail("Отсутствует штрихкод для повтора");
         }

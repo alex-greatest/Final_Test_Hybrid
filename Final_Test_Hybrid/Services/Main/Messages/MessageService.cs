@@ -77,8 +77,8 @@ public class MessageService
         (130, () => _operator.IsAuthenticated && !_autoReady.IsReady,
               () => "Ожидание автомата"),
 
-        // Сканирование (только если тест не запущен)
-        (120, () => _scanMode.IsScanModeEnabled && !_boilerState.IsTestRunning,
+        // Сканирование (только если тест не запущен и нет активной фазы)
+        (120, () => _scanMode.IsScanModeEnabled && !_boilerState.IsTestRunning && _phaseState.Phase == null,
               () => "Отсканируйте серийный номер котла"),
 
         // Фазы выполнения

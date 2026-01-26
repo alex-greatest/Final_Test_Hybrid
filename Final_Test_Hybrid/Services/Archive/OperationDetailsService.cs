@@ -23,6 +23,7 @@ public class OperationDetailsService(
         long operationId,
         AuditType auditType)
     {
+        logger.LogInformation("GetResultsAsync called with OperationId={OperationId}, AuditType={AuditType}", operationId, auditType);
         try
         {
             await using var db = await dbContextFactory.CreateDbContextAsync();
@@ -59,6 +60,7 @@ public class OperationDetailsService(
     /// <returns>Список ошибок.</returns>
     public async Task<IReadOnlyList<ArchiveErrorItem>> GetErrorsAsync(long operationId)
     {
+        logger.LogInformation("GetErrorsAsync called with OperationId={OperationId}", operationId);
         try
         {
             await using var db = await dbContextFactory.CreateDbContextAsync();
@@ -90,6 +92,7 @@ public class OperationDetailsService(
     /// <returns>Список времён шагов.</returns>
     public async Task<IReadOnlyList<ArchiveStepTimeItem>> GetStepTimesAsync(long operationId)
     {
+        logger.LogInformation("GetStepTimesAsync called with OperationId={OperationId}", operationId);
         try
         {
             await using var db = await dbContextFactory.CreateDbContextAsync();

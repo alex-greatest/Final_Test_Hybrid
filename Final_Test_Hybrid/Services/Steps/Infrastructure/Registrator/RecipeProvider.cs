@@ -122,6 +122,8 @@ public class RecipeProvider : IRecipeProvider
             return (T?)(object?)TryParseInt(value, address);
         if (type == typeof(short))
             return (T?)(object?)TryParseShort(value, address);
+        if (type == typeof(ushort))
+            return (T?)(object?)TryParseUShort(value, address);
         if (type == typeof(bool))
             return (T?)(object?)TryParseBool(value, address);
 
@@ -176,6 +178,18 @@ public class RecipeProvider : IRecipeProvider
             return result;
 
         _logger.LogWarning("Failed to parse short for address '{Address}': '{Value}'", address, value);
+        return null;
+    }
+
+    /// <summary>
+    /// Парсит строку в ushort.
+    /// </summary>
+    private ushort? TryParseUShort(string value, string address)
+    {
+        if (ushort.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result))
+            return result;
+
+        _logger.LogWarning("Failed to parse ushort for address '{Address}': '{Value}'", address, value);
         return null;
     }
 

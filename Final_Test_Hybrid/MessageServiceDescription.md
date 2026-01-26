@@ -67,7 +67,7 @@ public class MessageService
 | 150 | `ResetActive` | "Сброс теста..." |
 | 140 | `!IsAuthenticated` | "Войдите в систему" |
 | 130 | `IsAuthenticated && !AutoReady` | "Ожидание автомата" |
-| **120** | `ScanModeEnabled && !IsTestRunning` | "Отсканируйте серийный номер котла" |
+| **120** | `ScanModeEnabled && !IsTestRunning && Phase == null` | "Отсканируйте серийный номер котла" |
 | 110 | `Phase != null` | Сообщение фазы (GetPhaseMessage) |
 
 **Фазы выполнения (правило 110):**
@@ -88,6 +88,7 @@ public class MessageService
 Сообщение "Отсканируйте серийный номер котла" показывается только когда:
 - `ScanModeEnabled = true` — режим сканирования включён
 - `IsTestRunning = false` — тест НЕ выполняется
+- `Phase == null` — нет активной фазы выполнения
 
 **Управление `IsTestRunning`:**
 
