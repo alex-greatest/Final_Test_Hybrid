@@ -105,4 +105,50 @@ public class RegisterWriter(
             return DiagnosticWriteResult.Fail(addressHi, ex.Message);
         }
     }
+
+    /// <summary>
+    /// Записывает ASCII строку в регистры (2 символа на регистр, high byte first).
+    /// </summary>
+    /// <remarks>
+    /// Если длина строки меньше maxLength — добавляется терминирующий ноль.
+    /// Если длина равна maxLength — без терминатора.
+    /// Поддерживаются только ASCII символы (0-127).
+    /// </remarks>
+    public async Task<DiagnosticWriteResult> WriteStringAsync(
+        ushort address, string value, int maxLength, CancellationToken ct = default)
+    {
+        try
+        {
+            if (value.Length > maxLength)
+            {
+                return DiagnosticWriteResult.Fail(address, $"Строка слишком длинная: {value.Length} > {maxLength}");
+            }
+
+            if (value.Any(c => c > 127))
+            {
+                return DiagnosticWriteResult.Fail(address, "Строка содержит не-ASCII символы");
+            }
+
+            var registerCount = (maxLength + 1) / 2;
+            var registers = new ushort[registerCount];
+
+            for (var i = 0; i < registerCount; i++)
+            {
+                var charIndex = i * 2;
+                var highChar = charIndex < value.Length ? value[charIndex] : '\0';
+                var lowChar = charIndex + 1 < value.Length ? value[charIndex + 1] : '\0';
+                registers[i] = (ushort)((highChar << 8) | lowChar);
+            }
+
+            await modbusClient.WriteMultipleRegistersAsync(address, registers, CommandPriority.High, ct)
+                .ConfigureAwait(false);
+            _logger.LogDebug("Запись строки в регистр {Address}: {Value}", address, value);
+            return DiagnosticWriteResult.Ok(address);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "Ошибка записи строки в регистр {Address}: {Error}", address, ex.Message);
+            return DiagnosticWriteResult.Fail(address, ex.Message);
+        }
+    }
 }

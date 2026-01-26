@@ -126,6 +126,12 @@ public static partial class ErrorDefinitions
         RelatedStepId: "coms-check-test-byte-on",
         RelatedStepName: "Coms/Check_Test_Byte_ON");
 
+    public static readonly ErrorDefinition EcuWriteError = new(
+        "П-016-03", "Ошибка записи в ЭБУ",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "coms-write-soft-code-plug",
+        RelatedStepName: "Coms/Write_Soft_Code_Plug");
+
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [
         BoilerNotLocked,
@@ -145,6 +151,7 @@ public static partial class ErrorDefinitions
         AlFillTimeСhSlow,
         NoDiagnosticConnection,
         WriteBytesOn,
-        BoilerNotStandMode
+        BoilerNotStandMode,
+        EcuWriteError
     ];
 }

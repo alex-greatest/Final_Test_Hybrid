@@ -48,4 +48,14 @@ public class PausableRegisterWriter(RegisterWriter inner, PauseTokenSource pause
         await pauseToken.WaitWhilePausedAsync(ct);
         return await inner.WriteFloatAsync(addressHi, value, ct);
     }
+
+    /// <summary>
+    /// Записывает ASCII строку в регистры (2 символа на регистр, high byte first).
+    /// </summary>
+    public async Task<DiagnosticWriteResult> WriteStringAsync(
+        ushort address, string value, int maxLength, CancellationToken ct = default)
+    {
+        await pauseToken.WaitWhilePausedAsync(ct);
+        return await inner.WriteStringAsync(address, value, maxLength, ct);
+    }
 }
