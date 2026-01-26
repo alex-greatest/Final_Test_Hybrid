@@ -1,0 +1,50 @@
+@using Final_Test_Hybrid.Models.Plc.Tags
+
+<div style="height: 100%; padding: 0 20px;">
+    <div class="panel-grid"
+         style="grid-template-columns: repeat(3, 0.1fr);">
+
+        @* VP1 - CH (Система отопления) *@
+        <PanelBox Style="width: 540px; height: 315px">
+            <LampOutput Label="VP1.1 Продувка" Tag="@PneumaticValveTags.Vp1_1_Purge"/>
+            <LampOutput Label="VP1.2 Продувка" Tag="@PneumaticValveTags.Vp1_2_Purge"/>
+            <LampOutput Label="VP1.3 Заполнение" Tag="@PneumaticValveTags.Vp1_3_Fill"/>
+            <LampOutput Label="VP1.4 Быстрое заполнение" Tag="@PneumaticValveTags.Vp1_4_FastFill"/>
+            <LampOutput Label="VP1.5 Подача воды в СН" Tag="@PneumaticValveTags.Vp1_5_WaterToCh"/>
+            <LampOutput Label="VP1.6 Подача воды в СН" Tag="@PneumaticValveTags.Vp1_6_WaterToCh"/>
+        </PanelBox>
+
+        <PanelBox Style="width: 540px; height: 315px">
+            <LampOutput Label="VP1.7 Под. гор. воды в теплообм. (б/насоса)" Tag="@PneumaticValveTags.Vp1_7_HotWaterNoPump"/>
+            <LampOutput Label="VP1.8 Слив" Tag="@PneumaticValveTags.Vp1_8_Drain"/>
+            <LampOutput Label="VP1.9 Резерв" Tag="@PneumaticValveTags.Vp1_9_Reserve"/>
+            <LampOutput Label="VP1.10 Под. гор воды в теплообм. (с насосом)" Tag="@PneumaticValveTags.Vp1_10_HotWaterWithPump"/>
+            <LampOutput Label="VP1.11 Слив" Tag="@PneumaticValveTags.Vp1_11_Drain"/>
+            <LampOutput Label="VP1.12 Медленное заполнение" Tag="@PneumaticValveTags.Vp1_12_SlowFill"/>
+        </PanelBox>
+
+        @* VP2 - DHW (Горячее водоснабжение) *@
+        <PanelBox Style="width: 540px; height: 315px">
+            <LampOutput Label="VP2.1 Продувка" Tag="@PneumaticValveTags.Vp2_1_Purge"/>
+            <LampOutput Label="VP2.2 Продувка" Tag="@PneumaticValveTags.Vp2_2_Purge"/>
+            <LampOutput Label="VP2.3 Линия высокого давления" Tag="@PneumaticValveTags.Vp2_3_HighPressure"/>
+            <LampOutput Label="VP2.4 Заполнение" Tag="@PneumaticValveTags.Vp2_4_Fill"/>
+            <LampOutput Label="VP2.5 Выход из котла" Tag="@PneumaticValveTags.Vp2_5_BoilerOut"/>
+            <LampOutput Label="VP2.6 Слив" Tag="@PneumaticValveTags.Vp2_6_Drain"/>
+        </PanelBox>
+
+        <PanelBox Style="width: 540px; height: 315px">
+            <LampOutput Label="VP2.7 Вход в котел" Tag="@PneumaticValveTags.Vp2_7_BoilerIn"/>
+            <LampOutput Label="VP2.8 Слив" Tag="@PneumaticValveTags.Vp2_8_Drain"/>
+        </PanelBox>
+
+        @* VP0 - GAS (Газ) *@
+        <PanelBox Style="width: 540px; height: 315px">
+            <LampOutput Label="VP0.1 Подача газа G20" Tag="@PneumaticValveTags.Vp0_1_GasG20"/>
+            <LampOutput Label="VP0.2 Подача газа G25" Tag="@PneumaticValveTags.Vp0_2_GasG25"/>
+            <LampOutput Label="VP0.3 Подача сжиж. газа G30" Tag="@PneumaticValveTags.Vp0_3_LpgG30"/>
+            <LampOutput Label="EV0.3 Подача газа на котел" Tag="@OutputsTags.Ev0_3_BoilerGasOn"/>
+        </PanelBox>
+
+    </div>
+</div>
