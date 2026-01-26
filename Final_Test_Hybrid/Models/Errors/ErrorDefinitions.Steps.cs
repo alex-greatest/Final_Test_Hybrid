@@ -123,8 +123,8 @@ public static partial class ErrorDefinitions
     public static readonly ErrorDefinition BoilerNotStandMode = new(
         "П-016-02", "Котел не в стендовом режиме",
         Severity: ErrorSeverity.Critical,
-        RelatedStepId: "coms-write-test-byte-on",
-        RelatedStepName: "Coms/Write_Test_Byte_ON");
+        RelatedStepId: "coms-check-test-byte-on",
+        RelatedStepName: "Coms/Check_Test_Byte_ON");
 
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [

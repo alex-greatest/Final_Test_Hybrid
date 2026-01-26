@@ -61,4 +61,8 @@ public class DiagnosticSettings
     /// </remarks>
     public ushort BaseAddressOffset { get; set; } = 1;
 
+    /// <summary>
+    /// Задержка после записи перед чтением для верификации (мс).
+    /// </summary>
+    public int WriteVerifyDelayMs { get; set; } = 100;
 }
