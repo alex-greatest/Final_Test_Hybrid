@@ -48,15 +48,15 @@ public partial class WriteSoftCodePlugStep(
     private const string PumpTypeRecipe = "Pump_Type";
     private const string PresSenTypeRecipe = "Pres_Sen_Type";
     private const string GasValveTypeRecipe = "Gas_Valve_Type";
-    private const string MaxChHeatOutMaxRecipe = "Max_CH_HeatOut_Max";
-    private const string MaxDhwHeatOutMaxRecipe = "Max_DHW_HeatOut_Max";
-    private const string MinChHeatOutMinRecipe = "Min_CH_HeatOut_Min";
+    private const string MaxChHeatOutMaxRecipe = "Max_CH_HeatOut";
+    private const string MaxDhwHeatOutMaxRecipe = "Max_DHW_HeatOut";
+    private const string MinChHeatOutMinRecipe = "Min_CH_HeatOut";
     private const string PumpModeRecipe = "Pump_Mode";
     private const string GasTypeRecipe = "Gas_Type";
     private const string CurrentOffsetRecipe = "Current_Offset";
     private const string FlowCoefficientRecipe = "Flow_Coefficient";
-    private const string PumpPowerMaxRecipe = "Pump_Power_Max";
-    private const string PumpPowerMinRecipe = "Pump_Power_Min";
+    private const string PumpPowerMaxRecipe = "Max_Pump_AutoModePower_Max";
+    private const string PumpPowerMinRecipe = "Min_Pump_AutoModePower_Min";
     private const string ComfortHysteresisRecipe = "Comfort_Hysteresis";
     private const string MaxFlowTemperatureRecipe = "Max_Flow_Temperature";
 
@@ -148,9 +148,7 @@ public partial class WriteSoftCodePlugStep(
         }
 
         result = await WriteMaxFlowTemperatureAsync(context, ct);
-        if (!result.Success) return result;
-
-        return TestStepResult.Pass();
+        return !result.Success ? result : TestStepResult.Pass();
     }
 
     /// <summary>

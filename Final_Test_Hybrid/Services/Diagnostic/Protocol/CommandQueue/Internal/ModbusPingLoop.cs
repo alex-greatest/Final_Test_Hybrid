@@ -71,9 +71,6 @@ internal sealed class ModbusPingLoop
                     if (isPortOpen() && !isStopping())
                     {
                         OnPingDataReceived?.Invoke(pingData);
-
-                        _logger.LogDebug("Ping OK: ModeKey={ModeKey:X8}, BoilerStatus={BoilerStatus}",
-                            pingData.ModeKey, pingData.BoilerStatus);
                     }
                 }
                 catch (OperationCanceledException)

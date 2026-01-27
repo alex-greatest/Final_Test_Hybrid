@@ -11,132 +11,142 @@ public partial class PreExecutionCoordinator
         CancellationToken ct)
     {
         var context = CreateContext(barcode);
-
-        var scanResult = await ExecuteScanStepAsync(context, ct);
-
-        switch (scanResult.Status)
+        try
         {
-            case PreExecutionStatus.Failed:
-                state.PhaseState.Clear();
-                infra.StatusReporter.UpdateScanStepStatus(
-                    TestStepStatus.Error,
-                    scanResult.ErrorMessage ?? "Ошибка",
-                    scanResult.Limits);
-                return scanResult;
-            case PreExecutionStatus.Cancelled:
-                state.PhaseState.Clear();
-                return scanResult;
+            var scanResult = await ExecuteScanStepAsync(context, ct);
+
+            switch (scanResult.Status)
+            {
+                case PreExecutionStatus.Failed:
+                    infra.StatusReporter.UpdateScanStepStatus(
+                        TestStepStatus.Error,
+                        scanResult.ErrorMessage ?? "Ошибка",
+                        scanResult.Limits);
+                    return scanResult;
+                case PreExecutionStatus.Cancelled:
+                    return scanResult;
+            }
+
+            infra.StatusReporter.UpdateScanStepStatus(
+                TestStepStatus.Success,
+                scanResult.SuccessMessage ?? "",
+                scanResult.Limits);
+
+            // Сохраняем context после успешного ScanStep (для повтора)
+            _lastSuccessfulContext = context;
+
+            // Очистить данные от предыдущего теста перед включением истории
+            ClearForNewTestStart();
+            AddAppVersionToResults();
+
+            // Включаем после успешного сканирования
+            infra.ErrorService.IsHistoryEnabled = true;
+            state.BoilerState.SetTestRunning(true);
+            state.BoilerState.StartTestTimer();
+
+            ct.ThrowIfCancellationRequested();
+
+            var timerResult = await ExecuteStartTimer1Async(context, ct);
+            if (timerResult.Status != PreExecutionStatus.Continue)
+            {
+                return timerResult;
+            }
+
+            var blockResult = await ExecuteBlockBoilerAdapterAsync(context, ct);
+            if (blockResult.Status != PreExecutionStatus.Continue)
+            {
+                return HandleNonContinueResult(blockResult);
+            }
+
+            return !StartTestExecution(context) ? PreExecutionResult.Fail("Test execution did not start") : PreExecutionResult.TestStarted();
         }
-
-        infra.StatusReporter.UpdateScanStepStatus(
-            TestStepStatus.Success,
-            scanResult.SuccessMessage ?? "",
-            scanResult.Limits);
-
-        // Сохраняем context после успешного ScanStep (для повтора)
-        _lastSuccessfulContext = context;
-
-        // Очистить данные от предыдущего теста перед включением истории
-        ClearForNewTestStart();
-        AddAppVersionToResults();
-
-        // Включаем после успешного сканирования
-        infra.ErrorService.IsHistoryEnabled = true;
-        state.BoilerState.SetTestRunning(true);
-        state.BoilerState.StartTestTimer();
-
-        ct.ThrowIfCancellationRequested();
-
-        var timerResult = await ExecuteStartTimer1Async(context, ct);
-        if (timerResult.Status != PreExecutionStatus.Continue)
+        finally
         {
             state.PhaseState.Clear();
-            return timerResult;
         }
-
-        var blockResult = await ExecuteBlockBoilerAdapterAsync(context, ct);
-        if (blockResult.Status != PreExecutionStatus.Continue)
-        {
-            state.PhaseState.Clear();
-            return HandleNonContinueResult(blockResult);
-        }
-
-        state.PhaseState.Clear();
-        return !StartTestExecution(context) ? PreExecutionResult.Fail("Test execution did not start") : PreExecutionResult.TestStarted();
     }
 
     private async Task<PreExecutionResult> ExecuteRepeatPipelineAsync(CancellationToken ct)
     {
         var context = _lastSuccessfulContext;
-        if (context?.Maps == null)
+        try
+        {
+            if (context?.Maps == null)
+            {
+                infra.Logger.LogError("Нет сохранённого контекста для повтора");
+                return PreExecutionResult.Fail("Нет данных для повтора");
+            }
+
+            // Пропускаем ScanStep - данные уже загружены
+            // Очистить данные от предыдущего теста перед включением истории
+            ClearForNewTestStart();
+            AddAppVersionToResults();
+
+            // Включаем флаги для теста
+            infra.ErrorService.IsHistoryEnabled = true;
+            state.BoilerState.SetTestRunning(true);
+            state.BoilerState.StartTestTimer();
+
+            ct.ThrowIfCancellationRequested();
+
+            var timerResult = await ExecuteStartTimer1Async(context, ct);
+            if (timerResult.Status != PreExecutionStatus.Continue)
+            {
+                return timerResult;
+            }
+
+            var blockResult = await ExecuteBlockBoilerAdapterAsync(context, ct);
+            if (blockResult.Status != PreExecutionStatus.Continue)
+            {
+                return HandleNonContinueResult(blockResult);
+            }
+
+            return !StartTestExecution(context) ? PreExecutionResult.Fail("Test execution did not start") : PreExecutionResult.TestStarted();
+        }
+        finally
         {
             state.PhaseState.Clear();
-            infra.Logger.LogError("Нет сохранённого контекста для повтора");
-            return PreExecutionResult.Fail("Нет данных для повтора");
         }
-
-        // Пропускаем ScanStep - данные уже загружены
-        // Очистить данные от предыдущего теста перед включением истории
-        ClearForNewTestStart();
-        AddAppVersionToResults();
-
-        // Включаем флаги для теста
-        infra.ErrorService.IsHistoryEnabled = true;
-        state.BoilerState.SetTestRunning(true);
-        state.BoilerState.StartTestTimer();
-
-        ct.ThrowIfCancellationRequested();
-
-        var timerResult = await ExecuteStartTimer1Async(context, ct);
-        if (timerResult.Status != PreExecutionStatus.Continue)
-        {
-            state.PhaseState.Clear();
-            return timerResult;
-        }
-
-        var blockResult = await ExecuteBlockBoilerAdapterAsync(context, ct);
-        if (blockResult.Status != PreExecutionStatus.Continue)
-        {
-            state.PhaseState.Clear();
-            return HandleNonContinueResult(blockResult);
-        }
-
-        state.PhaseState.Clear();
-        return !StartTestExecution(context) ? PreExecutionResult.Fail("Test execution did not start") : PreExecutionResult.TestStarted();
     }
 
     private async Task<PreExecutionResult> ExecuteNokRepeatPipelineAsync(CancellationToken ct)
     {
-        if (CurrentBarcode == null)
+        try
+        {
+            if (CurrentBarcode == null)
+            {
+                infra.Logger.LogError("NOK повтор: CurrentBarcode is null");
+                return PreExecutionResult.Fail("Отсутствует штрихкод для повтора");
+            }
+
+            infra.Logger.LogInformation("NOK повтор: запуск полной подготовки с barcode={Barcode}", CurrentBarcode);
+
+            while (!ct.IsCancellationRequested)
+            {
+                // Выполнить полный pipeline с сохранённым штрихкодом
+                var result = await ExecutePreExecutionPipelineAsync(CurrentBarcode, ct);
+
+                if (result.Status is PreExecutionStatus.TestStarted or PreExecutionStatus.Cancelled)
+                {
+                    return result;
+                }
+
+                // Показать диалог ошибки подготовки
+                var shouldRetry = await ShowPrepareErrorDialogAsync(result.ErrorMessage);
+                if (!shouldRetry)
+                {
+                    return PreExecutionResult.Cancelled();
+                }
+
+                infra.Logger.LogInformation("NOK повтор: повторная попытка подготовки");
+            }
+
+            return PreExecutionResult.Cancelled();
+        }
+        finally
         {
             state.PhaseState.Clear();
-            infra.Logger.LogError("NOK повтор: CurrentBarcode is null");
-            return PreExecutionResult.Fail("Отсутствует штрихкод для повтора");
         }
-
-        infra.Logger.LogInformation("NOK повтор: запуск полной подготовки с barcode={Barcode}", CurrentBarcode);
-
-        while (!ct.IsCancellationRequested)
-        {
-            // Выполнить полный pipeline с сохранённым штрихкодом
-            var result = await ExecutePreExecutionPipelineAsync(CurrentBarcode, ct);
-
-            if (result.Status is PreExecutionStatus.TestStarted or PreExecutionStatus.Cancelled)
-            {
-                return result;
-            }
-
-            // Показать диалог ошибки подготовки
-            var shouldRetry = await ShowPrepareErrorDialogAsync(result.ErrorMessage);
-            if (!shouldRetry)
-            {
-                return PreExecutionResult.Cancelled();
-            }
-
-            infra.Logger.LogInformation("NOK повтор: повторная попытка подготовки");
-        }
-
-        return PreExecutionResult.Cancelled();
     }
 
     private Task<bool> ShowPrepareErrorDialogAsync(string? errorMessage)

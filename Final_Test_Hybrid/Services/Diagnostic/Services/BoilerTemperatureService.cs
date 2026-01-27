@@ -52,11 +52,7 @@ public class BoilerTemperatureService(
         var address = (ushort)(RegisterSupplyLineTemperature - _settings.BaseAddressOffset);
         var result = await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
 
-        if (result.Success)
-        {
-            _logger.LogDebug("Температура подающей линии: {Value} C", result.Value);
-        }
-        else
+        if (!result.Success)
         {
             _logger.LogError("Ошибка чтения температуры подающей линии: {Error}", result.Error!);
         }
@@ -77,11 +73,7 @@ public class BoilerTemperatureService(
         var address = (ushort)(RegisterDhwTemperature - _settings.BaseAddressOffset);
         var result = await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
 
-        if (result.Success)
-        {
-            _logger.LogDebug("Температура ГВС: {Value} C", result.Value);
-        }
-        else
+        if (!result.Success)
         {
             _logger.LogError("Ошибка чтения температуры ГВС: {Error}", result.Error!);
         }
@@ -102,11 +94,7 @@ public class BoilerTemperatureService(
         var address = (ushort)(RegisterBoilerTemperature - _settings.BaseAddressOffset);
         var result = await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
 
-        if (result.Success)
-        {
-            _logger.LogDebug("Температура бойлера: {Value} C", result.Value);
-        }
-        else
+        if (!result.Success)
         {
             _logger.LogError("Ошибка чтения температуры бойлера: {Error}", result.Error!);
         }
@@ -127,11 +115,7 @@ public class BoilerTemperatureService(
         var address = (ushort)(RegisterOutdoorTemperature - _settings.BaseAddressOffset);
         var result = await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
 
-        if (result.Success)
-        {
-            _logger.LogDebug("Наружная температура: {Value} C", result.Value);
-        }
-        else
+        if (!result.Success)
         {
             _logger.LogError("Ошибка чтения наружной температуры: {Error}", result.Error!);
         }
@@ -156,11 +140,7 @@ public class BoilerTemperatureService(
         var address = (ushort)(RegisterSupplyLineResistance - _settings.BaseAddressOffset);
         var result = await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
 
-        if (result.Success)
-        {
-            _logger.LogDebug("Сопротивление датчика подающей линии: {Value} Ом", result.Value);
-        }
-        else
+        if (!result.Success)
         {
             _logger.LogError("Ошибка чтения сопротивления датчика подающей линии: {Error}", result.Error!);
         }
@@ -181,11 +161,7 @@ public class BoilerTemperatureService(
         var address = (ushort)(RegisterDhwResistance - _settings.BaseAddressOffset);
         var result = await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
 
-        if (result.Success)
-        {
-            _logger.LogDebug("Сопротивление датчика ГВС: {Value} Ом", result.Value);
-        }
-        else
+        if (!result.Success)
         {
             _logger.LogError("Ошибка чтения сопротивления датчика ГВС: {Error}", result.Error!);
         }
@@ -206,11 +182,7 @@ public class BoilerTemperatureService(
         var address = (ushort)(RegisterBoilerResistance - _settings.BaseAddressOffset);
         var result = await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
 
-        if (result.Success)
-        {
-            _logger.LogDebug("Сопротивление датчика бойлера: {Value} Ом", result.Value);
-        }
-        else
+        if (!result.Success)
         {
             _logger.LogError("Ошибка чтения сопротивления датчика бойлера: {Error}", result.Error!);
         }
@@ -231,11 +203,7 @@ public class BoilerTemperatureService(
         var address = (ushort)(RegisterOutdoorResistance - _settings.BaseAddressOffset);
         var result = await reader.ReadUInt32Async(address, ct).ConfigureAwait(false);
 
-        if (result.Success)
-        {
-            _logger.LogDebug("Сопротивление датчика наружной температуры: {Value} Ом", result.Value);
-        }
-        else
+        if (!result.Success)
         {
             _logger.LogError("Ошибка чтения сопротивления датчика наружной температуры: {Error}", result.Error!);
         }

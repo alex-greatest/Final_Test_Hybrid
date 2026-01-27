@@ -23,15 +23,14 @@ public class OperationDetailsService(
         long operationId,
         AuditType auditType)
     {
-        logger.LogInformation("GetResultsAsync called with OperationId={OperationId}, AuditType={AuditType}", operationId, auditType);
         try
         {
             await using var db = await dbContextFactory.CreateDbContextAsync();
+
             return await db.Results
                 .AsNoTracking()
                 .Where(r => r.OperationId == operationId)
-                .Where(r => r.ResultSettingHistory != null &&
-                            r.ResultSettingHistory.AuditType == auditType)
+                .Where(r => r.ResultSettingHistory!.AuditType == auditType)
                 .OrderBy(r => r.ResultSettingHistory!.ParameterName)
                 .Select(r => new ArchiveResultItem
                 {
@@ -60,14 +59,13 @@ public class OperationDetailsService(
     /// <returns>Список ошибок.</returns>
     public async Task<IReadOnlyList<ArchiveErrorItem>> GetErrorsAsync(long operationId)
     {
-        logger.LogInformation("GetErrorsAsync called with OperationId={OperationId}", operationId);
         try
         {
             await using var db = await dbContextFactory.CreateDbContextAsync();
+
             return await db.Errors
                 .AsNoTracking()
                 .Where(e => e.OperationId == operationId)
-                .Where(e => e.ErrorSettingsHistory != null)
                 .OrderBy(e => e.ErrorSettingsHistory!.AddressError)
                 .Select(e => new ArchiveErrorItem
                 {
@@ -92,14 +90,13 @@ public class OperationDetailsService(
     /// <returns>Список времён шагов.</returns>
     public async Task<IReadOnlyList<ArchiveStepTimeItem>> GetStepTimesAsync(long operationId)
     {
-        logger.LogInformation("GetStepTimesAsync called with OperationId={OperationId}", operationId);
         try
         {
             await using var db = await dbContextFactory.CreateDbContextAsync();
+
             return await db.StepTimes
                 .AsNoTracking()
                 .Where(st => st.OperationId == operationId)
-                .Where(st => st.StepFinalTestHistory != null)
                 .OrderBy(st => st.StepFinalTestHistory!.Name)
                 .Select(st => new ArchiveStepTimeItem
                 {

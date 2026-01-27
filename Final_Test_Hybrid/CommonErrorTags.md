@@ -57,6 +57,81 @@
 
 ---
 
+# Ошибки шагов (Step Errors)
+
+## DHW_Fill_Circuit_Normal_Direction (П-008-xx)
+
+| Код БД | Тег PLC | OPC UA Path | Описание |
+|--------|---------|-------------|----------|
+| П-008-00 | Al_NoWaterFlow | `ns=3;s="DB_DHW"."DB_DHW_Fill_Circuit_Normal"."Al_NoWaterFlow"` | Нет протока воды |
+| П-008-01 | Al_NoWaterPressure | `ns=3;s="DB_DHW"."DB_DHW_Fill_Circuit_Normal"."Al_NoWaterPressure"` | Нет давления воды |
+| П-008-02 | Al_FillTime | `ns=3;s="DB_DHW"."DB_DHW_Fill_Circuit_Normal"."Al_FillTime"` | Время заполнения превышено |
+
+---
+
+## Elec - Электрические подключения (П-009-xx)
+
+| Код БД | Описание | Шаг |
+|--------|----------|-----|
+| П-009-00 | Не подключен силовой кабель | Elec/Connect_Power_Cable |
+| П-009-01 | Клипса заземление не подключена | Elec/Connect_Earth_Clip |
+
+> **Примечание:** Это ошибки приложения без PLC тегов
+
+---
+
+## Gas_Leak_Test (П-010-xx)
+
+| Код БД | Тег PLC | OPC UA Path | Описание |
+|--------|---------|-------------|----------|
+| П-010-00 | Al_LeackGas | `ns=3;s="DB_Gas"."Gas_Leak_Test"."Al_LeackGas"` | Утечка газа |
+| П-010-01 | Al_NoPressureGas | `ns=3;s="DB_Gas"."Gas_Leak_Test"."Al_NoPressureGas"` | Нет давления газа |
+
+---
+
+## CH_Fast_Fill_Circuit (П-011-xx)
+
+| Код БД | Тег PLC | OPC UA Path | Описание |
+|--------|---------|-------------|----------|
+| П-011-00 | Al_NoWaterFlow | `ns=3;s="DB_CH"."DB_CH_Fast_Fill_Circuit"."Al_NoWaterFlow"` | Нет протока воды |
+| П-011-01 | Al_NoWaterPressure | `ns=3;s="DB_CH"."DB_CH_Fast_Fill_Circuit"."Al_NoWaterPressure"` | Нет давления воды |
+| П-011-02 | Al_FillTime | `ns=3;s="DB_CH"."DB_CH_Fast_Fill_Circuit"."Al_FillTime"` | Время заполнения превышено |
+
+---
+
+## CH_Slow_Fill_Circuit (П-013-xx)
+
+| Код БД | Тег PLC | OPC UA Path | Описание |
+|--------|---------|-------------|----------|
+| П-013-00 | Al_NoWaterFlow | `ns=3;s="DB_CH"."DB_CH_Slow_Fill_Circuit"."Al_NoWaterFlow"` | Нет протока воды |
+| П-013-01 | Al_NoWaterPressure | `ns=3;s="DB_CH"."DB_CH_Slow_Fill_Circuit"."Al_NoWaterPressure"` | Нет давления воды |
+| П-013-02 | Al_FillTime | `ns=3;s="DB_CH"."DB_CH_Slow_Fill_Circuit"."Al_FillTime"` | Время заполнения превышено |
+
+---
+
+## Coms - Диагностическая связь (П-016-xx)
+
+| Код БД | Описание | Шаг |
+|--------|----------|-----|
+| П-016-00 | Нет связи с котлом | Coms/Check_Comms |
+| П-016-01 | Ошибка при смене режима котла | Coms/Write_Test_Byte_ON |
+| П-016-02 | Котел не в стендовом режиме | Coms/Check_Test_Byte_ON |
+| П-016-03 | Ошибка записи в ЭБУ | Coms/Write_Soft_Code_Plug |
+| П-016-04 | Ошибка запуска насоса котла | Coms/CH_Pump_Start |
+
+> **Примечание:** Это ошибки приложения без PLC тегов (Modbus диагностика)
+
+---
+
+## Block_Boiler_Adapter (П-086-xx)
+
+| Код БД | Тег PLC | OPC UA Path | Описание |
+|--------|---------|-------------|----------|
+| П-086-00 | Al_Not_17K4 | `ns=3;s="DB_Common"."Al_Not_17K4"` | Котел не заблокирован |
+| П-086-01 | Al_17K5Fault | `ns=3;s="DB_Common"."Al_17K5Fault"` | Реле 17K5 неисправно |
+
+---
+
 ## Использование в коде
 
 ```csharp
@@ -109,15 +184,51 @@ VALUES
 -- Ошибки приложения (О-004-xx)
 INSERT INTO tb_error_settings_template (id, address_error, description, version, station_type_id, step_id)
 VALUES
-(134, 'О-004-00', 'Ошибка записи в ПЛК', 2, 7, NULL);
+(134, 'О-004-00', 'Ошибка записи в ПЛК', 2, 7, NULL),
+(135, 'О-004-01', 'Потеря связи с ПЛК', 2, 7, NULL),
+(136, 'О-004-02', 'Таймаут чтения тега ПЛК', 2, 7, NULL);
 
+-- DHW_Fill_Circuit_Normal_Direction (П-008-xx) - step_id=TBD
 INSERT INTO tb_error_settings_template (id, address_error, description, version, station_type_id, step_id)
 VALUES
-    (135, 'О-004-01', 'Потеря связи с ПЛК', 2, 7, NULL);
+(137, 'П-008-00', 'DHW_Fill_Circuit_Normal. Неисправность: Нет протока воды', 2, 7, NULL),
+(138, 'П-008-01', 'DHW_Fill_Circuit_Normal. Неисправность: Нет давления воды', 2, 7, NULL),
+(139, 'П-008-02', 'DHW_Fill_Circuit_Normal. Неисправность: Время заполнения превышено', 2, 7, NULL);
 
+-- Elec (П-009-xx) - step_id=TBD
 INSERT INTO tb_error_settings_template (id, address_error, description, version, station_type_id, step_id)
 VALUES
-    (136, 'О-004-02', 'Таймаут чтения тега ПЛК', 2, 7, NULL);
+(140, 'П-009-00', 'Elec_Connect_Power_Cable. Неисправность: Не подключен силовой кабель', 2, 7, NULL),
+(141, 'П-009-01', 'Elec_Connect_Earth_Clip. Неисправность: Клипса заземление не подключена', 2, 7, NULL);
+
+-- Gas_Leak_Test (П-010-xx) - step_id=TBD
+INSERT INTO tb_error_settings_template (id, address_error, description, version, station_type_id, step_id)
+VALUES
+(142, 'П-010-00', 'Gas_Leak_Test. Неисправность: Утечка газа', 2, 7, NULL),
+(143, 'П-010-01', 'Gas_Leak_Test. Неисправность: Нет давления газа', 2, 7, NULL);
+
+-- CH_Fast_Fill_Circuit (П-011-xx) - step_id=TBD
+INSERT INTO tb_error_settings_template (id, address_error, description, version, station_type_id, step_id)
+VALUES
+(144, 'П-011-00', 'CH_Fast_Fill_Circuit. Неисправность: Нет протока воды', 2, 7, NULL),
+(145, 'П-011-01', 'CH_Fast_Fill_Circuit. Неисправность: Нет давления воды', 2, 7, NULL),
+(146, 'П-011-02', 'CH_Fast_Fill_Circuit. Неисправность: Время заполнения превышено', 2, 7, NULL);
+
+-- CH_Slow_Fill_Circuit (П-013-xx) - step_id=TBD
+INSERT INTO tb_error_settings_template (id, address_error, description, version, station_type_id, step_id)
+VALUES
+(147, 'П-013-00', 'CH_Slow_Fill_Circuit. Неисправность: Нет протока воды', 2, 7, NULL),
+(148, 'П-013-01', 'CH_Slow_Fill_Circuit. Неисправность: Нет давления воды', 2, 7, NULL),
+(149, 'П-013-02', 'CH_Slow_Fill_Circuit. Неисправность: Время заполнения превышено', 2, 7, NULL);
+
+-- Coms (П-016-xx) - step_id=TBD
+INSERT INTO tb_error_settings_template (id, address_error, description, version, station_type_id, step_id)
+VALUES
+(150, 'П-016-00', 'Coms_Check_Comms. Неисправность: Нет связи с котлом', 2, 7, NULL),
+(151, 'П-016-01', 'Coms_Write_Test_Byte_ON. Неисправность: Ошибка при смене режима котла', 2, 7, NULL),
+(152, 'П-016-02', 'Coms_Check_Test_Byte_ON. Неисправность: Котел не в стендовом режиме', 2, 7, NULL),
+(153, 'П-016-03', 'Coms_Write_Soft_Code_Plug. Неисправность: Ошибка записи в ЭБУ', 2, 7, NULL),
+(154, 'П-016-04', 'Coms_CH_Pump_Start. Неисправность: Ошибка запуска насоса котла', 2, 7, NULL);
 
 -- Обновить sequence (следующий id = 627)
 ALTER SEQUENCE tb_error_settings_template_id_seq RESTART WITH 627;

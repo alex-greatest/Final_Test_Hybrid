@@ -18,10 +18,10 @@
                       Disabled="@(!CanExport)" />
     </div>
     <div class="tabs-shell">
-        <RadzenTabs RenderMode="TabRenderMode.Client" @bind-SelectedIndex="_selectedTabIndex" Change="OnTabChangeAsync" class="database-tabs">
+        <RadzenTabs RenderMode="TabRenderMode.Client" @bind-SelectedIndex="_selectedTabIndex" class="database-tabs">
             <Tabs>
                 <RadzenTabsItem Text="С диапазоном">
-                    @if (_isLoadingNumericWithRange)
+                    @if (_isLoading)
                     {
                         <div class="loading-container">
                             <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
@@ -34,7 +34,7 @@
                 </RadzenTabsItem>
 
                 <RadzenTabsItem Text="Без диапазона">
-                    @if (_isLoadingSimpleStatus)
+                    @if (_isLoading)
                     {
                         <div class="loading-container">
                             <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
@@ -47,7 +47,7 @@
                 </RadzenTabsItem>
 
                 <RadzenTabsItem Text="Плата">
-                    @if (_isLoadingBoardParameters)
+                    @if (_isLoading)
                     {
                         <div class="loading-container">
                             <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
@@ -60,7 +60,7 @@
                 </RadzenTabsItem>
 
                 <RadzenTabsItem Text="Ошибки">
-                    @if (_isLoadingErrors)
+                    @if (_isLoading)
                     {
                         <div class="loading-container">
                             <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
@@ -73,7 +73,7 @@
                 </RadzenTabsItem>
 
                 <RadzenTabsItem Text="Время шагов">
-                    @if (_isLoadingStepTimes)
+                    @if (_isLoading)
                     {
                         <div class="loading-container">
                             <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
@@ -95,24 +95,13 @@
 
     private int _selectedTabIndex;
     private bool _isExporting;
+    private bool _isLoading = true;
 
     private IReadOnlyList<ArchiveResultItem> _numericWithRangeResults = [];
     private IReadOnlyList<ArchiveResultItem> _simpleStatusResults = [];
     private IReadOnlyList<ArchiveResultItem> _boardParametersResults = [];
     private IReadOnlyList<ArchiveErrorItem> _errors = [];
     private IReadOnlyList<ArchiveStepTimeItem> _stepTimes = [];
-
-    private bool _isLoadingNumericWithRange;
-    private bool _isLoadingSimpleStatus;
-    private bool _isLoadingBoardParameters;
-    private bool _isLoadingErrors;
-    private bool _isLoadingStepTimes;
-
-    private bool _numericWithRangeLoaded;
-    private bool _simpleStatusLoaded;
-    private bool _boardParametersLoaded;
-    private bool _errorsLoaded;
-    private bool _stepTimesLoaded;
 
     /// <summary>
     /// Экспорт доступен только для завершённых операций (OK/NOK).
@@ -121,114 +110,35 @@
         (Operation.Status == OperationResultStatus.Ok || Operation.Status == OperationResultStatus.Nok);
 
     /// <summary>
-    /// Загружает данные первой вкладки при инициализации.
+    /// Загружает все данные при инициализации.
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
-        await LoadNumericWithRangeAsync();
+        await LoadAllDataAsync();
     }
 
     /// <summary>
-    /// Обрабатывает смену вкладки и загружает данные при необходимости.
+    /// Загружает все данные параллельно.
     /// </summary>
-    private async Task OnTabChangeAsync(int index)
+    private async Task LoadAllDataAsync()
     {
-        switch (index)
-        {
-            case 0 when !_numericWithRangeLoaded:
-                await LoadNumericWithRangeAsync();
-                break;
-            case 1 when !_simpleStatusLoaded:
-                await LoadSimpleStatusAsync();
-                break;
-            case 2 when !_boardParametersLoaded:
-                await LoadBoardParametersAsync();
-                break;
-            case 3 when !_errorsLoaded:
-                await LoadErrorsAsync();
-                break;
-            case 4 when !_stepTimesLoaded:
-                await LoadStepTimesAsync();
-                break;
-        }
-    }
+        _isLoading = true;
 
-    /// <summary>
-    /// Загружает результаты с диапазоном.
-    /// </summary>
-    private async Task LoadNumericWithRangeAsync()
-    {
-        _isLoadingNumericWithRange = true;
-        StateHasChanged();
+        var numericTask = OperationDetailsService.GetResultsAsync(Operation.Id, AuditType.NumericWithRange);
+        var simpleTask = OperationDetailsService.GetResultsAsync(Operation.Id, AuditType.SimpleStatus);
+        var boardTask = OperationDetailsService.GetResultsAsync(Operation.Id, AuditType.BoardParameters);
+        var errorsTask = OperationDetailsService.GetErrorsAsync(Operation.Id);
+        var stepTimesTask = OperationDetailsService.GetStepTimesAsync(Operation.Id);
 
-        _numericWithRangeResults = await OperationDetailsService.GetResultsAsync(
-            Operation.Id, AuditType.NumericWithRange);
-        _numericWithRangeLoaded = true;
+        await Task.WhenAll(numericTask, simpleTask, boardTask, errorsTask, stepTimesTask);
 
-        _isLoadingNumericWithRange = false;
-        StateHasChanged();
-    }
+        _numericWithRangeResults = await numericTask;
+        _simpleStatusResults = await simpleTask;
+        _boardParametersResults = await boardTask;
+        _errors = await errorsTask;
+        _stepTimes = await stepTimesTask;
 
-    /// <summary>
-    /// Загружает результаты без диапазона.
-    /// </summary>
-    private async Task LoadSimpleStatusAsync()
-    {
-        _isLoadingSimpleStatus = true;
-        StateHasChanged();
-
-        _simpleStatusResults = await OperationDetailsService.GetResultsAsync(
-            Operation.Id, AuditType.SimpleStatus);
-        _simpleStatusLoaded = true;
-
-        _isLoadingSimpleStatus = false;
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// Загружает параметры платы.
-    /// </summary>
-    private async Task LoadBoardParametersAsync()
-    {
-        _isLoadingBoardParameters = true;
-        StateHasChanged();
-
-        _boardParametersResults = await OperationDetailsService.GetResultsAsync(
-            Operation.Id, AuditType.BoardParameters);
-        _boardParametersLoaded = true;
-
-        _isLoadingBoardParameters = false;
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// Загружает ошибки.
-    /// </summary>
-    private async Task LoadErrorsAsync()
-    {
-        _isLoadingErrors = true;
-        StateHasChanged();
-
-        _errors = await OperationDetailsService.GetErrorsAsync(Operation.Id);
-        _errorsLoaded = true;
-
-        _isLoadingErrors = false;
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// Загружает время шагов.
-    /// </summary>
-    private async Task LoadStepTimesAsync()
-    {
-        _isLoadingStepTimes = true;
-        StateHasChanged();
-
-        _stepTimes = await OperationDetailsService.GetStepTimesAsync(Operation.Id);
-        _stepTimesLoaded = true;
-
-        _isLoadingStepTimes = false;
-        StateHasChanged();
+        _isLoading = false;
     }
 
     /// <summary>
@@ -246,27 +156,6 @@
 
         try
         {
-            if (!_numericWithRangeLoaded)
-            {
-                await LoadNumericWithRangeAsync();
-            }
-            if (!_simpleStatusLoaded)
-            {
-                await LoadSimpleStatusAsync();
-            }
-            if (!_boardParametersLoaded)
-            {
-                await LoadBoardParametersAsync();
-            }
-            if (!_errorsLoaded)
-            {
-                await LoadErrorsAsync();
-            }
-            if (!_stepTimesLoaded)
-            {
-                await LoadStepTimesAsync();
-            }
-
             var data = new ArchiveExportData
             {
                 DateStart = Operation.DateStart,

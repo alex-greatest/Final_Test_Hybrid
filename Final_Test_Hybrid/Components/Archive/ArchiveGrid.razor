@@ -264,7 +264,7 @@
             var fileName = $"{serialNumber}_{operation.DateStart:dd.MM.yyyy_HH-mm-ss}.xlsx";
 
             await Task.Run(() => ExcelExportService.Export(data, fileName));
-            NotificationService.Notify(NotificationSeverity.Success, "Готово", $"Файл: {fileName}");
+            NotificationService.Notify(NotificationSeverity.Success, "Готово", "Файл сохранён");
         }
         catch (Exception ex)
         {

@@ -22,7 +22,6 @@ public class RegisterWriter(
         try
         {
             await modbusClient.WriteSingleRegisterAsync(address, value, CommandPriority.High, ct).ConfigureAwait(false);
-            _logger.LogDebug("Запись в регистр {Address}: {Value}", address, value);
             return DiagnosticWriteResult.Ok(address);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -40,7 +39,6 @@ public class RegisterWriter(
         try
         {
             await modbusClient.WriteSingleRegisterAsync(address, (ushort)value, CommandPriority.High, ct).ConfigureAwait(false);
-            _logger.LogDebug("Запись в регистр {Address}: {Value}", address, value);
             return DiagnosticWriteResult.Ok(address);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -64,7 +62,6 @@ public class RegisterWriter(
             };
 
             await modbusClient.WriteMultipleRegistersAsync(addressHi, registers, CommandPriority.High, ct).ConfigureAwait(false);
-            _logger.LogDebug("Запись в регистр {Address}: {Value}", addressHi, value);
             return DiagnosticWriteResult.Ok(addressHi);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -96,7 +93,6 @@ public class RegisterWriter(
             };
 
             await modbusClient.WriteMultipleRegistersAsync(addressHi, registers, CommandPriority.High, ct).ConfigureAwait(false);
-            _logger.LogDebug("Запись в регистр {Address}: {Value}", addressHi, value);
             return DiagnosticWriteResult.Ok(addressHi);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -142,7 +138,6 @@ public class RegisterWriter(
 
             await modbusClient.WriteMultipleRegistersAsync(address, registers, CommandPriority.High, ct)
                 .ConfigureAwait(false);
-            _logger.LogDebug("Запись строки в регистр {Address}: {Value}", address, value);
             return DiagnosticWriteResult.Ok(address);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

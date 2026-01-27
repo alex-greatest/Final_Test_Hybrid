@@ -132,6 +132,12 @@ public static partial class ErrorDefinitions
         RelatedStepId: "coms-write-soft-code-plug",
         RelatedStepName: "Coms/Write_Soft_Code_Plug");
 
+    public static readonly ErrorDefinition ChPumpStartError = new(
+        "П-016-04", "Ошибка запуска насоса котла",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "coms-ch-pump-start",
+        RelatedStepName: "Coms/CH_Pump_Start");
+
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [
         BoilerNotLocked,
@@ -152,6 +158,7 @@ public static partial class ErrorDefinitions
         NoDiagnosticConnection,
         WriteBytesOn,
         BoilerNotStandMode,
-        EcuWriteError
+        EcuWriteError,
+        ChPumpStartError
     ];
 }

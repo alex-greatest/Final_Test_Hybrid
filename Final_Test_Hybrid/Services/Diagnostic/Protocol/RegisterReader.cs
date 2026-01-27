@@ -42,13 +42,7 @@ public class RegisterReader(
             var registers = await modbusClient.ReadHoldingRegistersAsync(address, 1, priority, ct).ConfigureAwait(false);
             var value = registers[0];
 
-            if (DiagnosticCodes.IsErrorCode(value))
-            {
-                return DiagnosticReadResult<ushort>.Fail(address, DiagnosticCodes.GetErrorMessage(value));
-            }
-
-            _logger.LogDebug("Чтение регистра {Address}: {Value}", address, value);
-            return DiagnosticReadResult<ushort>.Ok(address, value);
+            return DiagnosticCodes.IsErrorCode(value) ? DiagnosticReadResult<ushort>.Fail(address, DiagnosticCodes.GetErrorMessage(value)) : DiagnosticReadResult<ushort>.Ok(address, value);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -90,7 +84,6 @@ public class RegisterReader(
                 return DiagnosticReadResult<short>.Fail(address, DiagnosticCodes.GetSignedErrorMessage(value));
             }
 
-            _logger.LogDebug("Чтение регистра {Address}: {Value}", address, value);
             return DiagnosticReadResult<short>.Ok(address, value);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -133,7 +126,6 @@ public class RegisterReader(
                 return DiagnosticReadResult<uint>.Fail(addressHi, DiagnosticCodes.GetUInt32ErrorDescription(value)!);
             }
 
-            _logger.LogDebug("Чтение регистра {Address}: {Value}", addressHi, value);
             return DiagnosticReadResult<uint>.Ok(addressHi, value);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -187,7 +179,6 @@ public class RegisterReader(
                 return DiagnosticReadResult<float>.Fail(addressHi, errorType!);
             }
 
-            _logger.LogDebug("Чтение регистра {Address}: {Value}", addressHi, value);
             return DiagnosticReadResult<float>.Ok(addressHi, value);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -245,7 +236,6 @@ public class RegisterReader(
             }
 
             var value = sb.ToString();
-            _logger.LogDebug("Чтение строки по адресу {Address}: {Value}", address, value);
             return DiagnosticReadResult<string>.Ok(address, value);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

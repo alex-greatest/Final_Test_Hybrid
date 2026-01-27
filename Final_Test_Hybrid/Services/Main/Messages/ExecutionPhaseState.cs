@@ -13,6 +13,9 @@ public class ExecutionPhaseState
 
     public void Clear()
     {
+        if (Phase == null)
+            return;
+
         Phase = null;
         OnChanged?.Invoke();
     }
