@@ -26,6 +26,9 @@ public class SetFanMapStep(
     /// <summary>
     /// Записывает ступень вентилятора (значение 1) в регистр 1062.
     /// </summary>
+    /// <param name="context">Контекст выполнения тестового шага.</param>
+    /// <param name="ct">Токен отмены операции.</param>
+    /// <returns>Результат выполнения шага.</returns>
     public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
     {
         logger.LogInformation("Запись ступени вентилятора {Value} в регистр {Register}",
@@ -36,7 +39,7 @@ public class SetFanMapStep(
 
         if (!result.Success)
         {
-            var msg = $"Ошибка при записи значения {FanStageValue} в регистр {RegisterFanMap}. {result.Error}";
+            var msg = $"Ошибка при записи значения 0x{FanStageValue:X4} в регистр {RegisterFanMap}. {result.Error}";
             logger.LogError(msg);
             return TestStepResult.Fail(msg);
         }
