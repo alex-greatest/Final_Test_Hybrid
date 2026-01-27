@@ -1,0 +1,13 @@
+.w-full {
+    width: 100%;
+}
+
+/* Увеличенный шрифт в гриде */
+::deep .rz-data-grid {
+    font-size: 16px;
+}
+
+/* Увеличенный шрифт при редактировании */
+::deep .rz-numeric input {
+    font-size: 16px;
+}

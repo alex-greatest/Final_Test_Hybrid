@@ -1,5 +1,6 @@
 using Final_Test_Hybrid.Components.Base;
 using Final_Test_Hybrid.Models.Plc.Tags;
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Microsoft.AspNetCore.Components;
@@ -15,16 +16,19 @@ public partial class AiCallCheck : GridInplaceEditorBase<AiCallCheck.AiCallCheck
     [Inject]
     private OpcUaTagService TagService { get; set; } = null!;
 
+    [Inject]
+    private DualLogger<AiCallCheck> Logger { get; set; } = null!;
+
     private readonly Dictionary<string, Func<object?, Task>> _callbacks = new();
-    private string? _lastEditedField;
+    private readonly Dictionary<AiCallCheckItem, string> _pendingEdits = new();
 
     /// <summary>
-    /// Обрабатывает клик по ячейке и отслеживает редактируемое поле.
+    /// Обрабатывает клик по ячейке и отслеживает редактируемое поле для конкретного элемента.
     /// </summary>
     protected new async Task OnCellClick(DataGridCellMouseEventArgs<AiCallCheckItem> args)
     {
-        _lastEditedField = args.Column.Property;
         await base.OnCellClick(args);
+        _pendingEdits[args.Data] = args.Column.Property;
     }
 
     protected override async Task OnInitializedAsync()
@@ -103,41 +107,47 @@ public partial class AiCallCheck : GridInplaceEditorBase<AiCallCheck.AiCallCheck
     /// </summary>
     protected override void OnUpdateRow(AiCallCheckItem item)
     {
-        _ = WriteChangedFieldAsync(item);
+        if (!_pendingEdits.TryGetValue(item, out var editedField))
+        {
+            return;
+        }
+
+        _pendingEdits.Remove(item);
+        _ = WriteChangedFieldAsync(item, editedField);
     }
 
     /// <summary>
     /// Записывает измененное поле в PLC.
     /// </summary>
-    private async Task WriteChangedFieldAsync(AiCallCheckItem item)
+    private async Task WriteChangedFieldAsync(AiCallCheckItem item, string editedField)
     {
-        if (_lastEditedField == null)
-        {
-            return;
-        }
-
-        var (field, value) = GetFieldMapping(item, _lastEditedField);
+        var (field, value) = GetFieldMapping(item, editedField);
         if (field == null)
         {
             return;
         }
 
         var nodeId = AiCallCheckTags.BuildNodeId(item.PlcTag, field);
-        await TagService.WriteAsync(nodeId, (float)value);
-        _lastEditedField = null;
+
+        try
+        {
+            await TagService.WriteAsync(nodeId, (float)value);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Ошибка записи {Field} для {Tag}", field, item.PlcTag);
+        }
     }
 
     /// <summary>
-    /// Маппинг UI-поля на PLC-поле и значение.
+    /// Маппинг UI-поля на PLC-поле и значение (только редактируемые поля).
     /// </summary>
     private static (string? Field, double Value) GetFieldMapping(AiCallCheckItem item, string uiField) => uiField switch
     {
-        nameof(AiCallCheckItem.Raw) => (AiCallCheckTags.Fields.Value, item.Raw),
         nameof(AiCallCheckItem.Min) => (AiCallCheckTags.Fields.LimMin, item.Min),
         nameof(AiCallCheckItem.Max) => (AiCallCheckTags.Fields.LimMax, item.Max),
         nameof(AiCallCheckItem.Multiplier) => (AiCallCheckTags.Fields.Gain, item.Multiplier),
         nameof(AiCallCheckItem.Offset) => (AiCallCheckTags.Fields.Offset, item.Offset),
-        nameof(AiCallCheckItem.Calculated) => (AiCallCheckTags.Fields.ValueAct, item.Calculated),
         _ => (null, 0)
     };
 

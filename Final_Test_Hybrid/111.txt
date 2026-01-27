@@ -1,21 +1,39 @@
-Настройка датчиков температуры. Параметры в DB_Sensor в структурах для каждого датчика. Тип Pt100 для всех.
-Сырое – Value (измеренное значение в ma)
-Множитель – Gain
-Смещение – Offset
-Вычисленное – Value_Act
+Обзор. Аналоговые выходы. ПИД регулятор
+Тип – одинаковый, как есть.
+Параметры ПИД регулятора – DB_Control.Valve
+P – Gain1
+I – Ti1
+D – Td1
 
 
-	TAG	"ST_Pt100"	364.0			True	True	True	True	True		Линия GAS. Температура газа
-	CH_TMR	"ST_Pt100"	380.0			True	True	True	True	True		Линия CH. Температура потока воды
-	CH_TRR	"ST_Pt100"	396.0			True	True	True	True	True		Линия CH. Температура обратной воды
-	DHW_TES	"ST_Pt100"	412.0			True	True	True	True	True		Линия DHW. Температура потока воды
-	DHW_TUS	"ST_Pt100"	428.0			True	True	True	True	True		Линия DHW. Температура обратной воды
+
+Обзор. Аналоговые выходы. ПИД регулятор
+Тип – одинаковый, как есть.
+Параметры ПИД регулятора – DB_Control.Valve
+P – Gain1
+I – Ti1
+D – Td1
 
 
-Структура 
 
-	TAG	"ST_Pt100"	364.0			True	True	True	True	True		Линия GAS. Температура газа
-        Value	Real	364.0	0.0	0.0	True	True	True	True	False		Измеренное значение 
-        Value_Act	Real	368.0	0.0	0.0	True	True	True	True	False		Масштабированное измеренное значение 
-        Offset	Real	372.0	0.0	0.0	True	True	True	True	False		Смещение относительно начального значения
-        Gain	Real	376.0	1.0	1.0	True	True	True	True	False		Коэффициент
+вот структура
+
+	VRP2_1	"ST_PID"		True	True	True	True	False		Регулировочный клапан давления воды в контур DHW
+        SetPoint	Real	0.0	True	True	True	True	False		Заданное значение регулятора
+        ActuelValue	Real	0.0	True	True	True	True	False		Актуальная Значение
+        ManualValue	Real	0.0	True	True	True	True	False		Заданное значение в ручном режиме
+        ActuelloutValue	Real	0.0	True	True	True	True	False		Актуальное выходное значение
+        Gain1	Real	0.0	True	True	True	True	False		P - составляющая
+        Ti1	Real	0.0	True	True	True	True	False		I - составляющая
+        Td1	Real	0.0	True	True	True	True	False		D - составляющая
+        Gain2	Real	0.0	True	True	True	True	False		P - составляющая
+        Ti2	Real	0.0	True	True	True	True	False		I - составляющая
+        Td2	Real	0.0	True	True	True	True	False		D - составляющая
+        Mode	Int	0	True	True	True	True	False		Заданный режим работы регулятора
+        State	Int	0	True	True	True	True	False		Состояние регулятора
+        MeasChannel	Int	0	True	True	True	True	False		Измерительный канал
+        Start_Mode	Bool	false	True	True	True	True	False		Команда изменения режима
+        AcknowledgeError	Bool	FALSE	True	True	True	True	False		Квитирование ошибки регулятора
+        Reset	Bool	FALSE	True	True	True	True	False		Сброс регулятора
+        ManualEnable	Bool	FALSE	True	True	True	True	False		Разрешение управления в ручном режиме
+        Error	Bool	FALSE	True	True	True	True	False		Неисправность регулятора

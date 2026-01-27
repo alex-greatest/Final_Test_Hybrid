@@ -1,0 +1,143 @@
+@inherits Final_Test_Hybrid.Components.Base.GridInplaceEditorBase<PidRegulatorCheck.PidRegulatorItem>
+
+<div id="@ContainerId">
+    <RadzenDataGrid @ref="Grid" Data="@Items" TItem="PidRegulatorItem"
+                    EditMode="DataGridEditMode.Single"
+                    CellClick="@OnCellClick"
+                    RowUpdate="@OnUpdateRow"
+                    ColumnWidth="100px">
+        <Columns>
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="PlcTag" Title="Тэг ПЛК" Width="120px">
+                <Template Context="item">
+                    @item.PlcTag
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Type" Title="Тип" Width="120px">
+                <Template Context="item">
+                    @item.Type
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="SetPoint" Title="Уставка">
+                <Template Context="item">
+                    @item.SetPoint.ToString("F3")
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="ActuelValue" Title="Факт. знач.">
+                <Template Context="item">
+                    @item.ActuelValue.ToString("F3")
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="ManualValue" Title="Ручн. знач.">
+                <Template Context="item">
+                    @item.ManualValue.ToString("F3")
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="ActuelloutValue" Title="Выход">
+                <Template Context="item">
+                    @item.ActuelloutValue.ToString("F3")
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Gain1" Title="P1">
+                <Template Context="item">
+                    @item.Gain1.ToString("F3")
+                </Template>
+                <EditTemplate Context="item">
+                    @if (IsEditing(nameof(item.Gain1)))
+                    {
+                        <RadzenNumeric TValue="double" class="w-full" @bind-Value="item.Gain1" />
+                    }
+                    else
+                    {
+                        @item.Gain1.ToString("F3")
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Ti1" Title="I1">
+                <Template Context="item">
+                    @item.Ti1.ToString("F3")
+                </Template>
+                <EditTemplate Context="item">
+                    @if (IsEditing(nameof(item.Ti1)))
+                    {
+                        <RadzenNumeric TValue="double" class="w-full" @bind-Value="item.Ti1" />
+                    }
+                    else
+                    {
+                        @item.Ti1.ToString("F3")
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Td1" Title="D1">
+                <Template Context="item">
+                    @item.Td1.ToString("F3")
+                </Template>
+                <EditTemplate Context="item">
+                    @if (IsEditing(nameof(item.Td1)))
+                    {
+                        <RadzenNumeric TValue="double" class="w-full" @bind-Value="item.Td1" />
+                    }
+                    else
+                    {
+                        @item.Td1.ToString("F3")
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Gain2" Title="P2">
+                <Template Context="item">
+                    @item.Gain2.ToString("F3")
+                </Template>
+                <EditTemplate Context="item">
+                    @if (IsEditing(nameof(item.Gain2)))
+                    {
+                        <RadzenNumeric TValue="double" class="w-full" @bind-Value="item.Gain2" />
+                    }
+                    else
+                    {
+                        @item.Gain2.ToString("F3")
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Ti2" Title="I2">
+                <Template Context="item">
+                    @item.Ti2.ToString("F3")
+                </Template>
+                <EditTemplate Context="item">
+                    @if (IsEditing(nameof(item.Ti2)))
+                    {
+                        <RadzenNumeric TValue="double" class="w-full" @bind-Value="item.Ti2" />
+                    }
+                    else
+                    {
+                        @item.Ti2.ToString("F3")
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Td2" Title="D2">
+                <Template Context="item">
+                    @item.Td2.ToString("F3")
+                </Template>
+                <EditTemplate Context="item">
+                    @if (IsEditing(nameof(item.Td2)))
+                    {
+                        <RadzenNumeric TValue="double" class="w-full" @bind-Value="item.Td2" />
+                    }
+                    else
+                    {
+                        @item.Td2.ToString("F3")
+                    }
+                </EditTemplate>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+</div>
