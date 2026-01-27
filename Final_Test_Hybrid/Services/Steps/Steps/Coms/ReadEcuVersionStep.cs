@@ -2,6 +2,7 @@ using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Results;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Limits;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
@@ -16,7 +17,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
 public class ReadEcuVersionStep(
     IOptions<DiagnosticSettings> settings,
     ITestResultsService testResultsService,
-    DualLogger<ReadEcuVersionStep> logger) : ITestStep, IRequiresRecipes
+    DualLogger<ReadEcuVersionStep> logger) : ITestStep, IRequiresRecipes, IProvideLimits
 {
     private const ushort RegisterMajorVersion = 1055;
     private const ushort RegisterMinorVersion = 1056;
@@ -32,6 +33,16 @@ public class ReadEcuVersionStep(
     public string Description => "Чтение версии ПО ЭБУ";
 
     public IReadOnlyList<string> RequiredRecipeAddresses => [VersionMinRecipe, VersionMaxRecipe];
+    
+    /// <summary>
+    /// Возвращает пределы для отображения в гриде.
+    /// </summary>
+    public string? GetLimits(LimitsContext context)
+    {
+        var versionMinRecipe = context.RecipeProvider.GetValue<float>(VersionMinRecipe);
+        var versionMaxRecipe = context.RecipeProvider.GetValue<float>(VersionMaxRecipe);
+        return versionMinRecipe != null && versionMaxRecipe != null ? $"{versionMinRecipe} .. {versionMaxRecipe}" : null;
+    }
 
     /// <summary>
     /// Выполняет чтение и верификацию версии ПО ЭБУ.
@@ -86,7 +97,7 @@ public class ReadEcuVersionStep(
             return TestStepResult.Fail(msg, errors: [ErrorDefinitions.EcuFirmwareVersionMismatch]);
         }
 
-        return TestStepResult.Pass();
+        return TestStepResult.Pass(actualVersion);
     }
 
     /// <summary>

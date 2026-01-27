@@ -14,4 +14,12 @@ public record DiagnosticPingData
     /// Статус котла: -1 тест, 0 включение, 1-10 различные режимы.
     /// </summary>
     public short BoilerStatus { get; init; }
+
+    /// <summary>
+    /// ID последней ошибки ЭБУ.
+    /// - null = не удалось прочитать регистр ошибки (soft-fail)
+    /// - 0 = ошибок нет
+    /// - 1-25 = код ошибки
+    /// </summary>
+    public ushort? LastErrorId { get; init; }
 }

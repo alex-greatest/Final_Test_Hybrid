@@ -39,6 +39,9 @@ public static class DiagnosticServiceExtensions
         services.AddSingleton<BoilerDeviceInfoService>();
         services.AddSingleton<BoilerSettingsService>();
 
+        // ECU error sync
+        services.AddSingleton<EcuErrorSyncService>();
+
         return services;
     }
 }

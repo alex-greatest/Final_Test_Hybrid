@@ -84,7 +84,14 @@
             0xFA87CD5E => "Инженерный",
             _ => "Обычный"
         };
-        return $"{data.BoilerStatus}, {mode}";
+
+        var errorText = data.LastErrorId switch
+        {
+            null or 0 => "",
+            var id => $", {BoilerErrors.Get(id.Value).DisplayCode}"
+        };
+
+        return $"{data.BoilerStatus}, {mode}{errorText}";
     }
 
     public void Dispose()

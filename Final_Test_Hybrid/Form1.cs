@@ -3,6 +3,7 @@ using Final_Test_Hybrid.Services.Database.Config;
 using Final_Test_Hybrid.Services.DependencyInjection;
 using Final_Test_Hybrid.Services.Diagnostic.Polling;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
+using Final_Test_Hybrid.Services.Diagnostic.Services;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
@@ -140,6 +141,9 @@ public partial class Form1 : Form
         // Подписываемся на PLC Reset события для остановки диагностики
         plcResetCoordinator.OnForceStop += () => StopDispatcherSafely(dispatcher, logger);
         errorCoordinator.OnReset += () => StopDispatcherSafely(dispatcher, logger);
+
+        // ECU error sync — получаем чтобы создался и начал слушать события
+        _ = serviceProvider.GetRequiredService<EcuErrorSyncService>();
 
         // StartAsync() НЕ вызываем здесь — диагностика запускается из тестовых шагов
     }
