@@ -95,7 +95,8 @@
       "Bash(tree:*)",
       "Bash(dotnet ef database update:*)",
       "Bash(PGPASSWORD=ManLiv123 psql:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(Select-String -Pattern \"\\(error|Сборка успешно|Build succeeded\\)\")"
     ]
   }
 }

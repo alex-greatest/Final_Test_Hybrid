@@ -252,6 +252,71 @@ public static partial class ErrorDefinitions
         RelatedStepId: "coms-read-ecu-version",
         RelatedStepName: "Coms/Read_ECU_Version");
 
+    // Check Water Flow (П-029-xx)
+    public static readonly ErrorDefinition AlNoWaterFlowCheck = new(
+        "П-029-00", "Неисправность. Нет протока воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Check_Water_Flow\".\"Al_NoWaterFlow\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-check-water-flow",
+        RelatedStepName: "CH/Check_Water_Flow");
+
+    public static readonly ErrorDefinition AlWaterFlowMinCheck = new(
+        "П-029-01", "Неисправность. Слишком малый расход воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Check_Water_Flow\".\"Al_WaterFlowMin\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-check-water-flow",
+        RelatedStepName: "CH/Check_Water_Flow");
+
+    public static readonly ErrorDefinition AlWaterFlowMaxCheck = new(
+        "П-029-02", "Неисправность. Слишком большой расход воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Check_Water_Flow\".\"Al_WaterFlowMax\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-check-water-flow",
+        RelatedStepName: "CH/Check_Water_Flow");
+
+    public static readonly ErrorDefinition AlWaterPressureLowCheck = new(
+        "П-029-03", "Неисправность. Низкое давление воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Check_Water_Flow\".\"Al_WaterPressureLow\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-check-water-flow",
+        RelatedStepName: "CH/Check_Water_Flow");
+
+    public static readonly ErrorDefinition AlWaterPressureHighCheck = new(
+        "П-029-04", "Неисправность. Высокое давление воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Check_Water_Flow\".\"Al_WaterPressureHight\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-check-water-flow",
+        RelatedStepName: "CH/Check_Water_Flow");
+
+    // Get CHW Flow NTC Cold (П-031-xx)
+    public static readonly ErrorDefinition AlWaterFlowMinGetChwFlowNtcCold = new(
+        "П-031-00", "Неисправность. Слишком малый расход воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Get_CHW_Flow_NTC_Cold\".\"Al_WaterFlowMin\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-get-chw-flow-ntc-cold",
+        RelatedStepName: "CH/Get_CHW_Flow_NTC_Cold");
+
+    public static readonly ErrorDefinition AlWaterFlowMaxGetChwFlowNtcCold = new(
+        "П-031-01", "Неисправность. Слишком большой расход воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Get_CHW_Flow_NTC_Cold\".\"Al_WaterFlowMax\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-get-chw-flow-ntc-cold",
+        RelatedStepName: "CH/Get_CHW_Flow_NTC_Cold");
+
+    public static readonly ErrorDefinition AlWaterPressureLowGetChwFlowNtcCold = new(
+        "П-031-02", "Неисправность. Низкое давление воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Get_CHW_Flow_NTC_Cold\".\"Al_WaterPressureLow\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-get-chw-flow-ntc-cold",
+        RelatedStepName: "CH/Get_CHW_Flow_NTC_Cold");
+
+    public static readonly ErrorDefinition AlWaterPressureHighGetChwFlowNtcCold = new(
+        "П-031-03", "Неисправность. Высокое давление воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Get_CHW_Flow_NTC_Cold\".\"Al_WaterPressureHight\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-get-chw-flow-ntc-cold",
+        RelatedStepName: "CH/Get_CHW_Flow_NTC_Cold");
+
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [
         BoilerNotLocked,
@@ -292,6 +357,15 @@ public static partial class ErrorDefinitions
         EcuComfortHysteresisMismatch,
         EcuMaxFlowTemperatureMismatch,
         ThermostatJumperMissing,
-        EcuFirmwareVersionMismatch
+        EcuFirmwareVersionMismatch,
+        AlNoWaterFlowCheck,
+        AlWaterFlowMinCheck,
+        AlWaterFlowMaxCheck,
+        AlWaterPressureLowCheck,
+        AlWaterPressureHighCheck,
+        AlWaterFlowMinGetChwFlowNtcCold,
+        AlWaterFlowMaxGetChwFlowNtcCold,
+        AlWaterPressureLowGetChwFlowNtcCold,
+        AlWaterPressureHighGetChwFlowNtcCold
     ];
 }
