@@ -88,7 +88,7 @@ public class CheckTestByteOnStep(
 
         logger.LogWarning("Котёл НЕ в режиме Стенд (ModeKey: 0x{Key:X8})", readResult.Value);
         context.Variables[HadErrorKey] = true;
-        return CreateModeError(readResult.Value!);
+        return CreateModeError(readResult.Value);
     }
 
     /// <summary>
