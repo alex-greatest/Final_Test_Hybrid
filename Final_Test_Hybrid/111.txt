@@ -1,40 +1,21 @@
-Настройка аналоговых датчиков. Параметры в DB_Sensor в структурах для каждого датчика. Тип 4-20 ma для всех.
+Настройка датчиков температуры. Параметры в DB_Sensor в структурах для каждого датчика. Тип Pt100 для всех.
 Сырое – Value (измеренное значение в ma)
-Мин – Lim_Min
-Макс – Lim_Max
 Множитель – Gain
 Смещение – Offset
 Вычисленное – Value_Act
 
 
-
-	Gas_POG	"ST_AI_Sensor"	0.0		True	True	True	True	False		Линия GAS. Расход газа на ветке G20 (0 - 100)
-	Gas_PAG	"ST_AI_Sensor"	26.0		True	True	True	True	False		Линия GAS. Давление газа на входе в котел (0 - 60)
-	Gas_PGB	"ST_AI_Sensor"	52.0		True	True	True	True	False		Линия GAS. Давление газа на горелке котла (0 - 60)
-	CH_FR	"ST_AI_Sensor"	78.0		True	True	True	True	False		Линия CH. Расход воды в контуре (0 - 25)
-	CH_PMR	"ST_AI_Sensor"	104.0		True	True	True	True	False		Линия CH. Давление потока воды (0 - 4)
-	DHW_FS	"ST_AI_Sensor"	130.0		True	True	True	True	False		Линия DHW. Расход воды в контуре (0 - 25)
-	DHW_PES	"ST_AI_Sensor"	156.0		True	True	True	True	False		Линия DHW. Давление на входе в котел. (0 - 25)
-	FA_CO	"ST_AI_Sensor"	182.0		True	True	True	True	False		Газоанализатор. Уровень CO (0 - 300)
-	FA_CO2	"ST_AI_Sensor"	208.0		True	True	True	True	False		Газоанализатор. Уровень CO2 (0 - 20)
-	FA_O2	"ST_AI_Sensor"	234.0		True	True	True	True	False		Газоанализатор. Уровень O2 (0 - 24)
-	BlrSupply	"ST_AI_Sensor"	260.0		True	True	True	True	False		Напряжение питания котлаv (0 - 250)
-	Gas_POG1	"ST_AI_Sensor"	286.0		True	True	True	True	False		Линия GAS. Расход газа 
-	Gas_P	"ST_AI_Sensor"	312.0		True	True	True	True	False		Линия GAS. Давление газа
-	Gas_Pa	"ST_AI_Sensor"	338.0		True	True	True	True	False		Линия GAS. Атмосферное давление
+	TAG	"ST_Pt100"	364.0			True	True	True	True	True		Линия GAS. Температура газа
+	CH_TMR	"ST_Pt100"	380.0			True	True	True	True	True		Линия CH. Температура потока воды
+	CH_TRR	"ST_Pt100"	396.0			True	True	True	True	True		Линия CH. Температура обратной воды
+	DHW_TES	"ST_Pt100"	412.0			True	True	True	True	True		Линия DHW. Температура потока воды
+	DHW_TUS	"ST_Pt100"	428.0			True	True	True	True	True		Линия DHW. Температура обратной воды
 
 
-Как выглядит структуа
+Структура 
 
-	Gas_Pa	"ST_AI_Sensor"	338.0		True	True	True	True	False		Линия GAS. Атмосферное давление
-        Value	Real	338.0	0.0	True	True	True	True	False		Измеренное значение 
-        Value_Act	Real	342.0	0.0	True	True	True	True	False		Масштабированное измеренное значение 
-        Lim_Min	Real	346.0	0.0	True	True	True	True	False		Нижний предел измерения датчика
-        Lim_Max	Real	350.0	1.93	True	True	True	True	False		Верхний предел измерения датчика
-        Offset	Real	354.0	0.0	True	True	True	True	False		Смещение относительно начального значения
-        Gain	Real	358.0	1.0	True	True	True	True	False		Коэффициент
-        Ready	Bool	362.0	false	True	True	True	True	False		Датчик исправен
-        Al_Break	Bool	362.1	false	True	True	True	True	False		Неисправность: Обрыв датчика
-        Al_HH	Bool	362.2	false	True	True	True	True	False		Неисправность: Выход за верхнюю границу измерения
-        Al_LL	Bool	362.3	false	True	True	True	True	False		Неисправность: Выход за нижнюю границу измерения
-        Al_FaultParam	Bool	362.4	false	True	True	True	True	False		Неисправность: Ошибка параметрирования датчика
+	TAG	"ST_Pt100"	364.0			True	True	True	True	True		Линия GAS. Температура газа
+        Value	Real	364.0	0.0	0.0	True	True	True	True	False		Измеренное значение 
+        Value_Act	Real	368.0	0.0	0.0	True	True	True	True	False		Масштабированное измеренное значение 
+        Offset	Real	372.0	0.0	0.0	True	True	True	True	False		Смещение относительно начального значения
+        Gain	Real	376.0	1.0	1.0	True	True	True	True	False		Коэффициент
