@@ -15,6 +15,7 @@
 @inject OpcUaConnectionState ConnectionState
 @inject BlazorDispatcherAccessor BlazorDispatcherAccessor
 @inject TestCompletionUiState TestCompletionUiState
+@inject RangeSliderUiState RangeSliderUiState
 @implements IDisposable
 
 <SubscriptionLoadingOverlay IsVisible="@(SubscriptionState.IsInitializing && ConnectionState.IsConnected)" />
@@ -67,12 +68,7 @@
                                         </div>
                                     </ChildContent>
                                 </RadzenCard>
-                                @if (!TestCompletionUiState.ShowResultImage)
-                                {
-                                    <MessageHelper />
-                                    <TestSequenseGrid />
-                                }
-                                else
+                                @if (TestCompletionUiState.ShowResultImage)
                                 {
                                     <div class="result-image-container">
                                         <div class="result-image-hint">
@@ -80,6 +76,15 @@
                                         </div>
                                         <img src="@TestCompletionUiState.ImagePath" alt="Test Result" />
                                     </div>
+                                }
+                                else if (RangeSliderUiState.HasActiveSliders)
+                                {
+                                    <RangeSliderDisplay />
+                                }
+                                else
+                                {
+                                    <MessageHelper />
+                                    <TestSequenseGrid />
                                 }
                             </div>
                         </RadzenStack>
@@ -9211,6 +9216,7 @@
         SubscriptionState.OnStateChanged += HandleStateChanged;
         ConnectionState.ConnectionStateChanged += HandleConnectionChanged;
         TestCompletionUiState.OnStateChanged += HandleTestCompletionChanged;
+        RangeSliderUiState.OnStateChanged += HandleRangeSliderChanged;
     }
 
     private void HandleStateChanged() => InvokeAsync(StateHasChanged);
@@ -9219,10 +9225,13 @@
 
     private void HandleTestCompletionChanged() => InvokeAsync(StateHasChanged);
 
+    private void HandleRangeSliderChanged() => InvokeAsync(StateHasChanged);
+
     public void Dispose()
     {
         SubscriptionState.OnStateChanged -= HandleStateChanged;
         ConnectionState.ConnectionStateChanged -= HandleConnectionChanged;
         TestCompletionUiState.OnStateChanged -= HandleTestCompletionChanged;
+        RangeSliderUiState.OnStateChanged -= HandleRangeSliderChanged;
     }
 }

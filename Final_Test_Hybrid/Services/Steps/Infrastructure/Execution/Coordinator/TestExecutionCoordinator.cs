@@ -5,8 +5,8 @@ using Final_Test_Hybrid.Services.Diagnostic.Protocol;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
@@ -32,6 +32,7 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly ExecutionFlowState _flowState;
     private readonly PausableRegisterReader _pausableRegisterReader;
     private readonly PausableRegisterWriter _pausableRegisterWriter;
+    private readonly RangeSliderUiState _rangeSliderUiState;
     private readonly StepStatusReporter _statusReporter;
     private readonly Lock _stateLock = new();
     private readonly object _enqueueLock = new();
@@ -72,7 +73,8 @@ public partial class TestExecutionCoordinator : IDisposable
         PausableTagWaiter pausableTagWaiter,
         ExecutionFlowState flowState,
         PausableRegisterReader pausableRegisterReader,
-        PausableRegisterWriter pausableRegisterWriter)
+        PausableRegisterWriter pausableRegisterWriter,
+        RangeSliderUiState rangeSliderUiState)
     {
         _logger = logger;
         _testLogger = testLogger;
@@ -89,9 +91,10 @@ public partial class TestExecutionCoordinator : IDisposable
         _flowState = flowState;
         _pausableRegisterReader = pausableRegisterReader;
         _pausableRegisterWriter = pausableRegisterWriter;
+        _rangeSliderUiState = rangeSliderUiState;
         _statusReporter = statusReporter;
         _onExecutorStateChanged = HandleExecutorStateChanged;
-        _executors = CreateAllExecutors(pausableOpcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider);
+        _executors = CreateAllExecutors(pausableOpcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider, rangeSliderUiState);
         SubscribeToExecutorEvents();
         _plcResetCoordinator.OnForceStop += HandleForceStop;
         _errorCoordinator.OnReset += HandleReset;
@@ -132,13 +135,14 @@ public partial class TestExecutionCoordinator : IDisposable
         ITestStepLogger testLogger,
         ILoggerFactory loggerFactory,
         StepStatusReporter statusReporter,
-        IRecipeProvider recipeProvider)
+        IRecipeProvider recipeProvider,
+        RangeSliderUiState rangeSliderUiState)
     {
         return Enumerable.Range(0, ColumnCount)
             .Select(index => CreateExecutor(
                 index, opcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider,
                 _pauseToken, _errorService, _stepTimingService, _pausableRegisterReader, _pausableRegisterWriter,
-                _pausableTagWaiter))
+                _pausableTagWaiter, rangeSliderUiState))
             .ToArray();
     }
 
@@ -154,11 +158,12 @@ public partial class TestExecutionCoordinator : IDisposable
         IStepTimingService stepTimingService,
         PausableRegisterReader pausableRegisterReader,
         PausableRegisterWriter pausableRegisterWriter,
-        PausableTagWaiter pausableTagWaiter)
+        PausableTagWaiter pausableTagWaiter,
+        RangeSliderUiState rangeSliderUiState)
     {
         var context = new TestStepContext(
             index, opcUa, loggerFactory.CreateLogger($"Column{index}"), recipeProvider, pauseToken,
-            pausableRegisterReader, pausableRegisterWriter, pausableTagWaiter);
+            pausableRegisterReader, pausableRegisterWriter, pausableTagWaiter, rangeSliderUiState);
         var executorLogger = loggerFactory.CreateLogger<ColumnExecutor>();
         var dualLogger = new DualLogger<ColumnExecutor>(executorLogger, testLogger);
         return new ColumnExecutor(index, context, dualLogger, statusReporter, pauseToken, errorService, stepTimingService);

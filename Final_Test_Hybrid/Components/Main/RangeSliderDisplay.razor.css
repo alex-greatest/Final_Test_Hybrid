@@ -1,0 +1,9 @@
+.range-slider-display-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 4px;
+    margin-top: 10px;
+}

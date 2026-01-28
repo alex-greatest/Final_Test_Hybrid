@@ -71,6 +71,7 @@ public static class StepsServiceExtensions
 
         // Test completion
         services.AddSingleton<TestCompletionUiState>();
+        services.AddSingleton<RangeSliderUiState>();
         services.AddSingleton<TestCompletionDependencies>();
         services.AddSingleton<TestCompletionCoordinator>();
 

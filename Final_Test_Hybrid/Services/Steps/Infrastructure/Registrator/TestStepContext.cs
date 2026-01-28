@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol;
 using Final_Test_Hybrid.Services.OpcUa;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +15,8 @@ public class TestStepContext(
     PauseTokenSource pauseToken,
     PausableRegisterReader diagReader,
     PausableRegisterWriter diagWriter,
-    PausableTagWaiter tagWaiter)
+    PausableTagWaiter tagWaiter,
+    RangeSliderUiState rangeSliderUiState)
 {
     private Action<string>? _progressCallback;
 
@@ -27,6 +29,7 @@ public class TestStepContext(
     public PausableRegisterReader DiagReader { get; } = diagReader;
     public PausableRegisterWriter DiagWriter { get; } = diagWriter;
     public PausableTagWaiter TagWaiter { get; } = tagWaiter;
+    public RangeSliderUiState RangeSliderUiState { get; } = rangeSliderUiState;
 
     /// <summary>
     /// Устанавливает callback для промежуточных результатов.
@@ -61,5 +64,24 @@ public class TestStepContext(
             await Task.Delay(chunk, ct);
             remaining -= chunk;
         }
+    }
+
+    /// <summary>
+    /// Показать RangeSlider для текущей колонки.
+    /// </summary>
+    /// <param name="config">Конфигурация слайдера.</param>
+    /// <param name="ct">Токен отмены.</param>
+    public Task ShowRangeSliderAsync(RangeSliderConfig config, CancellationToken ct)
+    {
+        return RangeSliderUiState.ShowAsync(ColumnIndex, config, ct);
+    }
+
+    /// <summary>
+    /// Скрыть RangeSlider для текущей колонки.
+    /// </summary>
+    /// <param name="ct">Токен отмены.</param>
+    public Task HideRangeSliderAsync(CancellationToken ct = default)
+    {
+        return RangeSliderUiState.HideAsync(ColumnIndex, ct);
     }
 }

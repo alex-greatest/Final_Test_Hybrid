@@ -1,0 +1,18 @@
+@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion
+@inject RangeSliderUiState RangeSliderUiState
+
+<div class="range-slider-display-container">
+    @foreach (var kvp in RangeSliderUiState.GetActiveSliders())
+    {
+        var data = kvp.Value;
+        <RangeSlider
+            Label="@data.Label"
+            Unit="@data.Unit"
+            Min="@data.Min"
+            Max="@data.Max"
+            Value="@data.Value"
+            GreenZoneStart="@data.GreenZoneStart"
+            GreenZoneEnd="@data.GreenZoneEnd"
+            TickCount="@data.TickCount" />
+    }
+</div>

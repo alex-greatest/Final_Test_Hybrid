@@ -1,0 +1,80 @@
+@using Microsoft.AspNetCore.Components
+
+<div style="margin-bottom: 30px; padding: 10px 15px; background-color: #f5f5f5; border: 1px solid #ccc;">
+    <div style="font-size: 14px; color: #555; margin-bottom: 8px; font-family: Arial, sans-serif;">
+        @Label @(Unit != null ? $"({Unit})" : "")
+    </div>
+
+    <div style="position: relative;">
+        @* Background track with color zones *@
+        <div style="width: 100%; height: 36px; overflow: hidden; display: flex; border: 1px solid #999;">
+            <div style="width: @(GreenStartPercent)%; background-color: #e74c3c; height: 100%;"></div>
+            <div style="width: @(GreenZoneWidth)%; background-color: #2ecc71; height: 100%;"></div>
+            <div style="width: @(RightRedZoneWidth)%; background-color: #e74c3c; height: 100%;"></div>
+        </div>
+
+        @* Center line marker *@
+        <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2px; height: 42px; background-color: #333; z-index: 2;"></div>
+
+        @* Value indicator - большая белая с чёрной обводкой *@
+        <div style="position: absolute; top: -28px; left: @(ValuePercent)%; transform: translateX(-50%); z-index: 3;">
+            @* Чёрная обводка *@
+            <div style="width: 0; height: 0; border-left: 22px solid transparent; border-right: 22px solid transparent; border-top: 32px solid #222;"></div>
+            @* Белая внутренняя часть *@
+            <div style="position: absolute; top: 3px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 17px solid transparent; border-right: 17px solid transparent; border-top: 24px solid #fff;"></div>
+        </div>
+
+        @* Tick marks *@
+        <div style="position: relative; height: 8px;">
+            @foreach (var tick in Ticks)
+            {
+                var percent = ((tick - Min) / Range) * 100;
+                <div style="position: absolute; left: @(percent)%; top: 0; transform: translateX(-50%); width: 1px; height: 8px; background-color: #555;"></div>
+            }
+        </div>
+
+        @* Labels *@
+        <div style="position: relative; height: 28px;">
+            @foreach (var tick in Ticks)
+            {
+                var percent = ((tick - Min) / Range) * 100;
+                <span style="position: absolute; left: @(percent)%; transform: translateX(-50%); font-size: 20px; color: #555; font-family: Arial, sans-serif;">
+                    @tick.ToString("F1")
+                </span>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string? Unit { get; set; }
+    [Parameter] public double Min { get; set; }
+    [Parameter] public double Max { get; set; }
+    [Parameter] public double Value { get; set; }
+    [Parameter] public double GreenZoneStart { get; set; }
+    [Parameter] public double GreenZoneEnd { get; set; }
+    [Parameter] public int TickCount { get; set; } = 20;
+
+    private double Range => Max - Min;
+    private double GreenStartPercent => ((GreenZoneStart - Min) / Range) * 100;
+    private double GreenEndPercent => ((GreenZoneEnd - Min) / Range) * 100;
+    private double GreenZoneWidth => GreenEndPercent - GreenStartPercent;
+    private double RightRedZoneWidth => 100 - GreenEndPercent;
+    
+    private double ClampedValue => Math.Max(Min, Math.Min(Max, Value));
+    private double ValuePercent => ((ClampedValue - Min) / Range) * 100;
+
+    private List<double> Ticks
+    {
+        get
+        {
+            var ticks = new List<double>();
+            for (var i = 0; i <= TickCount; i++)
+            {
+                ticks.Add(Min + (Range / TickCount) * i);
+            }
+            return ticks;
+        }
+    }
+}
