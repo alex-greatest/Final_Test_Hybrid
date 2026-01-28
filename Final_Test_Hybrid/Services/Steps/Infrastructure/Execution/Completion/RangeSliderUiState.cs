@@ -1,7 +1,6 @@
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 
@@ -21,23 +20,22 @@ public class RangeSliderUiState
     private readonly PlcResetCoordinator _plcResetCoordinator;
     private readonly IErrorCoordinator _errorCoordinator;
     private readonly OpcUaSubscription _opcUaSubscription;
-    private readonly IRecipeProvider _recipeProvider;
     private readonly Dictionary<int, RangeSliderState> _states = new();
 
     private int _sessionCounter;
     private long _lastNotifyTicks;
     private int _pendingNotify;
+    private bool _debugMode;
+    private string? _title;
 
     public RangeSliderUiState(
         PlcResetCoordinator plcResetCoordinator,
         IErrorCoordinator errorCoordinator,
-        OpcUaSubscription opcUaSubscription,
-        IRecipeProvider recipeProvider)
+        OpcUaSubscription opcUaSubscription)
     {
         _plcResetCoordinator = plcResetCoordinator;
         _errorCoordinator = errorCoordinator;
         _opcUaSubscription = opcUaSubscription;
-        _recipeProvider = recipeProvider;
 
         _plcResetCoordinator.OnForceStop += HideAll;
         _errorCoordinator.OnReset += HideAll;
@@ -45,16 +43,54 @@ public class RangeSliderUiState
 
     /// <summary>
     /// Есть ли активные слайдеры для отображения.
+    /// В Debug Mode всегда возвращает true.
     /// </summary>
     public bool HasActiveSliders
     {
         get
         {
+            if (_debugMode)
+            {
+                return true;
+            }
+
             lock (_lock)
             {
                 return _states.Count > 0;
             }
         }
+    }
+
+    /// <summary>
+    /// Заголовок для отображения над слайдерами.
+    /// </summary>
+    public string? Title => _debugMode ? "Настройки параметров газа в максимальном режиме" : _title;
+
+    /// <summary>
+    /// Устанавливает заголовок для отображения.
+    /// </summary>
+    public void SetTitle(string? title)
+    {
+        _title = title;
+        ThrottledNotify();
+    }
+
+    /// <summary>
+    /// Включить режим отладки с тестовыми данными.
+    /// </summary>
+    public void EnableDebugMode()
+    {
+        _debugMode = true;
+        ThrottledNotify();
+    }
+
+    /// <summary>
+    /// Выключить режим отладки.
+    /// </summary>
+    public void DisableDebugMode()
+    {
+        _debugMode = false;
+        ThrottledNotify();
     }
 
     /// <summary>
@@ -64,9 +100,21 @@ public class RangeSliderUiState
 
     /// <summary>
     /// Получает состояния всех активных слайдеров.
+    /// В Debug Mode возвращает тестовые данные.
     /// </summary>
     public IReadOnlyDictionary<int, RangeSliderDisplayData> GetActiveSliders()
     {
+        if (_debugMode)
+        {
+            // Давление: Step=0.1, TickCount = (9.9-7.9)/0.1 = 20
+            // Расход: Step=1, TickCount = (20-0)/1 = 20
+            return new Dictionary<int, RangeSliderDisplayData>
+            {
+                [0] = new("Давление газа", "мбар", 7.9, 9.9, 8.9, 8.4, 9.4, 20),
+                [1] = new("Расход воды", "л/мин", 0, 20, 12, 8, 16, 20)
+            };
+        }
+
         lock (_lock)
         {
             return _states.ToDictionary(
@@ -79,7 +127,7 @@ public class RangeSliderUiState
                     kvp.Value.Value,
                     kvp.Value.GreenZoneStart,
                     kvp.Value.GreenZoneEnd,
-                    kvp.Value.Config.TickCount));
+                    kvp.Value.TickCount));
         }
     }
 
@@ -93,7 +141,7 @@ public class RangeSliderUiState
         await HideAsync(columnIndex, ct).ConfigureAwait(false);
 
         var sessionId = Interlocked.Increment(ref _sessionCounter);
-        var limits = LoadLimitsFromRecipes(config);
+        var limits = CalculateLimits(config);
         Func<object?, Task> callback = value => HandleValueChanged(columnIndex, sessionId, value);
 
         // Подписываемся ДО записи состояния
@@ -108,6 +156,8 @@ public class RangeSliderUiState
 
         lock (_lock)
         {
+            var step = config.Step > 0 ? config.Step : 1;
+            var tickCount = (int)Math.Round((limits.Max - limits.Min) / step);
             _states[columnIndex] = new RangeSliderState
             {
                 SessionId = sessionId,
@@ -115,9 +165,10 @@ public class RangeSliderUiState
                 Callback = callback,
                 Min = limits.Min,
                 Max = limits.Max,
-                GreenZoneStart = limits.GreenStart,
-                GreenZoneEnd = limits.GreenEnd,
-                Value = limits.Min
+                GreenZoneStart = config.GreenZoneStart,
+                GreenZoneEnd = config.GreenZoneEnd,
+                Value = limits.Min,
+                TickCount = tickCount > 0 ? tickCount : 10
             };
         }
 
@@ -167,6 +218,7 @@ public class RangeSliderUiState
                 .Select(kvp => (kvp.Value.Config.ValueTag, kvp.Value.Callback))
                 .ToList();
             _states.Clear();
+            _title = null;
         }
 
         foreach (var (valueTag, callback) in toUnsubscribe)
@@ -185,19 +237,23 @@ public class RangeSliderUiState
         }
     }
 
-    private (double Min, double Max, double GreenStart, double GreenEnd) LoadLimitsFromRecipes(RangeSliderConfig config)
+    /// <summary>
+    /// Вычисляет Min/Max шкалы из конфигурации.
+    /// </summary>
+    private static (double Min, double Max) CalculateLimits(RangeSliderConfig config)
     {
-        var min = _recipeProvider.GetValue<double>(config.MinRecipeAddress) ?? DefaultMin;
-        var max = _recipeProvider.GetValue<double>(config.MaxRecipeAddress) ?? DefaultMax;
-        var greenStart = _recipeProvider.GetValue<double>(config.GreenStartRecipeAddress) ?? min;
-        var greenEnd = _recipeProvider.GetValue<double>(config.GreenEndRecipeAddress) ?? max;
+        var greenWidth = config.GreenZoneEnd - config.GreenZoneStart;
+        var margin = greenWidth * 0.5;
+
+        var min = config.MinValue ?? (config.GreenZoneStart - margin);
+        var max = config.MaxValue ?? (config.GreenZoneEnd + margin);
 
         if (max <= min)
         {
             max = min + DefaultMax;
         }
 
-        return (min, max, greenStart, greenEnd);
+        return (min, max);
     }
 
     private Task HandleValueChanged(int columnIndex, int sessionId, object? value)
@@ -277,6 +333,7 @@ public class RangeSliderUiState
         public double GreenZoneStart { get; set; }
         public double GreenZoneEnd { get; set; }
         public double Value { get; set; }
+        public int TickCount { get; set; }
     }
 }
 

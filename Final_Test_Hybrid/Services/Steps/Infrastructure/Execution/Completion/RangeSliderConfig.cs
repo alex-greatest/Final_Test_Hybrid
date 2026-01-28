@@ -6,17 +6,17 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 /// <param name="Label">Название параметра для отображения.</param>
 /// <param name="Unit">Единица измерения (опционально).</param>
 /// <param name="ValueTag">OPC-UA тег для получения текущего значения.</param>
-/// <param name="MinRecipeAddress">Адрес рецепта для минимального значения шкалы.</param>
-/// <param name="MaxRecipeAddress">Адрес рецепта для максимального значения шкалы.</param>
-/// <param name="GreenStartRecipeAddress">Адрес рецепта для начала зелёной зоны.</param>
-/// <param name="GreenEndRecipeAddress">Адрес рецепта для конца зелёной зоны.</param>
-/// <param name="TickCount">Количество делений на шкале (по умолчанию 20).</param>
+/// <param name="GreenZoneStart">Начало зелёной зоны (число, шаг читает из рецепта).</param>
+/// <param name="GreenZoneEnd">Конец зелёной зоны (число, шаг читает из рецепта).</param>
+/// <param name="MinValue">Минимум шкалы (если null — вычисляется как GreenZoneStart - 50% ширины зелёной зоны).</param>
+/// <param name="MaxValue">Максимум шкалы (если null — вычисляется как GreenZoneEnd + 50% ширины зелёной зоны).</param>
+/// <param name="Step">Размер шага делений на шкале (по умолчанию 1).</param>
 public record RangeSliderConfig(
     string Label,
     string? Unit,
     string ValueTag,
-    string MinRecipeAddress,
-    string MaxRecipeAddress,
-    string GreenStartRecipeAddress,
-    string GreenEndRecipeAddress,
-    int TickCount = 20);
+    double GreenZoneStart,
+    double GreenZoneEnd,
+    double? MinValue = null,
+    double? MaxValue = null,
+    double Step = 1);

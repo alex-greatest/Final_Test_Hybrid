@@ -25,7 +25,7 @@ public class CompareFlowNtcTemperatureColdStep(
     private const string EndTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Cold\".\"End\"";
     private const string ErrorTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Cold\".\"Error\"";
     private const string Ready1Tag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Cold\".\"Ready_1\"";
-    private const string Continua1Tag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Cold\".\"Continua_1\"";
+    private const string Continua1Tag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Cold\".\"Сontinua_1\"";
     private const string FaultTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Cold\".\"Fault\"";
     private const string ChTmrTag = "ns=3;s=\"DB_Measure\".\"Temper\".\"CH_TMR\"";
     private const string TFlowDeltaMaxRecipe = "ns=3;s=\"DB_Recipe\".\"CH\".\"TFlowDeltaMax\"";

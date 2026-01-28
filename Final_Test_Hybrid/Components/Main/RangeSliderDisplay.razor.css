@@ -1,9 +1,22 @@
 .range-slider-display-container {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: 16px;
     padding: 20px;
     background-color: #fff;
     border-radius: 4px;
-    margin-top: 10px;
+    width: 100%;
+    height: 100%;
+    flex: 1;
+    box-sizing: border-box;
+}
+
+.range-slider-title {
+    font-size: 34px;
+    font-weight: bold;
+    color: #333;
+    text-align: center;
+    margin-bottom: 10px;
+    font-family: Arial, sans-serif;
 }

@@ -2,6 +2,10 @@
 @inject RangeSliderUiState RangeSliderUiState
 
 <div class="range-slider-display-container">
+    @if (!string.IsNullOrEmpty(RangeSliderUiState.Title))
+    {
+        <div class="range-slider-title">@RangeSliderUiState.Title</div>
+    }
     @foreach (var kvp in RangeSliderUiState.GetActiveSliders())
     {
         var data = kvp.Value;
