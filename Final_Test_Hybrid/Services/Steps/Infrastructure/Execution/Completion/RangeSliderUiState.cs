@@ -107,11 +107,11 @@ public class RangeSliderUiState
         if (_debugMode)
         {
             // Давление: Step=0.1, TickCount = (9.9-7.9)/0.1 = 20
-            // Расход: Step=1, TickCount = (20-0)/1 = 20
+            // Расход: Step=1, TickCount = (20-4)/1 = 16
             return new Dictionary<int, RangeSliderDisplayData>
             {
                 [0] = new("Давление газа", "мбар", 7.9, 9.9, 8.9, 8.4, 9.4, 20),
-                [1] = new("Расход воды", "л/мин", 0, 20, 12, 8, 16, 20)
+                [1] = new("Расход воды", "л/мин", 4, 20, 12, 8, 16, 16)
             };
         }
 
