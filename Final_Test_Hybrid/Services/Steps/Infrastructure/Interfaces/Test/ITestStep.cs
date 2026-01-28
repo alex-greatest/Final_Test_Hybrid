@@ -8,5 +8,11 @@ public interface ITestStep
     string Name { get; }
     string Description { get; }
     bool IsVisibleInEditor => true;
+
+    /// <summary>
+    /// Источник ошибки для отображения в UI (без скобок).
+    /// </summary>
+    string ErrorSourceTitle => "Стенд";
+
     Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct);
 }

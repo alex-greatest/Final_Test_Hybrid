@@ -117,14 +117,15 @@ public partial class TestExecutionCoordinator
     private static StepError CreateErrorFromExecutor(ColumnExecutor executor)
     {
         return new StepError(
-            executor.ColumnIndex,
-            executor.CurrentStepName ?? "Неизвестный шаг",
-            executor.CurrentStepDescription ?? "",
-            executor.ErrorMessage ?? "Неизвестная ошибка",
-            DateTime.Now,
-            executor.UiStepId,
-            executor.FailedStep,
-            executor.CanSkip);
+            ColumnIndex: executor.ColumnIndex,
+            StepName: executor.CurrentStepName ?? "Неизвестный шаг",
+            StepDescription: executor.CurrentStepDescription ?? "",
+            ErrorMessage: executor.ErrorMessage ?? "Неизвестная ошибка",
+            ErrorSourceTitle: executor.FailedStep?.ErrorSourceTitle ?? "Стенд",
+            OccurredAt: DateTime.Now,
+            UiStepId: executor.UiStepId,
+            FailedStep: executor.FailedStep,
+            CanSkip: executor.CanSkip);
     }
 
     /// <summary>

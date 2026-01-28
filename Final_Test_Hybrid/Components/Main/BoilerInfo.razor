@@ -59,6 +59,7 @@
     IsVisible="@_showErrorPanel"
     StepName="@_errorStepName"
     ErrorMessage="@_errorMessage"
+    ErrorSourceTitle="@_errorSourceTitle"
     ColumnIndex="0"
     StateManager="@ExecutionStateManager"
     OnClose="@CloseErrorPanel" />
@@ -71,6 +72,7 @@
     private bool _showErrorPanel;
     private string? _errorStepName;
     private string? _errorMessage;
+    private string? _errorSourceTitle;
     private bool _isSaveProgressDialogOpen;
     private bool? _desiredSaveProgressState;
 
@@ -274,12 +276,13 @@
         };
     }
 
-    private Task ShowBlockErrorDialogAsync(string stepName, string errorMessage)
+    private Task ShowBlockErrorDialogAsync(string stepName, string errorMessage, string errorSourceTitle)
     {
         return InvokeAsync(() =>
         {
             _errorStepName = stepName;
             _errorMessage = errorMessage;
+            _errorSourceTitle = errorSourceTitle;
             _showErrorPanel = true;
             StateHasChanged();
         });
@@ -300,6 +303,7 @@
             _showErrorPanel = false;
             _errorStepName = null;
             _errorMessage = null;
+            _errorSourceTitle = null;
             StateHasChanged();
         });
     }
@@ -310,6 +314,7 @@
         {
             _errorStepName = error.StepName;
             _errorMessage = error.ErrorMessage;
+            _errorSourceTitle = error.ErrorSourceTitle;
             _showErrorPanel = true;
             StateHasChanged();
         });

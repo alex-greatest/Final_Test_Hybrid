@@ -13,5 +13,10 @@ public interface IPreExecutionStep
     /// </summary>
     bool IsSkippable { get; }
 
+    /// <summary>
+    /// Источник ошибки для отображения в UI (без скобок).
+    /// </summary>
+    string ErrorSourceTitle => "Стенд";
+
     Task<PreExecutionResult> ExecuteAsync(PreExecutionContext context, CancellationToken ct);
 }

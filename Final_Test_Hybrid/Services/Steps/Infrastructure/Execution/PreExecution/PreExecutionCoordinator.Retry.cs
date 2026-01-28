@@ -117,7 +117,8 @@ public partial class PreExecutionCoordinator
 
                 await coordinators.DialogCoordinator.ShowBlockErrorDialogAsync(
                     step.Name,
-                    currentResult.UserMessage ?? currentResult.ErrorMessage!);
+                    currentResult.UserMessage ?? currentResult.ErrorMessage!,
+                    step.ErrorSourceTitle);
 
                 infra.Logger.LogInformation("Диалог показан, ожидаем WaitForResolutionAsync...");
                 var resolution = await WaitForResolutionAsync(step, ct);

@@ -8,10 +8,12 @@ namespace Final_Test_Hybrid.Components.Errors;
 public partial class FloatingErrorPanel : ComponentBase, IAsyncDisposable
 {
     private const string DefaultStepName = "Неизвестный шаг";
+    private const string DefaultErrorSource = "Стенд";
 
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public string? StepName { get; set; }
     [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public string? ErrorSourceTitle { get; set; }
     [Parameter] public int ColumnIndex { get; set; }
     [Parameter] public ExecutionStateManager? StateManager { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
@@ -78,9 +80,10 @@ public partial class FloatingErrorPanel : ComponentBase, IAsyncDisposable
             or ExecutionState.Failed;
     }
 
-    private string GetStandName()
+    private string GetErrorSourceDisplay()
     {
-        return $"[Стенд {ColumnIndex + 1}]";
+        var source = ErrorSourceTitle ?? DefaultErrorSource;
+        return $"[{source}]";
     }
 
     private void StartDrag(Microsoft.AspNetCore.Components.Web.MouseEventArgs e)

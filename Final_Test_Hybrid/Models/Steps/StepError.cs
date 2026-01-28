@@ -10,6 +10,7 @@ public record StepError(
     string StepName,
     string StepDescription,
     string ErrorMessage,
+    string ErrorSourceTitle,
     DateTime OccurredAt,
     Guid UiStepId,
     ITestStep? FailedStep,

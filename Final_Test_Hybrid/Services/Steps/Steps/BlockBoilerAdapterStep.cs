@@ -22,6 +22,7 @@ public class BlockBoilerAdapterStep(
     public string Description => "Блокирование адаптера";
     public bool IsVisibleInStatusGrid => true;
     public bool IsSkippable => false;
+    public string ErrorSourceTitle => "Стенд";
     public string PlcBlockPath => BlockPath;
 
     // IRequiresPlcTags - валидация тегов при старте

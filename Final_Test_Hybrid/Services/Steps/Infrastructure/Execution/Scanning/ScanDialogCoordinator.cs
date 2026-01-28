@@ -20,7 +20,7 @@ public class ScanDialogCoordinator
     public event Func<IReadOnlyList<MissingRecipeInfo>, Task>? OnMissingRecipesDialogRequested;
     public event Func<IReadOnlyList<RecipeWriteErrorInfo>, Task>? OnRecipeWriteErrorDialogRequested;
     public event Func<string, Func<string, string, Task<ReworkSubmitResult>>, Task<ReworkFlowResult>>? OnReworkDialogRequested;
-    public event Func<string, string, Task>? OnBlockErrorDialogRequested;
+    public event Func<string, string, string, Task>? OnBlockErrorDialogRequested;
     public event Action? OnBlockErrorDialogCloseRequested;
 
     public ScanDialogCoordinator(
@@ -42,10 +42,10 @@ public class ScanDialogCoordinator
         return await OnReworkDialogRequested(errorMessage, executeRework);
     }
 
-    public Task ShowBlockErrorDialogAsync(string stepName, string errorMessage)
+    public Task ShowBlockErrorDialogAsync(string stepName, string errorMessage, string errorSourceTitle)
     {
         // Fire-and-forget: диалог показывается, но не блокирует выполнение
-        _ = OnBlockErrorDialogRequested?.Invoke(stepName, errorMessage);
+        _ = OnBlockErrorDialogRequested?.Invoke(stepName, errorMessage, errorSourceTitle);
         return Task.CompletedTask;
     }
 
