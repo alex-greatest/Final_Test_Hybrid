@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Errors;
+using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.OpcUa;
@@ -22,7 +23,7 @@ public class BlockBoilerAdapterStep(
     public string Description => "Блокирование адаптера";
     public bool IsVisibleInStatusGrid => true;
     public bool IsSkippable => false;
-    public string ErrorSourceTitle => "Стенд";
+    public string ErrorSourceTitle => ErrorSourceDefaults.Stand;
     public string PlcBlockPath => BlockPath;
 
     // IRequiresPlcTags - валидация тегов при старте

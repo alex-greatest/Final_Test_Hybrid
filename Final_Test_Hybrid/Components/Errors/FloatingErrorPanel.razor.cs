@@ -8,7 +8,6 @@ namespace Final_Test_Hybrid.Components.Errors;
 public partial class FloatingErrorPanel : ComponentBase, IAsyncDisposable
 {
     private const string DefaultStepName = "Неизвестный шаг";
-    private const string DefaultErrorSource = "Стенд";
 
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public string? StepName { get; set; }
@@ -82,7 +81,7 @@ public partial class FloatingErrorPanel : ComponentBase, IAsyncDisposable
 
     private string GetErrorSourceDisplay()
     {
-        var source = ErrorSourceTitle ?? DefaultErrorSource;
+        var source = ErrorSourceTitle ?? ErrorSourceDefaults.Stand;
         return $"[{source}]";
     }
 

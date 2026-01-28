@@ -121,7 +121,7 @@ public partial class TestExecutionCoordinator
             StepName: executor.CurrentStepName ?? "Неизвестный шаг",
             StepDescription: executor.CurrentStepDescription ?? "",
             ErrorMessage: executor.ErrorMessage ?? "Неизвестная ошибка",
-            ErrorSourceTitle: executor.FailedStep?.ErrorSourceTitle ?? "Стенд",
+            ErrorSourceTitle: executor.FailedStep?.ErrorSourceTitle ?? ErrorSourceDefaults.Stand,
             OccurredAt: DateTime.Now,
             UiStepId: executor.UiStepId,
             FailedStep: executor.FailedStep,

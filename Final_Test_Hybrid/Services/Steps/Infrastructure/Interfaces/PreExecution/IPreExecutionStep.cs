@@ -1,3 +1,5 @@
+using Final_Test_Hybrid.Models.Steps;
+
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 
 public interface IPreExecutionStep
@@ -16,7 +18,7 @@ public interface IPreExecutionStep
     /// <summary>
     /// Источник ошибки для отображения в UI (без скобок).
     /// </summary>
-    string ErrorSourceTitle => "Стенд";
+    string ErrorSourceTitle => ErrorSourceDefaults.Stand;
 
     Task<PreExecutionResult> ExecuteAsync(PreExecutionContext context, CancellationToken ct);
 }
