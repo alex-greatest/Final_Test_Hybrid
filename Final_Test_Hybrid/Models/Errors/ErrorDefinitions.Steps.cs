@@ -332,6 +332,21 @@ public static partial class ErrorDefinitions
         RelatedStepId: "coms-ch-start-max-heatout",
         RelatedStepName: "Coms/CH_Start_Max_Heatout");
 
+    // CH_Start_Min_Heatout (П-024-xx)
+    public static readonly ErrorDefinition AlNoWaterFlowChStartMinHeatout = new(
+        "П-024-00", "Неисправность. Нет протока воды",
+        PlcTag: "ns=3;s=\"DB_Coms\".\"DB_CH_Start_Min_Heatout\".\"Al_NoWaterFlow\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "coms-ch-start-min-heatout",
+        RelatedStepName: "Coms/CH_Start_Min_Heatout");
+
+    public static readonly ErrorDefinition AlIonCurrentOutTolChStartMinHeatout = new(
+        "П-024-01", "Неисправность. Ток ионизации вне допуска",
+        PlcTag: "ns=3;s=\"DB_Coms\".\"DB_CH_Start_Min_Heatout\".\"Al_IonCurrentOutTol\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "coms-ch-start-min-heatout",
+        RelatedStepName: "Coms/CH_Start_Min_Heatout");
+
     // Compare Flow NTC Temperature Cold (П-030-xx)
     public static readonly ErrorDefinition AlDeltaTempNokCompare = new(
         "П-030-00", "Неисправность. Разность температур вне допуска",
@@ -471,6 +486,8 @@ public static partial class ErrorDefinitions
         AlWaterPressureHighGetChwFlowNtcCold,
         AlNoWaterFlowChStartMaxHeatout,
         AlIonCurrentOutTolChStartMaxHeatout,
+        AlNoWaterFlowChStartMinHeatout,
+        AlIonCurrentOutTolChStartMinHeatout,
         AlDeltaTempNokCompare,
         AlWaterFlowMinCompare,
         AlWaterFlowMaxCompare,
