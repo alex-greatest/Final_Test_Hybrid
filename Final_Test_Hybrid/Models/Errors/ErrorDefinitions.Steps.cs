@@ -317,6 +317,21 @@ public static partial class ErrorDefinitions
         RelatedStepId: "ch-get-chw-flow-ntc-cold",
         RelatedStepName: "CH/Get_CHW_Flow_NTC_Cold");
 
+    // CH_Start_Max_Heatout (П-032-xx)
+    public static readonly ErrorDefinition AlNoWaterFlowChStartMaxHeatout = new(
+        "П-032-00", "Неисправность. Нет протока воды",
+        PlcTag: "ns=3;s=\"DB_Coms\".\"DB_CH_Start_Max_Heatout\".\"Al_NoWaterFlow\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "coms-ch-start-max-heatout",
+        RelatedStepName: "Coms/CH_Start_Max_Heatout");
+
+    public static readonly ErrorDefinition AlIonCurrentOutTolChStartMaxHeatout = new(
+        "П-032-01", "Неисправность. Ток ионизации вне допуска",
+        PlcTag: "ns=3;s=\"DB_Coms\".\"DB_CH_Start_Max_Heatout\".\"Al_IonCurrentOutTol\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "coms-ch-start-max-heatout",
+        RelatedStepName: "Coms/CH_Start_Max_Heatout");
+
     // Compare Flow NTC Temperature Cold (П-030-xx)
     public static readonly ErrorDefinition AlDeltaTempNokCompare = new(
         "П-030-00", "Неисправность. Разность температур вне допуска",
@@ -352,6 +367,28 @@ public static partial class ErrorDefinitions
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "ch-compare-flow-ntc-temperature-cold",
         RelatedStepName: "CH/Compare_Flow_NTC_Temperature_Cold");
+
+    // Gas/Wait_for_Gas_Flow (П-034-xx)
+    public static readonly ErrorDefinition AlGasFlowLow = new(
+        "П-034-00", "Неисправность. Низкий расход газа",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Wait_for_Gas_Flow\".\"Al_GasFlowLow\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-wait-for-gas-flow",
+        RelatedStepName: "Gas/Wait_for_Gas_Flow");
+
+    public static readonly ErrorDefinition AlGasFlowHigh = new(
+        "П-034-01", "Неисправность. Высокий расход газа",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Wait_for_Gas_Flow\".\"Al_GasFlowHight\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-wait-for-gas-flow",
+        RelatedStepName: "Gas/Wait_for_Gas_Flow");
+
+    public static readonly ErrorDefinition AlNotStendReady = new(
+        "П-034-02", "Неисправность. Стенд не готов",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Wait_for_Gas_Flow\".\"Al_NotStendReady\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-wait-for-gas-flow",
+        RelatedStepName: "Gas/Wait_for_Gas_Flow");
 
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [
@@ -403,10 +440,15 @@ public static partial class ErrorDefinitions
         AlWaterFlowMaxGetChwFlowNtcCold,
         AlWaterPressureLowGetChwFlowNtcCold,
         AlWaterPressureHighGetChwFlowNtcCold,
+        AlNoWaterFlowChStartMaxHeatout,
+        AlIonCurrentOutTolChStartMaxHeatout,
         AlDeltaTempNokCompare,
         AlWaterFlowMinCompare,
         AlWaterFlowMaxCompare,
         AlWaterPressureLowCompare,
-        AlWaterPressureHighCompare
+        AlWaterPressureHighCompare,
+        AlGasFlowLow,
+        AlGasFlowHigh,
+        AlNotStendReady
     ];
 }
