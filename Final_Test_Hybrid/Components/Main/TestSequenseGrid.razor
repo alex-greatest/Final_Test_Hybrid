@@ -37,8 +37,13 @@
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Result" Title="Результаты">
                 <Template Context="data">
+                    @{
+                        var displayText = data.StepStatus == TestStepStatus.Running
+                            ? data.ProgressMessage
+                            : data.Result;
+                    }
                     <div class="cell-container @GetCellClass(data)">
-                        <span class="cell-text" title="@data.Result">@data.Result</span>
+                        <span class="cell-text" title="@displayText">@displayText</span>
                     </div>
                 </Template>
             </RadzenDataGridColumn>

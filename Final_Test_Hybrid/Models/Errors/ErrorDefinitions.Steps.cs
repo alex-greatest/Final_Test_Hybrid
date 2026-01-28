@@ -317,6 +317,42 @@ public static partial class ErrorDefinitions
         RelatedStepId: "ch-get-chw-flow-ntc-cold",
         RelatedStepName: "CH/Get_CHW_Flow_NTC_Cold");
 
+    // Compare Flow NTC Temperature Cold (П-030-xx)
+    public static readonly ErrorDefinition AlDeltaTempNokCompare = new(
+        "П-030-00", "Неисправность. Разность температур вне допуска",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Compare_Flow_NTC_Temp_Cold\".\"Al_DeltaTempNOK\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-compare-flow-ntc-temperature-cold",
+        RelatedStepName: "CH/Compare_Flow_NTC_Temperature_Cold");
+
+    public static readonly ErrorDefinition AlWaterFlowMinCompare = new(
+        "П-030-01", "Неисправность. Слишком малый расход воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Compare_Flow_NTC_Temp_Cold\".\"Al_WaterFlowMin\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-compare-flow-ntc-temperature-cold",
+        RelatedStepName: "CH/Compare_Flow_NTC_Temperature_Cold");
+
+    public static readonly ErrorDefinition AlWaterFlowMaxCompare = new(
+        "П-030-02", "Неисправность. Слишком большой расход воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Compare_Flow_NTC_Temp_Cold\".\"Al_WaterFlowMax\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-compare-flow-ntc-temperature-cold",
+        RelatedStepName: "CH/Compare_Flow_NTC_Temperature_Cold");
+
+    public static readonly ErrorDefinition AlWaterPressureLowCompare = new(
+        "П-030-03", "Неисправность. Низкое давление воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Compare_Flow_NTC_Temp_Cold\".\"Al_WaterPressureLow\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-compare-flow-ntc-temperature-cold",
+        RelatedStepName: "CH/Compare_Flow_NTC_Temperature_Cold");
+
+    public static readonly ErrorDefinition AlWaterPressureHighCompare = new(
+        "П-030-04", "Неисправность. Высокое давление воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Compare_Flow_NTC_Temp_Cold\".\"Al_WaterPressureHight\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-compare-flow-ntc-temperature-cold",
+        RelatedStepName: "CH/Compare_Flow_NTC_Temperature_Cold");
+
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [
         BoilerNotLocked,
@@ -366,6 +402,11 @@ public static partial class ErrorDefinitions
         AlWaterFlowMinGetChwFlowNtcCold,
         AlWaterFlowMaxGetChwFlowNtcCold,
         AlWaterPressureLowGetChwFlowNtcCold,
-        AlWaterPressureHighGetChwFlowNtcCold
+        AlWaterPressureHighGetChwFlowNtcCold,
+        AlDeltaTempNokCompare,
+        AlWaterFlowMinCompare,
+        AlWaterFlowMaxCompare,
+        AlWaterPressureLowCompare,
+        AlWaterPressureHighCompare
     ];
 }

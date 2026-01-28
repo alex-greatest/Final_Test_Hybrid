@@ -94,7 +94,43 @@ context.PauseToken        // Токен паузы
 
 // Pause-aware задержка
 await context.DelayAsync(TimeSpan.FromMilliseconds(100), ct);
+
+// Промежуточные результаты (обновляют UI без завершения шага)
+context.ReportProgress("Инициализация...");
 ```
+
+### 2.2.1 Промежуточные результаты (ReportProgress)
+
+Шаги могут сообщать о прогрессе выполнения через `context.ReportProgress()`. Сообщение отображается в колонке "Результаты" пока шаг выполняется.
+
+```csharp
+public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
+{
+    context.ReportProgress("Инициализация...");
+    await InitializeAsync(ct);
+
+    context.ReportProgress("Чтение данных...");
+    var data = await ReadDataAsync(ct);
+
+    context.ReportProgress("Проверка...");
+    var isValid = ValidateData(data);
+
+    // Финальный результат заменяет ProgressMessage
+    return isValid
+        ? TestStepResult.Pass($"Значение: {data.Value}")
+        : TestStepResult.Fail("Данные невалидны");
+}
+```
+
+**Поведение:**
+- Показывается в UI пока `StepStatus == Running`
+- После завершения (Pass/Fail) показывается `Result`
+- Автоматически очищается при завершении, retry и skip
+- Потокобезопасен — защита от race condition через `Volatile` и проверку статуса
+
+**Ограничения:**
+- НЕ вызывать после завершения шага (после return)
+- НЕ вызывать из фоновых задач, переживающих шаг
 
 ### 2.3 Результат TestStepResult
 
@@ -230,6 +266,52 @@ $"Ошибка: прочитан ключ 0x{actual:X8} из регистров 
 - Hex: `0x{value:X8}` (8 цифр для uint32) или `0x{value:X4}` (4 цифры для uint16)
 - Адреса: документационные (1000), не Modbus
 - Всегда добавлять `result.Error` для деталей
+
+---
+
+## Часть 5.5: Паттерн сброса Start тега
+
+### Правило
+
+**Start тег сбрасывается ТОЛЬКО при успехе (End от PLC).** При ошибке, retry или skip — координатор сбросит Start через `ResetBlockStartAsync`.
+
+```csharp
+// ✅ ПРАВИЛЬНО — сброс только при успехе
+private async Task<TestStepResult> HandleSuccessAsync(TestStepContext context, CancellationToken ct)
+{
+    logger.LogInformation("Шаг завершён успешно");
+
+    var writeResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
+    return writeResult.Error != null
+        ? TestStepResult.Fail($"Ошибка сброса Start: {writeResult.Error}")
+        : TestStepResult.Pass();
+}
+
+// ❌ НЕПРАВИЛЬНО — finally сбрасывает Start
+public async Task<TestStepResult> ExecuteAsync(...)
+{
+    try { return await WaitPhase1Async(context, ct); }
+    finally { await TryResetStartTagAsync(context); }  // НЕ ДЕЛАТЬ!
+}
+```
+
+### Кто сбрасывает Start
+
+| Сценарий | Кто сбрасывает |
+|----------|----------------|
+| **Успех (End)** | Шаг в `HandleSuccessAsync` |
+| **Ошибка (Error)** | Координатор `ResetBlockStartAsync` при Skip |
+| **Retry** | Координатор перед повторным выполнением |
+| **Cancel** | Координатор |
+
+### Почему так
+
+- При ошибке шаг возвращает `TestStepResult.Fail()` и завершается
+- Координатор показывает диалог Retry/Skip
+- При Skip — координатор вызывает `ResetBlockStartAsync(step)` через `PlcBlockTagHelper.GetStartTag()`
+- При Retry — шаг перезапускается, Start запишется заново
+
+**См. также:** `TestExecutionCoordinator.ErrorHandling.cs:369` — `ProcessSkipAsync`
 
 ---
 

@@ -117,6 +117,17 @@ public class MyService(DualLogger<MyService> logger)
 | Повтор | `Req_Repeat=true` | `AskRepeat=true`, ждёт `Error=false` |
 | Пропуск | `End=true` | — (NOK) |
 
+### ReportProgress (промежуточные результаты шагов)
+
+Шаги могут сообщать о прогрессе через `context.ReportProgress("сообщение")`. См. [StepsGuide.md](Docs/StepsGuide.md).
+
+| Момент | Поведение |
+|--------|-----------|
+| Во время выполнения | Показывает `ProgressMessage` в колонке "Результаты" |
+| После завершения | Показывает `Result`, `ProgressMessage` очищен |
+| Retry | Callback переустанавливается, прогресс работает |
+| Skip | `ProgressMessage` уже очищен в `SetErrorState` |
+
 ### Settings Blocking ([SettingsBlockingGuide.md](Docs/SettingsBlockingGuide.md))
 
 | Сервис | Блокирует |
@@ -132,6 +143,8 @@ public class MyService(DualLogger<MyService> logger)
 |---------|-----------|
 | `ExecutionStateManager.State` без Lock | Atomic enum, stale read OK для UI |
 | `?.TrySetResult()` без синхронизации | Идемпотентна |
+| `_progressCallback` без Volatile | Один writer (ColumnExecutor), редкие гонки приемлемы |
+| `_progressCompleted` с Volatile.Read/Write | Атомарный флаг для отсечения поздних вызовов |
 | Fire-and-forget в singleton | `.ContinueWith` или внутренний try-catch |
 | `TryStartInBackground()` | Исключения в `RunWithErrorHandlingAsync` |
 | `Task.WhenAny` race с таймером и ожиданием | Даже при "ложном" таймауте `await waitTask` вернёт правильный результат, ошибка снимется в `finally`. Максимум — кратковременный "мигнёт" ошибкой в UI |

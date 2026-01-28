@@ -19,4 +19,10 @@ public class TestSequenseData
     public DateTime StartTime { get; set; }
     public DateTime? EndTime { get; set; }
     public bool IsSkipped { get; set; } = false;
+
+    /// <summary>
+    /// Промежуточное сообщение о прогрессе выполнения шага.
+    /// Отображается в UI пока StepStatus == Running.
+    /// </summary>
+    public string ProgressMessage { get; set; } = string.Empty;
 }

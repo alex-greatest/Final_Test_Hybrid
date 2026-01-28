@@ -16,6 +16,8 @@ public class TestStepContext(
     PausableRegisterWriter diagWriter,
     PausableTagWaiter tagWaiter)
 {
+    private Action<string>? _progressCallback;
+
     public int ColumnIndex { get; } = columnIndex;
     public PausableOpcUaTagService OpcUa { get; } = opcUa;
     public ILogger Logger { get; } = logger;
@@ -25,6 +27,24 @@ public class TestStepContext(
     public PausableRegisterReader DiagReader { get; } = diagReader;
     public PausableRegisterWriter DiagWriter { get; } = diagWriter;
     public PausableTagWaiter TagWaiter { get; } = tagWaiter;
+
+    /// <summary>
+    /// Устанавливает callback для промежуточных результатов.
+    /// Вызывается из ColumnExecutor при старте шага.
+    /// </summary>
+    internal void SetProgressCallback(Action<string>? callback)
+    {
+        _progressCallback = callback;
+    }
+
+    /// <summary>
+    /// Сообщает промежуточный результат выполнения шага.
+    /// Обновляет текущую строку в гриде без изменения статуса.
+    /// </summary>
+    public void ReportProgress(string message)
+    {
+        _progressCallback?.Invoke(message);
+    }
 
     /// <summary>
     /// Pausable версия Task.Delay — останавливается при Auto OFF.

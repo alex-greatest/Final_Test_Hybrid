@@ -101,6 +101,7 @@ public class TestSequenseService(
             step.Status = "Выполняется";
             step.StepStatus = TestStepStatus.Running;
             step.Result = "";
+            step.ProgressMessage = "";
             step.StartTime = DateTime.Now;
             step.EndTime = null;
         });
@@ -119,6 +120,7 @@ public class TestSequenseService(
             step.Status = "Готово";
             step.StepStatus = TestStepStatus.Success;
             step.Result = message;
+            step.ProgressMessage = "";
             if (limits != null)
             {
                 step.Range = limits;
@@ -140,12 +142,40 @@ public class TestSequenseService(
             step.Status = "Ошибка";
             step.StepStatus = TestStepStatus.Error;
             step.Result = errorMessage;
+            step.ProgressMessage = "";
             if (limits != null)
             {
                 step.Range = limits;
             }
             step.EndTime = DateTime.Now;
         });
+    }
+
+    /// <summary>
+    /// Обновляет промежуточный прогресс шага без изменения статуса.
+    /// Игнорируется если шаг уже завершён (Success/Error).
+    /// </summary>
+    public void SetProgress(Guid id, string message)
+    {
+        var updated = TrySetProgress(id, message);
+        if (updated)
+        {
+            NotifyDataChanged();
+        }
+    }
+
+    private bool TrySetProgress(Guid id, string message)
+    {
+        lock (_lock)
+        {
+            var step = _steps.FirstOrDefault(s => s.Id == id);
+            if (step == null || step.StepStatus != TestStepStatus.Running)
+            {
+                return false;
+            }
+            step.ProgressMessage = message;
+            return true;
+        }
     }
 
     /// <summary>
@@ -197,6 +227,7 @@ public class TestSequenseService(
         scanStep.StepStatus = TestStepStatus.Running;
         scanStep.Result = "";
         scanStep.Range = "";
+        scanStep.ProgressMessage = "";
         scanStep.StartTime = DateTime.Now;
         scanStep.EndTime = null;
     }
@@ -230,6 +261,7 @@ public class TestSequenseService(
             scanStep.StepStatus = TestStepStatus.Running;
             scanStep.Result = "";
             scanStep.Range = "";
+            scanStep.ProgressMessage = "";
             scanStep.StartTime = DateTime.Now;
             scanStep.EndTime = null;
         }
@@ -263,6 +295,7 @@ public class TestSequenseService(
         step.StepStatus = status;
         step.Result = message;
         step.Range = limits ?? "";
+        step.ProgressMessage = "";
         step.Status = status switch
         {
             TestStepStatus.Running => "Выполняется",
@@ -329,7 +362,8 @@ public class TestSequenseService(
                 StepStatus = s.StepStatus,
                 StartTime = s.StartTime,
                 EndTime = s.EndTime,
-                IsSkipped = s.IsSkipped
+                IsSkipped = s.IsSkipped,
+                ProgressMessage = s.ProgressMessage
             }).ToList();
         }
     }

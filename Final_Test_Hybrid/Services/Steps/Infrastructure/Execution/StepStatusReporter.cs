@@ -109,6 +109,14 @@ public class StepStatusReporter
         _sequenseService.UpdateScanStep(status, message, limits);
     }
 
+    /// <summary>
+    /// Сообщает о промежуточном прогрессе шага.
+    /// </summary>
+    public void ReportProgress(Guid id, string message)
+    {
+        _sequenseService.SetProgress(id, message);
+    }
+
     public Guid EnsureScanStepExists(string name, string description)
     {
         return _sequenseService.EnsureScanStepExists(name, description);

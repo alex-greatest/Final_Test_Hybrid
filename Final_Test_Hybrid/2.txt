@@ -1,11 +1,12 @@
-﻿П-031-00  Неисправность. Слишком малый расход воды
-П-031-01  Неисправность. Слишком большой расход воды
-П-031-02  Неисправность. Низкое давление воды
-П-031-03  Неисправность. Высокое давление воды
+﻿DB_CH	DB_CH_Compare_Flow_NTC_Temp_Cold	Al_DeltaTempNOK	Неисправность. Разность температур вне допуска
+DB_CH	DB_CH_Compare_Flow_NTC_Temp_Cold	Al_WaterFlowMin	Неисправность. Слишком малый расход воды
+DB_CH	DB_CH_Compare_Flow_NTC_Temp_Cold	Al_WaterFlowMax	Неисправность. Слишком большой расход воды
+DB_CH	DB_CH_Compare_Flow_NTC_Temp_Cold	Al_WaterPressureLow	Неисправность. Низкое давление воды
+DB_CH	DB_CH_Compare_Flow_NTC_Temp_Cold	Al_WaterPressureHight	Неисправность. Высокое давление воды
 
 
-
-DB_CH	DB_CH_Get_CHW_Flow_NTC_Cold	Al_WaterFlowMin	Неисправность. Слишком малый расход воды
-DB_CH	DB_CH_Get_CHW_Flow_NTC_Cold	Al_WaterFlowMax	Неисправность. Слишком большой расход воды
-DB_CH	DB_CH_Get_CHW_Flow_NTC_Cold	Al_WaterPressureLow	Неисправность. Низкое давление воды
-DB_CH	DB_CH_Get_CHW_Flow_NTC_Cold	Al_WaterPressureHight	Неисправность. Высокое давление воды
+П-030-00 CH/Compare_Flow_NTC_Temperature_Cold DB_CH_Compare_Flow_NTC_Temp_Cold. Неисправность. Разность температур вне допуска
+П-030-01 CH/Compare_Flow_NTC_Temperature_Cold DB_CH_Compare_Flow_NTC_Temp_Cold. Неисправность. Слишком малый расход воды
+П-030-02 CH/Compare_Flow_NTC_Temperature_Cold DB_CH_Compare_Flow_NTC_Temp_Cold. Неисправность. Слишком большой расход воды
+П-030-03 CH/Compare_Flow_NTC_Temperature_Cold DB_CH_Compare_Flow_NTC_Temp_Cold. Неисправность. Низкое давление воды
+П-030-04 CH/Compare_Flow_NTC_Temperature_Cold DB_CH_Compare_Flow_NTC_Temp_Cold. Неисправность. Высокое давление воды

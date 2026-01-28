@@ -204,6 +204,29 @@ if (step == null) return;
 - `PrepareErrorDialog.razor` подписан на `OnReset` и `OnForceStop`
 - При этих событиях вызывает `DialogService.Close(false)` автоматически
 
+### 9. Сброс Start только при успехе (без finally)
+
+```csharp
+// Шаг НЕ использует finally для сброса Start
+public async Task<TestStepResult> ExecuteAsync(...)
+{
+    await context.OpcUa.WriteAsync(StartTag, true, ct);
+    return await WaitForCompletionAsync(context, ct);  // Без try/finally!
+}
+
+private async Task<TestStepResult> HandleSuccessAsync(...)
+{
+    await context.OpcUa.WriteAsync(StartTag, false, ct);  // Сброс ТОЛЬКО при успехе
+    return TestStepResult.Pass();
+}
+```
+
+**Почему OK:** При ошибке/retry/skip координатор сбрасывает Start через `ResetBlockStartAsync`:
+- `ProcessSkipAsync` → `ResetBlockStartAsync(error.FailedStep)`
+- Использует `PlcBlockTagHelper.GetStartTag(step)` для формирования тега
+
+**См. также:** [StepsGuide.md](StepsGuide.md) Часть 5.5
+
 ---
 
 ## Anti-Patterns (НЕ делать)

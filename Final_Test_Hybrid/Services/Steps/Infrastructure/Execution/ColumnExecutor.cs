@@ -22,6 +22,7 @@ public class ColumnExecutor(
     private readonly AsyncManualResetEvent _continueGate = new(true);
     private readonly SemaphoreSlim _retrySemaphore = new(1, 1);
     private ErrorScope? _errorScope;
+    private int _progressCompleted;
 
     private record StepState(
         string? Name,
@@ -93,7 +94,15 @@ public class ColumnExecutor(
             return;
         }
 
-        await ExecuteStepCoreAsync(step, ct);
+        try
+        {
+            await ExecuteStepCoreAsync(step, ct);
+        }
+        finally
+        {
+            Volatile.Write(ref _progressCompleted, 1);
+            context.SetProgressCallback(null);
+        }
     }
 
     /// <summary>
@@ -113,6 +122,8 @@ public class ColumnExecutor(
             logger.LogError(ex, "Ошибка регистрации шага {Step} в UI", step.Name);
             return false;
         }
+
+        SetupProgressCallback(uiId, step.Name);
 
         try
         {
@@ -309,7 +320,16 @@ public class ColumnExecutor(
                 return;
             }
             RestartFailedStep();
-            await ExecuteStepCoreAsync(step, ct);
+            SetupProgressCallback(_state.UiStepId, step.Name);
+            try
+            {
+                await ExecuteStepCoreAsync(step, ct);
+            }
+            finally
+            {
+                Volatile.Write(ref _progressCompleted, 1);
+                context.SetProgressCallback(null);
+            }
         }
         finally
         {
@@ -318,5 +338,28 @@ public class ColumnExecutor(
                 _retrySemaphore.Release();
             }
         }
+    }
+
+    /// <summary>
+    /// Устанавливает callback для прогресса с защитой от поздних вызовов.
+    /// </summary>
+    private void SetupProgressCallback(Guid uiId, string stepName)
+    {
+        Volatile.Write(ref _progressCompleted, 0);
+        context.SetProgressCallback(msg =>
+        {
+            if (Volatile.Read(ref _progressCompleted) == 1)
+            {
+                return;
+            }
+            try
+            {
+                statusReporter.ReportProgress(uiId, msg);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning("Ошибка отправки прогресса для {Step}: {Error}", stepName, ex.Message);
+            }
+        });
     }
 }
