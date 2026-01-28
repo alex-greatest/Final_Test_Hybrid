@@ -1,39 +1,33 @@
-Обзор. Аналоговые выходы. ПИД регулятор
-Тип – одинаковый, как есть.
-Параметры ПИД регулятора – DB_Control.Valve
-P – Gain1
-I – Ti1
-D – Td1
+Для Claude Code (финальное уточнение):
+Баг 1: Пропущен сегмент
+Не закрашена: Вертикальная труба вниз от горизонтальной линии (между VM0.4 и EV0.3) к клапану VM0.6
+Условие: должна быть жёлтой когда VP0.1 OR VP0.2 OR VP0.3 == open
+
+Баг 2: Трубы после EV0.3 игнорируют состояние клапана
+Проблема: Вся правая часть после EV0.3 (вертикальная труба к TAG, к баку, горизонталь к VM0.7) — жёлтая, хотя EV0.3 закрыт (красный).
+Решение: Эти сегменты должны проверять состояние EV0.3:
+
+EV0.3 == closed → трубы после него серые
+EV0.3 == open AND (VP0.1 OR VP0.2 OR VP0.3 == open) → трубы после него жёлтые
+
+Сегменты после EV0.3 (должны зависеть от его состояния):
+
+Вертикальная труба вверх от EV0.3 к точке соединения с TAG
+Горизонтальная труба влево к VM0.7
+Вертикальная труба вверх к баку
+Участок около VM0.9
+
+Найди в коде где задаётся цвет этих сегментов и добавь проверку EV0.3 == open.
 
 
 
-Обзор. Аналоговые выходы. ПИД регулятор
-Тип – одинаковый, как есть.
-Параметры ПИД регулятора – DB_Control.Valve
-P – Gain1
-I – Ti1
-D – Td1
+Для Claude Code (добавить к предыдущему):
+Баг 3: Закрашена стрелка направления потока
+Проблема: Стрелка (→) между расходомером POG и клапаном VM0.5 стала жёлтой. Стрелки направления потока не должны менять цвет — они всегда остаются в исходном виде.
+Решение: Исключить элементы-стрелки (arrows / flow direction indicators) из логики закраски труб. Красятся только сами трубы (pipes / lines), но не стрелки на них.
 
+Итого 3 бага:
 
-
-вот структура
-
-	VRP2_1	"ST_PID"		True	True	True	True	False		Регулировочный клапан давления воды в контур DHW
-        SetPoint	Real	0.0	True	True	True	True	False		Заданное значение регулятора
-        ActuelValue	Real	0.0	True	True	True	True	False		Актуальная Значение
-        ManualValue	Real	0.0	True	True	True	True	False		Заданное значение в ручном режиме
-        ActuelloutValue	Real	0.0	True	True	True	True	False		Актуальное выходное значение
-        Gain1	Real	0.0	True	True	True	True	False		P - составляющая
-        Ti1	Real	0.0	True	True	True	True	False		I - составляющая
-        Td1	Real	0.0	True	True	True	True	False		D - составляющая
-        Gain2	Real	0.0	True	True	True	True	False		P - составляющая
-        Ti2	Real	0.0	True	True	True	True	False		I - составляющая
-        Td2	Real	0.0	True	True	True	True	False		D - составляющая
-        Mode	Int	0	True	True	True	True	False		Заданный режим работы регулятора
-        State	Int	0	True	True	True	True	False		Состояние регулятора
-        MeasChannel	Int	0	True	True	True	True	False		Измерительный канал
-        Start_Mode	Bool	false	True	True	True	True	False		Команда изменения режима
-        AcknowledgeError	Bool	FALSE	True	True	True	True	False		Квитирование ошибки регулятора
-        Reset	Bool	FALSE	True	True	True	True	False		Сброс регулятора
-        ManualEnable	Bool	FALSE	True	True	True	True	False		Разрешение управления в ручном режиме
-        Error	Bool	FALSE	True	True	True	True	False		Неисправность регулятора
+Не закрашена вертикальная труба к VM0.6
+Неправильно закрашены трубы после EV0.3 (должны быть серые при закрытом EV0.3)
+Лишнее — закрашена стрелка направления потока (не должна менять цвет)

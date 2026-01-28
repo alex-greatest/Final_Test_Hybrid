@@ -1,3 +1,8 @@
+@using Final_Test_Hybrid.Services.OpcUa.Subscription
+@using Final_Test_Hybrid.Models.Plc.Tags
+@inject OpcUaSubscription Subscription
+@implements IAsyncDisposable
+
 <div class="scheme-container">
     <svg id="_Слой_1" data-name="Слой 1" xmlns="http://www.w3.org/2000/svg"
          xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1920 1080">
@@ -337,6 +342,50 @@
                             y1="1078.335" x2="13.963" y2="1078.335"
                             gradientTransform="translate(386.068 216377.007) scale(16 -200)"
                             xlink:href="#_Безымянный_градиент_45"/>
+            <!-- Жёлтый градиент для трубы после VP0_1 (открыт) -->
+            <linearGradient id="_Безымянный_градиент_45-13-open"
+                            data-name="Безымянный градиент 45 open" x1="12.994"
+                            y1="1078.335" x2="13.963" y2="1078.335"
+                            gradientTransform="translate(386.068 216377.007) scale(16 -200)"
+                            gradientUnits="userSpaceOnUse">
+                <stop offset=".01" stop-color="#b5a654"/>
+                <stop offset=".18" stop-color="#d4c478"/>
+                <stop offset=".5" stop-color="#f9f1b8"/>
+                <stop offset="1" stop-color="#b5a654"/>
+            </linearGradient>
+            <!-- Жёлтый градиент для вертикальной секции VP0_1 (открыт) -->
+            <linearGradient id="_Безымянный_градиент_35-open"
+                            data-name="Безымянный градиент 35 open" x1="24.42"
+                            y1="1081.25" x2="25.246" y2="1081.25"
+                            gradientTransform="translate(242.683 217027.654) scale(16 -200)"
+                            gradientUnits="userSpaceOnUse">
+                <stop offset=".01" stop-color="#b5a654"/>
+                <stop offset=".16" stop-color="#d4c478"/>
+                <stop offset=".49" stop-color="#f9f1b8"/>
+                <stop offset="1" stop-color="#b5a654"/>
+            </linearGradient>
+            <!-- Жёлтый градиент для трубы RG0.1 → POG (открыт) -->
+            <linearGradient id="_Безымянный_градиент_45-16-open"
+                            data-name="Безымянный градиент 45 open" x1="13.024"
+                            y1="1078.71" x2="13.993" y2="1078.71"
+                            gradientTransform="translate(460.579 216452.465) scale(16 -200)"
+                            gradientUnits="userSpaceOnUse">
+                <stop offset=".01" stop-color="#b5a654"/>
+                <stop offset=".18" stop-color="#d4c478"/>
+                <stop offset=".5" stop-color="#f9f1b8"/>
+                <stop offset="1" stop-color="#b5a654"/>
+            </linearGradient>
+            <!-- Жёлтый градиент для продолжения к POG (открыт) -->
+            <linearGradient id="_Безымянный_градиент_45-17-open"
+                            data-name="Безымянный градиент 45 open" x1="13.086"
+                            y1="1079.138" x2="14.055" y2="1079.138"
+                            gradientTransform="translate(545.168 216539.056) scale(16 -200)"
+                            gradientUnits="userSpaceOnUse">
+                <stop offset=".01" stop-color="#b5a654"/>
+                <stop offset=".18" stop-color="#d4c478"/>
+                <stop offset=".5" stop-color="#f9f1b8"/>
+                <stop offset="1" stop-color="#b5a654"/>
+            </linearGradient>
             <linearGradient id="_Безымянный_градиент_10"
                             data-name="Безымянный градиент 10" x1="344.767"
                             y1="1307.146" x2="344.767" y2="1346.091"
@@ -481,6 +530,63 @@
                 <stop offset=".49" stop-color="#e0e0e0"/>
                 <stop offset=".75" stop-color="#a3a4a4"/>
                 <stop offset="1" stop-color="#646566"/>
+            </linearGradient>
+            <!-- Жёлтые градиенты для 90° изгиба после VP0_2 (открыт) -->
+            <linearGradient id="_Безымянный_градиент_33-open"
+                            data-name="Безымянный градиент 33 open" x1="-450.205"
+                            y1="1738.393" x2="-430.844" y2="1738.393"
+                            gradientTransform="translate(889.602 -142.901) scale(.569)"
+                            gradientUnits="userSpaceOnUse">
+                <stop offset=".01" stop-color="#b5a654"/>
+                <stop offset=".18" stop-color="#d4c478"/>
+                <stop offset=".5" stop-color="#f9f1b8"/>
+                <stop offset="1" stop-color="#b5a654"/>
+            </linearGradient>
+            <linearGradient id="_Безымянный_градиент_10-2-open"
+                            data-name="Безымянный градиент 10 open" x1="-453.744"
+                            y1="1762.779" x2="-453.744" y2="1742.073"
+                            gradientTransform="translate(889.602 -142.901) scale(.569)"
+                            gradientUnits="userSpaceOnUse">
+                <stop offset=".01" stop-color="#b5a654"/>
+                <stop offset=".16" stop-color="#d4c478"/>
+                <stop offset=".49" stop-color="#f9f1b8"/>
+                <stop offset="1" stop-color="#b5a654"/>
+            </linearGradient>
+            <radialGradient id="_Безымянный_градиент_64-open"
+                            data-name="Безымянный градиент 64 open" cx="-95.044"
+                            cy="1279.268" fx="-95.044" fy="1279.268" r="23.779"
+                            gradientTransform="translate(633.128 100.619) rotate(-4.489) scale(.546 .581) skewX(-.614)"
+                            gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#8a7e2f"/>
+                <stop offset=".1" stop-color="#a39538"/>
+                <stop offset=".22" stop-color="#c4b85c"/>
+                <stop offset=".4" stop-color="#e5d98c"/>
+                <stop offset=".53" stop-color="#f9f1b8"/>
+                <stop offset=".64" stop-color="#e0d490"/>
+                <stop offset=".89" stop-color="#aa9e4a"/>
+                <stop offset="1" stop-color="#8a7e2f"/>
+            </radialGradient>
+            <linearGradient id="_Безымянный_градиент_63-open"
+                            data-name="Безымянный градиент 63 open" x1="-450.205"
+                            y1="1729.782" x2="-430.844" y2="1729.782"
+                            gradientTransform="translate(889.602 -142.901) scale(.569)"
+                            gradientUnits="userSpaceOnUse">
+                <stop offset=".01" stop-color="#a59a48"/>
+                <stop offset=".18" stop-color="#cfc26e"/>
+                <stop offset=".5" stop-color="#f9f1b8"/>
+                <stop offset=".74" stop-color="#d6ca7a"/>
+                <stop offset="1" stop-color="#a59a48"/>
+            </linearGradient>
+            <linearGradient id="_Безымянный_градиент_62-open"
+                            data-name="Безымянный градиент 62 open" x1="-460.223"
+                            y1="1762.757" x2="-460.223" y2="1742.052"
+                            gradientTransform="translate(889.602 -142.901) scale(.569)"
+                            gradientUnits="userSpaceOnUse">
+                <stop offset=".01" stop-color="#b5a654"/>
+                <stop offset=".16" stop-color="#d4c478"/>
+                <stop offset=".49" stop-color="#f9f1b8"/>
+                <stop offset=".75" stop-color="#d1c370"/>
+                <stop offset="1" stop-color="#b5a654"/>
             </linearGradient>
             <linearGradient id="_Безымянный_градиент_45-16"
                             data-name="Безымянный градиент 45" x1="13.024"
@@ -1090,6 +1196,118 @@
                             data-name="Безымянный градиент 62" x1="-160.709"
                             y1="2018.308" x2="-160.709" y2="1997.603"
                             xlink:href="#_Безымянный_градиент_62"/>
+            <!-- Жёлтые градиенты для 90° изгиба после VP0_3 (открыт) -->
+            <linearGradient id="_Безымянный_градиент_33-14-open"
+                            data-name="Безымянный градиент 33 open" x1="-150.691"
+                            y1="1993.945" x2="-131.331" y2="1993.945"
+                            xlink:href="#_Безымянный_градиент_33-open"/>
+            <linearGradient id="_Безымянный_градиент_10-32-open"
+                            data-name="Безымянный градиент 10 open" x1="-154.23"
+                            y1="2018.33" x2="-154.23" y2="1997.624"
+                            gradientTransform="translate(889.602 -142.901) scale(.569)"
+                            xlink:href="#_Безымянный_градиент_10-2-open"/>
+            <radialGradient id="_Безымянный_градиент_64-6-open"
+                            data-name="Безымянный градиент 64 open" cx="198.406"
+                            cy="1551.459" fx="198.406" fy="1551.459" r="23.779"
+                            xlink:href="#_Безымянный_градиент_64-open"/>
+            <linearGradient id="_Безымянный_градиент_63-6-open"
+                            data-name="Безымянный градиент 63 open" x1="-150.691"
+                            y1="1985.333" x2="-131.331" y2="1985.333"
+                            xlink:href="#_Безымянный_градиент_63-open"/>
+            <linearGradient id="_Безымянный_градиент_62-6-open"
+                            data-name="Безымянный градиент 62 open" x1="-160.709"
+                            y1="2018.308" x2="-160.709" y2="1997.603"
+                            xlink:href="#_Безымянный_градиент_62-open"/>
+            <!-- Жёлтый градиент для горизонтальной трубы VP0_3 → RG0.2 (открыт) -->
+            <linearGradient id="_Безымянный_градиент_112-open"
+                            data-name="Безымянный градиент 112 open" x1="31.18"
+                            y1="1078.334" x2="32.149" y2="1078.334"
+                            gradientTransform="translate(94.837 216667.727) scale(16 -200)"
+                            gradientUnits="userSpaceOnUse">
+                <stop offset=".01" stop-color="#b5a654"/>
+                <stop offset=".18" stop-color="#d4c478"/>
+                <stop offset=".5" stop-color="#f9f1b8"/>
+                <stop offset="1" stop-color="#b5a654"/>
+            </linearGradient>
+            <!-- Жёлтый градиент для вертикальной трубы VP0_3 вверх (открыт) -->
+            <linearGradient id="_Безымянный_градиент_112-2-open"
+                            data-name="Безымянный градиент 112 open" x1="31.18"
+                            y1="1078.947" x2="32.149" y2="1078.947"
+                            gradientTransform="translate(217.426 216790.317) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_112-open"/>
+            <!-- Жёлтый градиент для трубы POG → EV0.1 (открыт, зависит от любого VP) -->
+            <linearGradient id="_Безымянный_градиент_45-18-open"
+                            data-name="Безымянный градиент 45 open" x1="12.956"
+                            y1="1082.013" x2="13.924" y2="1082.013"
+                            gradientTransform="translate(1122.282 217111.981) scale(16 -200)"
+                            gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#b5a654"/>
+                <stop offset=".5" stop-color="#f9f1b8"/>
+                <stop offset="1" stop-color="#b5a654"/>
+            </linearGradient>
+            <!-- Жёлтый градиент для трубы VM0.4 верх (открыт, зависит от любого VP) -->
+            <linearGradient id="_Безымянный_градиент_45-33-open"
+                            data-name="Безымянный градиент 45 open" x1="-.447"
+                            y1="1080.296" x2=".522" y2="1080.296"
+                            gradientTransform="translate(1458.131 216795.322) scale(16 -200)"
+                            gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#b5a654"/>
+                <stop offset=".5" stop-color="#f9f1b8"/>
+                <stop offset="1" stop-color="#b5a654"/>
+            </linearGradient>
+            <!-- Жёлтый градиент для трубы VM0.4 низ (открыт, зависит от любого VP) -->
+            <linearGradient id="_Безымянный_градиент_45-34-open"
+                            data-name="Безымянный градиент 45 open" x1="-22.164"
+                            y1="1086.855" x2="-21.195" y2="1086.855"
+                            gradientTransform="translate(1805.357 218217.98) scale(16 -200)"
+                            gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#b5a654"/>
+                <stop offset=".5" stop-color="#f9f1b8"/>
+                <stop offset="1" stop-color="#b5a654"/>
+            </linearGradient>
+            <!-- Серые градиенты для стрелок направления (базовые, закрыты) -->
+            <linearGradient id="_Градиент_EV03_14"
+                            data-name="Gradient EV03 14" x1="1286"
+                            y1="670.196" x2="1365" y2="670.196"
+                            gradientTransform="matrix(1,0,0,1,0,0)"
+                            gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#646566"/>
+                <stop offset=".5" stop-color="#e0e0e0"/>
+                <stop offset="1" stop-color="#646566"/>
+            </linearGradient>
+            <linearGradient id="_Градиент_EV03_14-open"
+                            data-name="Gradient EV03 14 open" x1="1286"
+                            y1="670.196" x2="1365" y2="670.196"
+                            gradientTransform="matrix(1,0,0,1,0,0)"
+                            xlink:href="#_Безымянный_градиент_24"/>
+            <linearGradient id="_Градиент_EV03_15"
+                            data-name="Gradient EV03 15" x1="1308.875"
+                            y1="737.159" x2="1403.901" y2="737.159"
+                            gradientTransform="translate(2706.901 1302.317) rotate(-180)"
+                            gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#646566"/>
+                <stop offset=".5" stop-color="#e0e0e0"/>
+                <stop offset="1" stop-color="#646566"/>
+            </linearGradient>
+            <linearGradient id="_Градиент_EV03_15-open"
+                            data-name="Gradient EV03 15 open" x1="1308.875"
+                            y1="737.159" x2="1403.901" y2="737.159"
+                            gradientTransform="translate(2706.901 1302.317) rotate(-180)"
+                            xlink:href="#_Безымянный_градиент_24"/>
+            <linearGradient id="_Градиент_EV03_16"
+                            data-name="Gradient EV03 16" x1="1837.477"
+                            y1="872.948" x2="1920.424" y2="872.948"
+                            gradientTransform="translate(346.9 2330.424) rotate(-90)"
+                            gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#646566"/>
+                <stop offset=".5" stop-color="#e0e0e0"/>
+                <stop offset="1" stop-color="#646566"/>
+            </linearGradient>
+            <linearGradient id="_Градиент_EV03_16-open"
+                            data-name="Gradient EV03 16 open" x1="1837.477"
+                            y1="872.948" x2="1920.424" y2="872.948"
+                            gradientTransform="translate(346.9 2330.424) rotate(-90)"
+                            xlink:href="#_Безымянный_градиент_24"/>
             <linearGradient id="_Безымянный_градиент_10-33"
                             data-name="Безымянный градиент 10" x1="-93.266"
                             y1="1038.378" x2="-93.266" y2="1077.322"
@@ -1220,44 +1438,193 @@
                             y1="816.371" x2="993" y2="816.371"
                             gradientTransform="matrix(1,0,0,1,0,0)"
                             xlink:href="#_Безымянный_градиент_24"/>
+            <!-- ====== Жёлтые -open градиенты для динамической заливки труб ====== -->
+            <!-- Базовый жёлтый градиент -->
+            <linearGradient id="_Безымянный_градиент_45-open"
+                            data-name="Безымянный градиент 45 open" x1="12.956"
+                            y1="1081.03" x2="13.901" y2="1081.03"
+                            gradientTransform="translate(925.879 216915.197) scale(16 -200)"
+                            gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="#b5a654"/>
+                <stop offset=".5" stop-color="#f9f1b8"/>
+                <stop offset="1" stop-color="#b5a654"/>
+            </linearGradient>
+            <!-- -2-open -->
+            <linearGradient id="_Безымянный_градиент_45-2-open"
+                            data-name="Безымянный градиент 45 open" x1="13.771"
+                            y1="1081.631" x2="14.597" y2="1081.631"
+                            gradientTransform="translate(583.463 217180.415) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -3-open -->
+            <linearGradient id="_Безымянный_градиент_45-3-open"
+                            data-name="Безымянный градиент 45 open" x1="13.018"
+                            y1="1079.559" x2="13.987" y2="1079.559"
+                            gradientTransform="translate(630.511 216622.211) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -4-open -->
+            <linearGradient id="_Безымянный_градиент_45-4-open"
+                            data-name="Безымянный градиент 45 open" x1="-5.15"
+                            y1="1078.979" x2="-4.056" y2="1078.979"
+                            gradientTransform="translate(804.264 216216.598) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -5-open -->
+            <linearGradient id="_Безымянный_градиент_45-5-open"
+                            data-name="Безымянный градиент 45 open" x1="-18.185"
+                            y1="1082.693" x2="-17.216" y2="1082.693"
+                            gradientTransform="translate(1458.131 216795.322) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -6-open -->
+            <linearGradient id="_Безымянный_градиент_45-6-open"
+                            data-name="Безымянный градиент 45 open" x1="-28.743"
+                            y1="1083.844" x2="-27.774" y2="1083.844"
+                            gradientTransform="translate(1724.131 217077.322) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -7-open -->
+            <linearGradient id="_Безымянный_градиент_45-7-open"
+                            data-name="Безымянный градиент 45 open" x1="-28.618"
+                            y1="1082.439" x2="-27.649" y2="1082.439"
+                            gradientTransform="translate(1441.131 216798.322) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -8-open -->
+            <linearGradient id="_Безымянный_градиент_45-8-open"
+                            data-name="Безымянный градиент 45 open" x1=".074"
+                            y1="1084.509" x2="1.056" y2="1084.509"
+                            gradientTransform="translate(1850.645 217553.548) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -9-open -->
+            <linearGradient id="_Безымянный_градиент_45-9-open"
+                            data-name="Безымянный градиент 45 open" x1="12.923"
+                            y1="1084.4" x2="13.891" y2="1084.4"
+                            gradientTransform="translate(1600.216 217588.859) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -10-open -->
+            <linearGradient id="_Безымянный_градиент_45-10-open"
+                            data-name="Безымянный градиент 45 open" x1="12.936"
+                            y1="1083.872" x2="13.905" y2="1083.872"
+                            gradientTransform="translate(1494.437 217483.506) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -11-open -->
+            <linearGradient id="_Безымянный_градиент_45-11-open"
+                            data-name="Безымянный градиент 45 open" x1="22.001"
+                            y1="1078.326" x2="22.968" y2="1078.326"
+                            gradientTransform="translate(240.139 216519.273) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -20-open -->
+            <linearGradient id="_Безымянный_градиент_45-20-open"
+                            data-name="Безымянный градиент 45 open" x1="12.936"
+                            y1="1082.99" x2="13.905" y2="1082.99"
+                            gradientTransform="translate(1317.99 217307.059) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -21-open -->
+            <linearGradient id="_Безымянный_градиент_45-21-open"
+                            data-name="Безымянный градиент 45 open" x1="5.912"
+                            y1="1083.61" x2="6.822" y2="1083.61"
+                            gradientTransform="translate(1554.976 217318.339) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -22-open -->
+            <linearGradient id="_Безымянный_градиент_45-22-open"
+                            data-name="Безымянный градиент 45 open" x1="5.948"
+                            y1="1081.904" x2="6.917" y2="1081.904"
+                            gradientTransform="translate(1212.595 216978.062) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -23-open -->
+            <linearGradient id="_Безымянный_градиент_45-23-open"
+                            data-name="Безымянный градиент 45 open" x1="-18.185"
+                            y1="1081.711" x2="-17.216" y2="1081.711"
+                            gradientTransform="translate(1458.131 216795.322) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -24-open -->
+            <linearGradient id="_Безымянный_градиент_45-24-open"
+                            data-name="Безымянный градиент 45 open" x1="-18.198"
+                            y1="1083.147" x2="-17.229" y2="1083.147"
+                            gradientTransform="translate(1458.131 216795.322) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -25-open -->
+            <linearGradient id="_Безымянный_градиент_45-25-open"
+                            data-name="Безымянный градиент 45 open" x1="-34.993"
+                            y1="1083.079" x2="-34.024" y2="1083.079"
+                            gradientTransform="translate(1671.131 216824.322) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -26-open -->
+            <linearGradient id="_Безымянный_градиент_45-26-open"
+                            data-name="Безымянный градиент 45 open" x1="-28.681"
+                            y1="1083.044" x2="-27.712" y2="1083.044"
+                            gradientTransform="translate(1563.131 216918.322) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -28-open -->
+            <linearGradient id="_Безымянный_градиент_45-28-open"
+                            data-name="Безымянный градиент 45 open" x1="-6.368"
+                            y1="1082.724" x2="-5.399" y2="1082.724"
+                            gradientTransform="translate(1458.131 216795.322) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -29-open -->
+            <linearGradient id="_Безымянный_градиент_45-29-open"
+                            data-name="Безымянный градиент 45 open" x1="-6.306"
+                            y1="1082.289" x2="-5.337" y2="1082.289"
+                            gradientTransform="translate(1458.131 216795.322) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -30-open -->
+            <linearGradient id="_Безымянный_градиент_45-30-open"
+                            data-name="Безымянный градиент 45 open" x1="-16.306"
+                            y1="1084.862" x2="-15.337" y2="1084.862"
+                            gradientTransform="translate(1617.881 217420.904) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -32-open -->
+            <linearGradient id="_Безымянный_градиент_45-32-open"
+                            data-name="Безымянный градиент 45 open" x1="-40.998"
+                            y1="1080.671" x2="-40.03" y2="1080.671"
+                            gradientTransform="translate(1458.131 216795.322) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -36-open -->
+            <linearGradient id="_Безымянный_градиент_45-36-open"
+                            data-name="Безымянный градиент 45 open" x1="19.616"
+                            y1="1080.306" x2="20.584" y2="1080.306"
+                            gradientTransform="translate(1458.131 216795.322) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
+            <!-- -37-open -->
+            <linearGradient id="_Безымянный_градиент_45-37-open"
+                            data-name="Безымянный градиент 45 open" x1="-42.227"
+                            y1="1086.845" x2="-41.258" y2="1086.845"
+                            gradientTransform="translate(2447.357 218213.98) scale(16 -200)"
+                            xlink:href="#_Безымянный_градиент_45-open"/>
         </defs>
         <rect x="1133.169" y="651.158" width="15.121" height="115.156"
               transform="translate(1849.466 -431.993) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_45);"/>
+              style="fill: @GetPipeGradientForAny(new[]{"VP0_1","VP0_2","VP0_3"}, "_Безымянный_градиент_45");"/>
         <rect x="803.795" y="729.038" width="13.223" height="249.206"
               transform="translate(1620.813 1707.282) rotate(180)"
-              style="fill: url(#_Безымянный_градиент_45-2);"/>
+              style="fill: @GetPipeGradientForAny(new[]{"VP0_1","VP0_2","VP0_3"}, "_Безымянный_градиент_45-2");"/>
         <rect x="474.1" y="437.126" width="15.502" height="260.489"
               style="fill: url(#_Безымянный_градиент_24); stroke: #b9aa63;"/>
         <rect x="838.802" y="685.692" width="15.502" height="48.469"
               transform="translate(1556.479 -136.626) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_45-3);"/>
+              style="fill: @GetPipeGradientForAny(new[]{"VP0_1","VP0_2","VP0_3"}, "_Безымянный_градиент_45-3");"/>
         <rect x="721.871" y="394" width="17.502" height="52.489"
               transform="translate(1150.866 -310.378) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_45-4);"/>
+              style="fill: @GetPipeGradientForAny(new[]{"VP0_1","VP0_2","VP0_3"}, "_Безымянный_градиент_45-4");"/>
         <rect x="519.17" y="396.338" width="15.502" height="50.489"
               transform="translate(948.504 -105.339) rotate(90)"
               style="fill: url(#_Безымянный_градиент_24-2); stroke: #b9aa63;"/>
         <rect x="1167.17" y="223.468" width="15.502" height="65.489"
-              style="fill: url(#_Безымянный_градиент_45-5);"/>
+              style="fill: @GetPipeGradientForAny(new[]{"VP0_1","VP0_2","VP0_3"}, "_Безымянный_градиент_45-5");"/>
         <rect x="1264.241" y="228.779" width="15.502" height="158.489"
               transform="translate(1580.016 -963.969) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_45-6);"/>
+              style="fill: @GetPipeGradientForAny(new[]{"VP0_1","VP0_2","VP0_3"}, "_Безымянный_градиент_45-6");"/>
         <rect x="983.241" y="282.279" width="15.502" height="55.489"
               transform="translate(1301.016 -680.969) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_45-7);"/>
+              style="fill: @GetPipeGradientForAny(new[]{"VP0_1","VP0_2","VP0_3"}, "_Безымянный_градиент_45-7");"/>
         <rect x="1851.824" y="615.879" width="15.724" height="70.869"
               transform="translate(3719.372 1302.628) rotate(180)"
-              style="fill: url(#_Безымянный_градиент_45-8);"/>
+              style="fill: @GetPipeGradientForAny(new[]{"VP0_1","VP0_2","VP0_3"}, "_Безымянный_градиент_45-8");"/>
         <rect x="1806.978" y="684.164" width="15.502" height="48.469"
               transform="translate(2523.128 -1106.33) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_45-9);"/>
+              style="fill: @GetPipeGradientForAny(new[]{"VP0_1","VP0_2","VP0_3"}, "_Безымянный_градиент_45-9");"/>
         <rect x="1701.412" y="648.844" width="15.502" height="119.535"
               transform="translate(2417.774 -1000.551) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_45-10);"/>
+              style="fill: @GetPipeGradientForAny(new[]{"VP0_1","VP0_2","VP0_3"}, "_Безымянный_градиент_45-10");"/>
         <rect x="592.158" y="830.413" width="15.477" height="46.461"
               transform="translate(1453.541 253.747) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_45-11);"/>
+              style="fill: @GetPipeGradient("VP0_2", "_Безымянный_градиент_45-11");"/>
         <rect x="440.391" y="690.965" width="17.822" height="40.847"
               transform="translate(1160.69 262.086) rotate(90)"
               style="fill: url(#_Безымянный_градиент_24-3); stroke: #b9aa63;"/>
@@ -1353,93 +1720,93 @@
         <g id="Group_Pipe" data-name="Group Pipe">
             <g style="clip-path: url(#clippath);">
                 <rect x="555.132" y="694.784" width="3.307" height="15.37"
-                      style="fill: url(#_Безымянный_градиент_31);"/>
+                      style="fill: @GetValveColor("VP0_1");"/>
             </g>
         </g>
         <g id="Group_Port2" data-name="Group Port2">
             <path d="M536.498,695.342l20.376,14.855-20.376,15.073v-29.928"
-                  style="fill: url(#_Безымянный_градиент_3);"/>
+                  style="fill: @GetValveColor("VP0_1");"/>
         </g>
         <g id="Group_Port1" data-name="Group Port1">
             <path d="M576.887,695.342l-20.377,14.854,20.377,15.073v-29.928"
-                  style="fill: url(#_Безымянный_градиент_3-2);"/>
+                  style="fill: @GetValveColor("VP0_1");"/>
         </g>
         <g id="Group_Box-2" data-name="Group Box">
             <g style="clip-path: url(#clippath-1);">
                 <rect x="565.502" y="687.78" width="1.309" height="7.213"
-                      style="fill: url(#_Безымянный_градиент_30);"/>
+                      style="fill: @GetValveColor("VP0_1");"/>
             </g>
             <g style="clip-path: url(#clippath-2);">
                 <rect x="546.772" y="693.888" width="20.039" height="1.106"
-                      style="fill: url(#_Безымянный_градиент_5);"/>
+                      style="fill: @GetValveColorDark("VP0_1");"/>
             </g>
             <g style="clip-path: url(#clippath-3);">
                 <rect x="546.772" y="687.786" width="19.194" height="6.529"
-                      style="fill: url(#_Безымянный_градиент_29);"/>
+                      style="fill: @GetValveColor("VP0_1");"/>
             </g>
         </g>
         <g id="Group_Pipe-2" data-name="Group Pipe">
             <g style="clip-path: url(#clippath-4);">
                 <rect x="554.953" y="839.351" width="3.307" height="15.37"
-                      style="fill: url(#_Безымянный_градиент_31-2);"/>
+                      style="fill: @GetValveColor("VP0_2");"/>
             </g>
         </g>
         <g id="Group_Port2-2" data-name="Group Port2">
             <path d="M536.319,839.909l20.376,14.855-20.376,15.073v-29.928"
-                  style="fill: url(#_Безымянный_градиент_3-3);"/>
+                  style="fill: @GetValveColor("VP0_2");"/>
         </g>
         <g id="Group_Port1-2" data-name="Group Port1">
             <path d="M576.708,839.909l-20.377,14.854,20.377,15.073v-29.928"
-                  style="fill: url(#_Безымянный_градиент_3-4);"/>
+                  style="fill: @GetValveColor("VP0_2");"/>
         </g>
         <g id="Group_Box-3" data-name="Group Box">
             <g style="clip-path: url(#clippath-5);">
                 <rect x="565.323" y="832.347" width="1.309" height="7.213"
-                      style="fill: url(#_Безымянный_градиент_30-2);"/>
+                      style="fill: @GetValveColor("VP0_2");"/>
             </g>
             <g style="clip-path: url(#clippath-6);">
                 <rect x="546.593" y="838.455" width="20.039" height="1.106"
-                      style="fill: url(#_Безымянный_градиент_5-2);"/>
+                      style="fill: @GetValveColorDark("VP0_2");"/>
             </g>
             <g style="clip-path: url(#clippath-7);">
                 <rect x="546.593" y="832.353" width="19.194" height="6.529"
-                      style="fill: url(#_Безымянный_градиент_29-2);"/>
+                      style="fill: @GetValveColor("VP0_2");"/>
             </g>
         </g>
         <g id="Group_Pipe-3" data-name="Group Pipe">
             <g style="clip-path: url(#clippath-8);">
                 <rect x="555.05" y="984.978" width="3.307" height="15.37"
-                      style="fill: url(#_Безымянный_градиент_31-3);"/>
+                      style="fill: @GetValveColor("VP0_3");"/>
             </g>
         </g>
         <g id="Group_Port2-3" data-name="Group Port2">
             <path d="M536.416,985.536l20.376,14.855-20.376,15.073v-29.928"
-                  style="fill: url(#_Безымянный_градиент_3-5);"/>
+                  style="fill: @GetValveColor("VP0_3");"/>
         </g>
         <g id="Group_Port1-3" data-name="Group Port1">
             <path d="M576.805,985.536l-20.377,14.854,20.377,15.073v-29.928"
-                  style="fill: url(#_Безымянный_градиент_3-6);"/>
+                  style="fill: @GetValveColor("VP0_3");"/>
         </g>
         <g id="Group_Box-4" data-name="Group Box">
             <g style="clip-path: url(#clippath-9);">
                 <rect x="565.42" y="977.974" width="1.309" height="7.213"
-                      style="fill: url(#_Безымянный_градиент_30-3);"/>
+                      style="fill: @GetValveColor("VP0_3");"/>
             </g>
             <g style="clip-path: url(#clippath-10);">
                 <rect x="546.69" y="984.082" width="20.039" height="1.106"
-                      style="fill: url(#_Безымянный_градиент_5-3);"/>
+                      style="fill: @GetValveColorDark("VP0_3");"/>
             </g>
             <g style="clip-path: url(#clippath-11);">
                 <rect x="546.69" y="977.98" width="19.194" height="6.529"
-                      style="fill: url(#_Безымянный_градиент_29-3);"/>
+                      style="fill: @GetValveColor("VP0_3");"/>
             </g>
         </g>
         <rect x="633.405" y="722.658" width="13.223" height="109.206"
               transform="translate(1280.033 1554.522) rotate(180)"
-              style="fill: url(#_Безымянный_градиент_35);"/>
+              style="fill: @GetPipeGradient("VP0_2", "_Безымянный_градиент_35");"/>
         <rect x="593.978" y="685.312" width="15.502" height="48.469"
               transform="translate(1311.275 107.818) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_45-13);"/>
+              style="fill: @GetPipeGradient("VP0_1", "_Безымянный_градиент_45-13");"/>
         <g id="Group_Flange" data-name="Group Flange">
             <path d="M623.139,865.397h-4.426v-22.155h4.426v22.155"
                   style="fill: url(#_Безымянный_градиент_10);"/>
@@ -1530,16 +1897,16 @@
               style="fill: url(#_Безымянный_градиент_24-12); stroke: #b9aa63;"/>
         <g id="Group_90_Deg_Bend_Pipe" data-name="Group 90 Deg Bend Pipe">
             <rect x="633.485" y="845.466" width="11.014" height="1.172"
-                  style="fill: url(#_Безымянный_градиент_33);"/>
+                  style="fill: @GetPipeGradient("VP0_2", "_Безымянный_градиент_33");"/>
             <rect x="631.083" y="848.145" width=".777" height="11.779"
-                  style="fill: url(#_Безымянный_градиент_10-2);"/>
+                  style="fill: @GetPipeGradient("VP0_2", "_Безымянный_градиент_10-2");"/>
             <path
                 d="M631.513,859.924c6.332,0,12.987-4.657,12.987-13.88l-11.008-.035c-.23,1.623-.858,2.014-1.944,2.119-.128,3.092-.035,11.796-.035,11.796Z"
-                style="fill: url(#_Безымянный_градиент_64);"/>
+                style="fill: @GetPipeGradient("VP0_2", "_Безымянный_градиент_64");"/>
             <rect x="633.485" y="835.867" width="11.014" height="10.57"
-                  style="fill: url(#_Безымянный_градиент_63);"/>
+                  style="fill: @GetPipeGradient("VP0_2", "_Безымянный_градиент_63");"/>
             <rect x="623.985" y="848.133" width="7.603" height="11.779"
-                  style="fill: url(#_Безымянный_градиент_62);"/>
+                  style="fill: @GetPipeGradient("VP0_2", "_Безымянный_градиент_62");"/>
         </g>
         <rect x="701.348" y="691.23" width="31.845" height="35.362"
               style="fill: #999;"/>
@@ -1572,10 +1939,10 @@
               style="fill: #999; stroke: #1d1d1b; stroke-linecap: round; stroke-miterlimit: 10;"/>
         <rect x="668.963" y="685.786" width="15.502" height="48.469"
               transform="translate(1386.734 33.307) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_45-16);"/>
+              style="fill: @GetPipeGradientForAny(new[] { "VP0_1", "VP0_2", "VP0_3" }, "_Безымянный_градиент_45-16");"/>
         <rect x="754.552" y="680.976" width="15.502" height="60.091"
               transform="translate(1473.324 -51.282) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_45-17);"/>
+              style="fill: @GetPipeGradientForAny(new[] { "VP0_1", "VP0_2", "VP0_3" }, "_Безымянный_градиент_45-17");"/>
         <text transform="translate(876.979 705.315) scale(.633 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
             <tspan x="0" y="0">POG</tspan>
@@ -1624,7 +1991,7 @@
               style="fill: #999; stroke: #1d1d1b; stroke-linecap: round; stroke-miterlimit: 10;"/>
         <rect x="1329.572" y="601.682" width="15.502" height="214.489"
               transform="translate(2046.249 -628.396) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_45-18);"/>
+              style="fill: @GetPipeGradientForAny(new[] { "VP0_1", "VP0_2", "VP0_3" }, "_Безымянный_градиент_45-18");"/>
         <g id="Group_PortAndBody-4" data-name="Group PortAndBody">
             <path d="M1592.617,694.511h56.52v29.58h-56.52v-29.58"
                   style="fill: url(#_Безымянный_градиент_17-4);"/>
@@ -1661,7 +2028,7 @@
         </g>
         <rect x="1524.965" y="648.844" width="15.502" height="119.535"
               transform="translate(2241.327 -824.104) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_45-20);"/>
+              style="fill: @GetPipeGradient("EV0_3", "_Безымянный_градиент_45-20");"/>
         <g id="Group_Flange-2" data-name="Group Flange">
             <path d="M1842.995,720.465h-4.426v-24.155h4.426v24.155"
                   style="fill: url(#_Безымянный_градиент_10-3);"/>
@@ -1706,33 +2073,33 @@
         </g>
         <rect x="1649.575" y="417.502" width="14.548" height="356.513"
               transform="translate(2252.607 -1061.09) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_45-21);"/>
+              style="fill: @GetPipeGradient("EV0_3", "_Безымянный_градиент_45-21");"/>
         <g id="Group_Pipe-4" data-name="Group Pipe">
             <g style="clip-path: url(#clippath-12);">
                 <rect x="1456.588" y="582.004" width="3.307" height="15.37"
-                      style="fill: url(#_Безымянный_градиент_31-4);"/>
+                      style="fill: @GetValveColor("EV0_3");"/>
             </g>
         </g>
         <g id="Group_Port2-4" data-name="Group Port2">
             <path d="M1437.954,582.562l20.376,14.855-20.376,15.073v-29.928"
-                  style="fill: url(#_Безымянный_градиент_3-16);"/>
+                  style="fill: @GetValveColor("EV0_3");"/>
         </g>
         <g id="Group_Port1-4" data-name="Group Port1">
             <path d="M1478.343,582.562l-20.377,14.854,20.377,15.073v-29.928"
-                  style="fill: url(#_Безымянный_градиент_3-17);"/>
+                  style="fill: @GetValveColor("EV0_3");"/>
         </g>
         <g id="Group_Box-8" data-name="Group Box">
             <g style="clip-path: url(#clippath-13);">
                 <rect x="1466.958" y="575" width="1.309" height="7.213"
-                      style="fill: url(#_Безымянный_градиент_30-4);"/>
+                      style="fill: @GetValveColor("EV0_3");"/>
             </g>
             <g style="clip-path: url(#clippath-14);">
                 <rect x="1448.228" y="581.108" width="20.039" height="1.106"
-                      style="fill: url(#_Безымянный_градиент_5-4);"/>
+                      style="fill: @GetValveColorDark("EV0_3");"/>
             </g>
             <g style="clip-path: url(#clippath-15);">
                 <rect x="1448.228" y="575.006" width="19.194" height="6.529"
-                      style="fill: url(#_Безымянный_градиент_29-4);"/>
+                      style="fill: @GetValveColor("EV0_3");"/>
             </g>
         </g>
         <path d="M654.97,720.738v-21.012h-30.284v21.012h30.284Z"
@@ -1776,7 +2143,7 @@
         </g>
         <rect x="1307.769" y="474.567" width="15.502" height="244.489"
               transform="translate(1912.331 -718.709) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_45-22);"/>
+              style="fill: @GetPipeGradientForAny(new[] { "VP0_1", "VP0_2", "VP0_3" }, "_Безымянный_градиент_45-22");"/>
         <g id="Group_90_Deg_Bend_Pipe-4" data-name="Group 90 Deg Bend Pipe">
             <rect x="1177.289" y="596.606" width="10.859" height="1.188"
                   transform="translate(1798.4 -576.003) rotate(90.899)"
@@ -1804,7 +2171,7 @@
                 style="fill: url(#_Безымянный_градиент_10-15);"/>
         </g>
         <rect x="1167.17" y="327.425" width="15.502" height="250.489"
-              style="fill: url(#_Безымянный_градиент_45-23);"/>
+              style="fill: @GetPipeGradientForAny(new[] { "VP0_1", "VP0_2", "VP0_3" }, "_Безымянный_градиент_45-23");"/>
         <g id="Group_Port4" data-name="Group Port4">
             <polyline
                 points="1183.007 308.197 1183.007 323.441 1166.709 323.441 1166.709 308.286"
@@ -1852,7 +2219,7 @@
                 style="fill: url(#_Безымянный_градиент_33-9);"/>
         </g>
         <rect x="1166.966" y="137.641" width="15.502" height="55.489"
-              style="fill: url(#_Безымянный_градиент_45-24);"/>
+              style="fill: @GetPipeGradientForAny(new[] { "VP0_1", "VP0_2", "VP0_3" }, "_Безымянный_градиент_45-24");"/>
         <g id="Group_Drain" data-name="Group Drain">
             <path d="M1165.249,68.995h5.322v4.772h-5.322v-4.772Z"/>
         </g>
@@ -1912,7 +2279,7 @@
         </text>
         <rect x="1111.241" y="165.279" width="15.502" height="85.489"
               transform="translate(1327.016 -910.969) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_45-25);"/>
+              style="fill: @GetPipeGradient("EV0_3", "_Безымянный_градиент_45-25");"/>
         <rect x="846.267" y="159.524" width="237" height="93"
               style="fill: #93d2e0; stroke: #93d2e0;"/>
         <rect x="914.184" y="178.507" width="94.631" height="29.017"
@@ -1944,7 +2311,7 @@
         </text>
         <rect x="1104.241" y="266.279" width="15.502" height="85.489"
               transform="translate(1421.016 -802.969) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_45-26);"/>
+              style="fill: @GetPipeGradient("EV0_3", "_Безымянный_градиент_45-26");"/>
         <g id="Group_PortAndBody-5" data-name="Group PortAndBody">
             <path d="M1019.415,295.457h56.52v29.58h-56.52v-29.58"
                   style="fill: url(#_Безымянный_градиент_17-5);"/>
@@ -1988,7 +2355,7 @@
                 style="fill: url(#_Безымянный_градиент_33-10);"/>
         </g>
         <rect x="1356.241" y="207.279" width="15.502" height="85.489"
-              style="fill: url(#_Безымянный_градиент_45-28);"/>
+              style="fill: @GetPipeGradient("EV0_3", "_Безымянный_градиент_45-28");"/>
         <rect x="1246.492" y="146.524" width="237" height="93"
               style="fill: #93d2e0; stroke: #93d2e0;"/>
         <rect x="1325.41" y="165.507" width="94.631" height="29.017"
@@ -2046,10 +2413,10 @@
             <tspan x="251.161" y="0" style="letter-spacing: 0em;">ление</tspan>
         </text>
         <rect x="1357.241" y="323.279" width="15.502" height="27.489"
-              style="fill: url(#_Безымянный_градиент_45-29);"/>
+              style="fill: @GetPipeGradient("EV0_3", "_Безымянный_градиент_45-29");"/>
         <rect x="1356.991" y="405.195" width="15.502" height="85.489"
               transform="translate(2729.484 895.88) rotate(180)"
-              style="fill: url(#_Безымянный_градиент_45-30);"/>
+              style="fill: @GetPipeGradient("EV0_3", "_Безымянный_градиент_45-30");"/>
         <g id="Group_PortAndBody-6" data-name="Group PortAndBody">
             <path d="M1380.309,348.363v56.52h-29.58v-56.52h29.58"
                   style="fill: url(#_Безымянный_градиент_17-6);"/>
@@ -2183,29 +2550,29 @@
         <g id="Group_Pipe-5" data-name="Group Pipe">
             <g style="clip-path: url(#clippath-16);">
                 <rect x="682.062" y="404.503" width="3.307" height="15.37"
-                      style="fill: url(#_Безымянный_градиент_31-5);"/>
+                      style="fill: #dc3545;"/>
             </g>
         </g>
         <g id="Group_Port2-7" data-name="Group Port2">
             <path d="M663.428,405.061l20.376,14.855-20.376,15.073v-29.928"
-                  style="fill: url(#_Безымянный_градиент_3-24);"/>
+                  style="fill: #dc3545;"/>
         </g>
         <g id="Group_Port1-7" data-name="Group Port1">
             <path d="M703.817,405.061l-20.377,14.854,20.377,15.073v-29.928"
-                  style="fill: url(#_Безымянный_градиент_3-25);"/>
+                  style="fill: #dc3545;"/>
         </g>
         <g id="Group_Box-11" data-name="Group Box">
             <g style="clip-path: url(#clippath-17);">
                 <rect x="692.432" y="397.499" width="1.309" height="7.213"
-                      style="fill: url(#_Безымянный_градиент_30-5);"/>
+                      style="fill: #dc3545;"/>
             </g>
             <g style="clip-path: url(#clippath-18);">
                 <rect x="673.702" y="403.607" width="20.039" height="1.106"
-                      style="fill: url(#_Безымянный_градиент_5-5);"/>
+                      style="fill: #b02a37;"/>
             </g>
             <g style="clip-path: url(#clippath-19);">
                 <rect x="673.702" y="397.505" width="19.194" height="6.529"
-                      style="fill: url(#_Безымянный_градиент_29-5);"/>
+                      style="fill: #dc3545;"/>
             </g>
         </g>
         <rect x="756.5" y="345" width="126.5" height="133" style="fill: #999;"/>
@@ -2231,7 +2598,7 @@
             d="M780.693,448.642c-7.189-10.056-14.665-21.077-13.592-32.979.943-10.468,8.409-19.529,16.586-27.057,21.579-19.866,50.308-33.403,80.811-38.075"
             style="fill: none; stroke: #1d1d1b; stroke-linecap: round; stroke-miterlimit: 10;"/>
         <rect x="802.155" y="630.33" width="15.502" height="60.489"
-              style="fill: url(#_Безымянный_градиент_45-32);"/>
+              style="fill: @GetPipeGradient("EV0_3", "_Безымянный_градиент_45-32");"/>
         <rect x="697.577" y="544.287" width="237" height="93"
               style="fill: #93d2e0; stroke: #93d2e0;"/>
         <rect x="770.495" y="563.271" width="94.631" height="29.017"
@@ -2266,16 +2633,16 @@
         </g>
         <g id="Group_90_Deg_Bend_Pipe-6" data-name="Group 90 Deg Bend Pipe">
             <rect x="803.875" y="990.846" width="11.014" height="1.172"
-                  style="fill: url(#_Безымянный_градиент_33-14);"/>
+                  style="fill: @GetPipeGradient("VP0_3", "_Безымянный_градиент_33-14");"/>
             <rect x="801.473" y="993.525" width=".777" height="11.779"
-                  style="fill: url(#_Безымянный_градиент_10-32);"/>
+                  style="fill: @GetPipeGradient("VP0_3", "_Безымянный_градиент_10-32");"/>
             <path
                 d="M801.902,1005.304c6.332,0,12.987-4.657,12.987-13.88l-11.008-.035c-.23,1.623-.858,2.014-1.944,2.119-.128,3.092-.035,11.796-.035,11.796Z"
-                style="fill: url(#_Безымянный_градиент_64-6);"/>
+                style="fill: @GetPipeGradient("VP0_3", "_Безымянный_градиент_64-6");"/>
             <rect x="803.875" y="981.248" width="11.014" height="10.57"
-                  style="fill: url(#_Безымянный_градиент_63-6);"/>
+                  style="fill: @GetPipeGradient("VP0_3", "_Безымянный_градиент_63-6");"/>
             <rect x="794.375" y="993.513" width="7.603" height="11.779"
-                  style="fill: url(#_Безымянный_градиент_62-6);"/>
+                  style="fill: @GetPipeGradient("VP0_3", "_Безымянный_градиент_62-6");"/>
         </g>
         <g id="Group_Flange-20" data-name="Group Flange">
             <path
@@ -2283,10 +2650,10 @@
                 style="fill: url(#_Безымянный_градиент_10-33);"/>
         </g>
         <rect x="1450.98" y="721.817" width="15.502" height="27.489"
-              style="fill: url(#_Безымянный_градиент_45-33);"/>
+              style="fill: @GetPipeGradient("EV0_3", "_Безымянный_градиент_45-33");"/>
         <rect x="1450.73" y="803.733" width="15.502" height="85.489"
               transform="translate(2916.961 1692.956) rotate(180)"
-              style="fill: url(#_Безымянный_градиент_45-34);"/>
+              style="fill: @GetPipeGradient("EV0_3", "_Безымянный_градиент_45-34");"/>
         <g id="Group_PortAndBody-7" data-name="Group PortAndBody">
             <path d="M1474.047,746.901v56.52h-29.58v-56.52h29.58"
                   style="fill: url(#_Безымянный_градиент_17-7);"/>
@@ -2322,10 +2689,10 @@
                   style="fill: url(#_Безымянный_градиент_16-7);"/>
         </g>
         <rect x="1771.98" y="719.817" width="15.502" height="27.489"
-              style="fill: url(#_Безымянный_градиент_45-36);"/>
+              style="fill: @GetPipeGradient("EV0_3", "_Безымянный_градиент_45-36");"/>
         <rect x="1771.73" y="801.733" width="15.502" height="85.489"
               transform="translate(3558.961 1688.956) rotate(180)"
-              style="fill: url(#_Безымянный_градиент_45-37);"/>
+              style="fill: @GetPipeGradient("EV0_3", "_Безымянный_градиент_45-37");"/>
         <g id="Group_PortAndBody-8" data-name="Group PortAndBody">
             <path d="M1795.047,744.901v56.52h-29.58v-56.52h29.58"
                   style="fill: url(#_Безымянный_градиент_17-8);"/>
@@ -2427,10 +2794,10 @@
               style="fill: #999; stroke: #1d1d1b; stroke-linecap: round; stroke-miterlimit: 10;"/>
         <rect x="593.722" y="976.288" width="15.502" height="48.469"
               transform="translate(1601.995 399.049) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_112);"/>
+              style="fill: @GetPipeGradient("VP0_3", "_Безымянный_градиент_112");"/>
         <rect x="716.312" y="934.977" width="15.502" height="131.091"
               transform="translate(1724.586 276.46) rotate(90)"
-              style="fill: url(#_Безымянный_градиент_112-2);"/>
+              style="fill: @GetPipeGradient("VP0_3", "_Безымянный_градиент_112-2");"/>
         <text transform="translate(623.107 1066.895) scale(.83 1)"
               style="font-family: ArialMT, Arial; font-size: 30.018px;">
             <tspan x="0" y="0">RG0.2</tspan>
@@ -2469,13 +2836,13 @@
         </text>
         <path
             d="M1365,670.26l-30.757,12.813v-8.499h-48.242s0-8.692,0-8.692h48.242v-8.563s30.757,12.942,30.757,12.942Z"
-            style="fill: url(#_Безымянный_градиент_24-14); stroke: #b9aa63;"/>
+            style="fill: @GetPipeGradientForAny(new[] { "VP0_1", "VP0_2", "VP0_3" }, "_Градиент_EV03_14"); stroke: #b9aa63;"/>
         <path
             d="M1303,565.094l36.997-12.813v8.499s58.029,0,58.029,0v8.692s-58.029,0-58.029,0v8.563s-36.997-12.942-36.997-12.942Z"
-            style="fill: url(#_Безымянный_градиент_24-15); stroke: #b9aa63;"/>
+            style="fill: @GetPipeGradientForAny(new[] { "VP0_1", "VP0_2", "VP0_3" }, "_Градиент_EV03_15"); stroke: #b9aa63;"/>
         <path
             d="M1219.913,410l12.813,32.294h-8.499s0,50.653,0,50.653h-8.692s0-50.653,0-50.653h-8.563s12.942-32.294,12.942-32.294Z"
-            style="fill: url(#_Безымянный_градиент_24-16); stroke: #b9aa63;"/>
+            style="fill: @GetPipeGradient("EV0_3", "_Градиент_EV03_16"); stroke: #b9aa63;"/>
         <path
             d="M993,816.435l-30.417,12.813v-8.499h-47.708s0-8.692,0-8.692h47.708v-8.563s30.417,12.942,30.417,12.942Z"
             style="fill: url(#_Безымянный_градиент_24-17); stroke: #b9aa63;"/>
@@ -2504,187 +2871,91 @@
             d="M1238.214,754.046l12.813,22.953h-8.499v36.001h-8.692v-36.001h-8.563l12.942-22.953Z"
             style="stroke: #4c4c4c; stroke-miterlimit: 10; stroke-width: .129px;"/>
 
-        <!-- Интерактивные области клапанов (координаты на основе PortAndBody групп) -->
-        <g id="valve-overlays">
-            <!-- SF клапаны: PortAndBody-2 (228,694), PortAndBody (230,840), PortAndBody-3 (228,984) -->
-            <rect id="valve-SF0.1" x="195" y="660" width="150" height="80"
-                  class='valve-overlay @(GetValveClass("SF0.1"))'
-                  @onclick='() => OnValveClick("SF0.1")'
-                  @onmouseover='() => OnValveHover("SF0.1")'
-                  @onmouseout="OnValveLeave" />
-            <rect id="valve-SF0.2" x="195" y="805" width="150" height="80"
-                  class='valve-overlay @(GetValveClass("SF0.2"))'
-                  @onclick='() => OnValveClick("SF0.2")'
-                  @onmouseover='() => OnValveHover("SF0.2")'
-                  @onmouseout="OnValveLeave" />
-            <rect id="valve-SF0.3" x="195" y="950" width="150" height="80"
-                  class='valve-overlay @(GetValveClass("SF0.3"))'
-                  @onclick='() => OnValveClick("SF0.3")'
-                  @onmouseover='() => OnValveHover("SF0.3")'
-                  @onmouseout="OnValveLeave" />
-            <!-- VNR клапаны: рядом с SF, смещены вправо -->
-            <rect id="valve-VNR0.1" x="355" y="660" width="100" height="80"
-                  class='valve-overlay @(GetValveClass("VNR0.1"))'
-                  @onclick='() => OnValveClick("VNR0.1")'
-                  @onmouseover='() => OnValveHover("VNR0.1")'
-                  @onmouseout="OnValveLeave" />
-            <rect id="valve-VNR0.2" x="355" y="805" width="100" height="80"
-                  class='valve-overlay @(GetValveClass("VNR0.2"))'
-                  @onclick='() => OnValveClick("VNR0.2")'
-                  @onmouseover='() => OnValveHover("VNR0.2")'
-                  @onmouseout="OnValveLeave" />
-            <rect id="valve-VNR0.3" x="355" y="950" width="100" height="80"
-                  class='valve-overlay @(GetValveClass("VNR0.3"))'
-                  @onclick='() => OnValveClick("VNR0.3")'
-                  @onmouseover='() => OnValveHover("VNR0.3")'
-                  @onmouseout="OnValveLeave" />
-            <!-- VP клапаны: Group_Port1/Port2 элементы (два треугольника) -->
-            <rect id="valve-VP0.1" x="535" y="693" width="45" height="35"
-                  class='valve-overlay @(GetValveClass("VP0.1"))'
-                  @onclick='() => OnValveClick("VP0.1")'
-                  @onmouseover='() => OnValveHover("VP0.1")'
-                  @onmouseout="OnValveLeave" />
-            <rect id="valve-VP0.2" x="535" y="838" width="45" height="35"
-                  class='valve-overlay @(GetValveClass("VP0.2"))'
-                  @onclick='() => OnValveClick("VP0.2")'
-                  @onmouseover='() => OnValveHover("VP0.2")'
-                  @onmouseout="OnValveLeave" />
-            <rect id="valve-VP0.3" x="535" y="983" width="45" height="35"
-                  class='valve-overlay @(GetValveClass("VP0.3"))'
-                  @onclick='() => OnValveClick("VP0.3")'
-                  @onmouseover='() => OnValveHover("VP0.3")'
-                  @onmouseout="OnValveLeave" />
-            <!-- RG регуляторы -->
-            <rect id="valve-RG0.1" x="650" y="695" width="100" height="70"
-                  class='valve-overlay @(GetValveClass("RG0.1"))'
-                  @onclick='() => OnValveClick("RG0.1")'
-                  @onmouseover='() => OnValveHover("RG0.1")'
-                  @onmouseout="OnValveLeave" />
-            <rect id="valve-RG0.2" x="590" y="950" width="120" height="100"
-                  class='valve-overlay @(GetValveClass("RG0.2"))'
-                  @onclick='() => OnValveClick("RG0.2")'
-                  @onmouseover='() => OnValveHover("RG0.2")'
-                  @onmouseout="OnValveLeave" />
-            <rect id="valve-RG0.3" x="530" y="390" width="100" height="80"
-                  class='valve-overlay @(GetValveClass("RG0.3"))'
-                  @onclick='() => OnValveClick("RG0.3")'
-                  @onmouseover='() => OnValveHover("RG0.3")'
-                  @onmouseout="OnValveLeave" />
-            <!-- EV электроклапаны: Group_Port элементы (два треугольника) -->
-            <rect id="valve-EV0.1" x="662" y="403" width="45" height="35"
-                  class='valve-overlay @(GetValveClass("EV0.1"))'
-                  @onclick='() => OnValveClick("EV0.1")'
-                  @onmouseover='() => OnValveHover("EV0.1")'
-                  @onmouseout="OnValveLeave" />
-            <!-- EV0.3: Group_Port2-4/Port1-4 (1437-1478, 582) -->
-            <rect id="valve-EV0.3" x="1435" y="580" width="45" height="35"
-                  class='valve-overlay @(GetValveClass("EV0.3"))'
-                  @onclick='() => OnValveClick("EV0.3")'
-                  @onmouseover='() => OnValveHover("EV0.3")'
-                  @onmouseout="OnValveLeave" />
-            <!-- VM моторизованные: PortAndBody-4 (1592,694), PortAndBody-5 (1019,295), PortAndBody-6 (1350,348), PortAndBody-7 (1444,746), PortAndBody-8 (1765,744) -->
-            <rect id="valve-VM0.4" x="1560" y="665" width="120" height="80"
-                  class='valve-overlay @(GetValveClass("VM0.4"))'
-                  @onclick='() => OnValveClick("VM0.4")'
-                  @onmouseover='() => OnValveHover("VM0.4")'
-                  @onmouseout="OnValveLeave" />
-            <rect id="valve-VM0.5" x="1415" y="720" width="80" height="90"
-                  class='valve-overlay @(GetValveClass("VM0.5"))'
-                  @onclick='() => OnValveClick("VM0.5")'
-                  @onmouseover='() => OnValveHover("VM0.5")'
-                  @onmouseout="OnValveLeave" />
-            <rect id="valve-VM0.6" x="1740" y="720" width="80" height="90"
-                  class='valve-overlay @(GetValveClass("VM0.6"))'
-                  @onclick='() => OnValveClick("VM0.6")'
-                  @onmouseover='() => OnValveHover("VM0.6")'
-                  @onmouseout="OnValveLeave" />
-            <rect id="valve-VM0.7" x="990" y="265" width="120" height="80"
-                  class='valve-overlay @(GetValveClass("VM0.7"))'
-                  @onclick='() => OnValveClick("VM0.7")'
-                  @onmouseover='() => OnValveHover("VM0.7")'
-                  @onmouseout="OnValveLeave" />
-            <rect id="valve-VM0.9" x="1320" y="320" width="90" height="90"
-                  class='valve-overlay @(GetValveClass("VM0.9"))'
-                  @onclick='() => OnValveClick("VM0.9")'
-                  @onmouseover='() => OnValveHover("VM0.9")'
-                  @onmouseout="OnValveLeave" />
-            <!-- VPP панель давления -->
-            <rect id="valve-VPP3.1" x="1120" y="812" width="238" height="93"
-                  class='valve-overlay @(GetValveClass("VPP3.1"))'
-                  @onclick='() => OnValveClick("VPP3.1")'
-                  @onmouseover='() => OnValveHover("VPP3.1")'
-                  @onmouseout="OnValveLeave" />
-        </g>
     </svg>
 </div>
 
 @code {
-    private string? _hoveredValve;
+    private const string ClosedColor = "#dc3545";
+    private const string ClosedColorDark = "#b02a37";
+    private const string OpenColor = "#28a745";
+    private const string OpenColorDark = "#1e7e34";
 
-    /// <summary>
-    /// Событие клика по клапану.
-    /// </summary>
-    [Parameter]
-    public EventCallback<string> OnValveClicked { get; set; }
-
-    /// <summary>
-    /// Состояния клапанов (true = открыт).
-    /// </summary>
-    [Parameter]
-    public Dictionary<string, bool>? ValveStates { get; set; }
-
-    /// <summary>
-    /// Клапаны с ошибками.
-    /// </summary>
-    [Parameter]
-    public HashSet<string>? ValveErrors { get; set; }
-
-    /// <summary>
-    /// Получает CSS класс для клапана.
-    /// </summary>
-    private string GetValveClass(string valveId)
+    private readonly Dictionary<string, bool> _valveStates = new()
     {
-        var classes = new List<string>();
+        ["VP0_1"] = false,
+        ["VP0_2"] = false,
+        ["VP0_3"] = false,
+        ["EV0_3"] = false
+    };
 
-        if (ValveStates?.TryGetValue(valveId, out var isOpen) == true && isOpen)
-        {
-            classes.Add("valve-open");
-        }
-
-        if (ValveErrors?.Contains(valveId) == true)
-        {
-            classes.Add("valve-error");
-        }
-
-        if (_hoveredValve == valveId)
-        {
-            classes.Add("valve-hovered");
-        }
-
-        return string.Join(" ", classes);
+    /// <summary>
+    /// Подписывается на OPC-UA теги клапанов при инициализации.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_1_GasG20, v => OnValveChanged("VP0_1", v));
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_2_GasG25, v => OnValveChanged("VP0_2", v));
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_3_LpgG30, v => OnValveChanged("VP0_3", v));
+        await Subscription.SubscribeAsync(PneumaticValveTags.Ev0_3_Gas, v => OnValveChanged("EV0_3", v));
     }
 
     /// <summary>
-    /// Обработчик клика по клапану.
+    /// Обрабатывает изменение состояния клапана.
     /// </summary>
-    private async Task OnValveClick(string valveId)
+    private Task OnValveChanged(string valveId, object? value)
     {
-        await OnValveClicked.InvokeAsync(valveId);
+        _valveStates[valveId] = value is true;
+        InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
     }
 
     /// <summary>
-    /// Обработчик наведения на клапан.
+    /// Получает цвет заливки для клапана.
     /// </summary>
-    private void OnValveHover(string valveId)
+    private string GetValveColor(string valveId) =>
+        _valveStates.TryGetValue(valveId, out var isOpen) && isOpen ? OpenColor : ClosedColor;
+
+    /// <summary>
+    /// Получает тёмный цвет заливки для клапана (для полосы).
+    /// </summary>
+    private string GetValveColorDark(string valveId) =>
+        _valveStates.TryGetValue(valveId, out var isOpen) && isOpen ? OpenColorDark : ClosedColorDark;
+
+    /// <summary>
+    /// Возвращает URL градиента для трубы в зависимости от состояния клапана.
+    /// Открыт = жёлтый (-open), закрыт = серый (оригинал).
+    /// </summary>
+    private string GetPipeGradient(string valveId, string gradientId)
     {
-        _hoveredValve = valveId;
+        var isOpen = _valveStates.TryGetValue(valveId, out var state) && state;
+        var suffix = isOpen ? "-open" : "";
+        return $"url(#{gradientId}{suffix})";
     }
 
     /// <summary>
-    /// Обработчик ухода курсора с клапана.
+    /// Проверяет, открыт ли хотя бы один из указанных клапанов.
     /// </summary>
-    private void OnValveLeave()
+    private bool IsAnyValveOpen(params string[] valveIds) =>
+        valveIds.Any(id => _valveStates.TryGetValue(id, out var state) && state);
+
+    /// <summary>
+    /// Возвращает URL градиента для трубы, зависящей от нескольких клапанов.
+    /// Если любой из указанных клапанов открыт - жёлтый (-open), иначе серый.
+    /// </summary>
+    private string GetPipeGradientForAny(string[] valveIds, string gradientId)
     {
-        _hoveredValve = null;
+        var suffix = IsAnyValveOpen(valveIds) ? "-open" : "";
+        return $"url(#{gradientId}{suffix})";
+    }
+
+    /// <summary>
+    /// Отписывается от OPC-UA тегов при уничтожении компонента.
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp0_1_GasG20, v => OnValveChanged("VP0_1", v));
+        await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp0_2_GasG25, v => OnValveChanged("VP0_2", v));
+        await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp0_3_LpgG30, v => OnValveChanged("VP0_3", v));
+        await Subscription.UnsubscribeAsync(PneumaticValveTags.Ev0_3_Gas, v => OnValveChanged("EV0_3", v));
     }
 }

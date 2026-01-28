@@ -33,4 +33,5 @@ public static class PneumaticValveTags
     public const string Vp0_1_GasG20 = "ns=3;s=\"DB_PneuValve\".\"Gas\".\"VP0_1\".\"HMI\".\"xOut_Open\"";
     public const string Vp0_2_GasG25 = "ns=3;s=\"DB_PneuValve\".\"Gas\".\"VP0_2\".\"HMI\".\"xOut_Open\"";
     public const string Vp0_3_LpgG30 = "ns=3;s=\"DB_PneuValve\".\"Gas\".\"VP0_3\".\"HMI\".\"xOut_Open\"";
+    public const string Ev0_3_Gas = "ns=3;s=\"DB_PneuValve\".\"Gas\".\"EV0_3\".\"HMI\".\"xOut_Open\"";
 }
