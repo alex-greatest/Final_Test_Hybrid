@@ -216,7 +216,9 @@ var value = await context.OpcUa.ReadAsync<float>(ValueTag, ct);
 
 ## Часть 5: Работа с Modbus (Диагностика)
 
-### 5.1 Сервисы
+> **Подробно:** [DiagnosticGuide.md](DiagnosticGuide.md) — архитектура, чтение/запись регистров, обработка ошибок.
+
+**Краткая справка:**
 
 | Сервис | Использование | Паузится |
 |--------|---------------|----------|
@@ -224,48 +226,10 @@ var value = await context.OpcUa.ReadAsync<float>(ValueTag, ct);
 | `PausableRegisterReader/Writer` | Test steps (`context.DiagReader/Writer`) | Да |
 
 ```csharp
-// Чтение регистров
+// Чтение и запись в тестовом шаге
 var result = await context.DiagReader.ReadUInt32Async(modbusAddress, ct);
-if (!result.Success)
-    return TestStepResult.Fail($"Ошибка чтения: {result.Error}");
-
-// Запись регистров
 var writeResult = await context.DiagWriter.WriteUInt32Async(address, value, ct);
 ```
-
-### 5.2 Задержка перед чтением (WriteVerifyDelayMs)
-
-При записи значения в ECU и последующей верификации чтением, ECU может потребоваться время для применения изменений.
-
-**Настройка:** `DiagnosticSettings.WriteVerifyDelayMs` (по умолчанию 100мс)
-
-```csharp
-// Пример: запись → задержка → чтение для верификации
-await context.DiagWriter.WriteUInt32Async(address, key, ct);
-
-// Задержка для применения изменений ECU
-await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
-
-var readResult = await context.DiagReader.ReadUInt32Async(address, ct);
-```
-
-### 5.3 Формат сообщений об ошибках Modbus
-
-```csharp
-// Ошибка записи
-$"Ошибка при записи ключа 0x{key:X8} в регистры {addr}-{addr+1}. {result.Error}"
-
-// Ошибка чтения
-$"Ошибка при чтении ключа из регистров {addr}-{addr+1}. {result.Error}"
-
-// Неверное значение
-$"Ошибка: прочитан ключ 0x{actual:X8} из регистров {addr}-{addr+1}, ожидался 0x{expected:X8}"
-```
-
-**Правила:**
-- Hex: `0x{value:X8}` (8 цифр для uint32) или `0x{value:X4}` (4 цифры для uint16)
-- Адреса: документационные (1000), не Modbus
-- Всегда добавлять `result.Error` для деталей
 
 ---
 
@@ -317,41 +281,21 @@ public async Task<TestStepResult> ExecuteAsync(...)
 
 ## Часть 6: CancellationToken
 
-> **КРИТИЧНО:** Шаги полностью ответственны за обработку отмены. Система НЕ защищает от зависших шагов.
+> **Подробно:** [CancellationGuide.md](CancellationGuide.md) — архитектура, Soft/Hard Reset, примеры.
 
-### Обязательные правила
+**КРИТИЧНО:** Шаги полностью ответственны за обработку отмены. Система НЕ защищает от зависших шагов.
 
-```csharp
-// В циклах
-while (condition)
-{
-    ct.ThrowIfCancellationRequested();
-    // ...
-}
+| Правило | Пример |
+|---------|--------|
+| Проверка в циклах | `ct.ThrowIfCancellationRequested();` |
+| Задержки с ct | `await context.DelayAsync(..., ct);` |
+| IO с ct | `await context.OpcUa.WriteAsync(..., ct);` |
 
-// Задержки
-await context.DelayAsync(TimeSpan.FromSeconds(5), ct);  // Test steps
-await Task.Delay(TimeSpan.FromSeconds(5), ct);          // Pre-execution
-
-// IO операции — всегда передавать ct
-await context.OpcUa.WriteAsync(tag, value, ct);
-await context.DiagReader.ReadUInt32Async(address, ct);
-```
-
-### Запрещено
-
-```csharp
-// Блокирующие вызовы
-var result = task.Result;  // ❌
-task.Wait();               // ❌
-
-// Задержки без ct
-await Task.Delay(1000);    // ❌
-Thread.Sleep(1000);        // ❌
-
-// Бесконечные циклы без проверки
-while (true) { }           // ❌
-```
+| Запрещено | Почему |
+|-----------|--------|
+| `.Result`, `.Wait()` | Блокирует поток |
+| `Task.Delay(...)` без ct | Игнорирует отмену |
+| `Thread.Sleep()` | Блокирует, не отменяется |
 
 ---
 
@@ -372,11 +316,13 @@ while (true) { }           // ❌
 - [ ] `IProvideLimits` / `IRequiresRecipes` / `INonSkippable` если нужно
 - [ ] Автоматическая регистрация через рефлексию
 
-### Code Review
+### Code Review (CancellationToken)
 
-- [ ] Циклы содержат `ct.ThrowIfCancellationRequested()`
-- [ ] Задержки через `context.DelayAsync()` или `Task.Delay(..., ct)`
-- [ ] IO передаёт `ct`
+> **Полный checklist:** [CancellationGuide.md](CancellationGuide.md#checklist-для-новых-шагов)
+
+- [ ] Циклы: `ct.ThrowIfCancellationRequested()`
+- [ ] Задержки: `context.DelayAsync(..., ct)`
+- [ ] IO: передаёт `ct`
 - [ ] Нет `.Result` / `.Wait()` / `Thread.Sleep()`
 
 ---

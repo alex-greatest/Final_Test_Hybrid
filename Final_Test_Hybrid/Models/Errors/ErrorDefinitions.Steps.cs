@@ -390,6 +390,35 @@ public static partial class ErrorDefinitions
         RelatedStepId: "gas-wait-for-gas-flow",
         RelatedStepName: "Gas/Wait_for_Gas_Flow");
 
+    // Gas/Set_Required_Pressure (П-036-xx)
+    public static readonly ErrorDefinition AlGasFlowLowSetRequiredPressure = new(
+        "П-036-00", "Неисправность. Низкий расход газа",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Set_Required_Pressure\".\"Al_GasFlowLow\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-set-required-pressure",
+        RelatedStepName: "Gas/Set_Required_Pressure");
+
+    public static readonly ErrorDefinition AlGasFlowHightSetRequiredPressure = new(
+        "П-036-01", "Неисправность. Высокий расход газа",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Set_Required_Pressure\".\"Al_GasFlowHight\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-set-required-pressure",
+        RelatedStepName: "Gas/Set_Required_Pressure");
+
+    public static readonly ErrorDefinition AlNotStendReadySetRequiredPressure = new(
+        "П-036-02", "Неисправность. Стенд не готов",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Set_Required_Pressure\".\"Al_NotStendReady\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-set-required-pressure",
+        RelatedStepName: "Gas/Set_Required_Pressure");
+
+    public static readonly ErrorDefinition AlGasPressureNokSetRequiredPressure = new(
+        "П-036-03", "Неисправность. Заданное значение давления газа не достигнуто",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Set_Required_Pressure\".\"Al_GasPressureNOK\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-set-required-pressure",
+        RelatedStepName: "Gas/Set_Required_Pressure");
+
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [
         BoilerNotLocked,
@@ -449,6 +478,10 @@ public static partial class ErrorDefinitions
         AlWaterPressureHighCompare,
         AlGasFlowLow,
         AlGasFlowHigh,
-        AlNotStendReady
+        AlNotStendReady,
+        AlGasFlowLowSetRequiredPressure,
+        AlGasFlowHightSetRequiredPressure,
+        AlNotStendReadySetRequiredPressure,
+        AlGasPressureNokSetRequiredPressure
     ];
 }

@@ -139,33 +139,28 @@ public class MyService(DualLogger<MyService> logger)
 
 ## Accepted Patterns (NOT bugs)
 
-| Паттерн | Почему OK |
-|---------|-----------|
-| `ExecutionStateManager.State` без Lock | Atomic enum, stale read OK для UI |
-| `?.TrySetResult()` без синхронизации | Идемпотентна |
-| `_progressCallback` без Volatile | Один writer (ColumnExecutor), редкие гонки приемлемы |
-| `_progressCompleted` с Volatile.Read/Write | Атомарный флаг для отсечения поздних вызовов |
-| Fire-and-forget в singleton | `.ContinueWith` или внутренний try-catch |
-| `TryStartInBackground()` | Исключения в `RunWithErrorHandlingAsync` |
-| `Task.WhenAny` race с таймером и ожиданием | Даже при "ложном" таймауте `await waitTask` вернёт правильный результат, ошибка снимется в `finally`. Максимум — кратковременный "мигнёт" ошибкой в UI |
+> **Подробно о Cancellation:** [CancellationGuide.md](Docs/CancellationGuide.md)
 
-### Cancellation & Threading ([CancellationGuide.md](Docs/CancellationGuide.md))
+| Категория | Паттерн | Почему OK |
+|-----------|---------|-----------|
+| State | `ExecutionStateManager.State` без Lock | Atomic enum, stale read OK для UI |
+| State | `?.TrySetResult()` без синхронизации | Идемпотентна |
+| State | `_progressCallback` без Volatile | Один writer (ColumnExecutor), редкие гонки приемлемы |
+| State | `_progressCompleted` с Volatile.Read/Write | Атомарный флаг для отсечения поздних вызовов |
+| Async | Fire-and-forget в singleton | `.ContinueWith` или внутренний try-catch |
+| Async | `TryStartInBackground()` | Исключения в `RunWithErrorHandlingAsync` |
+| Async | `Task.WhenAny` race с таймером | `await waitTask` вернёт правильный результат |
+| CT | Gate ждёт только при HasFailed | Проверка ct ДО WaitAsync |
+| CT | Task.WhenAll без linked CTS | Исключения ловятся внутри ExecuteStepCoreAsync |
+| CT | Шаги без timeout защиты | Контракт: шаги ОБЯЗАНЫ уважать CancellationToken |
+| CT | DequeueError до retry | При Stop/Reset вызывается Reset() который очищает всё |
+| CT | Двойной Stop (OnForceStop + OnReset) | First-wins семантика, StopReason только для логов |
+| CT | Диалоги без CancellationToken | Закрываются через события OnReset/OnForceStop |
+| CT | Проверка step ПОСЛЕ семафора | Защита от TOCTOU — step может измениться пока ждём |
+| CT | CTS.Dispose() без синхронизации | Идемпотентен, double dispose безопасен |
+| PLC | Сброс Start только при успехе | Координатор сбрасывает через `ResetBlockStartAsync` |
 
-| Паттерн | Почему OK |
-|---------|-----------|
-| Gate ждёт только при HasFailed | Проверка ct ДО WaitAsync, при HasFailed=true ClearStatus ничего не делает |
-| Task.WhenAll без linked CTS | Исключения ловятся внутри ExecuteStepCoreAsync |
-| Шаги без timeout защиты | Контракт: шаги ОБЯЗАНЫ уважать CancellationToken |
-| DequeueError до retry | При Stop/Reset вызывается Reset() который очищает всё |
-| Двойной Stop (OnForceStop + OnReset) | First-wins семантика, StopReason только для логов |
-| Диалоги без CancellationToken | Закрываются через события OnReset/OnForceStop |
-| Проверка step ПОСЛЕ семафора | Защита от TOCTOU — step может измениться пока ждём |
-| CTS.Dispose() без строгой синхронизации | Идемпотентен, double dispose безопасен |
-
-**Правила для шагов:**
-- ВСЕГДА проверяй `ct.IsCancellationRequested` в циклах
-- ВСЕГДА передавай ct в async операции
-- НИКОГДА не игнорируй CancellationToken
+**CancellationToken в шагах:** проверяй в циклах, передавай в async, никогда не игнорируй.
 
 ## Safety Patterns
 

@@ -206,26 +206,9 @@ if (step == null) return;
 
 ### 9. Сброс Start только при успехе (без finally)
 
-```csharp
-// Шаг НЕ использует finally для сброса Start
-public async Task<TestStepResult> ExecuteAsync(...)
-{
-    await context.OpcUa.WriteAsync(StartTag, true, ct);
-    return await WaitForCompletionAsync(context, ct);  // Без try/finally!
-}
+**Подробно:** [StepsGuide.md](StepsGuide.md#часть-55-паттерн-сброса-start-тега)
 
-private async Task<TestStepResult> HandleSuccessAsync(...)
-{
-    await context.OpcUa.WriteAsync(StartTag, false, ct);  // Сброс ТОЛЬКО при успехе
-    return TestStepResult.Pass();
-}
-```
-
-**Почему OK:** При ошибке/retry/skip координатор сбрасывает Start через `ResetBlockStartAsync`:
-- `ProcessSkipAsync` → `ResetBlockStartAsync(error.FailedStep)`
-- Использует `PlcBlockTagHelper.GetStartTag(step)` для формирования тега
-
-**См. также:** [StepsGuide.md](StepsGuide.md) Часть 5.5
+При ошибке/retry/skip координатор сбрасывает Start через `ResetBlockStartAsync`.
 
 ---
 
@@ -287,27 +270,25 @@ await tagWaiter.WaitForTrueAsync(tag, timeout: TimeSpan.FromSeconds(30), ct);
 
 ## Checklist для новых шагов
 
-При создании или ревью шагов проверять:
+При создании или ревью шагов проверять. См. также [StepsGuide.md](StepsGuide.md#часть-7-чек-листы).
 
 ### CancellationToken
 
-- [ ] Все `while`/`for` циклы содержат `ct.ThrowIfCancellationRequested()`
-- [ ] Все задержки используют `context.DelayAsync()` или `Task.Delay(..., ct)`
-- [ ] Все I/O операции передают `ct`
-- [ ] Нет `.Result` или `.Wait()` вызовов
-- [ ] Нет `Thread.Sleep()`
+| Требование | Проверка |
+|------------|----------|
+| Циклы | `ct.ThrowIfCancellationRequested()` в каждом `while`/`for` |
+| Задержки | `context.DelayAsync()` или `Task.Delay(..., ct)` |
+| I/O операции | Передают `ct` |
+| Блокировки | Нет `.Result`, `.Wait()`, `Thread.Sleep()` |
 
-### События и состояние
+### События и Cleanup
 
-- [ ] Обработчики событий защищены try-catch (если критичны)
-- [ ] Состояние обновляется атомарно или под lock
-- [ ] При ошибке вызывается `SetErrorState` (для возможности Retry/Skip)
-
-### Cleanup
-
-- [ ] Ресурсы освобождаются в finally или using
-- [ ] При отмене выполняется корректный cleanup
-- [ ] Нет утечек памяти при повторном входе (Retry)
+| Требование | Проверка |
+|------------|----------|
+| Event handlers | Защищены try-catch (если критичны) |
+| Состояние | Атомарно или под lock |
+| Ресурсы | `finally` или `using` |
+| Retry | Нет утечек памяти при повторном входе |
 
 ---
 

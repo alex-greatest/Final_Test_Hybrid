@@ -1,8 +1,5 @@
-﻿DB_Gas	Gas_Wait_for_Gas_Flow	Al_GasFlowLow	Неисправность. Низкий расход газа
-DB_Gas	Gas_Wait_for_Gas_Flow	Al_GasFlowHight	Неисправность. Высокий расход газа
-DB_Gas	Gas_Wait_for_Gas_Flow	Al_NotStendReady	Неисправность. Стенд не готов
+﻿DB_Coms	DB_CH_Start_Min_Heatout	Al_NoWaterFlow	Неисправность. Нет протока воды
+DB_Coms	DB_CH_Start_Min_Heatout	Al_IonCurrentOutTol	Неисправность. Ток ионизации вне допуска
 
-
-П-034-00 Gas/Wait_for_Gas_Flow Gas_Wait_for_Gas_Flow. Неисправность. Низкий расход газа
-П-034-01 Gas/Wait_for_Gas_Flow Gas_Wait_for_Gas_Flow. Неисправность. Высокий расход газа
-П-034-02 Gas/Wait_for_Gas_Flow Gas_Wait_for_Gas_Flow. Неисправность. Стенд не готов
+П-024-00 Coms/CH_Start_Min_Heatout DB_CH_Start_Min_Heatout. Неисправность. Нет протока воды
+П-024-01 Coms/CH_Start_Min_Heatout DB_CH_Start_Min_Heatout. Неисправность. Ток ионизации вне допуска
