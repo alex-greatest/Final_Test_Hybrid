@@ -2896,6 +2896,7 @@
     private double _gasPValue;
     private double _gasPagValue;
     private double _gasPgbValue;
+    private bool _disposed;
 
     /// <summary>
     /// Подписывается на OPC-UA теги клапанов при инициализации.
@@ -2903,10 +2904,10 @@
     protected override async Task OnInitializedAsync()
     {
         // Клапаны
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_1_GasG20, v => OnValveChanged("VP0_1", v));
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_2_GasG25, v => OnValveChanged("VP0_2", v));
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_3_LpgG30, v => OnValveChanged("VP0_3", v));
-        await Subscription.SubscribeAsync(PneumaticValveTags.Ev0_3_Gas, v => OnValveChanged("EV0_3", v));
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_1_GasG20, OnVp01Changed);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_2_GasG25, OnVp02Changed);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_3_LpgG30, OnVp03Changed);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Ev0_3_Gas, OnEv03Changed);
 
         // Датчики
         await Subscription.SubscribeAsync("ns=3;s=\"DB_ControlValve\".\"VPP3_1\".\"ActuelValue\"", OnVpp31Changed);
@@ -2918,23 +2919,33 @@
         await Subscription.SubscribeAsync(MainScreenTags.GasPgb, OnGasPgbChanged);
     }
 
+    // Callbacks для клапанов (методы вместо лямбд для корректной отписки)
+    private Task OnVp01Changed(object? v) => OnValveChangedAsync("VP0_1", v);
+    private Task OnVp02Changed(object? v) => OnValveChangedAsync("VP0_2", v);
+    private Task OnVp03Changed(object? v) => OnValveChangedAsync("VP0_3", v);
+    private Task OnEv03Changed(object? v) => OnValveChangedAsync("EV0_3", v);
+
     /// <summary>
     /// Обрабатывает изменение состояния клапана.
     /// </summary>
-    private Task OnValveChanged(string valveId, object? value)
+    private async Task OnValveChangedAsync(string valveId, object? value)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _valveStates[valveId] = value is true;
-        InvokeAsync(StateHasChanged);
-        return Task.CompletedTask;
+        await InvokeAsync(StateHasChanged);
     }
 
-    private Task OnVpp31Changed(object? v) { _vpp3_1Value = ToDouble(v); InvokeAsync(StateHasChanged); return Task.CompletedTask; }
-    private Task OnGasPaChanged(object? v) { _gasPaValue = ToDouble(v); InvokeAsync(StateHasChanged); return Task.CompletedTask; }
-    private Task OnGasTagChanged(object? v) { _gasTagValue = ToDouble(v); InvokeAsync(StateHasChanged); return Task.CompletedTask; }
-    private Task OnGasPogChanged(object? v) { _gasPogValue = ToDouble(v); InvokeAsync(StateHasChanged); return Task.CompletedTask; }
-    private Task OnGasPChanged(object? v) { _gasPValue = ToDouble(v); InvokeAsync(StateHasChanged); return Task.CompletedTask; }
-    private Task OnGasPagChanged(object? v) { _gasPagValue = ToDouble(v); InvokeAsync(StateHasChanged); return Task.CompletedTask; }
-    private Task OnGasPgbChanged(object? v) { _gasPgbValue = ToDouble(v); InvokeAsync(StateHasChanged); return Task.CompletedTask; }
+    private async Task OnVpp31Changed(object? v) { if (_disposed) return; _vpp3_1Value = ToDouble(v); await InvokeAsync(StateHasChanged); }
+    private async Task OnGasPaChanged(object? v) { if (_disposed) return; _gasPaValue = ToDouble(v); await InvokeAsync(StateHasChanged); }
+    private async Task OnGasTagChanged(object? v) { if (_disposed) return; _gasTagValue = ToDouble(v); await InvokeAsync(StateHasChanged); }
+    private async Task OnGasPogChanged(object? v) { if (_disposed) return; _gasPogValue = ToDouble(v); await InvokeAsync(StateHasChanged); }
+    private async Task OnGasPChanged(object? v) { if (_disposed) return; _gasPValue = ToDouble(v); await InvokeAsync(StateHasChanged); }
+    private async Task OnGasPagChanged(object? v) { if (_disposed) return; _gasPagValue = ToDouble(v); await InvokeAsync(StateHasChanged); }
+    private async Task OnGasPgbChanged(object? v) { if (_disposed) return; _gasPgbValue = ToDouble(v); await InvokeAsync(StateHasChanged); }
 
     private static double ToDouble(object? value) => value switch
     {
@@ -2999,11 +3010,13 @@
     /// </summary>
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
+
         // Клапаны
-        await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp0_1_GasG20, v => OnValveChanged("VP0_1", v));
-        await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp0_2_GasG25, v => OnValveChanged("VP0_2", v));
-        await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp0_3_LpgG30, v => OnValveChanged("VP0_3", v));
-        await Subscription.UnsubscribeAsync(PneumaticValveTags.Ev0_3_Gas, v => OnValveChanged("EV0_3", v));
+        await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp0_1_GasG20, OnVp01Changed);
+        await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp0_2_GasG25, OnVp02Changed);
+        await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp0_3_LpgG30, OnVp03Changed);
+        await Subscription.UnsubscribeAsync(PneumaticValveTags.Ev0_3_Gas, OnEv03Changed);
 
         // Датчики
         await Subscription.UnsubscribeAsync("ns=3;s=\"DB_ControlValve\".\"VPP3_1\".\"ActuelValue\"", OnVpp31Changed);

@@ -21,6 +21,7 @@ public partial class RtdCalCheck : GridInplaceEditorBase<RtdCalCheck.RtdCalCheck
 
     private readonly Dictionary<string, Func<object?, Task>> _callbacks = new();
     private readonly Dictionary<RtdCalCheckItem, string> _pendingEdits = new();
+    private bool _disposed;
 
     /// <summary>
     /// Обрабатывает клик по ячейке и отслеживает редактируемое поле для конкретного элемента.
@@ -80,6 +81,11 @@ public partial class RtdCalCheck : GridInplaceEditorBase<RtdCalCheck.RtdCalCheck
 
         Task Callback(object? value)
         {
+            if (_disposed)
+            {
+                return Task.CompletedTask;
+            }
+
             setter(value);
             return InvokeAsync(StateHasChanged);
         }
@@ -147,8 +153,9 @@ public partial class RtdCalCheck : GridInplaceEditorBase<RtdCalCheck.RtdCalCheck
         _ => (null, 0)
     };
 
-    public new async ValueTask DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
+        _disposed = true;
         await UnsubscribeAllAsync();
         await base.DisposeAsync();
     }

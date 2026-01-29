@@ -21,6 +21,7 @@ public partial class AiCallCheck : GridInplaceEditorBase<AiCallCheck.AiCallCheck
 
     private readonly Dictionary<string, Func<object?, Task>> _callbacks = new();
     private readonly Dictionary<AiCallCheckItem, string> _pendingEdits = new();
+    private bool _disposed;
 
     /// <summary>
     /// Обрабатывает клик по ячейке и отслеживает редактируемое поле для конкретного элемента.
@@ -82,6 +83,11 @@ public partial class AiCallCheck : GridInplaceEditorBase<AiCallCheck.AiCallCheck
 
         Task Callback(object? value)
         {
+            if (_disposed)
+            {
+                return Task.CompletedTask;
+            }
+
             setter(value);
             return InvokeAsync(StateHasChanged);
         }
@@ -151,8 +157,9 @@ public partial class AiCallCheck : GridInplaceEditorBase<AiCallCheck.AiCallCheck
         _ => (null, 0)
     };
 
-    public new async ValueTask DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
+        _disposed = true;
         await UnsubscribeAllAsync();
         await base.DisposeAsync();
     }

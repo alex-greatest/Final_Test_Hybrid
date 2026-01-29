@@ -50,6 +50,7 @@
     private bool CanInteract => !IsBlocked && (IsOnScanStep || IsWaitingForAuto || !TestSequenseService.Data.Any());
     private bool CanShowAuthButton => !OperatorState.IsAuthenticated && CanInteract;
     private bool CanShowLogoutButton => OperatorState.IsAuthenticated && CanInteract;
+    private bool _disposed;
 
     protected override void OnInitialized()
     {
@@ -62,7 +63,8 @@
 
     private void OnLocalStateChanged()
     {
-        InvokeAsync(StateHasChanged);
+        if (_disposed) return;
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private Task OpenLoginDialog() => (AppSettingsService.UseMes, AppSettingsService.UseOperatorQrAuth) switch
@@ -138,6 +140,7 @@
 
     public void Dispose()
     {
+        _disposed = true;
         OperatorState.OnStateChanged -= OnLocalStateChanged;
         TestSequenseService.OnDataChanged -= OnLocalStateChanged;
         AutoReadySubscription.OnStateChanged -= OnLocalStateChanged;

@@ -28,6 +28,7 @@
 
     private bool _isOn;
     private string? _subscribedTag;
+    private bool _disposed;
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -50,6 +51,11 @@
     /// </summary>
     private async Task OnValueChanged(object? value)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         Logger.LogInformation("LampOutput callback: Tag={Tag}, Value={Value}, Type={Type}",
             _subscribedTag, value, value?.GetType().Name ?? "null");
         _isOn = value is true;
@@ -59,6 +65,8 @@
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
+
         if (string.IsNullOrEmpty(_subscribedTag))
         {
             return;

@@ -6612,6 +6612,7 @@
 @code {
     private int selectedIndex = 0;
     private int innerSelectedIndex = 0;
+    private bool _disposed;
 
     protected override void OnInitialized()
     {
@@ -6621,14 +6622,27 @@
         TestCompletionUiState.OnStateChanged += HandleTestCompletionChanged;
     }
 
-    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
+    private void HandleStateChanged()
+    {
+        if (_disposed) return;
+        _ = InvokeAsync(StateHasChanged);
+    }
 
-    private void HandleConnectionChanged(bool _) => InvokeAsync(StateHasChanged);
+    private void HandleConnectionChanged(bool isConnected)
+    {
+        if (_disposed) return;
+        _ = InvokeAsync(StateHasChanged);
+    }
 
-    private void HandleTestCompletionChanged() => InvokeAsync(StateHasChanged);
+    private void HandleTestCompletionChanged()
+    {
+        if (_disposed) return;
+        _ = InvokeAsync(StateHasChanged);
+    }
 
     public void Dispose()
     {
+        _disposed = true;
         SubscriptionState.OnStateChanged -= HandleStateChanged;
         ConnectionState.ConnectionStateChanged -= HandleConnectionChanged;
         TestCompletionUiState.OnStateChanged -= HandleTestCompletionChanged;

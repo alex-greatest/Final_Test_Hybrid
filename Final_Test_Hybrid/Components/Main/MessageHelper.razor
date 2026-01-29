@@ -10,15 +10,21 @@
 
 @code {
     private Action? _onChangeHandler;
+    private bool _disposed;
 
     protected override void OnInitialized()
     {
-        _onChangeHandler = () => InvokeAsync(StateHasChanged);
+        _onChangeHandler = () =>
+        {
+            if (_disposed) return;
+            _ = InvokeAsync(StateHasChanged);
+        };
         MessageService.OnChange += _onChangeHandler;
     }
 
     public void Dispose()
     {
+        _disposed = true;
         if (_onChangeHandler != null)
         {
             MessageService.OnChange -= _onChangeHandler;

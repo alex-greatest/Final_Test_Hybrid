@@ -36,6 +36,7 @@
     private string _tDhwBoiler = "N/A";
     private PeriodicTimer? _modbusTimer;
     private CancellationTokenSource? _cts;
+    private bool _disposed;
 
     protected override async Task OnInitializedAsync()
     {
@@ -59,8 +60,10 @@
         {
             while (await _modbusTimer!.WaitForNextTickAsync(ct).ConfigureAwait(false))
             {
+                if (_disposed) return;
                 var result = await BoilerTemperatureService.ReadDHWTemperatureAsync(ct).ConfigureAwait(false);
-                _tDhwBoiler = result.Success ? $"{result.Value}  °C" : "N/A";
+                if (_disposed) return;
+                _tDhwBoiler = result.Success ? $"{result.Value:F3}  °C" : "N/A";
                 await InvokeAsync(StateHasChanged);
             }
         }
@@ -72,33 +75,42 @@
 
     private async Task OnQDhwChanged(object? value)
     {
+        if (_disposed) return;
         _qDhw = FormatValue(value, "  л/мин");
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnPDhwChanged(object? value)
     {
+        if (_disposed) return;
         _pDhw = FormatValue(value, "  бар");
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnTDhwInChanged(object? value)
     {
+        if (_disposed) return;
         _tDhwIn = FormatValue(value, "  °C");
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnTDhwOutChanged(object? value)
     {
+        if (_disposed) return;
         _tDhwOut = FormatValue(value, "  °C");
         await InvokeAsync(StateHasChanged);
     }
 
-    private static string FormatValue(object? value, string unit) =>
-        value != null ? $"{value}{unit}" : "N/A";
+    private static string FormatValue(object? value, string unit)
+    {
+        if (value == null) return "N/A";
+        if (value is IFormattable formattable) return $"{formattable.ToString("F3", null)}{unit}";
+        return $"{value}{unit}";
+    }
 
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         _cts?.Cancel();
         _modbusTimer?.Dispose();
         _cts?.Dispose();

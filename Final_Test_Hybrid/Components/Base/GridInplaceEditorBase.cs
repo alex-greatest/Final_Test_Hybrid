@@ -126,7 +126,7 @@ public abstract class GridInplaceEditorBase<TItem> : ComponentBase, IAsyncDispos
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public virtual async ValueTask DisposeAsync()
     {
         await UnregisterOutsideClickHandler();
         _dotNetHelper?.Dispose();
