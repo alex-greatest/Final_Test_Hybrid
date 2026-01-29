@@ -1954,7 +1954,7 @@
         </text>
         <text transform="translate(949.063 706.024) scale(.657 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
-            <tspan x="0" y="0">0.00</tspan>
+            <tspan x="0" y="0">@_gasPogValue.ToString("F2")</tspan>
         </text>
         <text transform="translate(932.85 740.868) scale(.633 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
@@ -2263,7 +2263,7 @@
         </text>
         <text transform="translate(943.551 55.85) scale(.657 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
-            <tspan x="0" y="0">0.00</tspan>
+            <tspan x="0" y="0">@_gasPgbValue.ToString("F2")</tspan>
         </text>
         <text transform="translate(880.338 88.694) scale(.633 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
@@ -2298,7 +2298,7 @@
         </text>
         <text transform="translate(944.679 203.756) scale(.576 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
-            <tspan x="0" y="0">0.00</tspan>
+            <tspan x="0" y="0">@_gasPagValue.ToString("F2")</tspan>
         </text>
         <text transform="translate(855.452 236.6) scale(.633 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
@@ -2372,7 +2372,7 @@
         </text>
         <text transform="translate(1352.891 190.756) scale(.657 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
-            <tspan x="0" y="0">0.00</tspan>
+            <tspan x="0" y="0">@_gasTagValue.ToString("F2")</tspan>
         </text>
         <text transform="translate(1284.678 223.6) scale(.633 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
@@ -2402,7 +2402,7 @@
         </text>
         <text transform="translate(1682.891 316.895) scale(.657 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
-            <tspan x="0" y="0">0.00</tspan>
+            <tspan x="0" y="0">@_gasPaValue.ToString("F2")</tspan>
         </text>
         <text transform="translate(1594.678 349.739) scale(.633 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
@@ -2616,7 +2616,7 @@
         </text>
         <text transform="translate(796.976 588.52) scale(.657 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
-            <tspan x="0" y="0">0.00</tspan>
+            <tspan x="0" y="0">@_gasPValue.ToString("F2")</tspan>
         </text>
         <text transform="translate(748.763 621.363) scale(.633 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
@@ -2653,7 +2653,7 @@
               style="fill: @GetPipeGradientForAny(new[]{"VP0_1","VP0_2","VP0_3"}, "_Безымянный_градиент_45-33");"/>
         <rect x="1450.73" y="803.733" width="15.502" height="85.489"
               transform="translate(2916.961 1692.956) rotate(180)"
-              style="fill: @GetPipeGradient("EV0_3", "_Безымянный_градиент_45-34");"/>
+              style="fill: url(#_Безымянный_градиент_45-34);"/>
         <g id="Group_PortAndBody-7" data-name="Group PortAndBody">
             <path d="M1474.047,746.901v56.52h-29.58v-56.52h29.58"
                   style="fill: url(#_Безымянный_градиент_17-7);"/>
@@ -2692,7 +2692,7 @@
               style="fill: @GetPipeGradientForAny(new[]{"VP0_1","VP0_2","VP0_3"}, "_Безымянный_градиент_45-36");"/>
         <rect x="1771.73" y="801.733" width="15.502" height="85.489"
               transform="translate(3558.961 1688.956) rotate(180)"
-              style="fill: @GetPipeGradient("EV0_3", "_Безымянный_градиент_45-37");"/>
+              style="fill: url(#_Безымянный_градиент_45-37);"/>
         <g id="Group_PortAndBody-8" data-name="Group PortAndBody">
             <path d="M1795.047,744.901v56.52h-29.58v-56.52h29.58"
                   style="fill: url(#_Безымянный_градиент_17-8);"/>
@@ -2856,7 +2856,7 @@
         </text>
         <text transform="translate(1236.958 856.74) scale(.657 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
-            <tspan x="0" y="0">0.00</tspan>
+            <tspan x="0" y="0">@_vpp3_1Value.ToString("F2")</tspan>
         </text>
         <text transform="translate(1168.745 889.584) scale(.633 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
@@ -2888,15 +2888,34 @@
         ["EV0_3"] = false
     };
 
+    // Значения датчиков
+    private double _vpp3_1Value;
+    private double _gasPaValue;
+    private double _gasTagValue;
+    private double _gasPogValue;
+    private double _gasPValue;
+    private double _gasPagValue;
+    private double _gasPgbValue;
+
     /// <summary>
     /// Подписывается на OPC-UA теги клапанов при инициализации.
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
+        // Клапаны
         await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_1_GasG20, v => OnValveChanged("VP0_1", v));
         await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_2_GasG25, v => OnValveChanged("VP0_2", v));
         await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_3_LpgG30, v => OnValveChanged("VP0_3", v));
         await Subscription.SubscribeAsync(PneumaticValveTags.Ev0_3_Gas, v => OnValveChanged("EV0_3", v));
+
+        // Датчики
+        await Subscription.SubscribeAsync("ns=3;s=\"DB_ControlValve\".\"VPP3_1\".\"ActuelValue\"", OnVpp31Changed);
+        await Subscription.SubscribeAsync(SensorScreenTags.GasPa, OnGasPaChanged);
+        await Subscription.SubscribeAsync(MainScreenTags.GasTag, OnGasTagChanged);
+        await Subscription.SubscribeAsync(SensorScreenTags.GasPog, OnGasPogChanged);
+        await Subscription.SubscribeAsync(SensorScreenTags.GasP, OnGasPChanged);
+        await Subscription.SubscribeAsync(SensorScreenTags.GasPag, OnGasPagChanged);
+        await Subscription.SubscribeAsync(MainScreenTags.GasPgb, OnGasPgbChanged);
     }
 
     /// <summary>
@@ -2908,6 +2927,22 @@
         InvokeAsync(StateHasChanged);
         return Task.CompletedTask;
     }
+
+    private Task OnVpp31Changed(object? v) { _vpp3_1Value = ToDouble(v); InvokeAsync(StateHasChanged); return Task.CompletedTask; }
+    private Task OnGasPaChanged(object? v) { _gasPaValue = ToDouble(v); InvokeAsync(StateHasChanged); return Task.CompletedTask; }
+    private Task OnGasTagChanged(object? v) { _gasTagValue = ToDouble(v); InvokeAsync(StateHasChanged); return Task.CompletedTask; }
+    private Task OnGasPogChanged(object? v) { _gasPogValue = ToDouble(v); InvokeAsync(StateHasChanged); return Task.CompletedTask; }
+    private Task OnGasPChanged(object? v) { _gasPValue = ToDouble(v); InvokeAsync(StateHasChanged); return Task.CompletedTask; }
+    private Task OnGasPagChanged(object? v) { _gasPagValue = ToDouble(v); InvokeAsync(StateHasChanged); return Task.CompletedTask; }
+    private Task OnGasPgbChanged(object? v) { _gasPgbValue = ToDouble(v); InvokeAsync(StateHasChanged); return Task.CompletedTask; }
+
+    private static double ToDouble(object? value) => value switch
+    {
+        double d => d,
+        float f => f,
+        int i => i,
+        _ => 0
+    };
 
     /// <summary>
     /// Получает цвет заливки для клапана.
@@ -2964,9 +2999,19 @@
     /// </summary>
     public async ValueTask DisposeAsync()
     {
+        // Клапаны
         await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp0_1_GasG20, v => OnValveChanged("VP0_1", v));
         await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp0_2_GasG25, v => OnValveChanged("VP0_2", v));
         await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp0_3_LpgG30, v => OnValveChanged("VP0_3", v));
         await Subscription.UnsubscribeAsync(PneumaticValveTags.Ev0_3_Gas, v => OnValveChanged("EV0_3", v));
+
+        // Датчики
+        await Subscription.UnsubscribeAsync("ns=3;s=\"DB_ControlValve\".\"VPP3_1\".\"ActuelValue\"", OnVpp31Changed);
+        await Subscription.UnsubscribeAsync(SensorScreenTags.GasPa, OnGasPaChanged);
+        await Subscription.UnsubscribeAsync(MainScreenTags.GasTag, OnGasTagChanged);
+        await Subscription.UnsubscribeAsync(SensorScreenTags.GasPog, OnGasPogChanged);
+        await Subscription.UnsubscribeAsync(SensorScreenTags.GasP, OnGasPChanged);
+        await Subscription.UnsubscribeAsync(SensorScreenTags.GasPag, OnGasPagChanged);
+        await Subscription.UnsubscribeAsync(MainScreenTags.GasPgb, OnGasPgbChanged);
     }
 }

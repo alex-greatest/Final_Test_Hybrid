@@ -1,4 +1,24 @@
-<path d="M993,816.435l-30.417,12.813v-8.499h-47.708s0-8.692,0-8.692h47.708v-8.563s30.417,12.942,30.417,12.942Z" style="fill: url(#_Безымянный_градиент_24-17); stroke: #b9aa63;" b-8slbfmi7j7=""></path>
-<path d="M1365,670.26l-30.757,12.813v-8.499h-48.242s0-8.692,0-8.692h48.242v-8.563s30.757,12.942,30.757,12.942Z" style="fill: url(#_Градиент_EV03_14-open); stroke: #b9aa63;" b-8slbfmi7j7=""></path>
-<path d="M1303,565.094l36.997-12.813v8.499s58.029,0,58.029,0v8.692s-58.029,0-58.029,0v8.563s-36.997-12.942-36.997-12.942Z" style="fill: url(#_Градиент_EV03_15-open); stroke: #b9aa63;" b-8slbfmi7j7=""></path>
-<path d="M1219.913,410l12.813,32.294h-8.499s0,50.653,0,50.653h-8.692s0-50.653,0-50.653h-8.563s12.942-32.294,12.942-32.294Z" style="fill: url(#_Градиент_EV03_16); stroke: #b9aa63;" b-8slbfmi7j7=""></path>
+<text transform="translate(1236.958 856.74) scale(.657 1)" style="font-family: ArialMT, Arial; 
+font-size: 30px;" b-8slbfmi7j7=""><tspan x="0" y="0" b-8slbfmi7j7="">0.00</tspan></text> - привяжи к "DB_ControlValve".VPP3_1.ActuelValue
+
+<text transform="translate(1682.891 316.895) scale(.657 1)" style="font-family: ArialMT, Arial;
+ font-size: 30px;" b-8slbfmi7j7=""><tspan x="0" y="0" b-8slbfmi7j7="">0.00</tspan></text> - "DB_Measure".Sensor.Gas_Pa
+ 
+<text transform="translate(1352.891 190.756) scale(.657 1)" style="font-family: ArialMT, Arial; 
+font-size: 30px;" b-8slbfmi7j7=""><tspan x="0" y="0" b-8slbfmi7j7="">0.00</tspan></text> - "DB_Measure".Temper.GAS_TAG
+
+
+<text transform="translate(949.063 706.024) scale(.657 1)" style="font-family: ArialMT, Arial; 
+font-size: 30px;" b-8slbfmi7j7=""><tspan x="0" y="0" b-8slbfmi7j7="">0.00</tspan></text> - "DB_Measure".Sensor.Gas_POG
+
+
+<text transform="translate(796.976 588.52) scale(.657 1)" style="font-family: ArialMT, Arial; 
+font-size: 30px;" b-8slbfmi7j7=""><tspan x="0" y="0" b-8slbfmi7j7="">0.00</tspan></text> - "DB_Measure".Sensor.Gas_P
+
+
+<text transform="translate(944.679 203.756) scale(.576 1)" style="font-family: ArialMT, Arial; 
+font-size: 30px;" b-8slbfmi7j7=""><tspan x="0" y="0" b-8slbfmi7j7="">0.00</tspan></text> - "DB_Measure".Sensor.Gas_PAG
+
+
+<text transform="translate(943.551 55.85) scale(.657 1)" style="font-family: ArialMT, Arial; 
+font-size: 30px;" b-8slbfmi7j7=""><tspan x="0" y="0" b-8slbfmi7j7="">0.00</tspan></text> - "DB_Measure".Sensor.Gas_PGB
