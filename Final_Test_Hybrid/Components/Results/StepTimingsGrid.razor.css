@@ -42,6 +42,11 @@
     border: 1px solid #ccc !important;
 }
 
+/* Убираем padding у ячеек данных - управляем через cell-container */
+.step-timings-wrapper ::deep .rz-data-grid td {
+    padding: 0 !important;
+}
+
 /* Заголовки */
 .step-timings-wrapper ::deep .rz-data-grid th {
     padding: 10px 8px !important;
@@ -82,9 +87,8 @@
 .step-timings-wrapper ::deep .cell-container {
     display: flex;
     align-items: center;
-    height: 100%;
-    padding: 0 0.5rem;
-    margin: -0.5rem;
+    min-height: 40px;
+    padding: 0.5rem;
 }
 
 .step-timings-wrapper ::deep .cell-container.running {

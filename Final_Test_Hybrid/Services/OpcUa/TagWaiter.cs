@@ -55,7 +55,6 @@ public class TagWaiter(
             {
                 return Task.CompletedTask;
             }
-            logger.LogInformation("Тег {NodeId} = {Value}", nodeId, typed);
             testLogger.LogInformation("  Получен сигнал: {Value}", typed);
             tcs.TrySetResult(typed);
             return Task.CompletedTask;

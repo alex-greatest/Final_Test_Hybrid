@@ -244,14 +244,13 @@ public class OpcUaSubscription(
         }
         var nodeId = item.StartNodeId.ToString();
         var value = notification.Value?.Value;
-        StoreAndLogValue(nodeId, value);
+        StoreValue(nodeId, value);
         InvokeCallbacks(nodeId, value);
     }
 
-    private void StoreAndLogValue(string nodeId, object? value)
+    private void StoreValue(string nodeId, object? value)
     {
         _values[nodeId] = value;
-        logger.LogInformation("Тег {NodeId} = {Value}", nodeId, value);
     }
 
     private void InvokeCallbacks(string nodeId, object? value)
