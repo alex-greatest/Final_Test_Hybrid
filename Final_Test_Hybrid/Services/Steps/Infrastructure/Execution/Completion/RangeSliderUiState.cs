@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Services.Main.PlcReset;
+using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 
@@ -20,22 +21,24 @@ public class RangeSliderUiState
     private readonly PlcResetCoordinator _plcResetCoordinator;
     private readonly IErrorCoordinator _errorCoordinator;
     private readonly OpcUaSubscription _opcUaSubscription;
+    private readonly OpcUaTagService _opcUaTagService;
     private readonly Dictionary<int, RangeSliderState> _states = new();
 
     private int _sessionCounter;
     private long _lastNotifyTicks;
     private int _pendingNotify;
-    private bool _debugMode;
     private string? _title;
 
     public RangeSliderUiState(
         PlcResetCoordinator plcResetCoordinator,
         IErrorCoordinator errorCoordinator,
-        OpcUaSubscription opcUaSubscription)
+        OpcUaSubscription opcUaSubscription,
+        OpcUaTagService opcUaTagService)
     {
         _plcResetCoordinator = plcResetCoordinator;
         _errorCoordinator = errorCoordinator;
         _opcUaSubscription = opcUaSubscription;
+        _opcUaTagService = opcUaTagService;
 
         _plcResetCoordinator.OnForceStop += HideAll;
         _errorCoordinator.OnReset += HideAll;
@@ -43,17 +46,11 @@ public class RangeSliderUiState
 
     /// <summary>
     /// Есть ли активные слайдеры для отображения.
-    /// В Debug Mode всегда возвращает true.
     /// </summary>
     public bool HasActiveSliders
     {
         get
         {
-            if (_debugMode)
-            {
-                return true;
-            }
-
             lock (_lock)
             {
                 return _states.Count > 0;
@@ -64,7 +61,7 @@ public class RangeSliderUiState
     /// <summary>
     /// Заголовок для отображения над слайдерами.
     /// </summary>
-    public string? Title => _debugMode ? "Настройки параметров газа в максимальном режиме" : _title;
+    public string? Title => _title;
 
     /// <summary>
     /// Устанавливает заголовок для отображения.
@@ -76,45 +73,15 @@ public class RangeSliderUiState
     }
 
     /// <summary>
-    /// Включить режим отладки с тестовыми данными.
-    /// </summary>
-    public void EnableDebugMode()
-    {
-        _debugMode = true;
-        ThrottledNotify();
-    }
-
-    /// <summary>
-    /// Выключить режим отладки.
-    /// </summary>
-    public void DisableDebugMode()
-    {
-        _debugMode = false;
-        ThrottledNotify();
-    }
-
-    /// <summary>
     /// Событие изменения состояния (для обновления UI).
     /// </summary>
     public event Action? OnStateChanged;
 
     /// <summary>
     /// Получает состояния всех активных слайдеров.
-    /// В Debug Mode возвращает тестовые данные.
     /// </summary>
     public IReadOnlyDictionary<int, RangeSliderDisplayData> GetActiveSliders()
     {
-        if (_debugMode)
-        {
-            // Давление: Step=0.1, TickCount = (9.9-7.9)/0.1 = 20
-            // Расход: Step=1, TickCount = (20-4)/1 = 16
-            return new Dictionary<int, RangeSliderDisplayData>
-            {
-                [0] = new("Давление газа", "мбар", 7.9, 9.9, 8.9, 8.4, 9.4, 20),
-                [1] = new("Расход воды", "л/мин", 4, 20, 12, 8, 16, 16)
-            };
-        }
-
         lock (_lock)
         {
             return _states.ToDictionary(
@@ -154,6 +121,9 @@ public class RangeSliderUiState
             ct.ThrowIfCancellationRequested();
         }
 
+        // Читаем начальное значение с датчика
+        var initialValue = await ReadInitialValueAsync(config.ValueTag, limits.Min, ct).ConfigureAwait(false);
+
         lock (_lock)
         {
             var step = config.Step > 0 ? config.Step : 1;
@@ -167,7 +137,7 @@ public class RangeSliderUiState
                 Max = limits.Max,
                 GreenZoneStart = config.GreenZoneStart,
                 GreenZoneEnd = config.GreenZoneEnd,
-                Value = limits.Min,
+                Value = initialValue,
                 TickCount = tickCount > 0 ? tickCount : 10
             };
         }
@@ -197,10 +167,7 @@ public class RangeSliderUiState
             _states.Remove(columnIndex);
         }
 
-        if (callback != null && valueTag != null)
-        {
-            await _opcUaSubscription.UnsubscribeAsync(valueTag, callback, removeTag: false, ct).ConfigureAwait(false);
-        }
+        await _opcUaSubscription.UnsubscribeAsync(valueTag, callback, removeTag: false, ct).ConfigureAwait(false);
 
         ThrottledNotify();
     }
@@ -231,7 +198,7 @@ public class RangeSliderUiState
 
     private static void ValidateColumnIndex(int columnIndex)
     {
-        if (columnIndex < 0 || columnIndex >= ColumnCount)
+        if (columnIndex is < 0 or >= ColumnCount)
         {
             throw new ArgumentOutOfRangeException(nameof(columnIndex), $"Column index must be between 0 and {ColumnCount - 1}");
         }
@@ -256,16 +223,20 @@ public class RangeSliderUiState
         return (min, max);
     }
 
+    /// <summary>
+    /// Читает начальное значение с датчика.
+    /// </summary>
+    private async Task<double> ReadInitialValueAsync(string valueTag, double defaultValue, CancellationToken ct)
+    {
+        var result = await _opcUaTagService.ReadAsync<double>(valueTag, ct).ConfigureAwait(false);
+        return result.Success ? result.Value : defaultValue;
+    }
+
     private Task HandleValueChanged(int columnIndex, int sessionId, object? value)
     {
         lock (_lock)
         {
-            if (!_states.TryGetValue(columnIndex, out var state))
-            {
-                return Task.CompletedTask;
-            }
-
-            if (state.SessionId != sessionId)
+            if (!_states.TryGetValue(columnIndex, out var state) || state.SessionId != sessionId)
             {
                 return Task.CompletedTask;
             }

@@ -1,5 +1,10 @@
-﻿DB_Coms	DB_CH_Start_Min_Heatout	Al_NoWaterFlow	Неисправность. Нет протока воды
-DB_Coms	DB_CH_Start_Min_Heatout	Al_IonCurrentOutTol	Неисправность. Ток ионизации вне допуска
+﻿DB_Gas	Gas_Set_Gas_and_P_Burner_Max_Levels	Al_GasFlowLow	Неисправность. Низкий расход газа
+DB_Gas	Gas_Set_Gas_and_P_Burner_Max_Levels	Al_GasFlowHight	Неисправность. Высокий расход газа
+DB_Gas	Gas_Set_Gas_and_P_Burner_Max_Levels	Al_NotStendReady	Неисправность. Стенд не готов
+DB_Gas	Gas_Set_Gas_and_P_Burner_Max_Levels	Al_NotConnectSensorPGB	Неисправность. Не подключена трубка газового клапана
 
-П-024-00 Coms/CH_Start_Min_Heatout DB_CH_Start_Min_Heatout. Неисправность. Нет протока воды
-П-024-01 Coms/CH_Start_Min_Heatout DB_CH_Start_Min_Heatout. Неисправность. Ток ионизации вне допуска
+
+П-037-03 Gas/Set_Gas_and_P_Burner_Max_Levels Gas_Set_Gas_and_P_Burner_Max_Levels. Неисправность. Не подключена трубка газового клапана
+П-037-02 Gas/Set_Gas_and_P_Burner_Max_Levels Gas_Set_Gas_and_P_Burner_Max_Levels. Неисправность. Стенд не готов
+П-037-01 Gas/Set_Gas_and_P_Burner_Max_Levels Gas_Set_Gas_and_P_Burner_Max_Levels. Неисправность. Высокий расход газа
+П-037-00 Gas/Set_Gas_and_P_Burner_Max_Levels Gas_Set_Gas_and_P_Burner_Max_Levels. Неисправность. Низкий расход газа

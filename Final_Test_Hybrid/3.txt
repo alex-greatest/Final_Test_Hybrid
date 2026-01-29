@@ -1,24 +1,22 @@
-﻿Создать шаг Coms/CH_Start_Min_Heatout с описанием: Запуск минимального нагрева контура Отопления.
- шаг c блоком "DB_VI".Coms.CH_Start_Min_Heatout. 
-Так же как обычно подписываемся на End и Error  и так же ждём сигнала Ready_1., которые определяют ок шаг или нет. Эти два сигнала в приоритете!. 
+﻿Создать шаг Gas/Set_Gas_and_P_Burner_Max_Levels с описанием: Регулировка давления и расхода газа на максимальной мощности. блок: "DB_VI".Gas.Set_Gas_and_P_Burner_Max_Levels. Ждём сигналы End и Error. End - ok, Error - нет. Когда начинаем шаг, надо отобразить RangeSlider. заголовок: "Настройка параметров газа в максимальном режиме" .В качестве зелёной зоны: низ зелёной золоны для давления (ns=3;s="DB_Recipe"."Gas"."BurnerPressMax"."SetValue" - ns=3;s="DB_Recipe"."Gas"."BurnerPressMax"."DownTol") - берём из рецептов.
+А вверх ns=3;s="DB_Recipe"."Gas"."BurnerPressMax"."SetValue" + ns=3;s="DB_Recipe"."Gas"."BurnerPressMax"."UpTol". красная зона - предлагаю добавить по 0.5 вниз и вверх. шаг должен быть по 0.1. в качестве привязки к стрелочки используем "DB_Measure".Sensor.Gas_PGB
 
-Стенд переключает котёл через функцию 1.2.F в режим работы на минимуме (3) 
+дальше для утечек тоже нижняя ns=3;s="DB_Recipe"."Gas"."FlowMax"."SetValue" - ns=3;s="DB_Recipe"."Gas"."FlowMax"."DownTol" и ns=3;s="DB_Recipe"."Gas"."FlowMax"."SetValue" + ns=3;s="DB_Recipe"."Gas"."FlowMax"."UpTol". предлагаю для крансной зоны добавить по 4 вверх и вниз шаг 1.  
 
-1036	1.2.F	Установленное значение в функции «Кратковременная смена режима работы системы».	-	0 – нормальный режим;
-2 – настраиваемый режим;
-3 – мин. режим;
-4 – макс. режим.
+Когда получаем End или Error скрываем слайдер, какие-то не придвиденные ошибки, тоже скрываем
 
 
-Как получаем Ready_1
 
-Проверка работы горелки, получение значения функции 2.0.b
+дальше когда получили end или Error (определяет ок или nok) надо записать значения в результаты TestResultService  
 
-
-1014	2.0.b	Текущее показание датчика контроля пламени (ток с электрода ионизации).	1/1000 мкА	0...15000
-в утилите отображаем как число с 2 знаками дробной части.	6000	uint16_t
+"DB_Parameter".Blr.Gas_Pres_Max - считать из плк и сохранить в результаты с именем Blr_Gas_Pres_Max c пределами
+(ns=3;s="DB_Recipe"."Gas"."SuppPress"."SetValue" - ns=3;s="DB_Recipe"."Gas"."SuppPress"."DownTol) - из рецептов - минимум. максиму: ns=3;s="DB_Recipe"."Gas"."SuppPress"."SetValue" + ns=3;s="DB_Recipe"."Gas"."SuppPress"."UpTol"
 
 
-Если 1 мкА < ток ионизации ≤15 мкА - то всё ок, пишем в плк  Сontinua_1 и продолжаем ждать error или end.
-Если ток ионизации < 1 мкА на протяжении 10 сек - не ок, нет розжгиа котла, пишем в плк Fault и продолжаем ждать error или end.
-Если значение тока >15 мкА - не ок, ток ионизации превышен, пишем в плк Fault и продолжаем ждать error или end.
+"DB_Parameter".Gas.Flow_Max - считать из плк и сохранить в результаты, с названием Gas_Flow_Max с пределами (ns=3;s="DB_Recipe"."Gas"."FlowMax"."SetValue" - ns=3;s="DB_Recipe"."Gas"."FlowMax"."DownTol") и (ns=3;s="DB_Recipe"."Gas"."FlowMax"."SetValue" + ns=3;s="DB_Recipe"."Gas"."FlowMax"."UpTol")
+
+
+"DB_Parameter".Bnr.Gas_Pres_Max - считать из плк и сохранить в результаты с именем Bnr_Gas_Pres_Max c пределами (ns=3;s="DB_Recipe"."Gas"."BurnerPressMax"."SetValue" - ns=3;s="DB_Recipe"."Gas"."BurnerPressMax"."DownTol")
+
+
+ns=3;s="DB_Recipe"."Gas"."BurnerPressMax"."SetValue" + ns=3;s="DB_Recipe"."Gas"."BurnerPressMax"."UpTol")

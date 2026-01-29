@@ -9217,10 +9217,6 @@
         ConnectionState.ConnectionStateChanged += HandleConnectionChanged;
         TestCompletionUiState.OnStateChanged += HandleTestCompletionChanged;
         RangeSliderUiState.OnStateChanged += HandleRangeSliderChanged;
-#if DEBUG
-        // Временно включить debug mode для проверки UI слайдеров
-        RangeSliderUiState.EnableDebugMode();
-#endif
     }
 
     private void HandleStateChanged() => InvokeAsync(StateHasChanged);

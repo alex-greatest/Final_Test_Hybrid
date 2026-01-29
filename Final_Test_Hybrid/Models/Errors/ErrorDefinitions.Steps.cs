@@ -434,6 +434,35 @@ public static partial class ErrorDefinitions
         RelatedStepId: "gas-set-required-pressure",
         RelatedStepName: "Gas/Set_Required_Pressure");
 
+    // Gas/Set_Gas_and_P_Burner_Max_Levels (П-037-xx)
+    public static readonly ErrorDefinition AlGasFlowLowSetGasBurnerMax = new(
+        "П-037-00", "Неисправность. Низкий расход газа",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Set_Gas_and_P_Burner_Max_Levels\".\"Al_GasFlowLow\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-set-gas-and-p-burner-max-levels",
+        RelatedStepName: "Gas/Set_Gas_and_P_Burner_Max_Levels");
+
+    public static readonly ErrorDefinition AlGasFlowHighSetGasBurnerMax = new(
+        "П-037-01", "Неисправность. Высокий расход газа",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Set_Gas_and_P_Burner_Max_Levels\".\"Al_GasFlowHight\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-set-gas-and-p-burner-max-levels",
+        RelatedStepName: "Gas/Set_Gas_and_P_Burner_Max_Levels");
+
+    public static readonly ErrorDefinition AlNotStendReadySetGasBurnerMax = new(
+        "П-037-02", "Неисправность. Стенд не готов",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Set_Gas_and_P_Burner_Max_Levels\".\"Al_NotStendReady\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-set-gas-and-p-burner-max-levels",
+        RelatedStepName: "Gas/Set_Gas_and_P_Burner_Max_Levels");
+
+    public static readonly ErrorDefinition AlNotConnectSensorPgbSetGasBurnerMax = new(
+        "П-037-03", "Неисправность. Не подключена трубка газового клапана",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Set_Gas_and_P_Burner_Max_Levels\".\"Al_NotConnectSensorPGB\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-set-gas-and-p-burner-max-levels",
+        RelatedStepName: "Gas/Set_Gas_and_P_Burner_Max_Levels");
+
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [
         BoilerNotLocked,
@@ -499,6 +528,10 @@ public static partial class ErrorDefinitions
         AlGasFlowLowSetRequiredPressure,
         AlGasFlowHightSetRequiredPressure,
         AlNotStendReadySetRequiredPressure,
-        AlGasPressureNokSetRequiredPressure
+        AlGasPressureNokSetRequiredPressure,
+        AlGasFlowLowSetGasBurnerMax,
+        AlGasFlowHighSetGasBurnerMax,
+        AlNotStendReadySetGasBurnerMax,
+        AlNotConnectSensorPgbSetGasBurnerMax
     ];
 }

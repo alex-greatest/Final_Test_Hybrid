@@ -1,5 +1,6 @@
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion
 @inject RangeSliderUiState RangeSliderUiState
+@implements IDisposable
 
 <div class="range-slider-display-container">
     @if (!string.IsNullOrEmpty(RangeSliderUiState.Title))
@@ -20,3 +21,29 @@
             TickCount="@data.TickCount" />
     }
 </div>
+
+@code {
+    /// <summary>
+    /// Подписывается на событие изменения состояния слайдеров.
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        RangeSliderUiState.OnStateChanged += HandleStateChanged;
+    }
+
+    /// <summary>
+    /// Обрабатывает изменение состояния слайдеров.
+    /// </summary>
+    private void HandleStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Отписывается от события при уничтожении компонента.
+    /// </summary>
+    public void Dispose()
+    {
+        RangeSliderUiState.OnStateChanged -= HandleStateChanged;
+    }
+}

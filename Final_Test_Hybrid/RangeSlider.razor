@@ -84,12 +84,24 @@
     {
         get
         {
-            var ticks = new List<double>();
-            for (var i = 0; i <= TickCount; i++)
+            var ticks = new HashSet<double> { Min, GreenZoneStart, GreenZoneEnd, Max };
+
+            // Добавляем промежуточные насечки между ключевыми точками
+            var keyPoints = new[] { Min, GreenZoneStart, GreenZoneEnd, Max };
+            Array.Sort(keyPoints);
+
+            foreach (var (start, end) in keyPoints.Zip(keyPoints.Skip(1)))
             {
-                ticks.Add(Min + (Range / TickCount) * i);
+                var segmentRange = end - start;
+                var segmentTicks = Math.Max(1, (int)Math.Round(segmentRange / Range * TickCount));
+
+                for (var i = 1; i < segmentTicks; i++)
+                {
+                    ticks.Add(start + (segmentRange / segmentTicks) * i);
+                }
             }
-            return ticks;
+
+            return ticks.OrderBy(t => t).ToList();
         }
     }
 }
