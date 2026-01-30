@@ -1,5 +1,7 @@
-﻿DB_DHW	DB_DHW_Purge_Circuit_Reverse_Direction	Al_NoStendReady	Неисправность. Система не готова к продувке
+﻿DB_DHW	DB_DHW_Compare_Flow_NTC_Temp_Cold	Al_NotStendReady	Неисправность. Стенд не готов
+DB_DHW	DB_DHW_Compare_Flow_NTC_Temp_Cold	Al_DeltaTempNOK	Неисправность. Разность температур вне допуска
 
-П-074-00
-DHW/Purge_Circuit_Reverse_Direction
-DB_DHW_Purge_Circuit_Reverse_Direction. Неисправность. Система не готова к продувке
+
+
+П-051-00 DHW/Compare_Flow_NTC_Temperature_Cold DB_DHW_Compare_Flow_NTC_Temp_Cold. Неисправность. Стенд не готов
+П-051-01 DHW/Compare_Flow_NTC_Temperature_Cold DB_DHW_Compare_Flow_NTC_Temp_Cold. Неисправность. Разность температур вне допуска

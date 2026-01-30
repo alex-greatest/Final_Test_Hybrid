@@ -80,6 +80,43 @@ public static partial class ErrorDefinitions
         RelatedStepId: "ch-check-flow-temperature-rise",
         RelatedStepName: "CH/Check_Flow_Temperature_Rise");
 
+    // DHW/Get_Flow_NTC_Cold (П-050-xx)
+    public static readonly ErrorDefinition AlNotStendReadyGetFlowNtcCold = new(
+        "П-050-00", "Неисправность. Стенд не готов",
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Get_Flow_NTC_Cold\".\"Al_NotStendReady\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-get-flow-ntc-cold",
+        RelatedStepName: "DHW/Get_Flow_NTC_Cold");
+
+    // DHW/Check_Flow_Rate (П-053-xx)
+    public static readonly ErrorDefinition AlNotStendReadyCheckFlowRate = new(
+        "П-053-00", "Неисправность. Стенд не готов",
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Check_Flow_Rate\".\"Al_NotStendReady\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-check-flow-rate",
+        RelatedStepName: "DHW/Check_Flow_Rate");
+
+    public static readonly ErrorDefinition AlPressureLowCheckFlowRate = new(
+        "П-053-01", "Неисправность. Давление не достигнуто",
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Check_Flow_Rate\".\"Al_PressureLow\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-check-flow-rate",
+        RelatedStepName: "DHW/Check_Flow_Rate");
+
+    public static readonly ErrorDefinition AlWaterFlowMinCheckFlowRate = new(
+        "П-053-02", "Неисправность. Слишком малый расход воды",
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Check_Flow_Rate\".\"Al_WaterFlowMin\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-check-flow-rate",
+        RelatedStepName: "DHW/Check_Flow_Rate");
+
+    public static readonly ErrorDefinition AlWaterFlowMaxCheckFlowRate = new(
+        "П-053-03", "Неисправность. Слишком большой расход воды",
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Check_Flow_Rate\".\"Al_WaterFlowMax\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-check-flow-rate",
+        RelatedStepName: "DHW/Check_Flow_Rate");
+
     internal static IEnumerable<ErrorDefinition> Steps1Errors =>
     [
         AlNotStendReadyTempRise,
@@ -92,6 +129,11 @@ public static partial class ErrorDefinitions
         AlWaterPressureLowTempRise,
         AlWaterPressureHighTempRise,
         AlFillTimeTempRise,
-        AlDeltaRiseNokTempRise
+        AlDeltaRiseNokTempRise,
+        AlNotStendReadyGetFlowNtcCold,
+        AlNotStendReadyCheckFlowRate,
+        AlPressureLowCheckFlowRate,
+        AlWaterFlowMinCheckFlowRate,
+        AlWaterFlowMaxCheckFlowRate
     ];
 }

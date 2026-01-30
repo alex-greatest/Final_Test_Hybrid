@@ -97,7 +97,8 @@
       "Bash(PGPASSWORD=ManLiv123 psql:*)",
       "Bash(curl:*)",
       "Bash(Select-String -Pattern \"\\(error|Сборка успешно|Build succeeded\\)\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(xxd:*)"
     ]
   }
 }

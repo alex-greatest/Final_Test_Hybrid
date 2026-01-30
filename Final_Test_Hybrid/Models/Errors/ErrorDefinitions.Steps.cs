@@ -656,6 +656,22 @@ public static partial class ErrorDefinitions
         RelatedStepId: "dhw-purge-circuit-normal-direction",
         RelatedStepName: "DHW/Purge_Circuit_Normal_Direction");
 
+    // DHW/Purge_Circuit_Reverse_Direction (П-074-xx)
+    public static readonly ErrorDefinition AlNoStendReadyDhwPurgeReverse = new(
+        "П-074-00", "Неисправность. Система не готова к продувке",
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Purge_Circuit_Reverse_Direction\".\"Al_NoStendReady\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-purge-circuit-reverse-direction",
+        RelatedStepName: "DHW/Purge_Circuit_Reverse_Direction");
+
+    // DHW/Reduce_Circuit_Pressure (П-047-xx)
+    public static readonly ErrorDefinition AlFlushTimeDhwReduceCircuit = new(
+        "П-047-00", "Неисправность. Время заполнение превышено",
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Reduce_Circuit_Pressure\".\"Al_FlushTime\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-reduce-circuit-pressure",
+        RelatedStepName: "DHW/Reduce_Circuit_Pressure");
+
     // CH/Purge_Circuit_Reverse_Direction (П-073-xx)
     public static readonly ErrorDefinition AlNoStendReadyChPurgeReverse = new(
         "П-073-00", "Неисправность. Система не готова к продувке",
@@ -761,6 +777,8 @@ public static partial class ErrorDefinitions
         AlWaterFlowHighDhwCheckTank,
         AlNoWaterPressureDhwCheckTank,
         AlNoStendReadyDhwPurge,
+        AlNoStendReadyDhwPurgeReverse,
+        AlFlushTimeDhwReduceCircuit,
         AlNoStendReadyChPurgeReverse
     ];
 }
