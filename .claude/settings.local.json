@@ -94,7 +94,8 @@
       "mcp__codex-cli__codex-reply",
       "Bash(tree:*)",
       "Bash(dotnet ef database update:*)",
-      "WebFetch(domain:forum.radzen.com)"
+      "WebFetch(domain:forum.radzen.com)",
+      "Bash(echo:*)"
     ]
   }
 }

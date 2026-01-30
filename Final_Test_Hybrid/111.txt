@@ -1,24 +1,29 @@
-<text transform="translate(1236.958 856.74) scale(.657 1)" style="font-family: ArialMT, Arial; 
-font-size: 30px;" b-8slbfmi7j7=""><tspan x="0" y="0" b-8slbfmi7j7="">0.00</tspan></text> - привяжи к "DB_ControlValve".VPP3_1.ActuelValue
-
-<text transform="translate(1682.891 316.895) scale(.657 1)" style="font-family: ArialMT, Arial;
- font-size: 30px;" b-8slbfmi7j7=""><tspan x="0" y="0" b-8slbfmi7j7="">0.00</tspan></text> - "DB_Measure".Sensor.Gas_Pa
- 
-<text transform="translate(1352.891 190.756) scale(.657 1)" style="font-family: ArialMT, Arial; 
-font-size: 30px;" b-8slbfmi7j7=""><tspan x="0" y="0" b-8slbfmi7j7="">0.00</tspan></text> - "DB_Measure".Temper.GAS_TAG
+Показания датчиков из  DB_Measure
+Информация о состоянии датчиков в DB_PneuValve.CH
 
 
-<text transform="translate(949.063 706.024) scale(.657 1)" style="font-family: ArialMT, Arial; 
-font-size: 30px;" b-8slbfmi7j7=""><tspan x="0" y="0" b-8slbfmi7j7="">0.00</tspan></text> - "DB_Measure".Sensor.Gas_POG
+	VP1_1	"ST_Pneu_Valve"			False	True	True	True	True		Продувка
+	VP1_2	"ST_Pneu_Valve"			False	True	True	True	True		Продувка
+	VP1_3	"ST_Pneu_Valve"			False	True	True	True	True		Заполнение
+	VP1_4	"ST_Pneu_Valve"			False	True	True	True	True		Быстрое заполнение
+	VP1_5	"ST_Pneu_Valve"			False	True	True	True	True		Подача воды в контур охлаждения
+	VP1_6	"ST_Pneu_Valve"			False	True	True	True	True		Подача воды в контур охлаждения
+	VP1_7	"ST_Pneu_Valve"			False	True	True	True	True		Подача горячей воды в теплообменник (без насоса)
+	VP1_8	"ST_Pneu_Valve"			False	True	True	True	True		Слив в обр.
+	VP1_9	"ST_Pneu_Valve"			False	True	True	True	True		Резерв
+	VP1_10	"ST_Pneu_Valve"			False	True	True	True	True		Подача горячей воды в теплообменник (с насосом)
+	VP1_11	"ST_Pneu_Valve"			False	True	True	True	True		Слив
+	VP1_12	"ST_Pneu_Valve"			False	True	True	True	True		CH Медленное заполнение
+	PUMP1_1	"ST_Pneu_Valve"			False	True	True	True	True		
 
 
-<text transform="translate(796.976 588.52) scale(.657 1)" style="font-family: ArialMT, Arial; 
-font-size: 30px;" b-8slbfmi7j7=""><tspan x="0" y="0" b-8slbfmi7j7="">0.00</tspan></text> - "DB_Measure".Sensor.Gas_P
 
-
-<text transform="translate(944.679 203.756) scale(.576 1)" style="font-family: ArialMT, Arial; 
-font-size: 30px;" b-8slbfmi7j7=""><tspan x="0" y="0" b-8slbfmi7j7="">0.00</tspan></text> - "DB_Measure".Sensor.Gas_PAG
-
-
-<text transform="translate(943.551 55.85) scale(.657 1)" style="font-family: ArialMT, Arial; 
-font-size: 30px;" b-8slbfmi7j7=""><tspan x="0" y="0" b-8slbfmi7j7="">0.00</tspan></text> - "DB_Measure".Sensor.Gas_PGB
+	Pos_Close	Bool	false	TRUE	False	True	True	True	False		
+	Pos_Open	Bool	false	FALSE	False	True	True	True	False		
+	Req_Open	Bool	false	FALSE	False	True	True	True	False		Запрос перемещения открытия клапана
+	Req_Close	Bool	false	FALSE	False	True	True	True	False		Запрос перемещения закрытия клапана
+	En_Open	Bool	false	FALSE	False	True	True	True	False		Разрешение открытия клапана
+	HMI	"ST_Pneu_Valve_HMI"			False	True	True	True	False		
+	xSB_Open	Bool	false	FALSE	False	True	True	True	False		Open button HMI / Кнопка открыть HMI
+	xEn_Open	Bool	false	FALSE	False	True	True	True	False		Enable opening / Разрешение открытия
+	xOut_Open	Bool	false	TRUE	False	True	True	True	False		Opening output signal / Выход на открытие
