@@ -1,7 +1,67 @@
-﻿DB_DHW	DB_DHW_Check_Water_Flow_when_in_DHW_Mode	Al_FlowCHNOK	Неисправность. Расход воды в контуре CH выше допустимого
-
-
-
-П-054-00
-DHW/Check_Water_Flow_When_In_DHW_Mode
-DB_DHW_Check_Water_Flow_when_in_DHW_Mode. Неисправность. Расход воды в контуре CH выше допустимого
+﻿ScanBarcode			
+Misc/StartTimer1			
+Block boiler adapter			
+	CH/Flush_Circuit	DHW/Flush_DHW_Circuit_Normal_Direction	Elec/Connect_Earth_Clip
+Gas/Open_Circuit	CH/Open_Circuit_Normal	DHW/Fill_Circuit_Normal_Direction	Elec/Connect_Power_Cable
+Gas/Leak_Test	CH/Fast_Fill_Circuit	DHW/Fill_Circuit_Reverse_Direction	Elec/Boiler_Power_ON
+	CH/Slow_Fill_Circuit		Elec/Power_Supply_Test
+Coms/Check_Comms			
+Coms/Write_Test_Byte_ON			
+Coms/Check_Test_Byte_ON			
+Coms/Write_Soft_Code_Plug			
+	Coms/CH_Pump_Start		
+Coms/Read_Soft_Code_Plug			
+Coms/Read_ECU_Version			
+Coms/Set_Fan_Map	Coms/Check_Boiler_Status		
+WaitTime/WaitThreeSec			
+CH/Check_Water_Flow	CH/Slow_Fill_Circuit		
+CH/Get_CHW_Flow_NTC_Cold	CH/Compare_Flow_NTC_Temperature_Cold		
+Coms/Pump_Start_Func_Reset			
+Coms/CH_Start_Max_Heatout	Coms/Enable_Cooling		
+Gas/Wait_for_Gas_Flow	Gas/Get_Temperature		
+Gas/Set_Required_Pressure			
+Gas/Set_Gas_and_P_Burner_Max_Levels			
+Coms/CH_Start_Min_Heatout			
+Gas/Set_Gas_and_P_Burner_Min_Levels			
+Coms/CH_Start_Max_Heatout			
+Gas/Check_Gas_and_P_Burner_Max_Levels			
+Coms/CH_Start_Min_Heatout			
+Gas/Check_Gas_and_P_Burner_Min_Levels			
+Misc/StopTimer1			
+Misc/StartTimer2			
+Coms/CH_Start_Max_Heatout			
+WaitTime/WaitTenSec			
+CH/Disable_Cooling			
+WaitTime/WaitTenSec			
+CH/Check_Flow_Temperature_Rise	CH/Compare_Flow_NTC_Temperatures_Hot		
+Coms/CH_Reset	Coms/Enable_Cooling		
+WaitTime/WaitTenSec			
+WaitTime/WaitTenSec			
+Elec/Boiler_Power_OFF	CH/Disable_Cooling		
+WaitTime/WaitOneSec			
+Elec/Boiler_Power_ON			
+WaitTime/WaitThreeSec			
+Coms/Write_Test_Byte_ON	Coms/Check_Boiler_Status		
+Coms/Check_Test_Byte_ON			
+DHW/Set_Tank_Mode	Coms/Set_DHW_Tank_Mode		
+DHW/Check_Tank_Mode			
+Coms/Pump_Start_Func_Reset			
+WaitTime/WaitOneSec			
+Gas/Close_Circuit			
+WaitTime/WaitThreeSec			
+Coms/CH_Start_ST_Heatout			
+Coms/Safety_Time			
+Coms/CH_Reset	Coms/Set_to_Zero_CH_Pump_Overrun		
+Coms/Read_CH_Poti_Setpoint			
+Coms/Read_DHW_Poti_Setpoint			
+		Coms/Reset	
+		Coms/Delete_Error_History	
+		WaitTime/WaitOneSec	
+CH/Close_Circuit_Valve		Coms/Write_Test_Byte_OFF	
+		Coms/Check_Test_Byte_OFF	
+		Elec/Disconnect	не найдем информацию по шагу
+CH/Drain_Circuit	DHW/Drain_Circuit_Normal_Direction	Elec/Boiler_Power_OFF	
+CH/Purge_Circuit_Normal_Direction	DHW/Purge_Circuit_Normal_Direction		
+CH/Purge_Circuit_Reverse_Direction	DHW/Purge_Circuit_Reverse_Direction		
+WaitTime/WaitTenSec			
+Misc/StopTimer2			

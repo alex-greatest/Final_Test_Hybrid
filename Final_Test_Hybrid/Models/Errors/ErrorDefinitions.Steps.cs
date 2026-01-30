@@ -680,6 +680,28 @@ public static partial class ErrorDefinitions
         RelatedStepId: "ch-purge-circuit-reverse-direction",
         RelatedStepName: "CH/Purge_Circuit_Reverse_Direction");
 
+    // DHW/Check_Flow_Temperature_Rise (П-052-xx)
+    public static readonly ErrorDefinition AlDeltaTempNokDhwCheckFlowTempRise = new(
+        "П-052-00", "Неисправность. Разность температур вне допуска",
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Check_Flow_Temperature_Rise\".\"Al_DeltaTempNOK\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-check-flow-temperature-rise",
+        RelatedStepName: "DHW/Check_Flow_Temperature_Rise");
+
+    public static readonly ErrorDefinition AlNoFlowGasDhwCheckFlowTempRise = new(
+        "П-052-01", "Неисправность. Не разжёгся котёл",
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Check_Flow_Temperature_Rise\".\"Al_NoFlowGas\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-check-flow-temperature-rise",
+        RelatedStepName: "DHW/Check_Flow_Temperature_Rise");
+
+    public static readonly ErrorDefinition AlNoSetFlowDhwCheckFlowTempRise = new(
+        "П-052-02", "Неисправность. Заданный расход воды не достигнут",
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Check_Flow_Temperature_Rise\".\"Al_NoSetFlow\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-check-flow-temperature-rise",
+        RelatedStepName: "DHW/Check_Flow_Temperature_Rise");
+
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [
         BoilerNotLocked,
@@ -779,6 +801,9 @@ public static partial class ErrorDefinitions
         AlNoStendReadyDhwPurge,
         AlNoStendReadyDhwPurgeReverse,
         AlFlushTimeDhwReduceCircuit,
-        AlNoStendReadyChPurgeReverse
+        AlNoStendReadyChPurgeReverse,
+        AlDeltaTempNokDhwCheckFlowTempRise,
+        AlNoFlowGasDhwCheckFlowTempRise,
+        AlNoSetFlowDhwCheckFlowTempRise
     ];
 }

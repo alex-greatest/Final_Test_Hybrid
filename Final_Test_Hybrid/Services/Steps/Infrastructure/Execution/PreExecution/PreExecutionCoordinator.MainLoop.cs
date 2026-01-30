@@ -150,15 +150,18 @@ public partial class PreExecutionCoordinator
             case CycleExitReason.TestCompleted:
                 state.BoilerState.SetTestRunning(false);
                 ClearForTestCompletion();
+                state.BoilerState.ResetAndStartChangeoverTimer();
                 break;
 
             case CycleExitReason.SoftReset:
                 // Ничего - очистка произойдёт по AskEnd в HandleGridClear
+                state.BoilerState.ResetAndStartChangeoverTimer();
                 break;
 
             case CycleExitReason.HardReset:
                 ClearStateOnReset();
                 infra.StatusReporter.ClearAllExceptScan();
+                state.BoilerState.ResetAndStartChangeoverTimer();
                 break;
 
             case CycleExitReason.RepeatRequested:

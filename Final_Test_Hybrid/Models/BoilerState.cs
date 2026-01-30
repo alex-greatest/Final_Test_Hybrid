@@ -26,10 +26,14 @@ public class BoilerState
     private int _testResult;
     private DateTime? _testStartTime;
     private System.Threading.Timer? _testTimer;
+    private DateTime? _changeoverStartTime;
+    private TimeSpan? _changeoverStoppedDuration;
+    private System.Threading.Timer? _changeoverTimer;
 
     public event Action? OnChanged;
     public event Action? OnCleared;
     public event Action? OnTestTimerTick;
+    public event Action? OnChangeoverTimerTick;
 
     public string? SerialNumber
     {
@@ -193,6 +197,80 @@ public class BoilerState
     private void OnTimerTick(object? state)
     {
         OnTestTimerTick?.Invoke();
+    }
+
+    /// <summary>
+    /// Запускает таймер переналадки.
+    /// </summary>
+    public void StartChangeoverTimer()
+    {
+        lock (_lock)
+        {
+            _changeoverStartTime = DateTime.Now;
+            _changeoverStoppedDuration = null;
+            _changeoverTimer?.Dispose();
+            _changeoverTimer = new System.Threading.Timer(OnChangeoverTimerTick_Internal, null, 0, 1000);
+        }
+    }
+
+    /// <summary>
+    /// Останавливает таймер переналадки и фиксирует текущее время.
+    /// </summary>
+    public void StopChangeoverTimer()
+    {
+        lock (_lock)
+        {
+            if (_changeoverStartTime.HasValue && _changeoverStoppedDuration == null)
+            {
+                _changeoverStoppedDuration = DateTime.Now - _changeoverStartTime.Value;
+            }
+            _changeoverTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+    }
+
+    /// <summary>
+    /// Сбрасывает и запускает таймер переналадки заново.
+    /// </summary>
+    public void ResetAndStartChangeoverTimer()
+    {
+        lock (_lock)
+        {
+            _changeoverStartTime = DateTime.Now;
+            _changeoverStoppedDuration = null;
+            _changeoverTimer?.Dispose();
+            _changeoverTimer = new System.Threading.Timer(OnChangeoverTimerTick_Internal, null, 0, 1000);
+        }
+    }
+
+    /// <summary>
+    /// Возвращает продолжительность переналадки.
+    /// </summary>
+    public TimeSpan GetChangeoverDuration()
+    {
+        lock (_lock)
+        {
+            if (_changeoverStoppedDuration.HasValue)
+            {
+                return _changeoverStoppedDuration.Value;
+            }
+            return _changeoverStartTime.HasValue
+                ? DateTime.Now - _changeoverStartTime.Value
+                : TimeSpan.Zero;
+        }
+    }
+
+    /// <summary>
+    /// Возвращает продолжительность переналадки в формате HH:mm:ss.
+    /// </summary>
+    public string GetChangeoverDurationFormatted()
+    {
+        var duration = GetChangeoverDuration();
+        return $"{(int)duration.TotalHours:D2}:{duration.Minutes:D2}:{duration.Seconds:D2}";
+    }
+
+    private void OnChangeoverTimerTick_Internal(object? state)
+    {
+        OnChangeoverTimerTick?.Invoke();
     }
 
     public void SetData(

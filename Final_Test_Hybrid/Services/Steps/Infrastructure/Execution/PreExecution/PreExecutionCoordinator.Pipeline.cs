@@ -284,6 +284,7 @@ public partial class PreExecutionCoordinator
             RollbackTestStart();
             return false;
         }
+        state.BoilerState.StopChangeoverTimer();
         return true;
     }
 
