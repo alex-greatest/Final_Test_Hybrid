@@ -1,3 +1,14 @@
-﻿Создать шаг DHW/Check_Tank_Mode с описанием:Проверка расхода воды режима БКН. блока "DB_VI".DHW.Check_Tank_Mode.Start. Ждём сигналы End и Error. End - ok, Error - нет. 
-когда получаем ок или error то надо считать из контроллера "DB_Parameter".DHW.Check_Tank_Mode и записать в TestResultService с названием Tank_DHW_Press isRange = true. пределы нижний "DB_Recipe".DHW.Tank.WaterMin
-"DB_Recipe".DHW.Tank.WaterMax - из рецептов. их в GetLimits, в pass или fail считанное значение "DB_Parameter".DHW.Check_Tank_Mode
+﻿Создать шаг Coms/CH_Start_ST_Heatout с описанием: Запуск нагрева котла в нормальном режиме
+
+
+Запись 4 в регистр 1036	ок			
+Чтение регистра 1036				
+Если в регистре прочитана 4, то система перейдёт к нагреву контура отолпения на максимальной мощности.	ок			
+Если в регистре прочитана не 4, то ошибка.	ошибка			режим не переключен
+Повтор команды Coms\Write_Test_Byte_ON и затем повтор пункта 1				
+
+
+программную ошибку не надо. только в Fail
+
+
+после записи ждём время из appsettings.json

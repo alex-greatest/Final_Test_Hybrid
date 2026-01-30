@@ -111,12 +111,7 @@ public class CheckTankModeStep(
             logger.LogInformation("Проверка расхода воды режима БКН завершена успешно");
 
             var resetResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
-            if (resetResult.Error != null)
-            {
-                return TestStepResult.Fail($"Ошибка сброса Start: {resetResult.Error}");
-            }
-
-            return TestStepResult.Pass(msg);
+            return resetResult.Error != null ? TestStepResult.Fail($"Ошибка сброса Start: {resetResult.Error}") : TestStepResult.Pass(msg);
         }
 
         // При Error НЕ передаём ошибки - они активируются автоматически от PLC
