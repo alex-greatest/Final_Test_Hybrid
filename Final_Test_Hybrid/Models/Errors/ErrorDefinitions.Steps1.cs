@@ -117,6 +117,21 @@ public static partial class ErrorDefinitions
         RelatedStepId: "dhw-check-flow-rate",
         RelatedStepName: "DHW/Check_Flow_Rate");
 
+    // DHW/Compare_Flow_NTC_Temperature_Hot (П-055-xx)
+    public static readonly ErrorDefinition AlNotStendReadyDhwCompareFlowNtcTempHot = new(
+        "П-055-00", "Неисправность. Стенд не готов к тесту",
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Compare_Flow_NTC_Temp_Hot\".\"Al_NotStendReady\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-compare-flow-ntc-temperature-hot",
+        RelatedStepName: "DHW/Compare_Flow_NTC_Temperature_Hot");
+
+    public static readonly ErrorDefinition AlDeltaTempNokDhwCompareFlowNtcTempHot = new(
+        "П-055-01", "Неисправность. Разность температур вне допуска",
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Compare_Flow_NTC_Temp_Hot\".\"Al_DeltaTempNOK\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-compare-flow-ntc-temperature-hot",
+        RelatedStepName: "DHW/Compare_Flow_NTC_Temperature_Hot");
+
     internal static IEnumerable<ErrorDefinition> Steps1Errors =>
     [
         AlNotStendReadyTempRise,
@@ -134,6 +149,8 @@ public static partial class ErrorDefinitions
         AlNotStendReadyCheckFlowRate,
         AlPressureLowCheckFlowRate,
         AlWaterFlowMinCheckFlowRate,
-        AlWaterFlowMaxCheckFlowRate
+        AlWaterFlowMaxCheckFlowRate,
+        AlNotStendReadyDhwCompareFlowNtcTempHot,
+        AlDeltaTempNokDhwCompareFlowNtcTempHot
     ];
 }
