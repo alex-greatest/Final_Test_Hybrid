@@ -63,14 +63,7 @@ public class CheckWaterFlowStep(
             return TestStepResult.Fail($"Ошибка записи Start: {writeResult.Error}");
         }
 
-        try
-        {
-            return await WaitForCompletionAsync(context, ct);
-        }
-        finally
-        {
-            await TryResetStartTagAsync(context);
-        }
+        return await WaitForCompletionAsync(context, ct);
     }
 
     /// <summary>
@@ -126,28 +119,17 @@ public class CheckWaterFlowStep(
         logger.LogInformation("Расход воды: {FlowRate:F3}, пределы: {Min:F3} - {Max:F3}, статус: {Status}",
             flowRate, min, max, status == 1 ? "OK" : "NOK");
 
+        var msg = $"Расход воды: {flowRate:F3}";
+
         if (isSuccess)
         {
             logger.LogInformation("Проверка расхода воды завершена успешно");
-            return TestStepResult.Pass($"{flowRate:F3}");
+
+            var resetResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
+            return resetResult.Error != null ? TestStepResult.Fail($"Ошибка сброса Start: {resetResult.Error}") : TestStepResult.Pass(msg);
         }
 
-        return TestStepResult.Fail($"Ошибка проверки расхода воды: {flowRate:F3}");
-    }
-
-    /// <summary>
-    /// Сбрасывает Start тег. Выполняется без ct для гарантированного cleanup.
-    /// </summary>
-    private async Task TryResetStartTagAsync(TestStepContext context)
-    {
-        try
-        {
-            await context.OpcUa.WriteAsync(StartTag, false, CancellationToken.None);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning("Ошибка сброса Start тега при cleanup: {Error}", ex.Message);
-        }
+        return TestStepResult.Fail(msg);
     }
 
     private enum FlowResult { Success, Error }

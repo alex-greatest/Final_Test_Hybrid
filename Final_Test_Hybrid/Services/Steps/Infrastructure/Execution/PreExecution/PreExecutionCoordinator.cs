@@ -1,5 +1,4 @@
-﻿using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
+﻿using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Steps;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
@@ -101,6 +100,7 @@ public partial class PreExecutionCoordinator(
     /// </summary>
     private void AddAppVersionToResults()
     {
+        infra.TestResultsService.Remove("App_Version");
         var appVersion = infra.RecipeProvider.GetStringValue("App_Version");
         if (!string.IsNullOrEmpty(appVersion))
         {

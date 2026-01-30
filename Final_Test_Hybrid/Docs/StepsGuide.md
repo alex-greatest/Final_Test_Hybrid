@@ -143,7 +143,25 @@ TestStepResult.Fail("Ошибка", errors: [ErrorDef]);  // С ошибками
 TestStepResult.Skip("Не применимо");                // Пропущен
 ```
 
-### 2.4 Регистрация
+### 2.4 Ошибки в шагах (ErrorDefinition)
+
+| Тип ошибки | PlcTag | Активация | Пример |
+|------------|--------|-----------|--------|
+| **PLC** | Есть | Автоматически через PlcErrorMonitorService | Al_NoWaterFlow, Al_FillTime |
+| **Программная** | Нет | Вручную через `errors:` в TestStepResult.Fail | NoDiagnosticConnection, EcuArticleMismatch |
+
+**PLC ошибки** (с `PlcTag`) — НЕ передавать в `TestStepResult.Fail()`. Они автоматически активируются когда PLC поднимает соответствующий Al_* сигнал. `PlcErrorMonitorService` подписывается на все теги из `ErrorDefinitions.PlcErrors`.
+
+**Программные ошибки** (без `PlcTag`) — передавать в `TestStepResult.Fail()`:
+```csharp
+// ✅ ПРАВИЛЬНО — программная ошибка без PlcTag
+return TestStepResult.Fail("Нет связи с котлом", errors: [ErrorDefinitions.NoDiagnosticConnection]);
+
+// ❌ НЕПРАВИЛЬНО — PLC ошибка с PlcTag (активируется автоматически)
+return TestStepResult.Fail(msg, errors: [ErrorDefinitions.AlNoWaterFlowCh]);
+```
+
+### 2.5 Регистрация
 
 Test steps регистрируются **автоматически** через рефлексию — достаточно создать класс с `ITestStep`.
 

@@ -11,31 +11,31 @@ using Microsoft.Extensions.Options;
 namespace Final_Test_Hybrid.Services.Steps.Steps.CH;
 
 /// <summary>
-/// Тестовый шаг сравнения температуры холодной воды из датчика стенда (OPC-UA)
+/// Тестовый шаг сравнения температуры горячей воды из датчика стенда (OPC-UA)
 /// с температурой из датчика котла (Modbus). Вычисляет дельту и проверяет допуски.
 /// </summary>
-public class CompareFlowNtcTemperatureColdStep(
+public class CompareFlowNtcTemperaturesHotStep(
     IOptions<DiagnosticSettings> settings,
-    DualLogger<CompareFlowNtcTemperatureColdStep> logger,
+    DualLogger<CompareFlowNtcTemperaturesHotStep> logger,
     ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions, IRequiresRecipes, IProvideLimits
 {
-    private const string BlockPath = "DB_VI.CH.Compare_Flow_NTC_Temperature_Cold";
-    private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Cold\".\"Start\"";
-    private const string EndTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Cold\".\"End\"";
-    private const string ErrorTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Cold\".\"Error\"";
-    private const string Ready1Tag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Cold\".\"Ready_1\"";
-    private const string Continua1Tag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Cold\".\"Сontinua_1\"";
-    private const string FaultTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Cold\".\"Fault\"";
+    private const string BlockPath = "DB_VI.CH.Compare_Flow_NTC_Temperatures_Hot";
+    private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperatures_Hot\".\"Start\"";
+    private const string EndTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperatures_Hot\".\"End\"";
+    private const string ErrorTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperatures_Hot\".\"Error\"";
+    private const string Ready1Tag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperatures_Hot\".\"Ready_1\"";
+    private const string Continua1Tag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperatures_Hot\".\"Сontinua_1\"";
+    private const string FaultTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperatures_Hot\".\"Fault\"";
     private const string ChTmrTag = "ns=3;s=\"DB_Measure\".\"Temper\".\"CH_TMR\"";
     private const string TFlowDeltaMaxRecipe = "ns=3;s=\"DB_Recipe\".\"CH\".\"TFlowDeltaMax\"";
-    private const string ParameterName = "Delta_CH_Flow_Temp_Cold";
+    private const string ParameterName = "Delta_CH_Flow_Temp_Hot";
     private const ushort RegisterChTemperature = 1006;
 
     private readonly DiagnosticSettings _settings = settings.Value;
 
-    public string Id => "ch-compare-flow-ntc-temperature-cold";
-    public string Name => "CH/Compare_Flow_NTC_Temperature_Cold";
-    public string Description => "Контур Отопление. Сравнение температуры NTC (холодная вода).";
+    public string Id => "ch-compare-flow-ntc-temperatures-hot";
+    public string Name => "CH/Compare_Flow_NTC_Temperatures_Hot";
+    public string Description => "Контур Отопление. Сравнение показаний температур горячей воды.";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, Ready1Tag, Continua1Tag, FaultTag, ChTmrTag];
     public IReadOnlyList<string> RequiredRecipeAddresses => [TFlowDeltaMaxRecipe];
@@ -52,14 +52,14 @@ public class CompareFlowNtcTemperatureColdStep(
     }
 
     /// <summary>
-    /// Выполняет шаг сравнения температуры NTC (холодная вода).
+    /// Выполняет шаг сравнения температуры NTC (горячая вода).
     /// </summary>
     /// <param name="context">Контекст выполнения шага.</param>
     /// <param name="ct">Токен отмены.</param>
     /// <returns>Результат выполнения шага.</returns>
     public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
     {
-        logger.LogInformation("Запуск сравнения температуры NTC (холодная вода)");
+        logger.LogInformation("Запуск сравнения температуры NTC (горячая вода)");
         testResultsService.Remove(ParameterName);
 
         var writeResult = await context.OpcUa.WriteAsync(StartTag, true, ct);
@@ -198,19 +198,28 @@ public class CompareFlowNtcTemperatureColdStep(
                 isSuccess ? "OK" : "NOK");
         }
 
-        var msg = measurement != null
-            ? $"Дельта: {measurement.Delta:F3}, TMR: {measurement.ChTmr:F3}, котёл: {measurement.ModbusTemp}"
-            : "Ошибка сравнения температуры NTC";
-
         if (isSuccess)
         {
             logger.LogInformation("Сравнение температуры NTC завершено успешно");
 
             var writeResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
-            return writeResult.Error != null ? TestStepResult.Fail($"Ошибка сброса Start: {writeResult.Error}") : TestStepResult.Pass(msg);
+            if (writeResult.Error != null)
+            {
+                return TestStepResult.Fail($"Ошибка сброса Start: {writeResult.Error}");
+            }
+
+            var passMsg = measurement != null
+                ? $"Дельта: {measurement.Delta:F3}, TMR: {measurement.ChTmr:F3}, котёл: {measurement.ModbusTemp}"
+                : "";
+
+            return TestStepResult.Pass(passMsg);
         }
 
-        return TestStepResult.Fail(msg);
+        var errorMsg = measurement != null
+            ? $"Дельта: {measurement.Delta:F3}, TMR: {measurement.ChTmr:F3}, котёл: {measurement.ModbusTemp}"
+            : "Ошибка сравнения температуры NTC";
+
+        return TestStepResult.Fail(errorMsg);
     }
 
     /// <summary>

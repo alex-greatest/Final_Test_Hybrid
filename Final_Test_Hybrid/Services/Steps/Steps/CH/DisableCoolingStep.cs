@@ -18,7 +18,7 @@ public class DisableCoolingStep(
 
     public string Id => "ch-disable-cooling";
     public string Name => "CH/Disable_Cooling";
-    public string Description => "Отключение охлаждения контура Отопления";
+    public string Description => "Контур Отопления. Отключение охлаждения.";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 
@@ -55,7 +55,7 @@ public class DisableCoolingStep(
         return waitResult.Result switch
         {
             CoolingResult.Success => await HandleSuccessAsync(context, ct),
-            CoolingResult.Error => TestStepResult.Fail("Ошибка отключения охлаждения"),
+            CoolingResult.Error => TestStepResult.Fail("Ошибка отключения охлаждения контура"),
             _ => TestStepResult.Fail("Неизвестный результат")
         };
     }

@@ -22,6 +22,8 @@ public class SetGasAndPBurnerMaxLevelsStep(
     private const string StartTag = "ns=3;s=\"DB_VI\".\"Gas\".\"Set_Gas_and_P_Burner_Max_Levels\".\"Start\"";
     private const string EndTag = "ns=3;s=\"DB_VI\".\"Gas\".\"Set_Gas_and_P_Burner_Max_Levels\".\"End\"";
     private const string ErrorTag = "ns=3;s=\"DB_VI\".\"Gas\".\"Set_Gas_and_P_Burner_Max_Levels\".\"Error\"";
+    private const string Ready1Tag = "ns=3;s=\"DB_VI\".\"Gas\".\"Set_Gas_and_P_Burner_Max_Levels\".\"Ready_1\"";
+    private const string Continue1Tag = "ns=3;s=\"DB_VI\".\"Gas\".\"Set_Gas_and_P_Burner_Max_Levels\".\"Continue_1\"";
 
     // Теги для слайдеров (привязка стрелки)
     private const string GasPgbTag = "ns=3;s=\"DB_Measure\".\"Sensor\".\"Gas_PGB\"";
@@ -58,7 +60,7 @@ public class SetGasAndPBurnerMaxLevelsStep(
 
     public IReadOnlyList<string> RequiredPlcTags =>
     [
-        StartTag, EndTag, ErrorTag,
+        StartTag, EndTag, ErrorTag, Ready1Tag,
         GasPgbTag, GasPogTag,
         BlrGasPressMaxTag, GasFlowMaxTag, BnrGasPressMaxTag
     ];
@@ -216,18 +218,28 @@ public class SetGasAndPBurnerMaxLevelsStep(
     /// </summary>
     private async Task<TestStepResult> WaitForCompletionAsync(TestStepContext context, CancellationToken ct)
     {
-        var waitResult = await context.TagWaiter.WaitAnyAsync(
-            context.TagWaiter.CreateWaitGroup<CompletionResult>()
-                .WaitForTrue(EndTag, () => CompletionResult.Success, "End")
-                .WaitForTrue(ErrorTag, () => CompletionResult.Error, "Error"),
-            ct);
-
-        return waitResult.Result switch
+        while (true)
         {
-            CompletionResult.Success => await HandleCompletionAsync(context, isSuccess: true, ct),
-            CompletionResult.Error => await HandleCompletionAsync(context, isSuccess: false, ct),
-            _ => TestStepResult.Fail("Неизвестный результат")
-        };
+            var waitResult = await context.TagWaiter.WaitAnyAsync(
+                context.TagWaiter.CreateWaitGroup<CompletionResult>()
+                    .WaitForTrue(EndTag, () => CompletionResult.Success, "End")
+                    .WaitForTrue(ErrorTag, () => CompletionResult.Error, "Error")
+                    .WaitForTrue(Ready1Tag, () => CompletionResult.Ready1, "Ready_1"),
+                ct);
+
+            switch (waitResult.Result)
+            {
+                case CompletionResult.Success:
+                    return await HandleCompletionAsync(context, isSuccess: true, ct);
+                case CompletionResult.Error:
+                    return await HandleCompletionAsync(context, isSuccess: false, ct);
+                case CompletionResult.Ready1:
+                    await context.OpcUa.WriteAsync(Continue1Tag, true, ct);
+                    continue;
+                default:
+                    return TestStepResult.Fail("Неизвестный результат");
+            }
+        }
     }
 
     /// <summary>
@@ -360,5 +372,5 @@ public class SetGasAndPBurnerMaxLevelsStep(
         }
     }
 
-    private enum CompletionResult { Success, Error }
+    private enum CompletionResult { Success, Error, Ready1 }
 }

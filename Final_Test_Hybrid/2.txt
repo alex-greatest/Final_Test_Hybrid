@@ -1,10 +1,9 @@
-﻿DB_Gas	Gas_Set_Gas_and_P_Burner_Max_Levels	Al_GasFlowLow	Неисправность. Низкий расход газа
-DB_Gas	Gas_Set_Gas_and_P_Burner_Max_Levels	Al_GasFlowHight	Неисправность. Высокий расход газа
-DB_Gas	Gas_Set_Gas_and_P_Burner_Max_Levels	Al_NotStendReady	Неисправность. Стенд не готов
-DB_Gas	Gas_Set_Gas_and_P_Burner_Max_Levels	Al_NotConnectSensorPGB	Неисправность. Не подключена трубка газового клапана
+﻿DB_DHW	DB_Check_Tank_Mode	Al_WaterFlowLow	Неисправность. Низкий расход воды в контуре
+DB_DHW	DB_Check_Tank_Mode	Al_WaterFlowHight	Неисправность. Высокий расход воды в контуре
+		Al_NoWaterPressure	Неисправность. Нет давления воды
 
 
-П-037-03 Gas/Set_Gas_and_P_Burner_Max_Levels Gas_Set_Gas_and_P_Burner_Max_Levels. Неисправность. Не подключена трубка газового клапана
-П-037-02 Gas/Set_Gas_and_P_Burner_Max_Levels Gas_Set_Gas_and_P_Burner_Max_Levels. Неисправность. Стенд не готов
-П-037-01 Gas/Set_Gas_and_P_Burner_Max_Levels Gas_Set_Gas_and_P_Burner_Max_Levels. Неисправность. Высокий расход газа
-П-037-00 Gas/Set_Gas_and_P_Burner_Max_Levels Gas_Set_Gas_and_P_Burner_Max_Levels. Неисправность. Низкий расход газа
+
+П-025-02 DHW/Check_Tank_Mode DB_Check_Tank_Mode. Неисправность. Нет давления воды
+П-025-01 DHW/Check_Tank_Mode DB_Check_Tank_Mode. Неисправность. Высокий расход воды в контуре
+П-025-00 DHW/Check_Tank_Mode DB_Check_Tank_Mode. Неисправность. Низкий расход воды в контуре

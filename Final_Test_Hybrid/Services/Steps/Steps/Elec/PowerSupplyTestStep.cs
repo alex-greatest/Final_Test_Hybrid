@@ -78,7 +78,7 @@ public class PowerSupplyTestStep(
     }
 
     /// <summary>
-    /// Обрабатывает завершение: чтение напряжения, сброс Start, валидация и сохранение результата.
+    /// Обрабатывает завершение: чтение напряжения, валидация и сохранение результата.
     /// </summary>
     private async Task<TestStepResult> HandleCompletionAsync(TestStepContext context, bool isSuccess, CancellationToken ct)
     {
@@ -86,12 +86,6 @@ public class PowerSupplyTestStep(
         if (error != null)
         {
             return TestStepResult.Fail($"Ошибка чтения Supply: {error}");
-        }
-
-        var resetResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
-        if (resetResult.Error != null)
-        {
-            return TestStepResult.Fail($"Ошибка сброса Start: {resetResult.Error}");
         }
 
         var min = context.RecipeProvider.GetValue<float>(VoltageMinRecipe)!.Value;
@@ -110,13 +104,17 @@ public class PowerSupplyTestStep(
         logger.LogInformation("Напряжение: {Supply:F1} V, пределы: {Min:F1} - {Max:F1}, статус: {Status}",
             supply, min, max, status == 1 ? "OK" : "NOK");
 
+        var msg = $"Напряжение: {supply:F1} V";
+
         if (isSuccess)
         {
             logger.LogInformation("Проверка напряжения питания завершена успешно");
-            return TestStepResult.Pass($"{supply:F1} V");
+
+            var resetResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
+            return resetResult.Error != null ? TestStepResult.Fail($"Ошибка сброса Start: {resetResult.Error}") : TestStepResult.Pass(msg);
         }
 
-        return TestStepResult.Fail($"Ошибка проверки напряжения: {supply:F1} V");
+        return TestStepResult.Fail(msg);
     }
 
     private enum TestResult { Success, Error }

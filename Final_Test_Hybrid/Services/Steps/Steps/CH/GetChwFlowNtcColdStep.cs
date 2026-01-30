@@ -46,20 +46,13 @@ public class GetChwFlowNtcColdStep(
 
         testResultsService.Remove("CH_Flw_Temp_Cold");
 
-        try
+        var writeResult = await context.OpcUa.WriteAsync(StartTag, true, ct);
+        if (writeResult.Error != null)
         {
-            var writeResult = await context.OpcUa.WriteAsync(StartTag, true, ct);
-            if (writeResult.Error != null)
-            {
-                return TestStepResult.Fail($"Ошибка записи Start: {writeResult.Error}");
-            }
+            return TestStepResult.Fail($"Ошибка записи Start: {writeResult.Error}");
+        }
 
-            return await WaitForCompletionAsync(context, ct);
-        }
-        finally
-        {
-            await TryResetStartTagAsync(context);
-        }
+        return await WaitForCompletionAsync(context, ct);
     }
 
     /// <summary>
@@ -106,28 +99,22 @@ public class GetChwFlowNtcColdStep(
         logger.LogInformation("Температура холодной воды: {FlwTempCold:F3}, статус: {Status}",
             flwTempCold, status == 1 ? "OK" : "NOK");
 
+        var msg = $"Температура: {flwTempCold:F3}";
+
         if (isSuccess)
         {
             logger.LogInformation("Замер температуры холодной воды завершен успешно");
-            return TestStepResult.Pass($"{flwTempCold:F3}");
+
+            var resetResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
+            if (resetResult.Error != null)
+            {
+                return TestStepResult.Fail($"Ошибка сброса Start: {resetResult.Error}");
+            }
+
+            return TestStepResult.Pass(msg);
         }
 
-        return TestStepResult.Fail($"Ошибка замера температуры холодной воды: {flwTempCold:F3}");
-    }
-
-    /// <summary>
-    /// Сбрасывает тег Start в false.
-    /// </summary>
-    private async Task TryResetStartTagAsync(TestStepContext context)
-    {
-        try
-        {
-            await context.OpcUa.WriteAsync(StartTag, false, CancellationToken.None);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning("Не удалось сбросить Start: {Error}", ex.Message);
-        }
+        return TestStepResult.Fail(msg);
     }
 
     private enum MeasureResult { Success, Error }

@@ -179,6 +179,15 @@ public abstract class ScanStepBase(
 
     #region Запись рецептов в PLC
 
+    /// <summary>
+    /// Размер батча для записи рецептов. 50 — консервативное значение,
+    /// поддерживаемое большинством OPC-UA серверов (типичный лимит 1000+).
+    /// </summary>
+    private const int BatchSize = 50;
+
+    /// <summary>
+    /// Записывает рецепты в PLC батчами.
+    /// </summary>
     protected async Task<PreExecutionResult?> WriteRecipesToPlcAsync(PreExecutionContext context, CancellationToken ct)
     {
         var recipes = GetPlcRecipes();
@@ -189,6 +198,9 @@ public abstract class ScanStepBase(
         return await WriteAllRecipesAsync(recipes, context, ct);
     }
 
+    /// <summary>
+    /// Возвращает список рецептов для записи в PLC.
+    /// </summary>
     private List<RecipeResponseDto> GetPlcRecipes()
     {
         return BoilerState.Recipes?
@@ -196,91 +208,149 @@ public abstract class ScanStepBase(
             .ToList() ?? [];
     }
 
+    /// <summary>
+    /// Записывает все рецепты в PLC с использованием батчинга.
+    /// </summary>
     private async Task<PreExecutionResult?> WriteAllRecipesAsync(
         List<RecipeResponseDto> recipes,
         PreExecutionContext context,
         CancellationToken ct)
     {
-        var total = recipes.Count;
-        for (var i = 0; i < total; i++)
+        PhaseState.SetPhase(ExecutionPhase.LoadingRecipes);
+
+        // 1. Парсинг всех значений (fail-fast при ошибке парсинга)
+        var items = new List<(string nodeId, object value, RecipeResponseDto recipe)>();
+        foreach (var recipe in recipes)
         {
-            PhaseState.SetPhase(ExecutionPhase.LoadingRecipes);
-            var result = await WriteRecipeAsync(recipes[i], context, ct);
-            if (result != null)
+            var parseResult = TryParseRecipeValue(recipe);
+            if (!parseResult.IsSuccess)
             {
-                return result;
+                return CreateParseError(recipe, parseResult.Error!);
+            }
+            items.Add((recipe.Address, parseResult.Value!, recipe));
+        }
+
+        // 2. Chunked batch write (по BatchSize рецептов за запрос)
+        var chunks = items.Chunk(BatchSize);
+        foreach (var chunk in chunks)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var batchItems = chunk.Select(i => (i.nodeId, i.value)).ToList();
+            LogBatchWrite(chunk);
+
+            var results = await context.OpcUa.WriteBatchAsync(batchItems, ct);
+
+            // Fail-fast: при первой ошибке — прервать
+            var error = FindFirstError(chunk, results);
+            if (error != null)
+            {
+                return error;
+            }
+
+            LogBatchSuccess(chunk);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Логирует начало записи батча.
+    /// </summary>
+    private void LogBatchWrite(IEnumerable<(string nodeId, object value, RecipeResponseDto recipe)> items)
+    {
+        foreach (var (_, _, recipe) in items)
+        {
+            Logger.LogInformation("WriteRecipe: Tag={Tag}, Value={Value}, Type={Type}",
+                recipe.TagName, recipe.Value, recipe.PlcType);
+        }
+    }
+
+    /// <summary>
+    /// Логирует успешную запись батча.
+    /// </summary>
+    private void LogBatchSuccess(IEnumerable<(string nodeId, object value, RecipeResponseDto recipe)> items)
+    {
+        foreach (var (_, _, recipe) in items)
+        {
+            Logger.LogInformation("Записан рецепт {Tag} = {Value}", recipe.TagName, recipe.Value);
+        }
+    }
+
+    /// <summary>
+    /// Находит первую ошибку в результатах записи.
+    /// </summary>
+    private PreExecutionResult? FindFirstError(
+        IEnumerable<(string nodeId, object value, RecipeResponseDto recipe)> items,
+        List<WriteResult> results)
+    {
+        var itemsList = items.ToList();
+        for (var i = 0; i < results.Count; i++)
+        {
+            if (!results[i].Success)
+            {
+                var recipe = itemsList[i].recipe;
+                var message = $"Ошибка записи {recipe.TagName}: {results[i].Error}";
+                Logger.LogError("{Error}", message);
+                var errorInfo = new RecipeWriteErrorInfo(recipe.TagName, recipe.Address, recipe.Value, results[i].Error!);
+                return PreExecutionResult.Fail(message, new RecipeWriteErrorDetails([errorInfo]), "Ошибка загрузки рецептов");
             }
         }
         return null;
     }
 
-    private async Task<PreExecutionResult?> WriteRecipeAsync(
-        RecipeResponseDto recipe,
-        PreExecutionContext context,
-        CancellationToken ct)
-    {
-        Logger.LogInformation("WriteRecipe: Tag={Tag}, Address=[{Address}], Value={Value}, Type={Type}",
-            recipe.TagName, recipe.Address, recipe.Value, recipe.PlcType);
-        var writeResult = await WriteValueByTypeAsync(recipe, context, ct);
-        if (!writeResult.Success)
-        {
-            var message = $"Ошибка записи {recipe.TagName}: {writeResult.Error}";
-            Logger.LogError("{Error}", message);
-            var errorInfo = new RecipeWriteErrorInfo(recipe.TagName, recipe.Address, recipe.Value, writeResult.Error!);
-            return PreExecutionResult.Fail(message, new RecipeWriteErrorDetails([errorInfo]), "Ошибка загрузки рецептов");
-        }
-        Logger.LogInformation("Записан рецепт {Tag} = {Value}", recipe.TagName, recipe.Value);
-        return null;
-    }
-
-    private async Task<WriteResult> WriteValueByTypeAsync(
-        RecipeResponseDto recipe,
-        PreExecutionContext context,
-        CancellationToken ct)
+    /// <summary>
+    /// Парсит значение рецепта в соответствии с типом PLC.
+    /// </summary>
+    private ParseResult TryParseRecipeValue(RecipeResponseDto recipe)
     {
         return recipe.PlcType switch
         {
-            PlcType.REAL => await WriteFloatAsync(recipe, context, ct),
-            PlcType.INT16 => await WriteInt16Async(recipe, context, ct),
-            PlcType.DINT => await WriteInt32Async(recipe, context, ct),
-            PlcType.BOOL => await context.OpcUa.WriteAsync(recipe.Address, ParseBool(recipe.Value), ct),
-            PlcType.STRING => await context.OpcUa.WriteAsync(recipe.Address, recipe.Value, ct),
-            _ => new WriteResult(recipe.Address, $"Неизвестный тип: {recipe.PlcType}")
+            PlcType.REAL => TryParseFloat(recipe.Value, out var f)
+                ? ParseResult.Ok(f)
+                : ParseResult.Fail($"Некорректное значение '{recipe.Value}' для типа float"),
+            PlcType.INT16 => short.TryParse(recipe.Value, CultureInfo.InvariantCulture, out var s)
+                ? ParseResult.Ok(s)
+                : ParseResult.Fail($"Некорректное значение '{recipe.Value}' для типа Int16"),
+            PlcType.DINT => int.TryParse(recipe.Value, CultureInfo.InvariantCulture, out var d)
+                ? ParseResult.Ok(d)
+                : ParseResult.Fail($"Некорректное значение '{recipe.Value}' для типа Dint"),
+            PlcType.BOOL => ParseResult.Ok(ParseBool(recipe.Value)),
+            PlcType.STRING => ParseResult.Ok(recipe.Value),
+            _ => ParseResult.Fail($"Неизвестный тип: {recipe.PlcType}")
         };
     }
 
-    private async Task<WriteResult> WriteFloatAsync(RecipeResponseDto recipe, PreExecutionContext context, CancellationToken ct)
+    /// <summary>
+    /// Результат парсинга значения рецепта.
+    /// </summary>
+    private record ParseResult(bool IsSuccess, object? Value, string? Error)
     {
-        if (!TryParseFloat(recipe.Value, out var value))
-        {
-            return new WriteResult(recipe.Address, $"Некорректное значение '{recipe.Value}' для типа float");
-        }
-        return await context.OpcUa.WriteAsync(recipe.Address, value, ct);
+        public static ParseResult Ok(object value) => new(true, value, null);
+        public static ParseResult Fail(string error) => new(false, null, error);
     }
 
-    private async Task<WriteResult> WriteInt16Async(RecipeResponseDto recipe, PreExecutionContext context, CancellationToken ct)
+    /// <summary>
+    /// Создаёт ошибку парсинга рецепта.
+    /// </summary>
+    private PreExecutionResult CreateParseError(RecipeResponseDto recipe, string error)
     {
-        if (!short.TryParse(recipe.Value, CultureInfo.InvariantCulture, out var value))
-        {
-            return new WriteResult(recipe.Address, $"Некорректное значение '{recipe.Value}' для типа Int16");
-        }
-        return await context.OpcUa.WriteAsync(recipe.Address, value, ct);
+        Logger.LogError("{Error}", error);
+        var errorInfo = new RecipeWriteErrorInfo(recipe.TagName, recipe.Address, recipe.Value, error);
+        return PreExecutionResult.Fail(error, new RecipeWriteErrorDetails([errorInfo]), "Ошибка загрузки рецептов");
     }
 
-    private async Task<WriteResult> WriteInt32Async(RecipeResponseDto recipe, PreExecutionContext context, CancellationToken ct)
-    {
-        if (!int.TryParse(recipe.Value, CultureInfo.InvariantCulture, out var value))
-        {
-            return new WriteResult(recipe.Address, $"Некорректное значение '{recipe.Value}' для типа Dint");
-        }
-        return await context.OpcUa.WriteAsync(recipe.Address, value, ct);
-    }
-
+    /// <summary>
+    /// Парсит строковое значение в float.
+    /// </summary>
     private static bool TryParseFloat(string value, out float result)
     {
         return float.TryParse(value.Replace(',', '.'), CultureInfo.InvariantCulture, out result);
     }
 
+    /// <summary>
+    /// Парсит строковое значение в bool.
+    /// </summary>
     private static bool ParseBool(string value)
     {
         return value.Equals("true", StringComparison.OrdinalIgnoreCase)

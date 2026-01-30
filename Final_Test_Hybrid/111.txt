@@ -1,2 +1,22 @@
-Low: DiagnosticConnectionService.cs (line 161) / DiagnosticConnectionService.cs (line 166) / DiagnosticConnectionService.cs (line 170) — если ModbusFactory.CreateRtuMaster падает после создания _serialPortAdapter, в catch освобождается только port, а адаптер остаётся жить до следующего CloseConnection/Dispose; при отменённой попытке без последующих вызовов это может оставить «висящий» адаптер (возможная утечка ресурса в зависимости от реализации NModbus).
-Low: DiagnosticConnectionService.cs (line 83) / DiagnosticConnectionService.cs (line 219) — StartReconnect ставит в очередь новый fire‑and‑forget при каждом сбое; семафор не даёт параллелизма, но серия ошибок может накопить очередь ожиданий и вызвать лишние циклы переподключения (временное давление на память/ресурсы).
+DB_CH	DB_CH_Compare_Flow_NTC_Temp_Hot	Al_NotStendReady	Неисправность. Стенд не готов
+DB_CH	DB_CH_Compare_Flow_NTC_Temp_Hot	Al_GasFlowNOK	Неисправность. Расход газа вне допуска
+DB_CH	DB_CH_Compare_Flow_NTC_Temp_Hot	Al_GasFlowPressureNOK	Неисправность. Давление газа вне допуска
+DB_CH	DB_CH_Compare_Flow_NTC_Temp_Hot	Al_BnrGasFlowPressureNOK	Неисправность. Давление на горелке вне допуска
+DB_CH	DB_CH_Compare_Flow_NTC_Temp_Hot	Al_WaterFlowMin	Неисправность. Слишком малый расход воды
+DB_CH	DB_CH_Compare_Flow_NTC_Temp_Hot	Al_WaterFlowMax	Неисправность. Слишком большой расход воды
+DB_CH	DB_CH_Compare_Flow_NTC_Temp_Hot	Al_WaterPressureLow	Неисправность. Низкое давление воды
+DB_CH	DB_CH_Compare_Flow_NTC_Temp_Hot	Al_WaterPressureHight	Неисправность. Высокое давление воды
+DB_CH	DB_CH_Compare_Flow_NTC_Temp_Hot	Al_FillTime	Неисправность. Время заполнение превышено
+DB_CH	DB_CH_Compare_Flow_NTC_Temp_Hot	Al_DeltaTempNOK	Неисправность. Разность температур вне допуска
+
+
+П-046-09 CH/Compare_Flow_NTC_Temperatures_Hot DB_CH_Compare_Flow_NTC_Temp_Hot. Неисправность. Разность температур вне допуска
+П-046-08 CH/Compare_Flow_NTC_Temperatures_Hot DB_CH_Compare_Flow_NTC_Temp_Hot. Неисправность. Время заполнение превышено
+П-046-07 CH/Compare_Flow_NTC_Temperatures_Hot DB_CH_Compare_Flow_NTC_Temp_Hot. Неисправность. Высокое давление воды
+П-046-06 CH/Compare_Flow_NTC_Temperatures_Hot DB_CH_Compare_Flow_NTC_Temp_Hot. Неисправность. Низкое давление воды
+П-046-05 CH/Compare_Flow_NTC_Temperatures_Hot DB_CH_Compare_Flow_NTC_Temp_Hot. Неисправность. Слишком большой расход воды
+П-046-04 CH/Compare_Flow_NTC_Temperatures_Hot DB_CH_Compare_Flow_NTC_Temp_Hot. Неисправность. Слишком малый расход воды
+П-046-03 CH/Compare_Flow_NTC_Temperatures_Hot DB_CH_Compare_Flow_NTC_Temp_Hот. Неисправность. Давление на горелке вне допуска
+П-046-02 CH/Compare_Flow_NTC_Temperatures_Hot DB_CH_Compare_Flow_NTC_Temp_Hot. Неисправность. Давление газа вне допуска
+П-046-01 CH/Compare_Flow_NTC_Temperatures_Hot DB_CH_Compare_Flow_NTC_Temp_Hot. Неисправность. Расход газа вне допуска
+П-046-00 CH/Compare_Flow_NTC_Temperatures_Hot DB_CH_Compare_Flow_NTC_Temp_Hot. Неисправность. Стенд не готов

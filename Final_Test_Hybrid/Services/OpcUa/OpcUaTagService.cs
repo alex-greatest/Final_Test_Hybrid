@@ -7,6 +7,9 @@ using Opc.Ua.Client;
 
 namespace Final_Test_Hybrid.Services.OpcUa;
 
+/// <summary>
+/// Сервис для чтения и записи OPC-UA тегов.
+/// </summary>
 public class OpcUaTagService(
     OpcUaConnectionService connectionService,
     DualLogger<OpcUaTagService> logger)
@@ -70,6 +73,61 @@ public class OpcUaTagService(
         {
             logger.LogError(ex, "Ошибка записи тега {NodeId}", nodeId);
             return new WriteResult(nodeId, $"Ошибка записи: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Записывает несколько тегов одним запросом (батчинг).
+    /// </summary>
+    /// <param name="items">Список пар (nodeId, value) для записи.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>Список результатов записи для каждого тега.</returns>
+    public async Task<List<WriteResult>> WriteBatchAsync(
+        IReadOnlyList<(string nodeId, object value)> items,
+        CancellationToken ct = default)
+    {
+        if (items.Count == 0)
+        {
+            return [];
+        }
+
+        try
+        {
+            var nodesToWrite = new WriteValueCollection();
+            foreach (var (nodeId, value) in items)
+            {
+                nodesToWrite.Add(new WriteValue
+                {
+                    NodeId = new NodeId(nodeId),
+                    AttributeId = Attributes.Value,
+                    Value = new DataValue(new Variant(value))
+                });
+            }
+
+            var response = await Session.WriteAsync(null, nodesToWrite, ct);
+
+            if (response.Results.Count != items.Count)
+            {
+                logger.LogError("Несоответствие количества результатов: ожидалось {Expected}, получено {Actual}",
+                    items.Count, response.Results.Count);
+                return items.Select(i => new WriteResult(i.nodeId, "Ошибка: несоответствие количества результатов")).ToList();
+            }
+
+            return items.Zip(response.Results, (item, status) =>
+                new WriteResult(
+                    item.nodeId,
+                    StatusCode.IsBad(status) ? OpcUaErrorMapper.ToHumanReadable(status) : null
+                )).ToList();
+        }
+        catch (ServiceResultException ex)
+        {
+            logger.LogError(ex, "Ошибка батч-записи {Count} тегов", items.Count);
+            return items.Select(i => new WriteResult(i.nodeId, OpcUaErrorMapper.ToHumanReadable(ex.StatusCode))).ToList();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка батч-записи {Count} тегов", items.Count);
+            return items.Select(i => new WriteResult(i.nodeId, $"Ошибка записи: {ex.Message}")).ToList();
         }
     }
 }

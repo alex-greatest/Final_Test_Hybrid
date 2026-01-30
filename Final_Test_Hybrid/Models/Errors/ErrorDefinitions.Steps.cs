@@ -383,6 +383,77 @@ public static partial class ErrorDefinitions
         RelatedStepId: "ch-compare-flow-ntc-temperature-cold",
         RelatedStepName: "CH/Compare_Flow_NTC_Temperature_Cold");
 
+    // Compare Flow NTC Temperatures Hot (П-046-xx)
+    public static readonly ErrorDefinition AlNotStendReadyCompareHot = new(
+        "П-046-00", "Неисправность. Стенд не готов",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Compare_Flow_NTC_Temp_Hot\".\"Al_NotStendReady\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-compare-flow-ntc-temperatures-hot",
+        RelatedStepName: "CH/Compare_Flow_NTC_Temperatures_Hot");
+
+    public static readonly ErrorDefinition AlGasFlowNokCompareHot = new(
+        "П-046-01", "Неисправность. Расход газа вне допуска",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Compare_Flow_NTC_Temp_Hot\".\"Al_GasFlowNOK\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-compare-flow-ntc-temperatures-hot",
+        RelatedStepName: "CH/Compare_Flow_NTC_Temperatures_Hot");
+
+    public static readonly ErrorDefinition AlGasFlowPressureNokCompareHot = new(
+        "П-046-02", "Неисправность. Давление газа вне допуска",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Compare_Flow_NTC_Temp_Hot\".\"Al_GasFlowPressureNOK\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-compare-flow-ntc-temperatures-hot",
+        RelatedStepName: "CH/Compare_Flow_NTC_Temperatures_Hot");
+
+    public static readonly ErrorDefinition AlBnrGasFlowPressureNokCompareHot = new(
+        "П-046-03", "Неисправность. Давление на горелке вне допуска",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Compare_Flow_NTC_Temp_Hot\".\"Al_BnrGasFlowPressureNOK\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-compare-flow-ntc-temperatures-hot",
+        RelatedStepName: "CH/Compare_Flow_NTC_Temperatures_Hot");
+
+    public static readonly ErrorDefinition AlWaterFlowMinCompareHot = new(
+        "П-046-04", "Неисправность. Слишком малый расход воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Compare_Flow_NTC_Temp_Hot\".\"Al_WaterFlowMin\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-compare-flow-ntc-temperatures-hot",
+        RelatedStepName: "CH/Compare_Flow_NTC_Temperatures_Hot");
+
+    public static readonly ErrorDefinition AlWaterFlowMaxCompareHot = new(
+        "П-046-05", "Неисправность. Слишком большой расход воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Compare_Flow_NTC_Temp_Hot\".\"Al_WaterFlowMax\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-compare-flow-ntc-temperatures-hot",
+        RelatedStepName: "CH/Compare_Flow_NTC_Temperatures_Hot");
+
+    public static readonly ErrorDefinition AlWaterPressureLowCompareHot = new(
+        "П-046-06", "Неисправность. Низкое давление воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Compare_Flow_NTC_Temp_Hot\".\"Al_WaterPressureLow\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-compare-flow-ntc-temperatures-hot",
+        RelatedStepName: "CH/Compare_Flow_NTC_Temperatures_Hot");
+
+    public static readonly ErrorDefinition AlWaterPressureHighCompareHot = new(
+        "П-046-07", "Неисправность. Высокое давление воды",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Compare_Flow_NTC_Temp_Hot\".\"Al_WaterPressureHight\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-compare-flow-ntc-temperatures-hot",
+        RelatedStepName: "CH/Compare_Flow_NTC_Temperatures_Hot");
+
+    public static readonly ErrorDefinition AlFillTimeCompareHot = new(
+        "П-046-08", "Неисправность. Время заполнение превышено",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Compare_Flow_NTC_Temp_Hot\".\"Al_FillTime\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-compare-flow-ntc-temperatures-hot",
+        RelatedStepName: "CH/Compare_Flow_NTC_Temperatures_Hot");
+
+    public static readonly ErrorDefinition AlDeltaTempNokCompareHot = new(
+        "П-046-09", "Неисправность. Разность температур вне допуска",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Compare_Flow_NTC_Temp_Hot\".\"Al_DeltaTempNOK\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-compare-flow-ntc-temperatures-hot",
+        RelatedStepName: "CH/Compare_Flow_NTC_Temperatures_Hot");
+
     // Gas/Wait_for_Gas_Flow (П-034-xx)
     public static readonly ErrorDefinition AlGasFlowLow = new(
         "П-034-00", "Неисправность. Низкий расход газа",
@@ -463,6 +534,28 @@ public static partial class ErrorDefinitions
         RelatedStepId: "gas-set-gas-and-p-burner-max-levels",
         RelatedStepName: "Gas/Set_Gas_and_P_Burner_Max_Levels");
 
+    // DHW/Check_Tank_Mode (П-025-xx)
+    public static readonly ErrorDefinition AlWaterFlowLowDhwCheckTank = new(
+        "П-025-00", "Неисправность. Низкий расход воды в контуре",
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_Check_Tank_Mode\".\"Al_WaterFlowLow\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-check-tank-mode",
+        RelatedStepName: "DHW/Check_Tank_Mode");
+
+    public static readonly ErrorDefinition AlWaterFlowHighDhwCheckTank = new(
+        "П-025-01", "Неисправность. Высокий расход воды в контуре",
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_Check_Tank_Mode\".\"Al_WaterFlowHight\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-check-tank-mode",
+        RelatedStepName: "DHW/Check_Tank_Mode");
+
+    public static readonly ErrorDefinition AlNoWaterPressureDhwCheckTank = new(
+        "П-025-02", "Неисправность. Нет давления воды",
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_Check_Tank_Mode\".\"Al_NoWaterPressure\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-check-tank-mode",
+        RelatedStepName: "DHW/Check_Tank_Mode");
+
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [
         BoilerNotLocked,
@@ -522,6 +615,16 @@ public static partial class ErrorDefinitions
         AlWaterFlowMaxCompare,
         AlWaterPressureLowCompare,
         AlWaterPressureHighCompare,
+        AlNotStendReadyCompareHot,
+        AlGasFlowNokCompareHot,
+        AlGasFlowPressureNokCompareHot,
+        AlBnrGasFlowPressureNokCompareHot,
+        AlWaterFlowMinCompareHot,
+        AlWaterFlowMaxCompareHot,
+        AlWaterPressureLowCompareHot,
+        AlWaterPressureHighCompareHot,
+        AlFillTimeCompareHot,
+        AlDeltaTempNokCompareHot,
         AlGasFlowLow,
         AlGasFlowHigh,
         AlNotStendReady,
@@ -532,6 +635,9 @@ public static partial class ErrorDefinitions
         AlGasFlowLowSetGasBurnerMax,
         AlGasFlowHighSetGasBurnerMax,
         AlNotStendReadySetGasBurnerMax,
-        AlNotConnectSensorPgbSetGasBurnerMax
+        AlNotConnectSensorPgbSetGasBurnerMax,
+        AlWaterFlowLowDhwCheckTank,
+        AlWaterFlowHighDhwCheckTank,
+        AlNoWaterPressureDhwCheckTank
     ];
 }

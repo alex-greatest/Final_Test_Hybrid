@@ -1,22 +1,3 @@
-﻿Создать шаг Gas/Set_Gas_and_P_Burner_Max_Levels с описанием: Регулировка давления и расхода газа на максимальной мощности. блок: "DB_VI".Gas.Set_Gas_and_P_Burner_Max_Levels. Ждём сигналы End и Error. End - ok, Error - нет. Когда начинаем шаг, надо отобразить RangeSlider. заголовок: "Настройка параметров газа в максимальном режиме" .В качестве зелёной зоны: низ зелёной золоны для давления (ns=3;s="DB_Recipe"."Gas"."BurnerPressMax"."SetValue" - ns=3;s="DB_Recipe"."Gas"."BurnerPressMax"."DownTol") - берём из рецептов.
-А вверх ns=3;s="DB_Recipe"."Gas"."BurnerPressMax"."SetValue" + ns=3;s="DB_Recipe"."Gas"."BurnerPressMax"."UpTol". красная зона - предлагаю добавить по 0.5 вниз и вверх. шаг должен быть по 0.1. в качестве привязки к стрелочки используем "DB_Measure".Sensor.Gas_PGB
-
-дальше для утечек тоже нижняя ns=3;s="DB_Recipe"."Gas"."FlowMax"."SetValue" - ns=3;s="DB_Recipe"."Gas"."FlowMax"."DownTol" и ns=3;s="DB_Recipe"."Gas"."FlowMax"."SetValue" + ns=3;s="DB_Recipe"."Gas"."FlowMax"."UpTol". предлагаю для крансной зоны добавить по 4 вверх и вниз шаг 1.  
-
-Когда получаем End или Error скрываем слайдер, какие-то не придвиденные ошибки, тоже скрываем
-
-
-
-дальше когда получили end или Error (определяет ок или nok) надо записать значения в результаты TestResultService  
-
-"DB_Parameter".Blr.Gas_Pres_Max - считать из плк и сохранить в результаты с именем Blr_Gas_Pres_Max c пределами
-(ns=3;s="DB_Recipe"."Gas"."SuppPress"."SetValue" - ns=3;s="DB_Recipe"."Gas"."SuppPress"."DownTol) - из рецептов - минимум. максиму: ns=3;s="DB_Recipe"."Gas"."SuppPress"."SetValue" + ns=3;s="DB_Recipe"."Gas"."SuppPress"."UpTol"
-
-
-"DB_Parameter".Gas.Flow_Max - считать из плк и сохранить в результаты, с названием Gas_Flow_Max с пределами (ns=3;s="DB_Recipe"."Gas"."FlowMax"."SetValue" - ns=3;s="DB_Recipe"."Gas"."FlowMax"."DownTol") и (ns=3;s="DB_Recipe"."Gas"."FlowMax"."SetValue" + ns=3;s="DB_Recipe"."Gas"."FlowMax"."UpTol")
-
-
-"DB_Parameter".Bnr.Gas_Pres_Max - считать из плк и сохранить в результаты с именем Bnr_Gas_Pres_Max c пределами (ns=3;s="DB_Recipe"."Gas"."BurnerPressMax"."SetValue" - ns=3;s="DB_Recipe"."Gas"."BurnerPressMax"."DownTol")
-
-
-ns=3;s="DB_Recipe"."Gas"."BurnerPressMax"."SetValue" + ns=3;s="DB_Recipe"."Gas"."BurnerPressMax"."UpTol")
+﻿Создать шаг DHW/Check_Tank_Mode с описанием:Проверка расхода воды режима БКН. блока "DB_VI".DHW.Check_Tank_Mode.Start. Ждём сигналы End и Error. End - ok, Error - нет. 
+когда получаем ок или error то надо считать из контроллера "DB_Parameter".DHW.Check_Tank_Mode и записать в TestResultService с названием Tank_DHW_Press isRange = true. пределы нижний "DB_Recipe".DHW.Tank.WaterMin
+"DB_Recipe".DHW.Tank.WaterMax - из рецептов. их в GetLimits, в pass или fail считанное значение "DB_Parameter".DHW.Check_Tank_Mode

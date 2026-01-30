@@ -8,37 +8,29 @@ using Microsoft.Extensions.Options;
 namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
 
 /// <summary>
-/// Сброс принудительного пуска насоса котла.
+/// Перевод котла в летний режим (сброс отопления).
 /// При ошибке на Retry автоматически пытается установить режим стенда заново.
 /// Реализует INonSkippable — пропуск запрещён.
 /// </summary>
-public class PumpStartFuncResetStep(
+public class ChResetStep(
     AccessLevelManager accessLevelManager,
     IOptions<DiagnosticSettings> settings,
-    DualLogger<PumpStartFuncResetStep> logger) : ITestStep, INonSkippable
+    DualLogger<ChResetStep> logger) : ITestStep, INonSkippable
 {
-    private const string HadErrorKey = "coms-pump-start-func-reset-had-error";
-    private const ushort RegisterPumpStartFuncDoc = 1189;
+    private const string HadErrorKey = "coms-ch-reset-had-error";
+    private const ushort RegisterChResetDoc = 1036;
     private const ushort ResetValue = 0;
 
     private readonly DiagnosticSettings _settings = settings.Value;
 
-    /// <inheritdoc />
-    public string Id => "coms-pump-start-func-reset";
-
-    /// <inheritdoc />
-    public string Name => "Coms/Pump_Start_Func_Reset";
-
-    /// <inheritdoc />
-    public string Description => "Сброс пуска насоса котла";
+    public string Id => "coms-ch-reset";
+    public string Name => "Coms/CH_Reset";
+    public string Description => "Перевод котла в летний режим";
 
     /// <summary>
-    /// Выполняет сброс принудительного пуска насоса котла.
+    /// Выполняет перевод котла в летний режим.
     /// При retry пытается установить режим стенда заново.
     /// </summary>
-    /// <param name="context">Контекст выполнения шага.</param>
-    /// <param name="ct">Токен отмены.</param>
-    /// <returns>Результат выполнения шага.</returns>
     public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
     {
         var isRetry = context.Variables.ContainsKey(HadErrorKey);
@@ -48,7 +40,7 @@ public class PumpStartFuncResetStep(
             return await HandleRetryAsync(context, ct);
         }
 
-        return await ResetPumpStartFuncAsync(context, ct);
+        return await ResetHeatingModeAsync(context, ct);
     }
 
     /// <summary>
@@ -56,7 +48,7 @@ public class PumpStartFuncResetStep(
     /// </summary>
     private async Task<TestStepResult> HandleRetryAsync(TestStepContext context, CancellationToken ct)
     {
-        logger.LogInformation("Retry: пытаемся установить режим Стенд перед сбросом насоса");
+        logger.LogInformation("Retry: пытаемся установить режим Стенд перед сбросом отопления");
 
         var setResult = await accessLevelManager.SetStandModeAsync(context.DiagWriter, ct);
         if (!setResult.Success)
@@ -66,25 +58,17 @@ public class PumpStartFuncResetStep(
 
         await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
 
-        return await ResetPumpStartFuncAsync(context, ct);
+        return await ResetHeatingModeAsync(context, ct);
     }
 
     /// <summary>
-    /// Сбрасывает принудительный пуск насоса записью 0 в регистр.
+    /// Переводит котёл в летний режим записью 0 в регистр отопления.
     /// </summary>
-    private async Task<TestStepResult> ResetPumpStartFuncAsync(TestStepContext context, CancellationToken ct)
+    private async Task<TestStepResult> ResetHeatingModeAsync(TestStepContext context, CancellationToken ct)
     {
-        logger.LogInformation("Сброс принудительного пуска насоса котла");
+        logger.LogInformation("Перевод котла в летний режим");
 
-        return await WriteAndVerifyAsync(context, ct);
-    }
-
-    /// <summary>
-    /// Записывает значение 0 в регистр и проверяет результат чтением.
-    /// </summary>
-    private async Task<TestStepResult> WriteAndVerifyAsync(TestStepContext context, CancellationToken ct)
-    {
-        var modbusAddress = (ushort)(RegisterPumpStartFuncDoc - _settings.BaseAddressOffset);
+        var modbusAddress = (ushort)(RegisterChResetDoc - _settings.BaseAddressOffset);
 
         var writeResult = await context.DiagWriter.WriteUInt16Async(modbusAddress, ResetValue, ct);
         if (!writeResult.Success)
@@ -104,12 +88,12 @@ public class PumpStartFuncResetStep(
 
         if (readResult.Value == ResetValue)
         {
-            logger.LogInformation("Принудительный пуск насоса сброшен успешно");
+            logger.LogInformation("Котёл переведён в летний режим");
             context.Variables.Remove(HadErrorKey);
             return TestStepResult.Pass();
         }
 
-        logger.LogWarning("Принудительный режим насоса не сброшен (прочитано: {Value}, ожидалось: {Expected})",
+        logger.LogWarning("Режим работы котла не изменён (прочитано: {Value}, ожидалось: {Expected})",
             readResult.Value, ResetValue);
         context.Variables[HadErrorKey] = true;
         return CreateModeError(readResult.Value);
@@ -120,7 +104,7 @@ public class PumpStartFuncResetStep(
     /// </summary>
     private TestStepResult CreateStandModeError(string error)
     {
-        var msg = $"Ошибка при установке режима Стенд перед сбросом насоса. {error}";
+        var msg = $"Ошибка установки режима Стенд. {error}";
         logger.LogError(msg);
         return TestStepResult.Fail(msg);
     }
@@ -130,7 +114,7 @@ public class PumpStartFuncResetStep(
     /// </summary>
     private TestStepResult CreateWriteError(string error)
     {
-        var msg = $"Ошибка при записи значения 0x{ResetValue:X4} в регистр {RegisterPumpStartFuncDoc}. {error}";
+        var msg = $"Ошибка записи в регистр {RegisterChResetDoc}. {error}";
         logger.LogError(msg);
         return TestStepResult.Fail(msg);
     }
@@ -140,18 +124,18 @@ public class PumpStartFuncResetStep(
     /// </summary>
     private TestStepResult CreateReadError(string error)
     {
-        var msg = $"Ошибка при чтении регистра {RegisterPumpStartFuncDoc}. {error}";
+        var msg = $"Ошибка чтения регистра {RegisterChResetDoc}. {error}";
         logger.LogError(msg);
         return TestStepResult.Fail(msg);
     }
 
     /// <summary>
-    /// Создаёт результат ошибки неверного значения.
+    /// Создаёт результат ошибки неверного режима.
     /// </summary>
     private TestStepResult CreateModeError(ushort actualValue)
     {
-        var msg = $"Ошибка: прочитано значение 0x{actualValue:X4} из регистра {RegisterPumpStartFuncDoc}, ожидалось 0x{ResetValue:X4}";
-        logger.LogError(msg);
+        var msg = "Режим работы котла не изменен";
+        logger.LogError("{Msg} (прочитано: {Value}, ожидалось: {Expected})", msg, actualValue, ResetValue);
         return TestStepResult.Fail(msg);
     }
 }

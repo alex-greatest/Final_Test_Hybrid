@@ -90,14 +90,16 @@ public class ReadEcuVersionStep(
         logger.LogInformation("Версия ПО ЭБУ: {Actual}, диапазон: [{Min}..{Max}], статус: {Status}",
             actualVersion, versionMinStr, versionMaxStr, isInRange ? "OK" : "NOK");
 
+        var msg = $"Версия ПО ЭБУ: {actualVersion} [{versionMinStr}..{versionMaxStr}]";
+
         if (!isInRange)
         {
-            var msg = $"Версия ПО ЭБУ ({actualVersion}) вне допустимого диапазона [{versionMinStr}..{versionMaxStr}]";
-            logger.LogError(msg);
+            logger.LogError("Версия ПО ЭБУ ({Actual}) вне допустимого диапазона [{Min}..{Max}]",
+                actualVersion, versionMinStr, versionMaxStr);
             return TestStepResult.Fail(msg, errors: [ErrorDefinitions.EcuFirmwareVersionMismatch]);
         }
 
-        return TestStepResult.Pass(actualVersion);
+        return TestStepResult.Pass(msg);
     }
 
     /// <summary>

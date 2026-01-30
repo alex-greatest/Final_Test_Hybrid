@@ -79,7 +79,7 @@ public class SlowFillCircuitStep(
     }
 
     /// <summary>
-    /// Обрабатывает завершение операции: чтение Flow_Press, сброс Start, валидация и сохранение результата.
+    /// Обрабатывает завершение операции: чтение Flow_Press, валидация и сохранение результата.
     /// </summary>
     private async Task<TestStepResult> HandleCompletionAsync(TestStepContext context, bool isSuccess, CancellationToken ct)
     {
@@ -87,12 +87,6 @@ public class SlowFillCircuitStep(
         if (error != null)
         {
             return TestStepResult.Fail($"Ошибка чтения Flow_Press: {error}");
-        }
-
-        var resetResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
-        if (resetResult.Error != null)
-        {
-            return TestStepResult.Fail($"Ошибка сброса Start: {resetResult.Error}");
         }
 
         var pressTestValue = context.RecipeProvider.GetValue<float>(PressTestValueRecipe)!.Value;
@@ -110,13 +104,22 @@ public class SlowFillCircuitStep(
         logger.LogInformation("Давление потока: {FlowPress:F3}, порог: {Threshold:F3}, статус: {Status}",
             flowPress, pressTestValue, status == 1 ? "OK" : "NOK");
 
+        var msg = $"Давление: {flowPress:F3}";
+
         if (isSuccess)
         {
             logger.LogInformation("Медленное заполнение контура завершено успешно");
-            return TestStepResult.Pass($"{flowPress:F3}");
+
+            var resetResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
+            if (resetResult.Error != null)
+            {
+                return TestStepResult.Fail($"Ошибка сброса Start: {resetResult.Error}");
+            }
+
+            return TestStepResult.Pass(msg);
         }
 
-        return TestStepResult.Fail($"Ошибка медленного заполнения контура: {flowPress:F3}");
+        return TestStepResult.Fail(msg);
     }
 
     private enum FillResult { Success, Error }
