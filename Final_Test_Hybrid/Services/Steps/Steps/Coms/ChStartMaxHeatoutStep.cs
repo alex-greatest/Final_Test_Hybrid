@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Diagnostic.Access;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Limits;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
@@ -18,8 +19,9 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
 /// В TestStepResult.Fail() передаются только программные ошибки, не связанные с PLC.
 /// </remarks>
 public class ChStartMaxHeatoutStep(
+    AccessLevelManager accessLevelManager,
     IOptions<DiagnosticSettings> settings,
-    DualLogger<ChStartMaxHeatoutStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags, IProvideLimits
+    DualLogger<ChStartMaxHeatoutStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags, IProvideLimits, INonSkippable
 {
     private const string BlockPath = "DB_VI.Coms.CH_Start_Max_Heatout";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"Coms\".\"CH_Start_Max_Heatout\".\"Start\"";
@@ -30,6 +32,8 @@ public class ChStartMaxHeatoutStep(
     private const string Continua1Tag = "ns=3;s=\"DB_VI\".\"Coms\".\"CH_Start_Max_Heatout\".\"Continua_1\"";
     private const string Continua2Tag = "ns=3;s=\"DB_VI\".\"Coms\".\"CH_Start_Max_Heatout\".\"Continua_2\"";
     private const string FaultTag = "ns=3;s=\"DB_VI\".\"Coms\".\"CH_Start_Max_Heatout\".\"Fault\"";
+
+    private const string HadErrorKey = "coms-ch-start-max-heatout-had-error";
 
     private const ushort RegisterOperationMode = 1036;
     private const ushort MaxHeatingMode = 4;
@@ -61,8 +65,44 @@ public class ChStartMaxHeatoutStep(
 
     /// <summary>
     /// Выполняет шаг запуска максимального нагрева.
+    /// При retry пытается установить режим стенда заново.
     /// </summary>
     public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
+    {
+        var isRetry = context.Variables.ContainsKey(HadErrorKey);
+
+        if (isRetry)
+        {
+            return await HandleRetryAsync(context, ct);
+        }
+
+        return await StartMaxHeatoutAsync(context, ct);
+    }
+
+    /// <summary>
+    /// Обрабатывает повторную попытку после ошибки.
+    /// </summary>
+    private async Task<TestStepResult> HandleRetryAsync(TestStepContext context, CancellationToken ct)
+    {
+        logger.LogInformation("Retry: устанавливаем режим Стенд перед запуском максимального нагрева");
+
+        var setResult = await accessLevelManager.SetStandModeAsync(context.DiagWriter, ct);
+        if (!setResult.Success)
+        {
+            var msg = $"Ошибка установки режима Стенд. {setResult.Error}";
+            logger.LogError(msg);
+            return TestStepResult.Fail(msg);
+        }
+
+        await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
+
+        return await StartMaxHeatoutAsync(context, ct);
+    }
+
+    /// <summary>
+    /// Выполняет запуск максимального нагрева.
+    /// </summary>
+    private async Task<TestStepResult> StartMaxHeatoutAsync(TestStepContext context, CancellationToken ct)
     {
         logger.LogInformation("Запуск шага максимального нагрева контура отопления");
 
@@ -114,8 +154,29 @@ public class ChStartMaxHeatoutStep(
             return await WaitForEndOrErrorAsync(context, msg, ct);
         }
 
+        // Верификация записи режима
+        await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
+
+        var readResult = await context.DiagReader.ReadUInt16Async(address, ct);
+        if (!readResult.Success)
+        {
+            var msg = $"Ошибка чтения регистра {RegisterOperationMode}. {readResult.Error}";
+            logger.LogError(msg);
+            await WriteFaultAsync(context, ct);
+            return await WaitForEndOrErrorAsync(context, msg, ct);
+        }
+
+        if (readResult.Value != MaxHeatingMode)
+        {
+            context.Variables[HadErrorKey] = true;
+            var msg = $"Режим не установлен (прочитано: {readResult.Value}, ожидалось: {MaxHeatingMode})";
+            logger.LogWarning(msg);
+            await WriteFaultAsync(context, ct);
+            return await WaitForEndOrErrorAsync(context, msg, ct);
+        }
+
         context.ReportProgress("Команда максимального нагрева отправлена успешно");
-        logger.LogInformation("Режим максимального нагрева (4) записан успешно");
+        logger.LogInformation("Режим максимального нагрева (4) записан и верифицирован");
 
         var continua = await context.OpcUa.WriteAsync(Continua1Tag, true, ct);
         if (continua.Error != null)
@@ -331,6 +392,7 @@ public class ChStartMaxHeatoutStep(
         float? ionization,
         CancellationToken ct)
     {
+        context.Variables.Remove(HadErrorKey);
         logger.LogInformation("Шаг максимального нагрева завершён успешно");
 
         var writeResult = await context.OpcUa.WriteAsync(StartTag, false, ct);

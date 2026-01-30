@@ -162,18 +162,7 @@ public static class StepsServiceExtensions
         services.AddSingleton<PreExecutionState>();
         services.AddSingleton<PreExecutionCoordinator>();
 
-        // Coms steps
-        services.AddTransient<CheckCommsStep>();
-
-        // Diagnostic steps (публичные — можно запускать отдельно)
-        services.AddTransient<DiagStressReadStep>();
-        services.AddTransient<DiagStartStopCycleStep>();
-        services.AddTransient<DiagReadBoilerErrorsStep>();
-        services.AddTransient<DiagPingDataStep>();
-        services.AddTransient<DiagPollingStressStep>();
-        services.AddTransient<DiagFullSuiteStep>();
-
-        // Diagnostic steps (внутренние — только через DiagFullSuiteStep)
+        // Diagnostic steps (внутренние — инжектятся напрямую в DiagFullSuiteStep)
         services.AddTransient<DiagLatencyStep>();
         services.AddTransient<DiagConcurrentReadStep>();
         services.AddTransient<DiagReconnectRecoveryStep>();

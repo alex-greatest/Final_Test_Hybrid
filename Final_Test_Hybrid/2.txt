@@ -1,9 +1,5 @@
-﻿DB_DHW	DB_Check_Tank_Mode	Al_WaterFlowLow	Неисправность. Низкий расход воды в контуре
-DB_DHW	DB_Check_Tank_Mode	Al_WaterFlowHight	Неисправность. Высокий расход воды в контуре
-		Al_NoWaterPressure	Неисправность. Нет давления воды
+﻿DB_DHW	DB_DHW_Purge_Circuit_Reverse_Direction	Al_NoStendReady	Неисправность. Система не готова к продувке
 
-
-
-П-025-02 DHW/Check_Tank_Mode DB_Check_Tank_Mode. Неисправность. Нет давления воды
-П-025-01 DHW/Check_Tank_Mode DB_Check_Tank_Mode. Неисправность. Высокий расход воды в контуре
-П-025-00 DHW/Check_Tank_Mode DB_Check_Tank_Mode. Неисправность. Низкий расход воды в контуре
+П-074-00
+DHW/Purge_Circuit_Reverse_Direction
+DB_DHW_Purge_Circuit_Reverse_Direction. Неисправность. Система не готова к продувке

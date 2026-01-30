@@ -80,6 +80,19 @@ public class AccessLevelManager(
         await SetAccessLevelAsync(AccessLevel.Normal, ResetKey, ct).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Сбрасывает в обычный режим через Pausable writer (для тестовых шагов).
+    /// Поддерживает паузу при Auto OFF.
+    /// </summary>
+    /// <param name="writer">Pausable writer из TestStepContext.</param>
+    /// <param name="ct">Токен отмены.</param>
+    /// <returns>Результат записи с детальной ошибкой.</returns>
+    public async Task<DiagnosticWriteResult> ResetToNormalModeAsync(
+        PausableRegisterWriter writer, CancellationToken ct)
+    {
+        return await SetAccessLevelAsync(AccessLevel.Normal, ResetKey, writer, ct).ConfigureAwait(false);
+    }
+
     private async Task<bool> SetAccessLevelAsync(AccessLevel level, uint key, CancellationToken ct)
     {
         var result = await SetAccessLevelCoreAsync(level, key, registerWriter, ct).ConfigureAwait(false);

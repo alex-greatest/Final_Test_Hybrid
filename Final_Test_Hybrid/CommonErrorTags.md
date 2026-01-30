@@ -89,6 +89,38 @@
 
 ---
 
+## Gas_Auto_Check_Gas_and_P_Burner_Max_Levels (П-039-xx)
+
+| Код БД | Тег PLC | OPC UA Path | Описание |
+|--------|---------|-------------|----------|
+| П-039-00 | Al_GasFlowNOK | `ns=3;s="DB_Gas"."Gas_Auto_Check_Gas_and_P_Burner_Max_Levels"."Al_GasFlowNOK"` | Расход газа вне допуска |
+| П-039-01 | Al_GasFlowPressureNOK | `ns=3;s="DB_Gas"."Gas_Auto_Check_Gas_and_P_Burner_Max_Levels"."Al_GasFlowPressureNOK"` | Давление газа вне допуска |
+| П-039-02 | Al_BnrGasFlowPressureNOK | `ns=3;s="DB_Gas"."Gas_Auto_Check_Gas_and_P_Burner_Max_Levels"."Al_BnrGasFlowPressureNOK"` | Давление на горелке вне допуска |
+| П-039-03 | Al_NotStendReady | `ns=3;s="DB_Gas"."Gas_Auto_Check_Gas_and_P_Burner_Max_Levels"."Al_NotStendReady"` | Стенд не готов |
+| П-039-04 | Al_NotConnectSensorPGB | `ns=3;s="DB_Gas"."Gas_Auto_Check_Gas_and_P_Burner_Max_Levels"."Al_NotConnectSensorPGB"` | Не подключена трубка газового клапана |
+
+---
+
+## Gas_Auto_Check_Gas_and_P_Burner_Min_Levels (П-041-xx)
+
+| Код БД | Тег PLC | OPC UA Path | Описание |
+|--------|---------|-------------|----------|
+| П-041-00 | Al_GasFlowNOK | `ns=3;s="DB_Gas"."Gas_Auto_Check_Gas_and_P_Burner_Min_Levels"."Al_GasFlowNOK"` | Расход газа вне допуска |
+| П-041-01 | Al_GasFlowPressureNOK | `ns=3;s="DB_Gas"."Gas_Auto_Check_Gas_and_P_Burner_Min_Levels"."Al_GasFlowPressureNOK"` | Давление газа вне допуска |
+| П-041-02 | Al_BnrGasFlowPressureNOK | `ns=3;s="DB_Gas"."Gas_Auto_Check_Gas_and_P_Burner_Min_Levels"."Al_BnrGasFlowPressureNOK"` | Давление на горелке вне допуска |
+| П-041-03 | Al_NotStendReady | `ns=3;s="DB_Gas"."Gas_Auto_Check_Gas_and_P_Burner_Min_Levels"."Al_NotStendReady"` | Стенд не готов |
+| П-041-04 | Al_NotConnectSensorPGB | `ns=3;s="DB_Gas"."Gas_Auto_Check_Gas_and_P_Burner_Min_Levels"."Al_NotConnectSensorPGB"` | Не подключена трубка газового клапана |
+
+---
+
+## Gas_Close_Circuit (П-060-xx)
+
+| Код БД | Тег PLC | OPC UA Path | Описание |
+|--------|---------|-------------|----------|
+| П-060-00 | Al_LeackGas | `ns=3;s="DB_Gas"."Gas_Close_Circuit"."Al_LeackGas"` | Утечка газа |
+
+---
+
 ## CH_Fast_Fill_Circuit (П-011-xx)
 
 | Код БД | Тег PLC | OPC UA Path | Описание |
@@ -118,6 +150,7 @@
 | П-016-02 | Котел не в стендовом режиме | Coms/Check_Test_Byte_ON |
 | П-016-03 | Ошибка записи в ЭБУ | Coms/Write_Soft_Code_Plug |
 | П-016-04 | Ошибка запуска насоса котла | Coms/CH_Pump_Start |
+| П-016-25 | Ошибка при выходе из режима Стенд | Coms/Write_Test_Byte_OFF |
 
 > **Примечание:** Это ошибки приложения без PLC тегов (Modbus диагностика)
 
@@ -207,6 +240,29 @@ VALUES
 (142, 'П-010-00', 'Gas_Leak_Test. Неисправность: Утечка газа', 2, 7, NULL),
 (143, 'П-010-01', 'Gas_Leak_Test. Неисправность: Нет давления газа', 2, 7, NULL);
 
+-- Gas_Auto_Check_Gas_and_P_Burner_Max_Levels (П-039-xx) - step_id=TBD
+INSERT INTO tb_error_settings_template (id, address_error, description, version, station_type_id, step_id)
+VALUES
+(628, 'П-039-00', 'Gas_Check_Gas_and_P_Burner_Max_Levels. Неисправность: Расход газа вне допуска', 2, 7, NULL),
+(629, 'П-039-01', 'Gas_Check_Gas_and_P_Burner_Max_Levels. Неисправность: Давление газа вне допуска', 2, 7, NULL),
+(630, 'П-039-02', 'Gas_Check_Gas_and_P_Burner_Max_Levels. Неисправность: Давление на горелке вне допуска', 2, 7, NULL),
+(631, 'П-039-03', 'Gas_Check_Gas_and_P_Burner_Max_Levels. Неисправность: Стенд не готов', 2, 7, NULL),
+(632, 'П-039-04', 'Gas_Check_Gas_and_P_Burner_Max_Levels. Неисправность: Не подключена трубка газового клапана', 2, 7, NULL);
+
+-- Gas_Auto_Check_Gas_and_P_Burner_Min_Levels (П-041-xx) - step_id=TBD
+INSERT INTO tb_error_settings_template (id, address_error, description, version, station_type_id, step_id)
+VALUES
+(633, 'П-041-00', 'Gas_Check_Gas_and_P_Burner_Min_Levels. Неисправность: Расход газа вне допуска', 2, 7, NULL),
+(634, 'П-041-01', 'Gas_Check_Gas_and_P_Burner_Min_Levels. Неисправность: Давление газа вне допуска', 2, 7, NULL),
+(635, 'П-041-02', 'Gas_Check_Gas_and_P_Burner_Min_Levels. Неисправность: Давление на горелке вне допуска', 2, 7, NULL),
+(636, 'П-041-03', 'Gas_Check_Gas_and_P_Burner_Min_Levels. Неисправность: Стенд не готов', 2, 7, NULL),
+(637, 'П-041-04', 'Gas_Check_Gas_and_P_Burner_Min_Levels. Неисправность: Не подключена трубка газового клапана', 2, 7, NULL);
+
+-- Gas_Close_Circuit (П-060-xx) - step_id=TBD
+INSERT INTO tb_error_settings_template (id, address_error, description, version, station_type_id, step_id)
+VALUES
+(638, 'П-060-00', 'Gas_Close_Circuit. Неисправность: Утечка газа', 2, 7, NULL);
+
 -- CH_Fast_Fill_Circuit (П-011-xx) - step_id=TBD
 INSERT INTO tb_error_settings_template (id, address_error, description, version, station_type_id, step_id)
 VALUES
@@ -228,8 +284,9 @@ VALUES
 (151, 'П-016-01', 'Coms_Write_Test_Byte_ON. Неисправность: Ошибка при смене режима котла', 2, 7, NULL),
 (152, 'П-016-02', 'Coms_Check_Test_Byte_ON. Неисправность: Котел не в стендовом режиме', 2, 7, NULL),
 (153, 'П-016-03', 'Coms_Write_Soft_Code_Plug. Неисправность: Ошибка записи в ЭБУ', 2, 7, NULL),
-(154, 'П-016-04', 'Coms_CH_Pump_Start. Неисправность: Ошибка запуска насоса котла', 2, 7, NULL);
+(154, 'П-016-04', 'Coms_CH_Pump_Start. Неисправность: Ошибка запуска насоса котла', 2, 7, NULL),
+(627, 'П-016-25', 'Coms_Write_Test_Byte_OFF. Неисправность: Ошибка при выходе из режима Стенд', 2, 7, NULL);
 
--- Обновить sequence (следующий id = 627)
-ALTER SEQUENCE tb_error_settings_template_id_seq RESTART WITH 627;
+-- Обновить sequence (следующий id = 639)
+ALTER SEQUENCE tb_error_settings_template_id_seq RESTART WITH 639;
 ```

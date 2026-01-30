@@ -119,7 +119,13 @@ public static partial class ErrorDefinitions
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-write-test-byte-on",
         RelatedStepName: "Coms/Write_Test_Byte_ON");
-    
+
+    public static readonly ErrorDefinition WriteBytesOff = new(
+        "П-016-25", "Ошибка при выходе из режима Стенд",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "coms-write-test-byte-off",
+        RelatedStepName: "Coms/Write_Test_Byte_OFF");
+
     public static readonly ErrorDefinition BoilerNotStandMode = new(
         "П-016-02", "Котел не в стендовом режиме",
         Severity: ErrorSeverity.Critical,
@@ -251,6 +257,12 @@ public static partial class ErrorDefinitions
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-read-ecu-version",
         RelatedStepName: "Coms/Read_ECU_Version");
+
+    public static readonly ErrorDefinition BoilerStillInStandMode = new(
+        "П-016-24", "Котел все еще в режиме Стенд",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "coms-check-test-byte-off",
+        RelatedStepName: "Coms/Check_Test_Byte_OFF");
 
     // Check Water Flow (П-029-xx)
     public static readonly ErrorDefinition AlNoWaterFlowCheck = new(
@@ -534,6 +546,86 @@ public static partial class ErrorDefinitions
         RelatedStepId: "gas-set-gas-and-p-burner-max-levels",
         RelatedStepName: "Gas/Set_Gas_and_P_Burner_Max_Levels");
 
+    // Gas/Check_Gas_and_P_Burner_Max_Levels (П-039-xx)
+    public static readonly ErrorDefinition AlGasFlowNokCheckGasBurnerMax = new(
+        "П-039-00", "Неисправность. Расход газа вне допуска",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Auto_Check_Gas_and_P_Burner_Max_Levels\".\"Al_GasFlowNOK\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-check-gas-and-p-burner-max-levels",
+        RelatedStepName: "Gas/Check_Gas_and_P_Burner_Max_Levels");
+
+    public static readonly ErrorDefinition AlGasFlowPressureNokCheckGasBurnerMax = new(
+        "П-039-01", "Неисправность. Давление газа вне допуска",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Auto_Check_Gas_and_P_Burner_Max_Levels\".\"Al_GasFlowPressureNOK\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-check-gas-and-p-burner-max-levels",
+        RelatedStepName: "Gas/Check_Gas_and_P_Burner_Max_Levels");
+
+    public static readonly ErrorDefinition AlBnrGasFlowPressureNokCheckGasBurnerMax = new(
+        "П-039-02", "Неисправность. Давление на горелке вне допуска",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Auto_Check_Gas_and_P_Burner_Max_Levels\".\"Al_BnrGasFlowPressureNOK\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-check-gas-and-p-burner-max-levels",
+        RelatedStepName: "Gas/Check_Gas_and_P_Burner_Max_Levels");
+
+    public static readonly ErrorDefinition AlNotStendReadyCheckGasBurnerMax = new(
+        "П-039-03", "Неисправность. Стенд не готов",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Auto_Check_Gas_and_P_Burner_Max_Levels\".\"Al_NotStendReady\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-check-gas-and-p-burner-max-levels",
+        RelatedStepName: "Gas/Check_Gas_and_P_Burner_Max_Levels");
+
+    public static readonly ErrorDefinition AlNotConnectSensorPgbCheckGasBurnerMax = new(
+        "П-039-04", "Неисправность. Не подключена трубка газового клапана",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Auto_Check_Gas_and_P_Burner_Max_Levels\".\"Al_NotConnectSensorPGB\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-check-gas-and-p-burner-max-levels",
+        RelatedStepName: "Gas/Check_Gas_and_P_Burner_Max_Levels");
+
+    // Gas/Check_Gas_and_P_Burner_Min_Levels (П-041-xx)
+    public static readonly ErrorDefinition AlGasFlowNokCheckGasBurnerMin = new(
+        "П-041-00", "Неисправность. Расход газа вне допуска",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Auto_Check_Gas_and_P_Burner_Min_Levels\".\"Al_GasFlowNOK\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-check-gas-and-p-burner-min-levels",
+        RelatedStepName: "Gas/Check_Gas_and_P_Burner_Min_Levels");
+
+    public static readonly ErrorDefinition AlGasFlowPressureNokCheckGasBurnerMin = new(
+        "П-041-01", "Неисправность. Давление газа вне допуска",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Auto_Check_Gas_and_P_Burner_Min_Levels\".\"Al_GasFlowPressureNOK\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-check-gas-and-p-burner-min-levels",
+        RelatedStepName: "Gas/Check_Gas_and_P_Burner_Min_Levels");
+
+    public static readonly ErrorDefinition AlBnrGasFlowPressureNokCheckGasBurnerMin = new(
+        "П-041-02", "Неисправность. Давление на горелке вне допуска",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Auto_Check_Gas_and_P_Burner_Min_Levels\".\"Al_BnrGasFlowPressureNOK\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-check-gas-and-p-burner-min-levels",
+        RelatedStepName: "Gas/Check_Gas_and_P_Burner_Min_Levels");
+
+    public static readonly ErrorDefinition AlNotStendReadyCheckGasBurnerMin = new(
+        "П-041-03", "Неисправность. Стенд не готов",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Auto_Check_Gas_and_P_Burner_Min_Levels\".\"Al_NotStendReady\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-check-gas-and-p-burner-min-levels",
+        RelatedStepName: "Gas/Check_Gas_and_P_Burner_Min_Levels");
+
+    public static readonly ErrorDefinition AlNotConnectSensorPgbCheckGasBurnerMin = new(
+        "П-041-04", "Неисправность. Не подключена трубка газового клапана",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Auto_Check_Gas_and_P_Burner_Min_Levels\".\"Al_NotConnectSensorPGB\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-check-gas-and-p-burner-min-levels",
+        RelatedStepName: "Gas/Check_Gas_and_P_Burner_Min_Levels");
+
+    // Gas/Close_Circuit (П-060-xx)
+    public static readonly ErrorDefinition AlLeackGasCloseCircuit = new(
+        "П-060-00", "Неисправность. Утечка газа",
+        PlcTag: "ns=3;s=\"DB_Gas\".\"Gas_Close_Circuit\".\"Al_LeackGas\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "gas-close-circuit",
+        RelatedStepName: "Gas/Close_Circuit");
+
     // DHW/Check_Tank_Mode (П-025-xx)
     public static readonly ErrorDefinition AlWaterFlowLowDhwCheckTank = new(
         "П-025-00", "Неисправность. Низкий расход воды в контуре",
@@ -556,6 +648,22 @@ public static partial class ErrorDefinitions
         RelatedStepId: "dhw-check-tank-mode",
         RelatedStepName: "DHW/Check_Tank_Mode");
 
+    // DHW/Purge_Circuit_Normal_Direction (П-071-xx)
+    public static readonly ErrorDefinition AlNoStendReadyDhwPurge = new(
+        "П-071-00", "Неисправность. Система не готова к продувке",
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Purge_Circuit_Normal_Direction\".\"Al_NoStendReady\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-purge-circuit-normal-direction",
+        RelatedStepName: "DHW/Purge_Circuit_Normal_Direction");
+
+    // CH/Purge_Circuit_Reverse_Direction (П-073-xx)
+    public static readonly ErrorDefinition AlNoStendReadyChPurgeReverse = new(
+        "П-073-00", "Неисправность. Система не готова к продувке",
+        PlcTag: "ns=3;s=\"DB_VI\".\"CH\".\"Purge_Circuit_Reverse_Direction\".\"Al_NoStendReady\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-purge-circuit-reverse-direction",
+        RelatedStepName: "CH/Purge_Circuit_Reverse_Direction");
+
     internal static IEnumerable<ErrorDefinition> StepErrors =>
     [
         BoilerNotLocked,
@@ -575,6 +683,7 @@ public static partial class ErrorDefinitions
         AlFillTimeСhSlow,
         NoDiagnosticConnection,
         WriteBytesOn,
+        WriteBytesOff,
         BoilerNotStandMode,
         EcuWriteError,
         ChPumpStartError,
@@ -597,6 +706,7 @@ public static partial class ErrorDefinitions
         EcuMaxFlowTemperatureMismatch,
         ThermostatJumperMissing,
         EcuFirmwareVersionMismatch,
+        BoilerStillInStandMode,
         AlNoWaterFlowCheck,
         AlWaterFlowMinCheck,
         AlWaterFlowMaxCheck,
@@ -636,8 +746,21 @@ public static partial class ErrorDefinitions
         AlGasFlowHighSetGasBurnerMax,
         AlNotStendReadySetGasBurnerMax,
         AlNotConnectSensorPgbSetGasBurnerMax,
+        AlGasFlowNokCheckGasBurnerMax,
+        AlGasFlowPressureNokCheckGasBurnerMax,
+        AlBnrGasFlowPressureNokCheckGasBurnerMax,
+        AlNotStendReadyCheckGasBurnerMax,
+        AlNotConnectSensorPgbCheckGasBurnerMax,
+        AlGasFlowNokCheckGasBurnerMin,
+        AlGasFlowPressureNokCheckGasBurnerMin,
+        AlBnrGasFlowPressureNokCheckGasBurnerMin,
+        AlNotStendReadyCheckGasBurnerMin,
+        AlNotConnectSensorPgbCheckGasBurnerMin,
+        AlLeackGasCloseCircuit,
         AlWaterFlowLowDhwCheckTank,
         AlWaterFlowHighDhwCheckTank,
-        AlNoWaterPressureDhwCheckTank
+        AlNoWaterPressureDhwCheckTank,
+        AlNoStendReadyDhwPurge,
+        AlNoStendReadyChPurgeReverse
     ];
 }
