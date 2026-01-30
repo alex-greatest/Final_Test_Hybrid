@@ -132,6 +132,14 @@ public static partial class ErrorDefinitions
         RelatedStepId: "dhw-compare-flow-ntc-temperature-hot",
         RelatedStepName: "DHW/Compare_Flow_NTC_Temperature_Hot");
 
+    // DHW/Check_Water_Flow_when_in_DHW_Mode (П-054-xx)
+    public static readonly ErrorDefinition AlFlowChNokCheckWaterFlowDhwMode = new(
+        "П-054-00", "Неисправность. Расход воды в контуре CH выше допустимого",
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Check_Water_Flow_when_in_DHW_Mode\".\"Al_FlowCHNOK\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-check-water-flow-when-in-dhw-mode",
+        RelatedStepName: "DHW/Check_Water_Flow_When_In_DHW_Mode");
+
     internal static IEnumerable<ErrorDefinition> Steps1Errors =>
     [
         AlNotStendReadyTempRise,
@@ -151,6 +159,7 @@ public static partial class ErrorDefinitions
         AlWaterFlowMinCheckFlowRate,
         AlWaterFlowMaxCheckFlowRate,
         AlNotStendReadyDhwCompareFlowNtcTempHot,
-        AlDeltaTempNokDhwCompareFlowNtcTempHot
+        AlDeltaTempNokDhwCompareFlowNtcTempHot,
+        AlFlowChNokCheckWaterFlowDhwMode
     ];
 }

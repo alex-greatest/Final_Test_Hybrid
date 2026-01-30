@@ -22,4 +22,10 @@ public record DiagnosticPingData
     /// - 1-25 = код ошибки
     /// </summary>
     public ushort? LastErrorId { get; init; }
+
+    /// <summary>
+    /// Температура подающей линии CH (регистр 1006).
+    /// null = не удалось прочитать (soft-fail).
+    /// </summary>
+    public short? ChTemperature { get; init; }
 }

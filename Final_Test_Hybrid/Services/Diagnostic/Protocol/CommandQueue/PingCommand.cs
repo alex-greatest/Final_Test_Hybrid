@@ -10,9 +10,10 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
 /// </summary>
 public class PingCommand : ModbusCommandBase<DiagnosticPingData>
 {
-    private const ushort ModeKeyAddressDoc = 1000;   // Документация: 1000-1001
-    private const ushort LastErrorAddressDoc = 1047; // Документация: 1047
-    private const ushort RegisterCount = 6;          // 6 регистров
+    private const ushort ModeKeyAddressDoc = 1000;      // Документация: 1000-1001
+    private const ushort LastErrorAddressDoc = 1047;   // Документация: 1047
+    private const ushort ChTemperatureAddressDoc = 1006; // Документация: 1006
+    private const ushort RegisterCount = 6;            // 6 регистров
 
     private readonly ushort _baseAddress;
     private readonly ushort _baseAddressOffset;
@@ -47,11 +48,15 @@ public class PingCommand : ModbusCommandBase<DiagnosticPingData>
         // Чтение ошибки — soft-fail (не ломает ping)
         var lastErrorId = ReadLastErrorSoftFail(master, slaveId, ct);
 
+        // Чтение температуры CH — soft-fail (не ломает ping)
+        var chTemperature = ReadChTemperatureSoftFail(master, slaveId, ct);
+
         var pingData = new DiagnosticPingData
         {
             ModeKey = modeKey,
             BoilerStatus = boilerStatus,
-            LastErrorId = lastErrorId
+            LastErrorId = lastErrorId,
+            ChTemperature = chTemperature
         };
 
         return System.Threading.Tasks.Task.FromResult(pingData);
@@ -76,6 +81,28 @@ public class PingCommand : ModbusCommandBase<DiagnosticPingData>
         catch
         {
             // soft-fail: возвращаем null, ping продолжает работать
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Читает температуру CH с soft-fail.
+    /// </summary>
+    private short? ReadChTemperatureSoftFail(IModbusMaster master, byte slaveId, CancellationToken ct)
+    {
+        try
+        {
+            ct.ThrowIfCancellationRequested();
+            var tempAddress = (ushort)(ChTemperatureAddressDoc - _baseAddressOffset);
+            var tempRegisters = master.ReadHoldingRegisters(slaveId, tempAddress, 1);
+            return (short)tempRegisters[0];
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
             return null;
         }
     }
