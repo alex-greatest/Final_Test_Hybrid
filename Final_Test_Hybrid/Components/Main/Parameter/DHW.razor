@@ -109,7 +109,7 @@
     private void StartModbusPolling()
     {
         if (!Dispatcher.IsConnected) return;
-        if (_pollingTask != null && !_pollingTask.IsCompleted) return;
+        if (_pollingTask is { IsCompleted: false }) return;
 
         _cts?.Dispose();
         _cts = new CancellationTokenSource();

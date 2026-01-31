@@ -675,7 +675,7 @@ public static partial class ErrorDefinitions
     // CH/Purge_Circuit_Reverse_Direction (П-073-xx)
     public static readonly ErrorDefinition AlNoStendReadyChPurgeReverse = new(
         "П-073-00", "Неисправность. Система не готова к продувке",
-        PlcTag: "ns=3;s=\"DB_VI\".\"CH\".\"Purge_Circuit_Reverse_Direction\".\"Al_NoStendReady\"",
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Purge_Circuit_Reverse_Direction\".\"Al_NoStendReady\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "ch-purge-circuit-reverse-direction",
         RelatedStepName: "CH/Purge_Circuit_Reverse_Direction");

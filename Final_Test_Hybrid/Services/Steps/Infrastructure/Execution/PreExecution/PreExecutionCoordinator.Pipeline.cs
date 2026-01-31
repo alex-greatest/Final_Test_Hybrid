@@ -43,6 +43,7 @@ public partial class PreExecutionCoordinator
             infra.ErrorService.IsHistoryEnabled = true;
             state.BoilerState.SetTestRunning(true);
             state.BoilerState.StartTestTimer();
+            state.BoilerState.StopChangeoverTimer();
 
             ct.ThrowIfCancellationRequested();
 
@@ -86,6 +87,7 @@ public partial class PreExecutionCoordinator
             infra.ErrorService.IsHistoryEnabled = true;
             state.BoilerState.SetTestRunning(true);
             state.BoilerState.StartTestTimer();
+            state.BoilerState.StopChangeoverTimer();
 
             ct.ThrowIfCancellationRequested();
 
@@ -284,7 +286,6 @@ public partial class PreExecutionCoordinator
             RollbackTestStart();
             return false;
         }
-        state.BoilerState.StopChangeoverTimer();
         return true;
     }
 

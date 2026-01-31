@@ -1,10 +1,8 @@
-﻿ScanBarcode			
-Misc/StartTimer1			
-Block boiler adapter			
-	CH/Flush_Circuit	DHW/Flush_DHW_Circuit_Normal_Direction	Elec/Connect_Earth_Clip
+﻿	CH/Flush_Circuit	DHW/Flush_DHW_Circuit_Normal_Direction	Elec/Connect_Earth_Clip
 Gas/Open_Circuit	CH/Open_Circuit_Normal	DHW/Fill_Circuit_Normal_Direction	Elec/Connect_Power_Cable
-Gas/Leak_Test	CH/Fast_Fill_Circuit	DHW/Fill_Circuit_Reverse_Direction	Elec/Boiler_Power_ON
+Gas/Leak_Test	CH/Fast_Fill_Circuit		Elec/Boiler_Power_ON
 	CH/Slow_Fill_Circuit		Elec/Power_Supply_Test
+			DHW/High_Pressure_Test
 Coms/Check_Comms			
 Coms/Write_Test_Byte_ON			
 Coms/Check_Test_Byte_ON			
@@ -34,21 +32,29 @@ WaitTime/WaitTenSec
 CH/Disable_Cooling			
 WaitTime/WaitTenSec			
 CH/Check_Flow_Temperature_Rise	CH/Compare_Flow_NTC_Temperatures_Hot		
-Coms/CH_Reset	Coms/Enable_Cooling		
+Coms/Enable_Cooling			
+Coms/CH_Reset			
 WaitTime/WaitTenSec			
 WaitTime/WaitTenSec			
-Elec/Boiler_Power_OFF	CH/Disable_Cooling		
+DHW/Reduce_Circuit_Pressure			
+Elec/Boiler_Power_OFF			
+DHW/Set_Circuit_Pressure			
+Elec/Boiler_Power_ON			
+WaitTime/WaitThreeSec	CH/Disable_Cooling		
+Coms/Write_Test_Byte_ON	Coms/Check_Boiler_Status		
+Coms/Check_Test_Byte_ON			
+DHW/Get_Flow_NTC_Cold	DHW/Compare_Flow_NTC_Temperature_Cold		
+DHW/Check_Flow_Rate	DHW/Check_Water_Flow_When_In_DHW_Mode		
+WaitTime/WaitThreeSec			
+DHW/Check_Flow_Temperature_Rise	DHW/Compare_Flow_NTC_Temperature_Hot	DHW/Check_Flow_Hot_Rate	
+DHW/Close_Circuit_Valve			
+WaitTime/WaitOneSec			
+Gas/Close_Circuit	Elec/Boiler_Power_OFF		
 WaitTime/WaitOneSec			
 Elec/Boiler_Power_ON			
 WaitTime/WaitThreeSec			
 Coms/Write_Test_Byte_ON	Coms/Check_Boiler_Status		
 Coms/Check_Test_Byte_ON			
-DHW/Set_Tank_Mode	Coms/Set_DHW_Tank_Mode		
-DHW/Check_Tank_Mode			
-Coms/Pump_Start_Func_Reset			
-WaitTime/WaitOneSec			
-Gas/Close_Circuit			
-WaitTime/WaitThreeSec			
 Coms/CH_Start_ST_Heatout			
 Coms/Safety_Time			
 Coms/CH_Reset	Coms/Set_to_Zero_CH_Pump_Overrun		

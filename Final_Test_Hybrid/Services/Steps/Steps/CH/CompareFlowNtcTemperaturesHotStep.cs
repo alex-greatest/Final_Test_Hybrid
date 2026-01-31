@@ -19,13 +19,13 @@ public class CompareFlowNtcTemperaturesHotStep(
     DualLogger<CompareFlowNtcTemperaturesHotStep> logger,
     ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions, IRequiresRecipes, IProvideLimits
 {
-    private const string BlockPath = "DB_VI.CH.Compare_Flow_NTC_Temperatures_Hot";
-    private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperatures_Hot\".\"Start\"";
-    private const string EndTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperatures_Hot\".\"End\"";
-    private const string ErrorTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperatures_Hot\".\"Error\"";
-    private const string Ready1Tag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperatures_Hot\".\"Ready_1\"";
-    private const string Continua1Tag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperatures_Hot\".\"Сontinua_1\"";
-    private const string FaultTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperatures_Hot\".\"Fault\"";
+    private const string BlockPath = "DB_VI.CH.Compare_Flow_NTC_Temperature_Hot";
+    private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Hot\".\"Start\"";
+    private const string EndTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Hot\".\"End\"";
+    private const string ErrorTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Hot\".\"Error\"";
+    private const string Ready1Tag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Hot\".\"Ready_1\"";
+    private const string Continua1Tag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Hot\".\"Сontinua_1\"";
+    private const string FaultTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Hot\".\"Fault\"";
     private const string ChTmrTag = "ns=3;s=\"DB_Measure\".\"Temper\".\"CH_TMR\"";
     private const string TFlowDeltaMaxRecipe = "ns=3;s=\"DB_Recipe\".\"CH\".\"TFlowDeltaMax\"";
     private const string ParameterName = "Delta_CH_Flow_Temp_Hot";
