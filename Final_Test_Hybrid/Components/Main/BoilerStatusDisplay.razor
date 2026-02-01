@@ -76,6 +76,23 @@
         }
     }
 
+    private static string FormatBoilerStatus(short status) => status switch
+    {
+        -1 => "Тест. линия",
+        0 => "Вкл. питания",
+        1 => "Блок. Б",
+        2 => "Блок. А",
+        3 => "ЧС",
+        4 => "Ожидание",
+        5 => "Уст. мощн.",
+        6 => "Кратк. ОС",
+        7 => "Пост. ОС",
+        8 => "Долг. прод.",
+        9 => "Лето",
+        10 => "Зима",
+        _ => $"Неизв. ({status})"
+    };
+
     private static string FormatStatus(DiagnosticPingData data)
     {
         var mode = data.ModeKey switch
@@ -91,7 +108,7 @@
             var id => $", {BoilerErrors.Get(id.Value).DisplayCode}"
         };
 
-        return $"{data.BoilerStatus}, {mode}{errorText}";
+        return $"{FormatBoilerStatus(data.BoilerStatus)}, {mode}{errorText}";
     }
 
     public void Dispose()

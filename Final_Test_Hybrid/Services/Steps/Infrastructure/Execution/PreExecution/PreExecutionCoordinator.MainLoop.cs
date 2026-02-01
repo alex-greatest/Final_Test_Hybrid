@@ -192,6 +192,7 @@ public partial class PreExecutionCoordinator
 
         infra.ErrorService.IsHistoryEnabled = false;
         state.BoilerState.StopTestTimer();
+        ReportTestTimingStep();
         var hasErrors = coordinators.TestCoordinator.HasErrors
                         || coordinators.TestCoordinator.HadSkippedError;
         var testResult = hasErrors ? 2 : 1;
@@ -260,5 +261,35 @@ public partial class PreExecutionCoordinator
             OnStateChanged?.Invoke();
             return barcode;
         }
+    }
+
+    /// <summary>
+    /// Добавляет шаг с итоговым временем теста в грид и сохраняет в результаты.
+    /// </summary>
+    private void ReportTestTimingStep()
+    {
+        var testTime = state.BoilerState.GetTestDuration();
+        var changeoverTime = state.BoilerState.GetChangeoverDuration();
+        var totalTime = testTime + changeoverTime;
+
+        var testFormatted = FormatDuration(testTime);
+        var changeoverFormatted = FormatDuration(changeoverTime);
+        var totalFormatted = FormatDuration(totalTime);
+
+        var stepId = infra.StatusReporter.ReportStepStarted("Время теста", "Итоговое время");
+        var message = $"Время теста: {testFormatted}  Время переналадки: {changeoverFormatted}  Общее время: {totalFormatted}";
+        infra.StatusReporter.ReportSuccess(stepId, message);
+
+        infra.TestResultsService.Add("Test_Time", testFormatted, "", "", 1, false, "");
+        infra.TestResultsService.Add("Change_Over_Time", changeoverFormatted, "", "", 1, false, "");
+        infra.TestResultsService.Add("Complete_Time", totalFormatted, "", "", 1, false, "");
+    }
+
+    /// <summary>
+    /// Форматирует TimeSpan в формат HH:mm:ss.
+    /// </summary>
+    private static string FormatDuration(TimeSpan duration)
+    {
+        return $"{(int)duration.TotalHours:D2}:{duration.Minutes:D2}:{duration.Seconds:D2}";
     }
 }
