@@ -95,7 +95,10 @@
       "Bash(tree:*)",
       "Bash(dotnet ef database update:*)",
       "WebFetch(domain:forum.radzen.com)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(for id in 67 130 26 34 208 77 3 37 134 163 173 88 115 308 330 331 85 93 94 106 112 121)",
+      "Bash(do echo \"=== h_elem_$id ===\")",
+      "Bash(done)"
     ]
   }
 }
