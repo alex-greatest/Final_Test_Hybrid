@@ -1,3 +1,10 @@
+.step-history-grid {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+}
+
 .step-history-grid .grid-header {
     display: flex;
     justify-content: space-between;

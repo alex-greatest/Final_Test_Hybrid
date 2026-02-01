@@ -93,6 +93,7 @@ public partial class ReadSoftCodePlugStep(
     private const string MaxFlowTemperatureRecipe = "Max_Flow_Temperature";
     private const string MaxFlowTemperatureMinRecipe = "Max_Flow_Temperature_Min";
     private const string MaxFlowTemperatureMaxRecipe = "Max_Flow_Temperature_Max";
+    private const string NumberOfContoursRecipe = "NumberOfContours";
 
     // Имена параметров для результатов
     private const string ArticleResultName = "Nomenclature_EngP3";
@@ -140,7 +141,8 @@ public partial class ReadSoftCodePlugStep(
         MaxPumpAutoPowerRecipe, MaxPumpAutoPowerMinRecipe, MaxPumpAutoPowerMaxRecipe,
         MinPumpAutoPowerRecipe, MinPumpAutoPowerMinRecipe, MinPumpAutoPowerMaxRecipe,
         ComfortHysteresisRecipe, ComfortHysteresisMinRecipe, ComfortHysteresisMaxRecipe,
-        MaxFlowTemperatureRecipe, MaxFlowTemperatureMinRecipe, MaxFlowTemperatureMaxRecipe
+        MaxFlowTemperatureRecipe, MaxFlowTemperatureMinRecipe, MaxFlowTemperatureMaxRecipe,
+        NumberOfContoursRecipe
     ];
 
     /// <summary>
@@ -202,9 +204,16 @@ public partial class ReadSoftCodePlugStep(
         result = await ReadAndVerifyCurrentOffsetAsync(context, ct);
         if (!result.Success) return result;
 
-        // Подшаг 13: Чтение и проверка коэффициента k расхода воды
-        result = await ReadAndVerifyFlowCoefficientAsync(context, ct);
-        if (!result.Success) return result;
+        // Подшаг 13: Чтение и проверка коэффициента k расхода воды (только для двухконтурных)
+        if (IsDualCircuit(context))
+        {
+            result = await ReadAndVerifyFlowCoefficientAsync(context, ct);
+            if (!result.Success) return result;
+        }
+        else
+        {
+            logger.LogInformation("Пропуск чтения коэффициента k — одноконтурный котёл");
+        }
 
         // Подшаг 14: Чтение и проверка макс. мощности насоса в авто режиме
         result = await ReadAndVerifyMaxPumpAutoPowerAsync(context, ct);
@@ -214,9 +223,16 @@ public partial class ReadSoftCodePlugStep(
         result = await ReadAndVerifyMinPumpAutoPowerAsync(context, ct);
         if (!result.Success) return result;
 
-        // Подшаг 16: Чтение и проверка гистерезиса ГВС в режиме комфорт
-        result = await ReadAndVerifyComfortHysteresisAsync(context, ct);
-        if (!result.Success) return result;
+        // Подшаг 16: Чтение и проверка гистерезиса ГВС в режиме комфорт (только для двухконтурных)
+        if (IsDualCircuit(context))
+        {
+            result = await ReadAndVerifyComfortHysteresisAsync(context, ct);
+            if (!result.Success) return result;
+        }
+        else
+        {
+            logger.LogInformation("Пропуск чтения гистерезиса ГВС — одноконтурный котёл");
+        }
 
         // Подшаг 17: Чтение и проверка макс. температуры подающей линии
         result = await ReadAndVerifyMaxFlowTemperatureAsync(context, ct);
@@ -244,6 +260,15 @@ public partial class ReadSoftCodePlugStep(
 
         logger.LogInformation("Все параметры успешно прочитаны и верифицированы");
         return TestStepResult.Pass();
+    }
+
+    /// <summary>
+    /// Определяет, является ли котёл двухконтурным.
+    /// </summary>
+    private static bool IsDualCircuit(TestStepContext context)
+    {
+        var contours = context.RecipeProvider.GetValue<ushort>(NumberOfContoursRecipe)!.Value;
+        return contours == 2;
     }
 
     /// <summary>

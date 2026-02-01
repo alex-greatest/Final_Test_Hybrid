@@ -100,6 +100,7 @@ public class OperationDetailsService(
                 .OrderBy(st => st.StepFinalTestHistory!.Name)
                 .Select(st => new ArchiveStepTimeItem
                 {
+                    Id = st.Id,
                     StepName = st.StepFinalTestHistory!.Name,
                     Duration = st.Duration
                 })
