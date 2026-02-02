@@ -9,6 +9,7 @@ public static class ScannerServiceExtensions
     public static IServiceCollection AddScannerServices(this IServiceCollection services)
     {
         services.AddSingleton<ScannerConnectionState>();
+        services.AddSingleton<ScannerDeviceDetector>();
         services.AddSingleton<RawInputService>();
 
         return services;

@@ -10,7 +10,7 @@ namespace Final_Test_Hybrid.Services.Scanner.RawInput;
 /// Detects and caches the target barcode scanner device by VID/PID.
 /// Thread-safe device identification with lazy discovery.
 /// </summary>
-public sealed class ScannerDeviceDetector(IConfiguration configuration, ILogger logger)
+public sealed class ScannerDeviceDetector(IConfiguration configuration, ILogger<ScannerDeviceDetector> logger)
 {
     private readonly ConcurrentDictionary<IntPtr, string> _deviceNameCache = new();
     private readonly Lock _lock = new();
@@ -30,7 +30,6 @@ public sealed class ScannerDeviceDetector(IConfiguration configuration, ILogger 
             _cachedDevice = IntPtr.Zero;
         }
         _deviceNameCache.Clear();
-        logger.LogDebug("Device cache cleared");
     }
 
     private bool TryGetCachedDevice(IntPtr hDevice)
@@ -44,11 +43,7 @@ public sealed class ScannerDeviceDetector(IConfiguration configuration, ILogger 
     private bool CheckAndCacheDevice(IntPtr hDevice)
     {
         var deviceName = GetDeviceName(hDevice);
-        if (string.IsNullOrEmpty(deviceName))
-        {
-            return false;
-        }
-        if (!IsTargetVidPid(deviceName))
+        if (string.IsNullOrEmpty(deviceName) || !IsTargetVidPid(deviceName))
         {
             return false;
         }

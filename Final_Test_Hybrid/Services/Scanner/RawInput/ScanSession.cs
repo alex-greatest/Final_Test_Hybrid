@@ -74,7 +74,6 @@ public sealed class ScanSessionHandler(BarcodeBuffer buffer)
 
     private void Release(Action<string> handler)
     {
-        bool activeChanged = false;
         lock (_lock)
         {
             if (_activeHandler == null)
@@ -86,18 +85,13 @@ public sealed class ScanSessionHandler(BarcodeBuffer buffer)
             {
                 RemoveHandlerUnsafe(handler);
                 _activeHandler = _handlerStack.Count > 0 ? _handlerStack.Peek() : null;
-                activeChanged = true;
             }
             else
             {
                 RemoveHandlerUnsafe(handler);
             }
         }
-
-        if (activeChanged)
-        {
-            buffer.Clear();
-        }
+        // buffer.Clear() УДАЛЁН - очистка происходит в Acquire() по ValidWindow
     }
 
     private void RemoveHandlerUnsafe(Action<string> handler)

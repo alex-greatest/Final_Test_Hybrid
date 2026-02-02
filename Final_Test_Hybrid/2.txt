@@ -1,73 +1,71 @@
-﻿	CH/Flush_Circuit	DHW/Flush_DHW_Circuit_Normal_Direction	Elec/Connect_Earth_Clip
-Gas/Open_Circuit	CH/Open_Circuit_Normal	DHW/Fill_Circuit_Normal_Direction	Elec/Connect_Power_Cable
-Gas/Leak_Test	CH/Fast_Fill_Circuit		Elec/Boiler_Power_ON
-	CH/Slow_Fill_Circuit		Elec/Power_Supply_Test
-			DHW/High_Pressure_Test
-Coms/Check_Comms			
-Coms/Write_Test_Byte_ON			
-Coms/Check_Test_Byte_ON			
-Coms/Write_Soft_Code_Plug			
-	Coms/CH_Pump_Start		
-Coms/Read_Soft_Code_Plug			
-Coms/Read_ECU_Version			
-Coms/Set_Fan_Map	Coms/Check_Boiler_Status		
-WaitTime/WaitThreeSec			
-CH/Check_Water_Flow	CH/Slow_Fill_Circuit		
-CH/Get_CHW_Flow_NTC_Cold	CH/Compare_Flow_NTC_Temperature_Cold		
-Coms/Pump_Start_Func_Reset			
-Coms/CH_Start_Max_Heatout	Coms/Enable_Cooling		
-Gas/Wait_for_Gas_Flow	Gas/Get_Temperature		
-Gas/Set_Required_Pressure			
-Gas/Set_Gas_and_P_Burner_Max_Levels			
-Coms/CH_Start_Min_Heatout			
-Gas/Set_Gas_and_P_Burner_Min_Levels			
-Coms/CH_Start_Max_Heatout			
-Gas/Check_Gas_and_P_Burner_Max_Levels			
-Coms/CH_Start_Min_Heatout			
-Gas/Check_Gas_and_P_Burner_Min_Levels			
-Misc/StopTimer1			
-Misc/StartTimer2			
-Coms/CH_Start_Max_Heatout			
-WaitTime/WaitTenSec			
-CH/Disable_Cooling			
-WaitTime/WaitTenSec			
-CH/Check_Flow_Temperature_Rise	CH/Compare_Flow_NTC_Temperatures_Hot		
-Coms/Enable_Cooling			
-Coms/CH_Reset			
-WaitTime/WaitTenSec			
-WaitTime/WaitTenSec			
-DHW/Reduce_Circuit_Pressure			
-Elec/Boiler_Power_OFF			
-DHW/Set_Circuit_Pressure			
-Elec/Boiler_Power_ON			
-WaitTime/WaitThreeSec	CH/Disable_Cooling		
-Coms/Write_Test_Byte_ON	Coms/Check_Boiler_Status		
-Coms/Check_Test_Byte_ON			
-DHW/Get_Flow_NTC_Cold	DHW/Compare_Flow_NTC_Temperature_Cold		
-DHW/Check_Flow_Rate	DHW/Check_Water_Flow_When_In_DHW_Mode		
-WaitTime/WaitThreeSec			
-DHW/Check_Flow_Temperature_Rise	DHW/Compare_Flow_NTC_Temperature_Hot	DHW/Check_Flow_Hot_Rate	
-DHW/Close_Circuit_Valve			
-WaitTime/WaitOneSec			
-Gas/Close_Circuit	Elec/Boiler_Power_OFF		
-WaitTime/WaitOneSec			
-Elec/Boiler_Power_ON			
-WaitTime/WaitThreeSec			
-Coms/Write_Test_Byte_ON	Coms/Check_Boiler_Status		
-Coms/Check_Test_Byte_ON			
-Coms/CH_Start_ST_Heatout			
-Coms/Safety_Time			
-Coms/CH_Reset	Coms/Set_to_Zero_CH_Pump_Overrun		
-Coms/Read_CH_Poti_Setpoint			
-Coms/Read_DHW_Poti_Setpoint			
-		Coms/Reset	
-		Coms/Delete_Error_History	
-		WaitTime/WaitOneSec	
-CH/Close_Circuit_Valve		Coms/Write_Test_Byte_OFF	
-		Coms/Check_Test_Byte_OFF	
-		Elec/Disconnect	не найдем информацию по шагу
-CH/Drain_Circuit	DHW/Drain_Circuit_Normal_Direction	Elec/Boiler_Power_OFF	
-CH/Purge_Circuit_Normal_Direction	DHW/Purge_Circuit_Normal_Direction		
-CH/Purge_Circuit_Reverse_Direction	DHW/Purge_Circuit_Reverse_Direction		
-WaitTime/WaitTenSec			
-Misc/StopTimer2			
+﻿DHW_Flow_Rate
+DHW_Flow_Rate
+Диапазон
+Real
+L/min, допустимое значение 6...10 - DHW_Flow_Rate - Расход воды в контуре DHW
+л/мин
+DHW_High_Pressure
+DHW_High_Pressure
+Диапазон
+Real
+bar, допустимое значение 11...15 - DHW_High_Pressure - Давление в контуре DHW в тесте высокого давления
+N/A
+DHW_In_Pres
+DHW_In_Pres
+Диапазон
+Real
+bar, допустимое значение 2...3 - DHW_In_Pres - Давление на входе котла в контуре DHW
+бар
+DHW_Temp_SP
+DHW_Temp_SP
+Диапазон
+Real
+град, допустимое значение 1...99
+град
+Gas_Flow_Max
+Gas_Flow_Max
+Диапазон
+Real
+L/min, допустимое значение 42.504...49.896 - Gas_Flow_Max - Расход газа при работе в макс. режиме
+л/мин
+Gas_Flow_Min
+Gas_Flow_Min
+Диапазон
+Real
+L/min, допустимое значение 12.9...15.1 - Gas_Flow_Min - Расход газа при работе в мin. режиме
+л/мин
+Gas_switch off 1
+Gas_switch off 1
+Диапазон
+Real
+Сек - Gas_switch off 1 - Время отключения клапанов котла при выкл. горелки в контуре CH
+N/A
+Gas_switch off 2
+Gas_switch off 2
+Диапазон
+Real
+Сек - Gas_switch off 2 - Время отключения клапанов котла при выкл. горелки в контуре DHW
+N/A
+Safety_Time
+Safety_Time
+Диапазон
+Real
+Сек - Время отключения котла
+с
+Tank_DHW_Flow
+Tank_DHW_Flow
+Диапазон
+Real
+л/мин, расход воды в тесте БКН
+л/мин
+Tank_DHW_Press
+Tank_DHW_Press
+Диапазон
+Real
+бар, давление воды в начале теста БКН
+бар
+Version
+Version
+Диапазон
+Real
+N/A

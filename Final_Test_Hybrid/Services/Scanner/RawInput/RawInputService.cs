@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
 using Final_Test_Hybrid.Services.Scanner.RawInput.Processing;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using static Final_Test_Hybrid.Services.Scanner.RawInput.RawInputInterop;
 
@@ -33,16 +32,16 @@ public sealed class RawInputService : IDisposable
     private static readonly TimeSpan StaleBufferTimeout = TimeSpan.FromSeconds(2);
 
     public RawInputService(
-        IConfiguration configuration,
         ILogger<RawInputService> logger,
-        ScannerConnectionState connectionState)
+        ScannerConnectionState connectionState,
+        ScannerDeviceDetector deviceDetector)
     {
         _logger = logger;
         _connectionState = connectionState;
+        _deviceDetector = deviceDetector;
         _buffer = new BarcodeBuffer();
         _sessionHandler = new ScanSessionHandler(_buffer);
         _inputMapper = new KeyboardInputMapper();
-        _deviceDetector = new ScannerDeviceDetector(configuration, logger);
         _dataReader = new RawInputDataReader();
         _inputProcessor = new KeyboardInputProcessor(_deviceDetector, _inputMapper);
         _dispatcher = new BarcodeDispatcher(_sessionHandler, logger);
