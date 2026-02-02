@@ -1,2 +1,4 @@
-<path d="M1473.766,880.662v35.045s-15.187,0-15.187,0v-35.045s15.187,0,15.187,0Z" style="fill: url(#h_elem_271);" b-nyv0tx7t4p=""></path>
-<path d="M1602.65,880.661v104.168s-15.187,0-15.187,0v-104.168s15.187,0,15.187,0Z" style="fill: url(#h_elem_393);" b-nyv0tx7t4p=""></path>
+"DB_Measure".Sensor.CH_PMR - <text transform="translate(831.895 150.687) scale(.657 1)" style="font-family: ArialMT, Arial; font-size: 27.016px;" b-nyv0tx7t4p=""><tspan x="0" y="0" b-nyv0tx7t4p="">0.00</tspan></text>
+"DB_Measure".Temper.CH_TMR - <text transform="translate(1190.219 154.169) scale(.657 1)" style="font-family: ArialMT, Arial; font-size: 30px;" b-nyv0tx7t4p=""><tspan x="0" y="0" b-nyv0tx7t4p="">0.00</tspan></text>
+"DB_Measure".Temper.CH_TRR - <text transform="translate(1770.933 143.8) scale(.657 1)" style="font-family: ArialMT, Arial; font-size: 30px;" b-nyv0tx7t4p=""><tspan x="0" y="0" b-nyv0tx7t4p="">0.00</tspan></text>
+"DB_Measure".Sensor.CH_FR - <text transform="translate(1765.933 480.128) scale(.657 1)" style="font-family: ArialMT, Arial; font-size: 30px;" b-nyv0tx7t4p=""><tspan x="0" y="0" b-nyv0tx7t4p="">0.00</tspan></text>

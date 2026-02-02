@@ -28,6 +28,18 @@
 
 ## Привязка труб к клапанам
 
+### VP1_1 (серый/зелёный)
+
+| Труба | Градиент | Метод |
+|-------|----------|-------|
+| h_elem_350 | h_elem_10 | `GetPipeGradient_h_elem_350()` |
+
+### VP1_2 (серый/зелёный)
+
+| Труба | Градиент | Метод |
+|-------|----------|-------|
+| h_elem_411 | h_elem_9 | `GetPipeGradient_h_elem_411()` |
+
 ### VP1_5 (одиночная зависимость)
 
 | Труба | Градиент | Метод |
@@ -42,8 +54,6 @@
 |-------|----------|-------|
 | h_elem_419 | h_elem_175 | `GetPipeGradient_h_elem_419()` |
 | h_elem_413 | h_elem_225 | `GetPipeGradient_h_elem_413()` |
-| h_elem_428 | h_elem_393 | `GetPipeGradient_h_elem_428()` |
-| h_elem_422 | h_elem_271 | `GetPipeGradient_h_elem_422()` |
 
 ### VP1_5 ИЛИ VP1_6 (комбинированная зависимость)
 
@@ -51,6 +61,8 @@
 |-------|----------|-------|
 | h_elem_401 | h_elem_141 | `GetPipeGradient_h_elem_401()` |
 | h_elem_426 | h_elem_241 | `GetPipeGradient_h_elem_426()` |
+| h_elem_428 | h_elem_393 | `GetPipeGradient_h_elem_428()` |
+| h_elem_422 | h_elem_271 | `GetPipeGradient_h_elem_422()` |
 
 ### VP1_7 (серый/красный)
 
@@ -66,6 +78,25 @@
 | h_elem_356 | h_elem_135 | `GetPipeGradient_h_elem_356()` |
 | h_elem_366 | h_elem_63 | `GetPipeGradient_h_elem_366()` |
 | h_elem_359 | h_elem_139 | `GetPipeGradient_h_elem_359()` |
+
+### VP1_11 (серый/красный)
+
+| Труба | Градиент | Метод |
+|-------|----------|-------|
+| h_elem_362 | h_elem_7 | `GetPipeGradient_h_elem_362()` |
+
+### VP1_8 (серый/красный)
+
+| Труба | Градиент | Метод |
+|-------|----------|-------|
+| h_elem_373 | h_elem_8 | `GetPipeGradient_h_elem_373()` |
+
+### VP1_12 (серый/красный)
+
+| Труба | Градиент | Метод |
+|-------|----------|-------|
+| h_elem_385 | h_elem_57 | `GetPipeGradient_h_elem_385()` |
+| h_elem_403 | h_elem_14 | `GetPipeGradient_h_elem_403()` |
 
 ## Добавление новой трубы
 
