@@ -2967,6 +2967,11 @@
     /// </summary>
     private async Task ToggleValveAsync(string valveId)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         if (!ValveSbOpenTags.TryGetValue(valveId, out var nodeId))
         {
             return;

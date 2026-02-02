@@ -43,4 +43,28 @@ public static class PneumaticValveTags
     public const string Vp0_2_GasG25_SbOpen = "ns=3;s=\"DB_PneuValve\".\"Gas\".\"VP0_2\".\"HMI\".\"xSB_Open\"";
     public const string Vp0_3_LpgG30_SbOpen = "ns=3;s=\"DB_PneuValve\".\"Gas\".\"VP0_3\".\"HMI\".\"xSB_Open\"";
     public const string Ev0_3_Gas_SbOpen = "ns=3;s=\"DB_PneuValve\".\"Gas\".\"EV0_3\".\"HMI\".\"xSB_Open\"";
+
+    // VP1 - CH (Кнопки управления)
+    public const string Vp1_1_Purge_SbOpen = "ns=3;s=\"DB_PneuValve\".\"CH\".\"VP1_1\".\"HMI\".\"xSB_Open\"";
+    public const string Vp1_2_Purge_SbOpen = "ns=3;s=\"DB_PneuValve\".\"CH\".\"VP1_2\".\"HMI\".\"xSB_Open\"";
+    public const string Vp1_3_Fill_SbOpen = "ns=3;s=\"DB_PneuValve\".\"CH\".\"VP1_3\".\"HMI\".\"xSB_Open\"";
+    public const string Vp1_4_FastFill_SbOpen = "ns=3;s=\"DB_PneuValve\".\"CH\".\"VP1_4\".\"HMI\".\"xSB_Open\"";
+    public const string Vp1_5_WaterToCh_SbOpen = "ns=3;s=\"DB_PneuValve\".\"CH\".\"VP1_5\".\"HMI\".\"xSB_Open\"";
+    public const string Vp1_6_WaterToCh_SbOpen = "ns=3;s=\"DB_PneuValve\".\"CH\".\"VP1_6\".\"HMI\".\"xSB_Open\"";
+    public const string Vp1_7_HotWaterNoPump_SbOpen = "ns=3;s=\"DB_PneuValve\".\"CH\".\"VP1_7\".\"HMI\".\"xSB_Open\"";
+    public const string Vp1_8_Drain_SbOpen = "ns=3;s=\"DB_PneuValve\".\"CH\".\"VP1_8\".\"HMI\".\"xSB_Open\"";
+    public const string Vp1_9_Reserve_SbOpen = "ns=3;s=\"DB_PneuValve\".\"CH\".\"VP1_9\".\"HMI\".\"xSB_Open\"";
+    public const string Vp1_10_HotWaterWithPump_SbOpen = "ns=3;s=\"DB_PneuValve\".\"CH\".\"VP1_10\".\"HMI\".\"xSB_Open\"";
+    public const string Vp1_11_Drain_SbOpen = "ns=3;s=\"DB_PneuValve\".\"CH\".\"VP1_11\".\"HMI\".\"xSB_Open\"";
+    public const string Vp1_12_SlowFill_SbOpen = "ns=3;s=\"DB_PneuValve\".\"CH\".\"VP1_12\".\"HMI\".\"xSB_Open\"";
+
+    // VP2 - DHW (Кнопки управления)
+    public const string Vp2_1_Purge_SbOpen = "ns=3;s=\"DB_PneuValve\".\"DHW\".\"VP2_1\".\"HMI\".\"xSB_Open\"";
+    public const string Vp2_2_Purge_SbOpen = "ns=3;s=\"DB_PneuValve\".\"DHW\".\"VP2_2\".\"HMI\".\"xSB_Open\"";
+    public const string Vp2_3_HighPressure_SbOpen = "ns=3;s=\"DB_PneuValve\".\"DHW\".\"VP2_3\".\"HMI\".\"xSB_Open\"";
+    public const string Vp2_4_Fill_SbOpen = "ns=3;s=\"DB_PneuValve\".\"DHW\".\"VP2_4\".\"HMI\".\"xSB_Open\"";
+    public const string Vp2_5_BoilerOut_SbOpen = "ns=3;s=\"DB_PneuValve\".\"DHW\".\"VP2_5\".\"HMI\".\"xSB_Open\"";
+    public const string Vp2_6_Drain_SbOpen = "ns=3;s=\"DB_PneuValve\".\"DHW\".\"VP2_6\".\"HMI\".\"xSB_Open\"";
+    public const string Vp2_7_BoilerIn_SbOpen = "ns=3;s=\"DB_PneuValve\".\"DHW\".\"VP2_7\".\"HMI\".\"xSB_Open\"";
+    public const string Vp2_8_Drain_SbOpen = "ns=3;s=\"DB_PneuValve\".\"DHW\".\"VP2_8\".\"HMI\".\"xSB_Open\"";
 }

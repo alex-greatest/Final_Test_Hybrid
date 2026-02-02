@@ -1,0 +1,38 @@
+@using Final_Test_Hybrid.Components.Schemes
+@using Final_Test_Hybrid.Components.Overview
+
+<div class="hand-program-container">
+    <div class="tabs-shell">
+        <RadzenTabs RenderMode="TabRenderMode.Client" class="hand-program-tabs">
+            <Tabs>
+                <RadzenTabsItem Text="Газ">
+                    <GasScheme />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Отопление">
+                    <HeatingScheme />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Горячая вода">
+                    <HotWaterScheme />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Входы 1">
+                    <InputsPanel1 />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="RTD входы">
+                    <RtdInputsPanel />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Входы 2">
+                    <InputsPanel2 />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Выходы 1">
+                    <OutputsPanel1 />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Пн. выходы">
+                    <PneumaticOutputsPanel />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Выходы 2">
+                    <OutputsPanel2 />
+                </RadzenTabsItem>
+            </Tabs>
+        </RadzenTabs>
+    </div>
+</div>

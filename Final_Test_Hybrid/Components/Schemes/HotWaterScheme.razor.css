@@ -12,3 +12,12 @@
     height: 100%;
     object-fit: contain;
 }
+
+/* Кликабельные клапаны */
+::deep .valve-interactive {
+    cursor: pointer;
+}
+
+::deep .valve-interactive:hover {
+    filter: brightness(1.3);
+}

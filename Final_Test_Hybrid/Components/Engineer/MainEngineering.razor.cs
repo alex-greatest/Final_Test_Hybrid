@@ -27,9 +27,19 @@ public partial class MainEngineering
         return result is true;
     }
 
-    private Task OnHandProgram()
+    private async Task OnHandProgram()
     {
-        return Task.CompletedTask;
+        await DialogService.OpenAsync<Modals.HandProgramDialog>("Hand Program",
+            new Dictionary<string, object>(),
+            new DialogOptions
+            {
+                Width = "95vw",
+                Height = "95vh",
+                Resizable = true,
+                Draggable = true,
+                CssClass = "hand-program-dialog",
+                CloseDialogOnOverlayClick = false
+            });
     }
 
     private Task OnIoEditor()

@@ -4,4 +4,3 @@
 "DB_Measure".Sensor.DHW_FS - <text transform="translate(992.78 783.032) scale(.576 1)" style="font-family: ArialMT, Arial; font-size: 30px;" b-5jnngoa4hi=""><tspan x="0" y="0" b-5jnngoa4hi="">0.00</tspan></text>
 "DB_ControlValve".VPP3_1.ActuelValue - <text transform="translate(722.657 917.383) scale(.576 1)" style="font-family: ArialMT, Arial; font-size: 30px;" b-5jnngoa4hi=""><tspan x="0" y="0" b-5jnngoa4hi="">0.00</tspan></text>
 
-
