@@ -3624,7 +3624,7 @@
         </text>
         <text transform="translate(831.895 150.687) scale(.657 1)"
               style="font-family: ArialMT, Arial; font-size: 27.016px;">
-            <tspan x="0" y="0">@_chPmrValue</tspan>
+            <tspan x="0" y="0">@_chPmrValue.ToString("F2")</tspan>
         </text>
         <text transform="translate(766.774 190.599) scale(.633 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
@@ -3645,7 +3645,7 @@
         </text>
         <text transform="translate(1190.219 154.169) scale(.657 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
-            <tspan x="0" y="0">@_chTmrValue</tspan>
+            <tspan x="0" y="0">@_chTmrValue.ToString("F2")</tspan>
         </text>
         <text transform="translate(1125.006 191.013) scale(.633 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
@@ -3673,7 +3673,7 @@
         </text>
         <text transform="translate(1765.933 480.128) scale(.657 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
-            <tspan x="0" y="0">@_chFrValue</tspan>
+            <tspan x="0" y="0">@_chFrValue.ToString("F2")</tspan>
         </text>
         <text transform="translate(1714.72 517.972) scale(.633 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
@@ -3797,7 +3797,7 @@
         </text>
         <text transform="translate(1770.933 143.8) scale(.657 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
-            <tspan x="0" y="0">@_chTrrValue</tspan>
+            <tspan x="0" y="0">@_chTrrValue.ToString("F2")</tspan>
         </text>
         <text transform="translate(1699.72 180.644) scale(.633 1)"
               style="font-family: ArialMT, Arial; font-size: 30px;">
@@ -4148,10 +4148,10 @@
     };
 
     // Значения датчиков
-    private string _chPmrValue = "0.00";
-    private string _chTmrValue = "0.00";
-    private string _chTrrValue = "0.00";
-    private string _chFrValue = "0.00";
+    private double _chPmrValue;
+    private double _chTmrValue;
+    private double _chTrrValue;
+    private double _chFrValue;
 
     private bool _disposed;
 
@@ -4193,10 +4193,18 @@
     private Task OnVp1_11Changed(object? v) => OnValveChangedAsync("VP1_11", v);
     private Task OnVp1_12Changed(object? v) => OnValveChangedAsync("VP1_12", v);
 
-    private Task OnChPmrChanged(object? v) => OnSensorChangedAsync(v, val => _chPmrValue = val);
-    private Task OnChTmrChanged(object? v) => OnSensorChangedAsync(v, val => _chTmrValue = val);
-    private Task OnChTrrChanged(object? v) => OnSensorChangedAsync(v, val => _chTrrValue = val);
-    private Task OnChFrChanged(object? v) => OnSensorChangedAsync(v, val => _chFrValue = val);
+    private async Task OnChPmrChanged(object? v) { if (_disposed) return; _chPmrValue = ToDouble(v); await InvokeAsync(StateHasChanged); }
+    private async Task OnChTmrChanged(object? v) { if (_disposed) return; _chTmrValue = ToDouble(v); await InvokeAsync(StateHasChanged); }
+    private async Task OnChTrrChanged(object? v) { if (_disposed) return; _chTrrValue = ToDouble(v); await InvokeAsync(StateHasChanged); }
+    private async Task OnChFrChanged(object? v) { if (_disposed) return; _chFrValue = ToDouble(v); await InvokeAsync(StateHasChanged); }
+
+    private static double ToDouble(object? value) => value switch
+    {
+        double d => d,
+        float f => f,
+        int i => i,
+        _ => 0
+    };
 
     /// <summary>
     /// Обрабатывает изменение состояния клапана.
@@ -4209,26 +4217,6 @@
         }
 
         _valveStates[valveId] = value is true;
-        await InvokeAsync(StateHasChanged);
-    }
-
-    /// <summary>
-    /// Обрабатывает изменение значения датчика.
-    /// </summary>
-    private async Task OnSensorChangedAsync(object? value, Action<string> setter)
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        var formatted = value switch
-        {
-            float f => f.ToString("F2"),
-            double d => d.ToString("F2"),
-            _ => "0.00"
-        };
-        setter(formatted);
         await InvokeAsync(StateHasChanged);
     }
 
