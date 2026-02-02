@@ -1,6 +1,5 @@
 ﻿using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Steps;
-
 using Final_Test_Hybrid.Services.SpringBoot.Operation.Interrupt;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
@@ -43,8 +42,22 @@ public partial class PreExecutionCoordinator(
     private PreExecutionContext? _lastSuccessfulContext;
     private const int ChangeoverStartNone = 0;
     private const int ChangeoverStartPending = 1;
-    private const int ChangeoverStartStarted = 2;
+    private const int ChangeoverTriggerNone = 0;
+    private const int ChangeoverTriggerAskEndOnly = 1;
+    private const int ChangeoverTriggerReasonSaved = 2;
+    private const int ChangeoverTriggerSecondReset = 3;
     private int _changeoverStartState;
+    private int _changeoverTrigger;
+    private int _changeoverPendingSequence;
+    private int _changeoverAskEndSequence;
+    private int _changeoverReasonSaved;
+
+    private enum ChangeoverResetMode
+    {
+        Immediate,
+        WaitForReason,
+        WaitForAskEndOnly
+    }
 
     public bool IsAcceptingInput { get; private set; }
     public bool IsProcessing => !IsAcceptingInput && state.ActivityTracker.IsPreExecutionActive;
@@ -231,8 +244,6 @@ public partial class PreExecutionCoordinator(
         _resetSignal?.TrySetResult(reason);
     }
 
-    private bool IsInterruptDialogActive => Volatile.Read(ref _interruptDialogActive) == 1;
-
     private bool ShouldDelayChangeoverStart()
     {
         var serialNumber = state.BoilerState.SerialNumber;
@@ -243,60 +254,122 @@ public partial class PreExecutionCoordinator(
             && infra.AppSettings.UseInterruptReason;
     }
 
-    private void HandleResetChangeoverStart(bool shouldDelay)
+    private bool ShouldDelayChangeoverUntilAskEndOnly()
     {
-        if (shouldDelay)
-        {
-            HandleDeferredChangeoverStart();
-            return;
-        }
-        StartChangeoverTimerForImmediateReset();
+        var stopReason = state.FlowState.StopReason;
+        return stopReason is ExecutionStopReason.PlcSoftReset or ExecutionStopReason.PlcHardReset or ExecutionStopReason.PlcForceStop
+            && !state.BoilerState.IsTestRunning;
     }
 
-    private void HandleDeferredChangeoverStart()
+    private ChangeoverResetMode GetChangeoverResetMode()
     {
-        if (TryStartChangeoverTimerWhileDialogActive())
+        return ShouldDelayChangeoverStart()
+            ? ChangeoverResetMode.WaitForReason
+            : ShouldDelayChangeoverUntilAskEndOnly()
+                ? ChangeoverResetMode.WaitForAskEndOnly
+                : ChangeoverResetMode.Immediate;
+    }
+
+    private int GetResetSequenceSnapshot()
+    {
+        return Volatile.Read(ref _resetSequence);
+    }
+
+    private void ArmChangeoverPendingForReset(int resetSequence, int defaultTrigger)
+    {
+        var startState = Interlocked.CompareExchange(ref _changeoverStartState, ChangeoverStartPending, ChangeoverStartNone);
+        var existingSequence = Volatile.Read(ref _changeoverPendingSequence);
+        var shouldUpdate = startState != ChangeoverStartPending || existingSequence != resetSequence;
+        if (!shouldUpdate)
         {
             return;
         }
-        ArmChangeoverStartPending();
+        var isSecondReset = startState == ChangeoverStartPending;
+        UpdateChangeoverPendingState(isSecondReset, resetSequence, defaultTrigger);
+        TryStartChangeoverAfterAskEnd();
     }
 
-    private bool TryStartChangeoverTimerWhileDialogActive()
+    private void UpdateChangeoverPendingState(bool isSecondReset, int resetSequence, int defaultTrigger)
     {
-        if (!IsInterruptDialogActive)
+        var trigger = isSecondReset ? ChangeoverTriggerSecondReset : defaultTrigger;
+        Volatile.Write(ref _changeoverTrigger, trigger);
+        Volatile.Write(ref _changeoverPendingSequence, resetSequence);
+        Volatile.Write(ref _changeoverReasonSaved, 0);
+    }
+
+    private void RecordAskEndSequence()
+    {
+        var resetSequence = GetResetSequenceSnapshot();
+        Volatile.Write(ref _changeoverAskEndSequence, resetSequence);
+        TryStartChangeoverAfterAskEnd();
+    }
+
+    private void MarkChangeoverReasonSaved()
+    {
+        Volatile.Write(ref _changeoverReasonSaved, 1);
+        TryStartChangeoverAfterAskEnd();
+    }
+
+    private void TryStartChangeoverAfterAskEnd()
+    {
+        if (!IsChangeoverStartReady())
+        {
+            return;
+        }
+        StartChangeoverTimerFromPending();
+    }
+
+    private bool IsChangeoverStartReady()
+    {
+        return IsChangeoverPendingAndAskEndMatched() && IsChangeoverTriggerSatisfied();
+    }
+
+    private bool IsChangeoverPendingAndAskEndMatched()
+    {
+        var startState = Volatile.Read(ref _changeoverStartState);
+        if (startState != ChangeoverStartPending)
         {
             return false;
         }
-        return TryStartChangeoverTimerFromPending();
+        return Volatile.Read(ref _changeoverPendingSequence) == Volatile.Read(ref _changeoverAskEndSequence);
     }
 
-    private bool TryStartChangeoverTimerFromPending()
+    private bool IsChangeoverTriggerSatisfied()
+    {
+        var trigger = Volatile.Read(ref _changeoverTrigger);
+        return trigger switch
+        {
+            ChangeoverTriggerAskEndOnly => true,
+            ChangeoverTriggerSecondReset => true,
+            ChangeoverTriggerReasonSaved => Volatile.Read(ref _changeoverReasonSaved) == 1,
+            _ => false
+        };
+    }
+
+    private void StartChangeoverTimerFromPending()
     {
         if (Interlocked.CompareExchange(
             ref _changeoverStartState,
-            ChangeoverStartStarted,
+            ChangeoverStartNone,
             ChangeoverStartPending) != ChangeoverStartPending)
         {
-            return false;
+            return;
         }
+        ClearChangeoverPendingState();
         StartChangeoverTimerImmediate();
-        return true;
     }
 
-    private void ArmChangeoverStartPending()
+    private void ClearChangeoverPendingState()
     {
-        Interlocked.CompareExchange(ref _changeoverStartState, ChangeoverStartPending, ChangeoverStartNone);
-    }
-
-    private void ResetChangeoverStartState()
-    {
-        Interlocked.Exchange(ref _changeoverStartState, ChangeoverStartNone);
+        Volatile.Write(ref _changeoverStartState, ChangeoverStartNone);
+        Volatile.Write(ref _changeoverTrigger, ChangeoverTriggerNone);
+        Volatile.Write(ref _changeoverPendingSequence, 0);
+        Volatile.Write(ref _changeoverReasonSaved, 0);
     }
 
     private void StartChangeoverTimerForImmediateReset()
     {
-        ResetChangeoverStartState();
+        ClearChangeoverPendingState();
         StartChangeoverTimerImmediate();
     }
 
@@ -309,8 +382,34 @@ public partial class PreExecutionCoordinator(
     {
         if (result.IsSuccess)
         {
-            TryStartChangeoverTimerFromPending();
+            MarkChangeoverReasonSaved();
         }
+    }
+
+    private void HandleChangeoverAfterReset(ChangeoverResetMode mode)
+    {
+        var resetSequence = GetResetSequenceSnapshot();
+        switch (mode)
+        {
+            case ChangeoverResetMode.WaitForReason:
+                ArmChangeoverPendingForReset(resetSequence, ChangeoverTriggerReasonSaved);
+                break;
+            case ChangeoverResetMode.WaitForAskEndOnly:
+                ArmChangeoverPendingForReset(resetSequence, ChangeoverTriggerAskEndOnly);
+                break;
+            default:
+                StartChangeoverTimerForImmediateReset();
+                break;
+        }
+    }
+
+    private void StopChangeoverTimerForReset(ChangeoverResetMode mode)
+    {
+        if (mode == ChangeoverResetMode.Immediate)
+        {
+            return;
+        }
+        state.BoilerState.StopChangeoverTimer();
     }
 
     /// <summary>

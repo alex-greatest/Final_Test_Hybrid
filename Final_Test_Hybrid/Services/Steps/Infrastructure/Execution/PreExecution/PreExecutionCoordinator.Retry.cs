@@ -45,6 +45,7 @@ public partial class PreExecutionCoordinator
             : ExecutionStopReason.PlcHardReset;
         state.FlowState.RequestStop(stopReason, stopAsFailure: true);
         SignalReset(exitReason);
+        StopChangeoverTimerForReset(GetChangeoverResetMode());
 
         if (TryCancelActiveOperation(exitReason))
         {
@@ -86,7 +87,7 @@ public partial class PreExecutionCoordinator
     private async Task ExecuteGridClearAsync()
     {
         var context = CaptureAndClearState();
-
+        RecordAskEndSequence();
         if (!ShouldShowInterruptDialog(context))
         {
             CompletePlcReset();
@@ -202,7 +203,6 @@ public partial class PreExecutionCoordinator
         }
         finally
         {
-            ResetChangeoverStartState();
             coordinators.PlcResetCoordinator.OnForceStop -= HandleCancel;
             coordinators.ErrorCoordinator.OnReset -= HandleCancel;
         }

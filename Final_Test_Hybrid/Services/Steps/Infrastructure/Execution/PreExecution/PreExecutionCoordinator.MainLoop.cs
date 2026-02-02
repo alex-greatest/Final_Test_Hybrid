@@ -155,15 +155,15 @@ public partial class PreExecutionCoordinator
 
             case CycleExitReason.SoftReset:
                 // Ничего - очистка произойдёт по AskEnd в HandleGridClear
-                HandleResetChangeoverStart(ShouldDelayChangeoverStart());
+                HandleChangeoverAfterReset(GetChangeoverResetMode());
                 break;
 
             case CycleExitReason.HardReset:
             {
-                var shouldDelay = ShouldDelayChangeoverStart();
+                var changeoverMode = GetChangeoverResetMode();
                 ClearStateOnReset();
                 infra.StatusReporter.ClearAllExceptScan();
-                HandleResetChangeoverStart(shouldDelay);
+                HandleChangeoverAfterReset(changeoverMode);
                 break;
             }
 
