@@ -23,8 +23,14 @@ public sealed class RawInputService : IDisposable
     private readonly KeyboardInputProcessor _inputProcessor;
     private readonly BarcodeDispatcher _dispatcher;
     private readonly ILogger<RawInputService> _logger;
+    private readonly System.Threading.Timer _staleBufferCleanupTimer;
     private volatile bool _isRegistered;
     private volatile bool _disposed;
+
+    /// <summary>
+    /// Таймаут для очистки совсем старых данных в буфере (мусор от сбоев сканера).
+    /// </summary>
+    private static readonly TimeSpan StaleBufferTimeout = TimeSpan.FromSeconds(2);
 
     public RawInputService(
         IConfiguration configuration,
@@ -40,6 +46,7 @@ public sealed class RawInputService : IDisposable
         _dataReader = new RawInputDataReader();
         _inputProcessor = new KeyboardInputProcessor(_deviceDetector, _inputMapper);
         _dispatcher = new BarcodeDispatcher(_sessionHandler, logger);
+        _staleBufferCleanupTimer = new System.Threading.Timer(CleanupStaleBuffer, null, 3000, 3000);
         _connectionState.ConnectionStateChanged += OnScannerConnectionChanged;
         _logger.LogInformation(
             "RawInputService initialized (VID={Vid}, PID={Pid})",
@@ -94,6 +101,7 @@ public sealed class RawInputService : IDisposable
             return;
         }
         _disposed = true;
+        _staleBufferCleanupTimer.Dispose();
         _buffer.Clear();
         _deviceDetector.ClearCache();
         Unregister();
@@ -113,7 +121,7 @@ public sealed class RawInputService : IDisposable
 
     private void HandleKeyboardInput(RawInput raw)
     {
-        var result = _inputProcessor.Process(raw, _sessionHandler.HasActiveHandler);
+        var result = _inputProcessor.Process(raw);
         ExecuteAction(result);
     }
 
@@ -151,6 +159,22 @@ public sealed class RawInputService : IDisposable
         _buffer.Clear();
         _deviceDetector.ClearCache();
         _logger.LogInformation("Scanner cache reset (disconnected)");
+    }
+
+    /// <summary>
+    /// Периодически очищает буфер если данные слишком старые (> 2 сек).
+    /// Защита от накопления мусора при сбоях сканера.
+    /// </summary>
+    private void CleanupStaleBuffer(object? state)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+        if (!_buffer.IsWithinValidWindow(StaleBufferTimeout))
+        {
+            _buffer.Clear();
+        }
     }
 
     private bool TryRegisterRawInput(IntPtr hwnd)

@@ -98,7 +98,8 @@
       "Bash(curl:*)",
       "Bash(Select-String -Pattern \"\\(error|Сборка успешно|Build succeeded\\)\")",
       "Bash(done)",
-      "Bash(xxd:*)"
+      "Bash(xxd:*)",
+      "Bash(git restore:*)"
     ]
   }
 }

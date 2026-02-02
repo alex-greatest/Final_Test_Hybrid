@@ -13,26 +13,27 @@ public readonly record struct KeyboardProcessResult(KeyboardAction Action, ushor
 
 /// <summary>
 /// Processes keyboard raw input and determines the action to take.
-/// Filters by device, key type, and session state.
+/// Filters by device and key type. Session state is NOT checked here —
+/// символы накапливаются в буфер даже без активной сессии.
 /// </summary>
 public sealed class KeyboardInputProcessor(ScannerDeviceDetector deviceDetector, KeyboardInputMapper inputMapper)
 {
-    public KeyboardProcessResult Process(RawInput raw, bool hasActiveSession)
+    public KeyboardProcessResult Process(RawInput raw)
     {
-        return !IsValidKeyboardInput(raw) ? new KeyboardProcessResult(KeyboardAction.Ignore) : ProcessValidInput(raw, hasActiveSession);
+        return !IsValidKeyboardInput(raw) ? new KeyboardProcessResult(KeyboardAction.Ignore) : ProcessValidInput(raw);
     }
 
-    private KeyboardProcessResult ProcessValidInput(RawInput raw, bool hasActiveSession)
+    private KeyboardProcessResult ProcessValidInput(RawInput raw)
     {
         var vKey = raw.Keyboard.VKey;
         var isKeyUp = IsKeyUpEvent(raw);
         inputMapper.UpdateShiftState(vKey, isKeyUp);
-        return DetermineAction(vKey, isKeyUp, hasActiveSession);
+        return DetermineAction(vKey, isKeyUp);
     }
 
-    private KeyboardProcessResult DetermineAction(ushort vKey, bool isKeyUp, bool hasActiveSession)
+    private static KeyboardProcessResult DetermineAction(ushort vKey, bool isKeyUp)
     {
-        return ShouldIgnoreKey(vKey, isKeyUp, hasActiveSession) ? new KeyboardProcessResult(KeyboardAction.Ignore) : GetKeyAction(vKey);
+        return ShouldIgnoreKey(vKey, isKeyUp) ? new KeyboardProcessResult(KeyboardAction.Ignore) : GetKeyAction(vKey);
     }
 
     private static KeyboardProcessResult GetKeyAction(ushort vKey)
@@ -49,8 +50,8 @@ public sealed class KeyboardInputProcessor(ScannerDeviceDetector deviceDetector,
 
     private static bool IsKeyUpEvent(RawInput raw) => (raw.Keyboard.Flags & 1) != 0;
 
-    private static bool ShouldIgnoreKey(ushort vKey, bool isKeyUp, bool hasActiveSession)
+    private static bool ShouldIgnoreKey(ushort vKey, bool isKeyUp)
     {
-        return KeyboardInputMapper.IsShiftKey(vKey) || isKeyUp || !hasActiveSession;
+        return KeyboardInputMapper.IsShiftKey(vKey) || isKeyUp;
     }
 }
