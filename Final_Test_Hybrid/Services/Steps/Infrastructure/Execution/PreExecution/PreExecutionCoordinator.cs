@@ -1,6 +1,8 @@
 ﻿using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Steps;
 
+using Final_Test_Hybrid.Services.SpringBoot.Operation.Interrupt;
+
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
 /// <summary>
@@ -39,6 +41,10 @@ public partial class PreExecutionCoordinator(
     private bool _skipNextScan;
     private bool _executeFullPreparation;
     private PreExecutionContext? _lastSuccessfulContext;
+    private const int ChangeoverStartNone = 0;
+    private const int ChangeoverStartPending = 1;
+    private const int ChangeoverStartStarted = 2;
+    private int _changeoverStartState;
 
     public bool IsAcceptingInput { get; private set; }
     public bool IsProcessing => !IsAcceptingInput && state.ActivityTracker.IsPreExecutionActive;
@@ -223,6 +229,88 @@ public partial class PreExecutionCoordinator(
     private void SignalReset(CycleExitReason reason)
     {
         _resetSignal?.TrySetResult(reason);
+    }
+
+    private bool IsInterruptDialogActive => Volatile.Read(ref _interruptDialogActive) == 1;
+
+    private bool ShouldDelayChangeoverStart()
+    {
+        var serialNumber = state.BoilerState.SerialNumber;
+        var stopReason = state.FlowState.StopReason;
+        return stopReason is ExecutionStopReason.PlcSoftReset or ExecutionStopReason.PlcHardReset or ExecutionStopReason.PlcForceStop
+            && state.BoilerState.IsTestRunning
+            && serialNumber != null
+            && infra.AppSettings.UseInterruptReason;
+    }
+
+    private void HandleResetChangeoverStart(bool shouldDelay)
+    {
+        if (shouldDelay)
+        {
+            HandleDeferredChangeoverStart();
+            return;
+        }
+        StartChangeoverTimerForImmediateReset();
+    }
+
+    private void HandleDeferredChangeoverStart()
+    {
+        if (TryStartChangeoverTimerWhileDialogActive())
+        {
+            return;
+        }
+        ArmChangeoverStartPending();
+    }
+
+    private bool TryStartChangeoverTimerWhileDialogActive()
+    {
+        if (!IsInterruptDialogActive)
+        {
+            return false;
+        }
+        return TryStartChangeoverTimerFromPending();
+    }
+
+    private bool TryStartChangeoverTimerFromPending()
+    {
+        if (Interlocked.CompareExchange(
+            ref _changeoverStartState,
+            ChangeoverStartStarted,
+            ChangeoverStartPending) != ChangeoverStartPending)
+        {
+            return false;
+        }
+        StartChangeoverTimerImmediate();
+        return true;
+    }
+
+    private void ArmChangeoverStartPending()
+    {
+        Interlocked.CompareExchange(ref _changeoverStartState, ChangeoverStartPending, ChangeoverStartNone);
+    }
+
+    private void ResetChangeoverStartState()
+    {
+        Interlocked.Exchange(ref _changeoverStartState, ChangeoverStartNone);
+    }
+
+    private void StartChangeoverTimerForImmediateReset()
+    {
+        ResetChangeoverStartState();
+        StartChangeoverTimerImmediate();
+    }
+
+    private void StartChangeoverTimerImmediate()
+    {
+        state.BoilerState.ResetAndStartChangeoverTimer();
+    }
+
+    private void HandleChangeoverAfterInterrupt(InterruptFlowResult result)
+    {
+        if (result.IsSuccess)
+        {
+            TryStartChangeoverTimerFromPending();
+        }
     }
 
     /// <summary>

@@ -198,9 +198,11 @@ public partial class PreExecutionCoordinator
                 ct);
 
             LogInterruptResult(result);
+            HandleChangeoverAfterInterrupt(result);
         }
         finally
         {
+            ResetChangeoverStartState();
             coordinators.PlcResetCoordinator.OnForceStop -= HandleCancel;
             coordinators.ErrorCoordinator.OnReset -= HandleCancel;
         }
