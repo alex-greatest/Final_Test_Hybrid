@@ -71,7 +71,13 @@ public sealed class RawInputService : IDisposable
         TryUnregisterRawInput();
     }
 
-    public IDisposable RequestScan(Action<string> handler) => _sessionHandler.Acquire(handler);
+    /// <summary>
+    /// Requests a scan session for the specified handler.
+    /// </summary>
+    /// <param name="handler">Handler to receive barcode scans.</param>
+    /// <param name="takeOver">If true, becomes active handler; if false, only becomes active when no other handler exists.</param>
+    public IDisposable RequestScan(Action<string> handler, bool takeOver = true) =>
+        _sessionHandler.Acquire(handler, takeOver);
 
     public void ProcessRawInput(IntPtr lParam)
     {

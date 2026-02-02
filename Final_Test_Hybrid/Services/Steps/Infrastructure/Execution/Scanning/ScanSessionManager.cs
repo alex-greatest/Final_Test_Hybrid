@@ -20,7 +20,7 @@ public class ScanSessionManager(
             {
                 return;
             }
-            _scanSession = rawInputService.RequestScan(barcodeHandler);
+            _scanSession = rawInputService.RequestScan(barcodeHandler, takeOver: false);
             logger.LogDebug("Scan session acquired");
         }
     }

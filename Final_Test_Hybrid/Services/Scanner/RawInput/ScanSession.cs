@@ -48,7 +48,12 @@ public sealed class ScanSessionHandler(BarcodeBuffer buffer)
     // Valid window for keeping buffered characters that arrived before Acquire.
     private static readonly TimeSpan ValidWindow = TimeSpan.FromMilliseconds(200);
 
-    public IDisposable Acquire(Action<string> handler)
+    /// <summary>
+    /// Acquires the barcode scanner for the specified handler.
+    /// </summary>
+    /// <param name="handler">Handler to receive barcode scans.</param>
+    /// <param name="takeOver">If true, becomes active handler; if false, only becomes active when no other handler exists.</param>
+    public IDisposable Acquire(Action<string> handler, bool takeOver = true)
     {
         // Overlap is expected: dialogs can temporarily take the scanner.
         if (!buffer.IsWithinValidWindow(ValidWindow))
@@ -59,7 +64,7 @@ public sealed class ScanSessionHandler(BarcodeBuffer buffer)
         lock (_lock)
         {
             _handlerStack.Push(handler);
-            _activeHandler = handler;
+            _activeHandler = takeOver || _activeHandler == null ? handler : _activeHandler;
         }
         return new ScanSession(() => Release(handler));
     }
