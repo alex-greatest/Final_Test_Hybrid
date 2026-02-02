@@ -1,0 +1,8 @@
+@implements IDisposable
+
+<div class="switch-interrupt-reason">
+    <span class="switch-interrupt-reason-label">Причина прерывания</span>
+    <div class="switch-wrapper" @onclick="OnSwitchClick">
+        <RadzenCheckBox Value="@_useInterruptReason" ReadOnly="true" Disabled="@IsDisabled" Style="transform: scale(1.5); transform-origin: center center;" />
+    </div>
+</div>

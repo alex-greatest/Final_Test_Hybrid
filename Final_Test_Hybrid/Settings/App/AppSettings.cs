@@ -6,6 +6,7 @@ public class AppSettings
     public bool UseOperatorQrAuth { get; set; }
     public bool UseAdminQrAuth { get; set; }
     public bool ExportStepsToExcel { get; set; }
+    public bool UseInterruptReason { get; set; }
     public string EngineerPassword { get; set; } = string.Empty;
     public string NameStation { get; set; } = string.Empty;
     public string ExportPath { get; set; } = string.Empty;

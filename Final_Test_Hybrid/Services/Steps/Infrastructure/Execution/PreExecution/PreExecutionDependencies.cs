@@ -7,15 +7,16 @@ using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Results;
+using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Final_Test_Hybrid.Services.Steps.Steps;
 using Final_Test_Hybrid.Services.Steps.Steps.Misc;
+using Final_Test_Hybrid.Services.SpringBoot.Operation.Interrupt;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
@@ -49,7 +50,9 @@ public class PreExecutionInfrastructure(
     IRecipeProvider recipeProvider,
     StepHistoryService stepHistory,
     ITimerService timerService,
-    DualLogger<PreExecutionCoordinator> logger)
+    DualLogger<PreExecutionCoordinator> logger,
+    AppSettingsService appSettings,
+    InterruptReasonRouter interruptReasonRouter)
 {
     public PausableOpcUaTagService OpcUa => opcUa;
     public OpcUaTagService PlcService => plcService;
@@ -63,6 +66,8 @@ public class PreExecutionInfrastructure(
     public StepHistoryService StepHistory => stepHistory;
     public ITimerService TimerService => timerService;
     public DualLogger<PreExecutionCoordinator> Logger => logger;
+    public AppSettingsService AppSettings => appSettings;
+    public InterruptReasonRouter InterruptReasonRouter => interruptReasonRouter;
 }
 
 /// <summary>
@@ -89,11 +94,13 @@ public class PreExecutionCoordinators(
 /// </summary>
 public class PreExecutionState(
     BoilerState boilerState,
+    OperatorState operatorState,
     ExecutionActivityTracker activityTracker,
     ExecutionPhaseState phaseState,
     ExecutionFlowState flowState)
 {
     public BoilerState BoilerState => boilerState;
+    public OperatorState OperatorState => operatorState;
     public ExecutionActivityTracker ActivityTracker => activityTracker;
     public ExecutionPhaseState PhaseState => phaseState;
     public ExecutionFlowState FlowState => flowState;

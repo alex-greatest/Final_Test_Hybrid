@@ -12,10 +12,12 @@ public class AppSettingsService(IOptions<AppSettings> options)
     public bool UseOperatorQrAuth { get; private set; } = options.Value.UseOperatorQrAuth;
     public bool UseAdminQrAuth { get; private set; } = options.Value.UseAdminQrAuth;
     public bool ExportStepsToExcel { get; private set; } = options.Value.ExportStepsToExcel;
+    public bool UseInterruptReason { get; private set; } = options.Value.UseInterruptReason;
     public string EngineerPassword { get; } = options.Value.EngineerPassword;
     public string NameStation { get; } = options.Value.NameStation;
     public string ExportPath { get; } = options.Value.ExportPath;
     public event Action<bool>? UseMesChanged;
+    public event Action<bool>? UseInterruptReasonChanged;
 
     public void SaveUseMes(bool value)
     {
@@ -40,6 +42,13 @@ public class AppSettingsService(IOptions<AppSettings> options)
     {
         ExportStepsToExcel = value;
         SaveSettingToFile(nameof(ExportStepsToExcel), value);
+    }
+
+    public void SaveUseInterruptReason(bool value)
+    {
+        UseInterruptReason = value;
+        SaveSettingToFile(nameof(UseInterruptReason), value);
+        UseInterruptReasonChanged?.Invoke(value);
     }
 
     private void SaveSettingToFile(string settingName, bool value)

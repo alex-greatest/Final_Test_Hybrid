@@ -29,6 +29,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.Behaviors;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Lifecycle;
+using Final_Test_Hybrid.Services.SpringBoot.Operation.Interrupt;
 using Final_Test_Hybrid.Services.Storage;
 using Final_Test_Hybrid.Services.Storage.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -82,6 +83,11 @@ public static class StepsServiceExtensions
         services.AddSingleton<MesTestResultStorage>();
         services.AddSingleton<TestResultStorageRouter>();
         services.AddSingleton<ITestResultStorage>(sp => sp.GetRequiredService<TestResultStorageRouter>());
+
+        // Interrupt reason services (InterruptDialogService и InterruptFlowExecutor создаются per-request)
+        services.AddSingleton<InterruptedOperationService>();
+        services.AddSingleton<InterruptReasonStorageService>();
+        services.AddSingleton<InterruptReasonRouter>();
 
         // Test sequence
         services.AddSingleton<StepHistoryService>();

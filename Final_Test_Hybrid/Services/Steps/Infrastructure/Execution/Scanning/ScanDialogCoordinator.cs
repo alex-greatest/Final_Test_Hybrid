@@ -1,5 +1,6 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.SpringBoot.Operation;
+using Final_Test_Hybrid.Services.SpringBoot.Operation.Interrupt;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Steps;
 using Final_Test_Hybrid.Services.Steps.Validation;
@@ -22,6 +23,7 @@ public class ScanDialogCoordinator
     public event Func<string, Func<string, string, Task<ReworkSubmitResult>>, Task<ReworkFlowResult>>? OnReworkDialogRequested;
     public event Func<string, string, string, Task>? OnBlockErrorDialogRequested;
     public event Action? OnBlockErrorDialogCloseRequested;
+    public event Func<string, Func<string, string, CancellationToken, Task<SaveResult>>, bool, string, CancellationToken, Task<InterruptFlowResult>>? OnInterruptReasonDialogRequested;
 
     public ScanDialogCoordinator(
         ScanErrorHandler errorHandler,
@@ -52,6 +54,20 @@ public class ScanDialogCoordinator
     public void CloseBlockErrorDialog()
     {
         OnBlockErrorDialogCloseRequested?.Invoke();
+    }
+
+    public async Task<InterruptFlowResult> ShowInterruptReasonDialogAsync(
+        string serialNumber,
+        Func<string, string, CancellationToken, Task<SaveResult>> onSave,
+        bool useMes,
+        string operatorUsername,
+        CancellationToken ct)
+    {
+        if (OnInterruptReasonDialogRequested == null)
+        {
+            return InterruptFlowResult.Cancelled();
+        }
+        return await OnInterruptReasonDialogRequested(serialNumber, onSave, useMes, operatorUsername, ct);
     }
 
     public async Task HandlePreExecutionErrorAsync(PreExecutionResult result)

@@ -1,0 +1,36 @@
+.switch-interrupt-reason {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.switch-interrupt-reason-label {
+    font-weight: bold;
+    font-size: 24px;
+    color: black;
+}
+
+.switch-wrapper {
+    cursor: pointer;
+    margin-bottom: 15px;
+}
+
+::deep .rz-chkbox-box {
+    width: 28px !important;
+    height: 28px !important;
+    border-color: #1976d2 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+::deep .rz-chkbox-box .rz-chkbox-icon {
+    font-size: 22px !important;
+    line-height: 1 !important;
+}
+
+::deep .rz-state-checked .rz-chkbox-box {
+    background-color: #1976d2 !important;
+    border-color: #1976d2 !important;
+}

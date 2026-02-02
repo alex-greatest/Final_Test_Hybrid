@@ -32,6 +32,7 @@ public partial class Form1 : Form
     private RawInputService? _rawInputService;
     private RawInputMessageFilter? _rawInputMessageFilter;
     private DatabaseConnectionService? _databaseConnectionService;
+    private ScanModeController? _scanModeController;
 
     public Form1()
     {
@@ -76,26 +77,108 @@ public partial class Form1 : Form
         StartDatabaseService(serviceProvider);
         StartMessageService(serviceProvider);
         ConfigureDiagnosticEvents(serviceProvider);
-        _ = serviceProvider.GetRequiredService<ScanModeController>();
+        // ScanModeController создаётся в OnHandleCreated ПОСЛЕ регистрации Raw Input
     }
 
     private void StartRawInputService(ServiceProvider serviceProvider)
     {
         _rawInputService = serviceProvider.GetRequiredService<RawInputService>();
-        Load += (_, _) =>
+        // Если Handle уже создан (например, из-за BlazorWebView), регистрируем сразу
+        if (IsHandleCreated)
         {
-            try
+            RegisterRawInput();
+            InitializeScanModeController();
+        }
+        // Иначе регистрация произойдёт в OnHandleCreated
+    }
+
+    /// <summary>
+    /// Регистрирует Raw Input при создании Handle (до Form.Load).
+    /// Обрабатывает пересоздание Handle (при смене DPI/стилей).
+    /// </summary>
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        RegisterRawInput();
+        InitializeScanModeController();
+    }
+
+    /// <summary>
+    /// Отписывается от Raw Input при уничтожении Handle.
+    /// </summary>
+    protected override void OnHandleDestroyed(EventArgs e)
+    {
+        RemoveMessageFilter();
+        UnregisterRawInput();
+        base.OnHandleDestroyed(e);
+    }
+
+    /// <summary>
+    /// Создаёт ScanModeController только после успешной регистрации Raw Input.
+    /// </summary>
+    private void InitializeScanModeController()
+    {
+        // Создаём только если Raw Input успешно зарегистрирован
+        if (_rawInputMessageFilter == null || _scanModeController != null)
+        {
+            return;
+        }
+        _scanModeController = _serviceProvider?.GetRequiredService<ScanModeController>();
+    }
+
+    /// <summary>
+    /// Регистрирует Raw Input и добавляет message filter.
+    /// </summary>
+    private void RegisterRawInput()
+    {
+        if (_rawInputService == null)
+        {
+            return;
+        }
+        try
+        {
+            var registered = _rawInputService.Register(Handle);
+            if (!registered)
             {
-                _rawInputService.Register(Handle);
+                var logger = _serviceProvider?.GetService<ILogger<Form1>>();
+                logger?.LogWarning("Raw Input registration returned false for handle {Handle}", Handle);
+                return;
+            }
+            if (_rawInputMessageFilter == null)
+            {
                 _rawInputMessageFilter = new RawInputMessageFilter(_rawInputService);
                 Application.AddMessageFilter(_rawInputMessageFilter);
             }
-            catch (Exception ex)
-            {
-                var logger = serviceProvider.GetService<ILogger<Form1>>();
-                logger?.LogError(ex, "Ошибка инициализации Raw Input");
-            }
-        };
+            var successLogger = _serviceProvider?.GetService<ILogger<Form1>>();
+            successLogger?.LogInformation("Raw Input registered with handle {Handle}", Handle);
+        }
+        catch (Exception ex)
+        {
+            // Сбрасываем filter если AddMessageFilter бросил исключение
+            _rawInputMessageFilter = null;
+            var logger = _serviceProvider?.GetService<ILogger<Form1>>();
+            logger?.LogError(ex, "Ошибка инициализации Raw Input");
+        }
+    }
+
+    /// <summary>
+    /// Удаляет message filter.
+    /// </summary>
+    private void RemoveMessageFilter()
+    {
+        if (_rawInputMessageFilter != null)
+        {
+            Application.RemoveMessageFilter(_rawInputMessageFilter);
+            _rawInputMessageFilter = null;
+        }
+    }
+
+    /// <summary>
+    /// Отменяет регистрацию Raw Input.
+    /// </summary>
+    private void UnregisterRawInput()
+    {
+        _rawInputService?.Unregister();
     }
 
     private static void HandleException(Microsoft.Extensions.Logging.ILogger logger)
@@ -210,12 +293,8 @@ public partial class Form1 : Form
     {
         try
         {
-            if (_rawInputMessageFilter != null)
-            {
-                Application.RemoveMessageFilter(_rawInputMessageFilter);
-                _rawInputMessageFilter = null;
-            }
-            _rawInputService?.Unregister();
+            RemoveMessageFilter();
+            UnregisterRawInput();
             _springBootHealthService?.Stop();
             _shiftService?.Stop();
             _databaseConnectionService?.Stop();

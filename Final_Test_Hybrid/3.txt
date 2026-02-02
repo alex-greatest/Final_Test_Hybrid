@@ -1,33 +1,16 @@
-﻿Создать шаг Coms/Safety_Time с описанием: Время безопасного отключения котла
-
-
-Чтение регистра 1023 и регистра 1028.
-Если полученные значения из регистров меньше 200 мА, то повтор пункта 1.
-
-
-Если полученные значения из регистров больше 200 мА, то запуск таймера времени закрытия (safety time).
-
-
-Чтение регистра 1023 и регистра 1028.
-Если полученные значения из регистров больше 200 мА, то повтор пункта 2.
-Если полученные значения из регистров меньше 200 мА, то остановка таймера времени закрытия (safety time).
-
-
-
-Полученное время safety_time сравнить с пределами из рецептов ns=3;s="DB_Recipe"."Time"."ignSafetyTimeMin" и ns=3;s="DB_Recipe"."Time"."ignSafetyTimeMax" результат пишем в TestResultService isRange:true. назавие параметра Safety time
-
-
-
-Проверка по статуса котла, чтение регистра 1005
-Если состояние равно 1 (Блокировка Б)
-Сброс ошибки записью в регистр 1153 нуля
-
-
-
-	
-
-
-программную ошибку не надо. только в Fail
-
-
-после записи и перед чтением того же регистра ждём время из appsettings.json
+﻿fail: Final_Test_Hybrid.Settings.Spring.SpringBootHttpClient[0]
+      GET /api/shift/request?nameStation=FT%2068 failed
+      System.Net.Http.HttpRequestException: ����������� �� �����������, �.�. �������� ��������� ������ ������ �� �����������. (localhost:8080)
+       ---> System.Net.Sockets.SocketException (10061): ����������� �� �����������, �.�. �������� ��������� ������ ������ �� �����������.
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)
+         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.System.Threading.Tasks.Sources.IValueTaskSource.GetResult(Int16 token)
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         --- End of inner exception stack trace ---
+         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.ConnectAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.CreateHttp11ConnectionAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.InjectNewHttp11ConnectionAsync(QueueItem queueItem)
+         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
+         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+         at System.Net.Http.HttpClient.<SendAsync>g__Core|83_0(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationTokenSource cts, Boolean disposeCts, CancellationTokenSource pendingRequestsCts, CancellationToken originalCancellationToken)

@@ -1,9 +1,11 @@
 @using Final_Test_Hybrid.Components.Errors
 @using Final_Test_Hybrid.Components.Main.Modals
+@using Final_Test_Hybrid.Components.Main.Modals.Rework
 @using Final_Test_Hybrid.Models.Steps
 @using Final_Test_Hybrid.Services.Common.Settings
 @using Final_Test_Hybrid.Services.Main.PlcReset
 @using Final_Test_Hybrid.Services.SpringBoot.Operation
+@using Final_Test_Hybrid.Services.SpringBoot.Operation.Interrupt
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator
@@ -97,6 +99,7 @@
         DialogCoordinator.OnReworkDialogRequested += HandleReworkDialogAsync;
         DialogCoordinator.OnBlockErrorDialogRequested += ShowBlockErrorDialogAsync;
         DialogCoordinator.OnBlockErrorDialogCloseRequested += CloseDialogs;
+        DialogCoordinator.OnInterruptReasonDialogRequested += HandleInterruptReasonDialogAsync;
         AppSettingsService.UseMesChanged += OnUseMesChanged;
         ErrorCoordinator.OnReset += CloseDialogs;
         PlcResetCoordinator.OnForceStop += CloseDialogs;
@@ -327,6 +330,51 @@
         return ReworkDialogService.ExecuteReworkFlowAsync(errorMessage, executeRework);
     }
 
+    private async Task<InterruptFlowResult> HandleInterruptReasonDialogAsync(
+        string serialNumber,
+        Func<string, string, CancellationToken, Task<SaveResult>> onSave,
+        bool useMes,
+        string operatorUsername,
+        CancellationToken ct)
+    {
+        if (_disposed)
+        {
+            return InterruptFlowResult.Cancelled();
+        }
+
+        var tcs = new TaskCompletionSource<InterruptFlowResult>();
+
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                if (_disposed)
+                {
+                    tcs.TrySetResult(InterruptFlowResult.Cancelled());
+                    return;
+                }
+
+                // UI-safe close delegate для отмены с любого потока
+                void UiSafeClose()
+                {
+                    try { _ = InvokeAsync(() => DialogService.Close()); }
+                    catch (ObjectDisposedException) { }
+                }
+
+                var dialogService = new InterruptDialogService(DialogService, UiSafeClose);
+                var executor = new InterruptFlowExecutor();
+                var result = await executor.ExecuteAsync(dialogService, onSave, useMes, operatorUsername, ct);
+                tcs.TrySetResult(result);
+            });
+        }
+        catch (ObjectDisposedException)
+        {
+            tcs.TrySetResult(InterruptFlowResult.Cancelled());
+        }
+
+        return await tcs.Task;
+    }
+
     private async Task<bool> HandleSaveErrorDialogAsync(string? errorMessage)
     {
         var tcs = new TaskCompletionSource<bool>();
@@ -462,6 +510,7 @@
         DialogCoordinator.OnReworkDialogRequested -= HandleReworkDialogAsync;
         DialogCoordinator.OnBlockErrorDialogRequested -= ShowBlockErrorDialogAsync;
         DialogCoordinator.OnBlockErrorDialogCloseRequested -= CloseDialogs;
+        DialogCoordinator.OnInterruptReasonDialogRequested -= HandleInterruptReasonDialogAsync;
         AppSettingsService.UseMesChanged -= OnUseMesChanged;
         ErrorCoordinator.OnReset -= CloseDialogs;
         PlcResetCoordinator.OnForceStop -= CloseDialogs;

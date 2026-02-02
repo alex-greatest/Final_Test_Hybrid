@@ -46,11 +46,23 @@ public sealed class ScanSessionHandler(BarcodeBuffer buffer)
 
     public IDisposable Acquire(Action<string> handler)
     {
+        // Инвариант: желательно одна сессия, но разрешаем перезапись.
+        // Overlap возможен при авторизации: диалог держит сессию,
+        // SetAuthenticated вызывает ScanModeController до закрытия диалога.
+        if (_activeHandler != null)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                "Warning: перезапись активного handler сканера. " +
+                "Возможен overlap сессий при авторизации.");
+        }
+
+        // Сначала очистка буфера (пока handler == null, символы игнорируются)
+        // Это предотвращает race condition когда старые символы попадают в новый handler
+        buffer.Clear();
         lock (_lock)
         {
             _activeHandler = handler;
         }
-        buffer.Clear();
         return new ScanSession(() => Release(handler));
     }
 
@@ -66,11 +78,12 @@ public sealed class ScanSessionHandler(BarcodeBuffer buffer)
     {
         lock (_lock)
         {
-            if (_activeHandler == handler)
+            if (_activeHandler != handler)
             {
-                _activeHandler = null;
+                return;  // handler уже перезаписан — не трогаем буфер
             }
+            _activeHandler = null;
         }
-        buffer.Clear();
+        buffer.Clear();  // очищаем только при реальном освобождении
     }
 }

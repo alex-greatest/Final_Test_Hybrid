@@ -1,0 +1,106 @@
+@using Final_Test_Hybrid.Services.SpringBoot.Operation.Interrupt
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+@implements IDisposable
+
+<div class="interrupt-reason-dialog">
+    <div class="field-group">
+        <label class="field-label">Причина прерывания теста</label>
+        <RadzenTextBox @bind-Value="_reason" Placeholder="Введите причину прерывания..." Style="width: 100%;" />
+    </div>
+
+    @if (!string.IsNullOrEmpty(_validationError))
+    {
+        <div class="validation-error">@_validationError</div>
+    }
+
+    <div class="dialog-buttons">
+        <RadzenButton Text="Сохранить"
+                      Icon="save"
+                      Click="@OnSaveClick"
+                      ButtonStyle="ButtonStyle.Primary"
+                      IsBusy="_isSaving"
+                      class="save-button" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public required Func<string, CancellationToken, Task<SaveResult>> OnSubmit { get; set; }
+
+    [Parameter]
+    public CancellationToken CancellationToken { get; set; }
+
+    private string _reason = "";
+    private bool _isSaving;
+    private string _validationError = "";
+    private bool _disposed;
+
+    private async Task OnSaveClick()
+    {
+        if (!ValidateReason())
+        {
+            return;
+        }
+        await ExecuteSaveAsync();
+    }
+
+    private bool ValidateReason()
+    {
+        _validationError = "";
+        if (!string.IsNullOrWhiteSpace(_reason))
+        {
+            return true;
+        }
+        _validationError = "Введите причину прерывания";
+        NotificationService.Notify(NotificationSeverity.Warning, "Введите причину");
+        return false;
+    }
+
+    private async Task ExecuteSaveAsync()
+    {
+        _isSaving = true;
+        var result = await TrySaveAsync();
+        _isSaving = false;
+        HandleSaveResult(result);
+    }
+
+    private async Task<SaveResult> TrySaveAsync()
+    {
+        try
+        {
+            return await OnSubmit(_reason, CancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return SaveResult.Fail(string.Empty);
+        }
+        catch (Exception)
+        {
+            return SaveResult.Fail("Ошибка сохранения");
+        }
+    }
+
+    private void HandleSaveResult(SaveResult result)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+        if (result.IsSuccess)
+        {
+            DialogService.Close(result);
+            return;
+        }
+        if (string.IsNullOrEmpty(result.ErrorMessage))
+        {
+            return;
+        }
+        NotificationService.Notify(NotificationSeverity.Error, result.ErrorMessage);
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+    }
+}

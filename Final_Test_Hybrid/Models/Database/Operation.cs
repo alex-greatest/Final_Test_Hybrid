@@ -16,6 +16,8 @@ public class Operation
     [Required]
     public int NumberShift { get; set; }
     public string? Comment { get; set; }
+    [StringLength(255)]
+    public string? AdminInterrupted { get; set; }
     [Required]
     public int Version { get; set; }
     [Required]

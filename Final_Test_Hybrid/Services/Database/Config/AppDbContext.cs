@@ -274,6 +274,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasConversion<string>().HasMaxLength(30);
             entity.Property(e => e.NumberShift).HasColumnName("NUMBER_SHIFT").IsRequired();
             entity.Property(e => e.Comment).HasColumnName("COMMENT_");
+            entity.Property(e => e.AdminInterrupted).HasColumnName("ADMIN_INTERRUPTED").HasMaxLength(255);
             entity.Property(e => e.Version).HasColumnName("VERSION").IsRequired().IsConcurrencyToken();
             entity.Property(e => e.Operator).HasColumnName("OPERATOR").IsRequired().HasMaxLength(255);
             entity.HasOne(e => e.Boiler).WithMany().HasForeignKey(e => e.BoilerId)
