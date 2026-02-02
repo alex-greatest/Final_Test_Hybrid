@@ -29,9 +29,18 @@ public static class PneumaticValveTags
     public const string Vp2_7_BoilerIn = "ns=3;s=\"DB_PneuValve\".\"DHW\".\"VP2_7\".\"HMI\".\"xOut_Open\"";
     public const string Vp2_8_Drain = "ns=3;s=\"DB_PneuValve\".\"DHW\".\"VP2_8\".\"HMI\".\"xOut_Open\"";
 
+    // VP3 - DHW дополнительные
+    public const string Vp3_1 = "ns=3;s=\"DB_PneuValve\".\"DHW\".\"VP3_1\".\"HMI\".\"xOut_Open\"";
+
     // VP0 - GAS (Газ)
     public const string Vp0_1_GasG20 = "ns=3;s=\"DB_PneuValve\".\"Gas\".\"VP0_1\".\"HMI\".\"xOut_Open\"";
     public const string Vp0_2_GasG25 = "ns=3;s=\"DB_PneuValve\".\"Gas\".\"VP0_2\".\"HMI\".\"xOut_Open\"";
     public const string Vp0_3_LpgG30 = "ns=3;s=\"DB_PneuValve\".\"Gas\".\"VP0_3\".\"HMI\".\"xOut_Open\"";
     public const string Ev0_3_Gas = "ns=3;s=\"DB_PneuValve\".\"Gas\".\"EV0_3\".\"HMI\".\"xOut_Open\"";
+
+    // VP0 - GAS (Кнопки управления)
+    public const string Vp0_1_GasG20_SbOpen = "ns=3;s=\"DB_PneuValve\".\"Gas\".\"VP0_1\".\"HMI\".\"xSB_Open\"";
+    public const string Vp0_2_GasG25_SbOpen = "ns=3;s=\"DB_PneuValve\".\"Gas\".\"VP0_2\".\"HMI\".\"xSB_Open\"";
+    public const string Vp0_3_LpgG30_SbOpen = "ns=3;s=\"DB_PneuValve\".\"Gas\".\"VP0_3\".\"HMI\".\"xSB_Open\"";
+    public const string Ev0_3_Gas_SbOpen = "ns=3;s=\"DB_PneuValve\".\"Gas\".\"EV0_3\".\"HMI\".\"xSB_Open\"";
 }

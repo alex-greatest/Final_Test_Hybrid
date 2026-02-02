@@ -1,6 +1,8 @@
 @using Final_Test_Hybrid.Services.OpcUa.Subscription
+@using Final_Test_Hybrid.Services.OpcUa
 @using Final_Test_Hybrid.Models.Plc.Tags
 @inject OpcUaSubscription Subscription
+@inject OpcUaTagService TagService
 @implements IAsyncDisposable
 
 <div class="scheme-container">
@@ -1717,88 +1719,94 @@
         <rect x="508.774" y="691.011" width="15.187" height="39.387"
               transform="translate(1227.072 194.337) rotate(90)"
               style="fill: url(#_Безымянный_градиент_24-8); stroke: #b9aa63;"/>
-        <g id="Group_Pipe" data-name="Group Pipe">
-            <g style="clip-path: url(#clippath);">
-                <rect x="555.132" y="694.784" width="3.307" height="15.37"
+        <g class="valve-interactive" @onclick="@(() => ToggleValveAsync(ValveVp01))">
+            <g id="Group_Pipe" data-name="Group Pipe">
+                <g style="clip-path: url(#clippath);">
+                    <rect x="555.132" y="694.784" width="3.307" height="15.37"
+                          style="fill: @GetValveColor("VP0_1");"/>
+                </g>
+            </g>
+            <g id="Group_Port2" data-name="Group Port2">
+                <path d="M536.498,695.342l20.376,14.855-20.376,15.073v-29.928"
                       style="fill: @GetValveColor("VP0_1");"/>
             </g>
-        </g>
-        <g id="Group_Port2" data-name="Group Port2">
-            <path d="M536.498,695.342l20.376,14.855-20.376,15.073v-29.928"
-                  style="fill: @GetValveColor("VP0_1");"/>
-        </g>
-        <g id="Group_Port1" data-name="Group Port1">
-            <path d="M576.887,695.342l-20.377,14.854,20.377,15.073v-29.928"
-                  style="fill: @GetValveColor("VP0_1");"/>
-        </g>
-        <g id="Group_Box-2" data-name="Group Box">
-            <g style="clip-path: url(#clippath-1);">
-                <rect x="565.502" y="687.78" width="1.309" height="7.213"
+            <g id="Group_Port1" data-name="Group Port1">
+                <path d="M576.887,695.342l-20.377,14.854,20.377,15.073v-29.928"
                       style="fill: @GetValveColor("VP0_1");"/>
             </g>
-            <g style="clip-path: url(#clippath-2);">
-                <rect x="546.772" y="693.888" width="20.039" height="1.106"
-                      style="fill: @GetValveColorDark("VP0_1");"/>
-            </g>
-            <g style="clip-path: url(#clippath-3);">
-                <rect x="546.772" y="687.786" width="19.194" height="6.529"
-                      style="fill: @GetValveColor("VP0_1");"/>
+            <g id="Group_Box-2" data-name="Group Box">
+                <g style="clip-path: url(#clippath-1);">
+                    <rect x="565.502" y="687.78" width="1.309" height="7.213"
+                          style="fill: @GetValveColor("VP0_1");"/>
+                </g>
+                <g style="clip-path: url(#clippath-2);">
+                    <rect x="546.772" y="693.888" width="20.039" height="1.106"
+                          style="fill: @GetValveColorDark("VP0_1");"/>
+                </g>
+                <g style="clip-path: url(#clippath-3);">
+                    <rect x="546.772" y="687.786" width="19.194" height="6.529"
+                          style="fill: @GetValveColor("VP0_1");"/>
+                </g>
             </g>
         </g>
-        <g id="Group_Pipe-2" data-name="Group Pipe">
+        <g class="valve-interactive" @onclick="@(() => ToggleValveAsync(ValveVp02))">
+            <g id="Group_Pipe-2" data-name="Group Pipe">
             <g style="clip-path: url(#clippath-4);">
                 <rect x="554.953" y="839.351" width="3.307" height="15.37"
                       style="fill: @GetValveColor("VP0_2");"/>
             </g>
         </g>
-        <g id="Group_Port2-2" data-name="Group Port2">
-            <path d="M536.319,839.909l20.376,14.855-20.376,15.073v-29.928"
-                  style="fill: @GetValveColor("VP0_2");"/>
-        </g>
-        <g id="Group_Port1-2" data-name="Group Port1">
-            <path d="M576.708,839.909l-20.377,14.854,20.377,15.073v-29.928"
-                  style="fill: @GetValveColor("VP0_2");"/>
-        </g>
-        <g id="Group_Box-3" data-name="Group Box">
-            <g style="clip-path: url(#clippath-5);">
-                <rect x="565.323" y="832.347" width="1.309" height="7.213"
+            <g id="Group_Port2-2" data-name="Group Port2">
+                <path d="M536.319,839.909l20.376,14.855-20.376,15.073v-29.928"
                       style="fill: @GetValveColor("VP0_2");"/>
             </g>
-            <g style="clip-path: url(#clippath-6);">
-                <rect x="546.593" y="838.455" width="20.039" height="1.106"
-                      style="fill: @GetValveColorDark("VP0_2");"/>
-            </g>
-            <g style="clip-path: url(#clippath-7);">
-                <rect x="546.593" y="832.353" width="19.194" height="6.529"
+            <g id="Group_Port1-2" data-name="Group Port1">
+                <path d="M576.708,839.909l-20.377,14.854,20.377,15.073v-29.928"
                       style="fill: @GetValveColor("VP0_2");"/>
             </g>
-        </g>
-        <g id="Group_Pipe-3" data-name="Group Pipe">
-            <g style="clip-path: url(#clippath-8);">
-                <rect x="555.05" y="984.978" width="3.307" height="15.37"
-                      style="fill: @GetValveColor("VP0_3");"/>
+            <g id="Group_Box-3" data-name="Group Box">
+                <g style="clip-path: url(#clippath-5);">
+                    <rect x="565.323" y="832.347" width="1.309" height="7.213"
+                          style="fill: @GetValveColor("VP0_2");"/>
+                </g>
+                <g style="clip-path: url(#clippath-6);">
+                    <rect x="546.593" y="838.455" width="20.039" height="1.106"
+                          style="fill: @GetValveColorDark("VP0_2");"/>
+                </g>
+                <g style="clip-path: url(#clippath-7);">
+                    <rect x="546.593" y="832.353" width="19.194" height="6.529"
+                          style="fill: @GetValveColor("VP0_2");"/>
+                </g>
             </g>
         </g>
-        <g id="Group_Port2-3" data-name="Group Port2">
-            <path d="M536.416,985.536l20.376,14.855-20.376,15.073v-29.928"
-                  style="fill: @GetValveColor("VP0_3");"/>
-        </g>
-        <g id="Group_Port1-3" data-name="Group Port1">
-            <path d="M576.805,985.536l-20.377,14.854,20.377,15.073v-29.928"
-                  style="fill: @GetValveColor("VP0_3");"/>
-        </g>
-        <g id="Group_Box-4" data-name="Group Box">
-            <g style="clip-path: url(#clippath-9);">
-                <rect x="565.42" y="977.974" width="1.309" height="7.213"
+        <g class="valve-interactive" @onclick="@(() => ToggleValveAsync(ValveVp03))">
+            <g id="Group_Pipe-3" data-name="Group Pipe">
+                <g style="clip-path: url(#clippath-8);">
+                    <rect x="555.05" y="984.978" width="3.307" height="15.37"
+                          style="fill: @GetValveColor("VP0_3");"/>
+                </g>
+            </g>
+            <g id="Group_Port2-3" data-name="Group Port2">
+                <path d="M536.416,985.536l20.376,14.855-20.376,15.073v-29.928"
                       style="fill: @GetValveColor("VP0_3");"/>
             </g>
-            <g style="clip-path: url(#clippath-10);">
-                <rect x="546.69" y="984.082" width="20.039" height="1.106"
-                      style="fill: @GetValveColorDark("VP0_3");"/>
-            </g>
-            <g style="clip-path: url(#clippath-11);">
-                <rect x="546.69" y="977.98" width="19.194" height="6.529"
+            <g id="Group_Port1-3" data-name="Group Port1">
+                <path d="M576.805,985.536l-20.377,14.854,20.377,15.073v-29.928"
                       style="fill: @GetValveColor("VP0_3");"/>
+            </g>
+            <g id="Group_Box-4" data-name="Group Box">
+                <g style="clip-path: url(#clippath-9);">
+                    <rect x="565.42" y="977.974" width="1.309" height="7.213"
+                          style="fill: @GetValveColor("VP0_3");"/>
+                </g>
+                <g style="clip-path: url(#clippath-10);">
+                    <rect x="546.69" y="984.082" width="20.039" height="1.106"
+                          style="fill: @GetValveColorDark("VP0_3");"/>
+                </g>
+                <g style="clip-path: url(#clippath-11);">
+                    <rect x="546.69" y="977.98" width="19.194" height="6.529"
+                          style="fill: @GetValveColor("VP0_3");"/>
+                </g>
             </g>
         </g>
         <rect x="633.405" y="722.658" width="13.223" height="109.206"
@@ -2074,32 +2082,34 @@
         <rect x="1649.575" y="417.502" width="14.548" height="356.513"
               transform="translate(2252.607 -1061.09) rotate(90)"
               style="fill: @GetPipeGradientForAny(new[]{"VP0_1","VP0_2","VP0_3"}, "_Безымянный_градиент_45-21");"/>
-        <g id="Group_Pipe-4" data-name="Group Pipe">
-            <g style="clip-path: url(#clippath-12);">
-                <rect x="1456.588" y="582.004" width="3.307" height="15.37"
+        <g class="valve-interactive" @onclick="@(() => ToggleValveAsync(ValveEv03))">
+            <g id="Group_Pipe-4" data-name="Group Pipe">
+                <g style="clip-path: url(#clippath-12);">
+                    <rect x="1456.588" y="582.004" width="3.307" height="15.37"
+                          style="fill: @GetValveColor("EV0_3");"/>
+                </g>
+            </g>
+            <g id="Group_Port2-4" data-name="Group Port2">
+                <path d="M1437.954,582.562l20.376,14.855-20.376,15.073v-29.928"
                       style="fill: @GetValveColor("EV0_3");"/>
             </g>
-        </g>
-        <g id="Group_Port2-4" data-name="Group Port2">
-            <path d="M1437.954,582.562l20.376,14.855-20.376,15.073v-29.928"
-                  style="fill: @GetValveColor("EV0_3");"/>
-        </g>
-        <g id="Group_Port1-4" data-name="Group Port1">
-            <path d="M1478.343,582.562l-20.377,14.854,20.377,15.073v-29.928"
-                  style="fill: @GetValveColor("EV0_3");"/>
-        </g>
-        <g id="Group_Box-8" data-name="Group Box">
-            <g style="clip-path: url(#clippath-13);">
-                <rect x="1466.958" y="575" width="1.309" height="7.213"
+            <g id="Group_Port1-4" data-name="Group Port1">
+                <path d="M1478.343,582.562l-20.377,14.854,20.377,15.073v-29.928"
                       style="fill: @GetValveColor("EV0_3");"/>
             </g>
-            <g style="clip-path: url(#clippath-14);">
-                <rect x="1448.228" y="581.108" width="20.039" height="1.106"
-                      style="fill: @GetValveColorDark("EV0_3");"/>
-            </g>
-            <g style="clip-path: url(#clippath-15);">
-                <rect x="1448.228" y="575.006" width="19.194" height="6.529"
-                      style="fill: @GetValveColor("EV0_3");"/>
+            <g id="Group_Box-8" data-name="Group Box">
+                <g style="clip-path: url(#clippath-13);">
+                    <rect x="1466.958" y="575" width="1.309" height="7.213"
+                          style="fill: @GetValveColor("EV0_3");"/>
+                </g>
+                <g style="clip-path: url(#clippath-14);">
+                    <rect x="1448.228" y="581.108" width="20.039" height="1.106"
+                          style="fill: @GetValveColorDark("EV0_3");"/>
+                </g>
+                <g style="clip-path: url(#clippath-15);">
+                    <rect x="1448.228" y="575.006" width="19.194" height="6.529"
+                          style="fill: @GetValveColor("EV0_3");"/>
+                </g>
             </g>
         </g>
         <path d="M654.97,720.738v-21.012h-30.284v21.012h30.284Z"
@@ -2880,12 +2890,25 @@
     private const string OpenColor = "#28a745";
     private const string OpenColorDark = "#1e7e34";
 
+    private const string ValveVp01 = "VP0_1";
+    private const string ValveVp02 = "VP0_2";
+    private const string ValveVp03 = "VP0_3";
+    private const string ValveEv03 = "EV0_3";
+
     private readonly Dictionary<string, bool> _valveStates = new()
     {
-        ["VP0_1"] = false,
-        ["VP0_2"] = false,
-        ["VP0_3"] = false,
-        ["EV0_3"] = false
+        [ValveVp01] = false,
+        [ValveVp02] = false,
+        [ValveVp03] = false,
+        [ValveEv03] = false
+    };
+
+    private static readonly Dictionary<string, string> ValveSbOpenTags = new()
+    {
+        [ValveVp01] = PneumaticValveTags.Vp0_1_GasG20_SbOpen,
+        [ValveVp02] = PneumaticValveTags.Vp0_2_GasG25_SbOpen,
+        [ValveVp03] = PneumaticValveTags.Vp0_3_LpgG30_SbOpen,
+        [ValveEv03] = PneumaticValveTags.Ev0_3_Gas_SbOpen
     };
 
     // Значения датчиков
@@ -2937,6 +2960,20 @@
 
         _valveStates[valveId] = value is true;
         await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Переключает состояние клапана (инвертирует xSB_Open).
+    /// </summary>
+    private async Task ToggleValveAsync(string valveId)
+    {
+        if (!ValveSbOpenTags.TryGetValue(valveId, out var nodeId))
+        {
+            return;
+        }
+
+        var newValue = !(_valveStates.TryGetValue(valveId, out var current) && current);
+        await TagService.WriteAsync(nodeId, newValue);
     }
 
     private async Task OnVpp31Changed(object? v) { if (_disposed) return; _vpp3_1Value = ToDouble(v); await InvokeAsync(StateHasChanged); }
