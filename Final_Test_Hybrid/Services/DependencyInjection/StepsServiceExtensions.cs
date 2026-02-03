@@ -105,6 +105,7 @@ public static class StepsServiceExtensions
 
         // Scanning
         services.AddSingleton<BarcodeScanService>();
+        services.AddSingleton<BarcodeDebounceHandler>();
         services.AddSingleton<ScanSessionManager>();
         services.AddSingleton<ScanErrorHandler>();
         services.AddSingleton<ScanDialogCoordinator>();

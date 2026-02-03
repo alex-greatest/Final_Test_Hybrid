@@ -18,6 +18,7 @@ public class ScanModeController : IDisposable
     private readonly OperatorState _operatorState;
     private readonly AutoReadySubscription _autoReady;
     private readonly StepStatusReporter _statusReporter;
+    private readonly BarcodeDebounceHandler _barcodeDebounceHandler;
     private readonly PreExecutionCoordinator _preExecutionCoordinator;
     private readonly PlcResetCoordinator _plcResetCoordinator;
     private readonly IStepTimingService _stepTimingService;
@@ -79,6 +80,7 @@ public class ScanModeController : IDisposable
         OperatorState operatorState,
         AutoReadySubscription autoReady,
         StepStatusReporter statusReporter,
+        BarcodeDebounceHandler barcodeDebounceHandler,
         PreExecutionCoordinator preExecutionCoordinator,
         PlcResetCoordinator plcResetCoordinator,
         IStepTimingService stepTimingService,
@@ -89,6 +91,7 @@ public class ScanModeController : IDisposable
         _operatorState = operatorState;
         _autoReady = autoReady;
         _statusReporter = statusReporter;
+        _barcodeDebounceHandler = barcodeDebounceHandler;
         _preExecutionCoordinator = preExecutionCoordinator;
         _plcResetCoordinator = plcResetCoordinator;
         _stepTimingService = stepTimingService;
@@ -248,7 +251,7 @@ public class ScanModeController : IDisposable
     /// </summary>
     private void HandleBarcodeScanned(string barcode)
     {
-        _preExecutionCoordinator.SubmitBarcode(barcode);
+        _barcodeDebounceHandler.Handle(barcode);
     }
 
     /// <summary>
