@@ -38,8 +38,7 @@ public partial class PreExecutionCoordinator
     private bool ShouldDelayChangeoverUntilAskEndOnly()
     {
         var stopReason = state.FlowState.StopReason;
-        return stopReason is ExecutionStopReason.PlcSoftReset or ExecutionStopReason.PlcHardReset or ExecutionStopReason.PlcForceStop
-            && !state.BoilerState.IsTestRunning;
+        return stopReason is ExecutionStopReason.PlcSoftReset or ExecutionStopReason.PlcHardReset or ExecutionStopReason.PlcForceStop;
     }
 
     private ChangeoverResetMode GetChangeoverResetMode()
@@ -158,6 +157,16 @@ public partial class PreExecutionCoordinator
     {
         // Запомнить seq для которого стартуем (защита от повторного запуска)
         var currentSeq = GetResetSequenceSnapshot();
+        var stopReason = state.FlowState.StopReason;
+        if (stopReason is ExecutionStopReason.PlcSoftReset or ExecutionStopReason.PlcHardReset or ExecutionStopReason.PlcForceStop
+            && Volatile.Read(ref _changeoverAskEndSequence) != currentSeq)
+        {
+            var trigger = ShouldDelayChangeoverStart()
+                ? ChangeoverTriggerReasonSaved
+                : ChangeoverTriggerAskEndOnly;
+            TryArmChangeoverPending(trigger);
+            return;
+        }
         Volatile.Write(ref _changeoverStartedSequence, currentSeq);
         state.BoilerState.ResetAndStartChangeoverTimer();
     }
@@ -175,7 +184,7 @@ public partial class PreExecutionCoordinator
         switch (mode)
         {
             case ChangeoverResetMode.Immediate:
-                // Immediate всегда стартует - без guard!
+                // Immediate стартует сразу (PLC reset будет gated в StartChangeoverTimerImmediate)
                 StartChangeoverTimerForImmediateReset();
                 break;
             case ChangeoverResetMode.WaitForReason:

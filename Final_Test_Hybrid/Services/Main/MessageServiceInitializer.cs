@@ -1,12 +1,12 @@
-using Final_Test_Hybrid.Models;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
 namespace Final_Test_Hybrid.Services.Main;
 
-public class MessageServiceInitializer(AutoReadySubscription autoReadySubscription, BoilerState boilerState)
+public class MessageServiceInitializer(AutoReadySubscription autoReadySubscription, IChangeoverStartGate changeoverStartGate)
 {
     public async Task InitializeAsync()
     {
-        autoReadySubscription.OnFirstAutoReceived += () => boilerState.StartChangeoverTimer();
+        autoReadySubscription.OnFirstAutoReceived += changeoverStartGate.RequestStartFromAutoReady;
         await autoReadySubscription.SubscribeAsync();
     }
 }
