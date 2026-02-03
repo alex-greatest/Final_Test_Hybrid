@@ -1,5 +1,3 @@
-using Final_Test_Hybrid.Models.Errors;
-using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.UI;
@@ -79,10 +77,12 @@ public sealed partial class ErrorCoordinator : IErrorCoordinator, IInterruptCont
 
         if (isReady)
         {
+            _logger.LogInformation("AutoReady ON → resume");
             FireAndForgetResume();
             return;
         }
 
+        _logger.LogInformation("AutoReady OFF → pause");
         if (isActive)
         {
             FireAndForgetInterrupt(InterruptReason.AutoModeDisabled);

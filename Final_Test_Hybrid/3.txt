@@ -1,11 +1,486 @@
-﻿AlwaysFailStep1	CH/Slow_Fill_Circuit	Elec/Boiler_Power_ON	DHW/High_Pressure_Test
-CH/Flush_Circuit	CH/Fast_Fill_Circuit	Elec/Boiler_Power_OFF	DHW/Fill_Circuit_Normal_Direction
-<TEST STEP>	<TEST STEP>	<TEST STEP>	<TEST STEP>
-Coms/Check_Comms			
-Coms/Write_Test_Byte_ON			
-Coms/Check_Test_Byte_ON			
-Coms/Write_Soft_Code_Plug			
-Coms/Read_Soft_Code_Plug			
-Coms/Read_ECU_Version			
-Coms/Set_Fan_Map			
-<TEST STEP>	<TEST STEP>	<TEST STEP>	<TEST STEP>
+﻿info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ CH.Water.Max = 25.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ CH.Overheat = 85.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ CH.Press.Max = 2.7
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ CH.FlowCool.On1 = 45.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ CH.Water.Min = 10.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ CH.Press.Min = 2.2
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ CH.FlowCool.Off = 35.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ CH.PresTestValue = 2.5
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ CH.DeltaTemp.Tol = 3.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ CH.FlowCool.On2 = 55.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW.Flow.Min = 6.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW.ClosePresReliefValveMin = 3.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW.CH_Flow_in_DHW_mode = 0.3
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=DHW.TempOutDeltaMax, Value=3, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=DHW.OpenPresReliefValve.Max, Value=9, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=DHW.OpenPresReliefValve.Min, Value=7, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=DHW.Flow.Max, Value=10, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=DHW_Flow_Hot_Rate_Min, Value=5, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=Misc.MainsVoltageMin, Value=200.0, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=Misc.MainsVoltageMax, Value=250.0, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=DHW.DHWCheckTankMode, Value=12, Type=DINT
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=CH.FlowCool.On365.0, Value=65.0, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=DHW.Tank.WaterMin, Value=5.0, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=CH.TFlowDeltaMax, Value=3, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=DHW.PresTest.Value, Value=0.25, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=DHW.Tank.Mode, Value=2.5, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=DHW.TFlowDeltaMax, Value=3.0, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=DHW.Tank.WaterMax, Value=20.0, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=DHW.FlwTempRise.Max, Value=60.0, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=DHW.PresTest.Tol, Value=0.5, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=DHW.DeltaTemp.SetValue, Value=3.0, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=DHW.FlwTempRise.Min, Value=7.0, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=DHW_Flow_Hot_Rate, Value=6, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      WriteRecipe: Tag=DHW_Flow_Hot_Rate_Max, Value=7, Type=REAL
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW.TempOutDeltaMax = 3
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW.OpenPresReliefValve.Max = 9
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW.OpenPresReliefValve.Min = 7
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW.Flow.Max = 10
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW_Flow_Hot_Rate_Min = 5
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ Misc.MainsVoltageMin = 200.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ Misc.MainsVoltageMax = 250.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW.DHWCheckTankMode = 12
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ CH.FlowCool.On365.0 = 65.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW.Tank.WaterMin = 5.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ CH.TFlowDeltaMax = 3
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW.PresTest.Value = 0.25
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW.Tank.Mode = 2.5
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW.TFlowDeltaMax = 3.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW.Tank.WaterMax = 20.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW.FlwTempRise.Max = 60.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW.PresTest.Tol = 0.5
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW.DeltaTemp.SetValue = 3.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW.FlwTempRise.Min = 7.0
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW_Flow_Hot_Rate = 6
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ������ DHW_Flow_Hot_Rate_Max = 7
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator.RecipeProvider[0]
+      Loaded 174 recipes
+info: Final_Test_Hybrid.Services.Steps.Steps.ScanBarcodeStep[0]
+      ������� ��������� � ���������: 174
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution.PreExecutionCoordinator[0]
+      ������� � ���������� ������� ��� ������ �����
+info: Final_Test_Hybrid.Services.Steps.Steps.Misc.StartTimer1Step[0]
+      ������ 1 �������
+info: Final_Test_Hybrid.Services.Steps.Steps.BlockBoilerAdapterStep[0]
+      ������ ���������� ��������
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution.PreExecutionCoordinator[0]
+      ���� � ExecuteRetryLoopAsync ��� Block boiler adapter
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution.PreExecutionCoordinator[0]
+      Retry loop: IsRetryable=true, ���������� ������
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution.PreExecutionCoordinator[0]
+      ������ �������, ������� WaitForResolutionAsync...
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      �������� ������� ��������� (��� ��������)...
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      WaitGroup: ������� [0] Retry ���������, ��� ns=3;s="DB_Station"."Test"."Req_Repeat" = True, ��������� = Retry
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      ������� ������: Retry
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution.PreExecutionCoordinator[0]
+      WaitForResolutionAsync ������: Retry
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution.PreExecutionCoordinator[0]
+      ���������� SendAskRepeatAsync...
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      �������� AskRepeat � PLC
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution.PreExecutionCoordinator[0]
+      SendAskRepeatAsync ���������, ��������� ���
+info: Final_Test_Hybrid.Services.Steps.Steps.BlockBoilerAdapterStep[0]
+      ������ ���������� ��������
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      WaitGroup: ������� [0] End ���������, ��� ns=3;s="DB_VI"."Block_Boiler_Adapter"."End" = True, ��������� = Success
+info: Final_Test_Hybrid.Services.Steps.Steps.BlockBoilerAdapterStep[0]
+      ������� ������������ �������
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution.PreExecutionCoordinator[0]
+      ������ TestExecutionCoordinator � 3 maps
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator.TestExecutionCoordinator[0]
+      ��������� 3 Maps
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator.TestExecutionCoordinator[0]
+      ������ 3 Maps
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator.TestExecutionCoordinator[0]
+      Map 1/3
+fail: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ColumnExecutor[0]
+      ��� AlwaysFailStep1 � ������� 0: �������� ������ ��� ��������
+fail: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ColumnExecutor[0]
+      ������ � ���� 'AlwaysFailStep1': �������� ������ ��� ��������
+info: Final_Test_Hybrid.Services.Steps.Steps.CH.SlowFillCircuitStep[0]
+      ������ ���������� ���������� ������� ���������
+info: Final_Test_Hybrid.Services.Steps.Steps.Elec.BoilerPowerOnStep[0]
+      ������ ��������� �����
+info: Final_Test_Hybrid.Services.Steps.Steps.DHW.HighPressureTestStep[0]
+      ������ ����� �������� �������� ������� ���
+info: Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription[0]
+      ��� ns=3;s="DB_VI"."CH"."Slow_Fill_Circuit"."End" �������� � ��������
+info: Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription[0]
+      ��� ns=3;s="DB_VI"."Elec"."Boiler_Power_ON"."End" �������� � ��������
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      �������� ������� ��������� (��� ��������)...
+info: Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription[0]
+      ��� ns=3;s="DB_VI"."DHW"."High_Pressure_Test"."End" �������� � ��������
+info: Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription[0]
+      ��� ns=3;s="DB_VI"."CH"."Slow_Fill_Circuit"."Error" �������� � ��������
+info: Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription[0]
+      ��� ns=3;s="DB_VI"."Elec"."Boiler_Power_ON"."Error" �������� � ��������
+info: Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription[0]
+      ��� ns=3;s="DB_VI"."DHW"."High_Pressure_Test"."Error" �������� � ��������
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      WaitGroup: ������� [1] Error ���������, ��� ns=3;s="DB_VI"."CH"."Slow_Fill_Circuit"."Error" = True, ��������� = Error
+info: Final_Test_Hybrid.Services.Steps.Steps.CH.SlowFillCircuitStep[0]
+      �������� ������: 0.000, �����: 2.500, ������: NOK
+fail: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ColumnExecutor[0]
+      ��� CH/Slow_Fill_Circuit � ������� 1: ��������: 0,000
+fail: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ColumnExecutor[0]
+      ������ � ���� 'CH/Slow_Fill_Circuit': ��������: 0,000
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      WaitGroup: ������� [1] Error ���������, ��� ns=3;s="DB_VI"."DHW"."High_Pressure_Test"."Error" = True, ��������� = Error
+info: Final_Test_Hybrid.Services.Steps.Steps.DHW.HighPressureTestStep[0]
+      DHW_High_Pressure: 0.000, �������: [7.000 .. 9.000], ������: NOK
+fail: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ColumnExecutor[0]
+      ��� DHW/High_Pressure_Test � ������� 3: DHW_High_Pressure: 0,000
+fail: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ColumnExecutor[0]
+      ������ � ���� 'DHW/High_Pressure_Test': DHW_High_Pressure: 0,000
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      WaitGroup: ������� [0] End ���������, ��� ns=3;s="DB_VI"."Elec"."Boiler_Power_ON"."End" = True, ��������� = Success
+info: Final_Test_Hybrid.Services.Steps.Steps.Elec.BoilerPowerOnStep[0]
+      ���� ������� �������
+info: Final_Test_Hybrid.Services.Steps.Steps.Elec.BoilerPowerOffStep[0]
+      ������ ���������� �����
+info: Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription[0]
+      ��� ns=3;s="DB_VI"."Elec"."Boiler_Power_OFF"."End" �������� � ��������
+info: Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription[0]
+      ��� ns=3;s="DB_VI"."Elec"."Boiler_Power_OFF"."Error" �������� � ��������
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      WaitGroup: ������� [1] Skip ���������, ��� ns=3;s="DB_Station"."Test"."EndStep" = True, ��������� = Skip
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      ������� ������: Skip
+warn: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator.TestExecutionCoordinator[0]
+      >>> ProcessSkipAsync: ������ �������� ������ ��������
+warn: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator.TestExecutionCoordinator[0]
+      >>> ProcessSkipAsync: ����� �������� ������ ��������
+info: Final_Test_Hybrid.Services.Steps.Steps.CH.FlushCircuitStep[0]
+      ������ �������� ������� ���������
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      �������� ������� ��������� (��� ��������)...
+info: Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription[0]
+      ��� ns=3;s="DB_VI"."CH"."Flush_Circuit"."End" �������� � ��������
+info: Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription[0]
+      ��� ns=3;s="DB_VI"."CH"."Flush_Circuit"."Error" �������� � ��������
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      WaitGroup: ������� [0] Retry ���������, ��� ns=3;s="DB_Station"."Test"."Req_Repeat" = True, ��������� = Retry
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      ������� ������: Retry
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      �������� AskRepeat � PLC
+info: Final_Test_Hybrid.Services.Steps.Steps.CH.SlowFillCircuitStep[0]
+      ������ ���������� ���������� ������� ���������
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      �������� ������� ��������� (��� ��������)...
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      WaitGroup: ������� [1] Skip ���������, ��� ns=3;s="DB_VI"."DHW"."High_Pressure_Test"."End" = True, ��������� = Skip
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      ������� ������: Skip
+warn: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator.TestExecutionCoordinator[0]
+      >>> ProcessSkipAsync: ������ �������� ������ ��������
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+warn: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator.TestExecutionCoordinator[0]
+      >>> ProcessSkipAsync: ����� �������� ������ ��������
+info: Final_Test_Hybrid.Services.Steps.Steps.DHW.FillCircuitNormalDirectionStep[0]
+      ������ ���������� ������� ��� � ������ �����������
+info: Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription[0]
+      ��� ns=3;s="DB_VI"."DHW"."Fill_Circuit_Normal_Direction"."End" �������� � ��������
+info: Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription[0]
+      ��� ns=3;s="DB_VI"."DHW"."Fill_Circuit_Normal_Direction"."Error" �������� � ��������
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      WaitGroup: ������� [0] End ���������, ��� ns=3;s="DB_VI"."CH"."Slow_Fill_Circuit"."End" = True, ��������� = Success
+info: Final_Test_Hybrid.Services.Steps.Steps.CH.SlowFillCircuitStep[0]
+      �������� ������: 0.000, �����: 2.500, ������: OK
+info: Final_Test_Hybrid.Services.Steps.Steps.CH.SlowFillCircuitStep[0]
+      ��������� ���������� ������� ��������� �������
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ColumnExecutor[0]
+        ���������: ��������: 0,000
+info: Final_Test_Hybrid.Services.Steps.Steps.CH.FastFillCircuitStep[0]
+      ������ �������� ���������� ������� ���������
+info: Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription[0]
+      ��� ns=3;s="DB_VI"."CH"."Fast_Fill_Circuit"."End" �������� � ��������
+info: Final_Test_Hybrid.Services.OpcUa.Subscription.OpcUaSubscription[0]
+      ��� ns=3;s="DB_VI"."CH"."Fast_Fill_Circuit"."Error" �������� � ��������
+info: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      WaitGroup: ������� [0] End ���������, ��� ns=3;s="DB_VI"."CH"."Fast_Fill_Circuit"."End" = True, ��������� = Success
+info: Final_Test_Hybrid.Services.Steps.Steps.CH.FastFillCircuitStep[0]
+      ������� ���������� ������� ��������� �������
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      WaitGroup: ������� [1] Error ���������, ��� ns=3;s="DB_VI"."Elec"."Boiler_Power_OFF"."Error" = True, ��������� = Error
+fail: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ColumnExecutor[0]
+      ��� Elec/Boiler_Power_OFF � ������� 2: ������ ���������� �����
+fail: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ColumnExecutor[0]
+      ������ � ���� 'Elec/Boiler_Power_OFF': ������ ���������� �����
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      �������� ������� ��������� (��� ��������)...
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      AutoReady OFF > pause
+warn: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      ����������: AutoModeDisabled � ��� ��������
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      AutoReady ON > resume
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      WaitGroup: ������� [0] Retry ���������, ��� ns=3;s="DB_Station"."Test"."Req_Repeat" = True, ��������� = Retry
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      ������� ������: Retry
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      �������� AskRepeat � PLC
+info: Final_Test_Hybrid.Services.Steps.Steps.Elec.BoilerPowerOffStep[0]
+      ������ ���������� �����
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      WaitGroup: ������� [0] End ���������, ��� ns=3;s="DB_VI"."Elec"."Boiler_Power_OFF"."End" = True, ��������� = Success
+info: Final_Test_Hybrid.Services.Steps.Steps.Elec.BoilerPowerOffStep[0]
+      ���� �������� �������
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      WaitGroup: ������� [0] End ���������, ��� ns=3;s="DB_VI"."DHW"."Fill_Circuit_Normal_Direction"."End" = True, ��������� = Success
+info: Final_Test_Hybrid.Services.Steps.Steps.DHW.FillCircuitNormalDirectionStep[0]
+      ���������� ������� ��� � ������ ����������� ��������� �������
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      AutoReady OFF > pause
+warn: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      ����������: AutoModeDisabled � ��� ��������
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      AutoReady ON > resume
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      WaitGroup: ������� [1] Error ���������, ��� ns=3;s="DB_VI"."CH"."Flush_Circuit"."Error" = True, ��������� = Error
+fail: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ColumnExecutor[0]
+      ��� CH/Flush_Circuit � ������� 0: ������ �������� �������
+fail: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ColumnExecutor[0]
+      ������ � ���� 'CH/Flush_Circuit': ������ �������� �������
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      �������� ������� ��������� (��� ��������)...
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      WaitGroup: ������� [0] Retry ���������, ��� ns=3;s="DB_Station"."Test"."Req_Repeat" = True, ��������� = Retry
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      ������� ������: Retry
+info: Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.ErrorCoordinator[0]
+      �������� AskRepeat � PLC
+info: Final_Test_Hybrid.Services.Steps.Steps.CH.FlushCircuitStep[0]
+      ������ �������� ������� ���������
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Final_Test_Hybrid.Services.OpcUa.TagWaiter[0]
+      WaitGroup: ������� [0] End ���������, ��� ns=3;s="DB_VI"."CH"."Flush_Circuit"."End" = True, ��������� = Success
+info: Final_Test_Hybrid.Services.Steps.Steps.CH.FlushCircuitStep[0]
+      �������� ������� ��������� �������
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='5']
+      SELECT 1

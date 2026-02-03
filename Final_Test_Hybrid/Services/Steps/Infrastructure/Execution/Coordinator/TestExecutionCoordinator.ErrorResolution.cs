@@ -123,6 +123,8 @@ public partial class TestExecutionCoordinator
     /// </summary>
     private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
     {
+        await _pauseToken.WaitWhilePausedAsync(ct);
+
         try
         {
             var blockErrorTag = GetBlockErrorTag(error.FailedStep);
@@ -194,6 +196,8 @@ public partial class TestExecutionCoordinator
     /// </summary>
     private async Task ProcessSkipAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
     {
+        await _pauseToken.WaitWhilePausedAsync(ct);
+
         await ResetBlockStartAsync(error.FailedStep, ct);
         await ResetFaultIfNoBlockAsync(error.FailedStep, ct);
 

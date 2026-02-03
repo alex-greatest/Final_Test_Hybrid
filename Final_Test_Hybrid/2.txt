@@ -1,71 +1,11 @@
-﻿DHW_Flow_Rate
-DHW_Flow_Rate
-Диапазон
-Real
-L/min, допустимое значение 6...10 - DHW_Flow_Rate - Расход воды в контуре DHW
-л/мин
-DHW_High_Pressure
-DHW_High_Pressure
-Диапазон
-Real
-bar, допустимое значение 11...15 - DHW_High_Pressure - Давление в контуре DHW в тесте высокого давления
-N/A
-DHW_In_Pres
-DHW_In_Pres
-Диапазон
-Real
-bar, допустимое значение 2...3 - DHW_In_Pres - Давление на входе котла в контуре DHW
-бар
-DHW_Temp_SP
-DHW_Temp_SP
-Диапазон
-Real
-град, допустимое значение 1...99
-град
-Gas_Flow_Max
-Gas_Flow_Max
-Диапазон
-Real
-L/min, допустимое значение 42.504...49.896 - Gas_Flow_Max - Расход газа при работе в макс. режиме
-л/мин
-Gas_Flow_Min
-Gas_Flow_Min
-Диапазон
-Real
-L/min, допустимое значение 12.9...15.1 - Gas_Flow_Min - Расход газа при работе в мin. режиме
-л/мин
-Gas_switch off 1
-Gas_switch off 1
-Диапазон
-Real
-Сек - Gas_switch off 1 - Время отключения клапанов котла при выкл. горелки в контуре CH
-N/A
-Gas_switch off 2
-Gas_switch off 2
-Диапазон
-Real
-Сек - Gas_switch off 2 - Время отключения клапанов котла при выкл. горелки в контуре DHW
-N/A
-Safety_Time
-Safety_Time
-Диапазон
-Real
-Сек - Время отключения котла
-с
-Tank_DHW_Flow
-Tank_DHW_Flow
-Диапазон
-Real
-л/мин, расход воды в тесте БКН
-л/мин
-Tank_DHW_Press
-Tank_DHW_Press
-Диапазон
-Real
-бар, давление воды в начале теста БКН
-бар
-Version
-Version
-Диапазон
-Real
-N/A
+﻿AlwaysFailStep1	CH/Slow_Fill_Circuit	Elec/Boiler_Power_ON	DHW/High_Pressure_Test
+CH/Flush_Circuit	CH/Fast_Fill_Circuit	Elec/Boiler_Power_OFF	DHW/Fill_Circuit_Normal_Direction
+<TEST STEP>	<TEST STEP>	<TEST STEP>	<TEST STEP>
+Coms/Check_Comms			
+Coms/Write_Test_Byte_ON			
+Coms/Check_Test_Byte_ON			
+Coms/Write_Soft_Code_Plug			
+Coms/Read_Soft_Code_Plug			
+Coms/Read_ECU_Version			
+Coms/Set_Fan_Map			
+<TEST STEP>	<TEST STEP>	<TEST STEP>	<TEST STEP>

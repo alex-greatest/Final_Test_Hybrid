@@ -4,7 +4,9 @@ using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Limits;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 
@@ -28,6 +30,7 @@ public class ColumnExecutor(
     private ErrorScope? _errorScope;
     private int _progressCompleted;
     private const int MapGateRetryDelayMs = 50;
+    private static readonly TimeSpan EndResetTimeout = TimeSpan.FromSeconds(5);
 
     private record StepState(
         string? Name,
@@ -173,8 +176,9 @@ public class ColumnExecutor(
         try
         {
             stepTimingService.StartColumnStepTiming(ColumnIndex, step.Name, step.Description);
-            var result = await step.ExecuteAsync(context, ct);
+            var result = await ExecuteWithEndGuardAsync(step, ct);
             stepTimingService.StopColumnStepTiming(ColumnIndex);
+            await pauseToken.WaitWhilePausedAsync(ct);
             ProcessStepResult(step, result);
         }
         catch (OperationCanceledException)
@@ -188,6 +192,23 @@ public class ColumnExecutor(
             SetErrorState(step, ex.Message, null, canSkip: step is not INonSkippable);
             LogError(step, ex.Message, ex);
         }
+    }
+
+    private async Task<TestStepResult> ExecuteWithEndGuardAsync(ITestStep step, CancellationToken ct)
+    {
+        if (step is IHasPlcBlockPath plcStep && PlcBlockTagHelper.GetEndTag(plcStep) is { } endTag)
+        {
+            try
+            {
+                await context.TagWaiter.WaitForFalseAsync(endTag, EndResetTimeout, ct);
+            }
+            catch (TimeoutException)
+            {
+                return TestStepResult.Fail("PLC не сбросил End");
+            }
+        }
+
+        return await step.ExecuteAsync(context, ct);
     }
 
     /// <summary>
@@ -337,6 +358,8 @@ public class ColumnExecutor(
 
     public async Task RetryLastFailedStepAsync(CancellationToken ct)
     {
+        await pauseToken.WaitWhilePausedAsync(ct);
+
         var acquired = false;
         try
         {

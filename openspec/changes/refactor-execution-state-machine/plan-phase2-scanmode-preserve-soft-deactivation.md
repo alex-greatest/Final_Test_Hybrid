@@ -81,6 +81,158 @@ Therefore Phase 2 requires extending lifecycle modeling so the "source of truth"
   - `Final_Test_Hybrid/Docs/StateManagementGuide.md`
   - `Final_Test_Hybrid/Docs/PlcResetGuide.md`
 
+#### Scenario Matrix (Characterization Contract)
+
+Definitions:
+- State:
+  - Activation: Inactive|Active (equivalent to `_isActivated`)
+  - IsResetting: false|true (equivalent to `_isResetting`)
+- Facts:
+  - IsOperatorAuthenticated, IsAutoReady, IsExecutionActive, IsWaitingForScan
+  - IsScanModeEnabled = IsOperatorAuthenticated && IsAutoReady
+- SoftReason (must match current `ShouldUseSoftDeactivation()`):
+  - (IsOperatorAuthenticated && !IsAutoReady) || IsExecutionActive || (IsOperatorAuthenticated && IsWaitingForScan)
+- Events:
+  - ScanModeEnabled
+  - ScanModeDisabledSoft
+  - ScanModeDisabledHard(IsOperatorAuthenticated)
+  - PlcResetStarting
+  - PlcResetCompleted(IsScanModeEnabledNow)
+- Actions:
+  - AcquireSession, ReleaseSession
+  - PauseAllTiming (PauseAllColumnsTiming), ResumeTiming (ResumeAllColumnsTiming)
+  - EnsureScanStepInGrid
+  - StartScanTiming, ResetScanTiming
+  - StartMainLoop, CancelMainLoop
+  - ClearGridAllExceptScan (only hard disable + !IsOperatorAuthenticated)
+  - WasInScanPhase = (Activation==Active && IsResetting==false) [only on PlcResetStarting]
+
+##### A. ScanModeEnabled
+
+A1 Initial activation
+- Given: (Inactive, false)
+- When: ScanModeEnabled
+- Then: (Active, false)
+- Actions: AcquireSession + EnsureScanStepInGrid + StartScanTiming + StartMainLoop
+- Must NOT: ResumeTiming, ResetScanTiming, CancelMainLoop, ReleaseSession
+
+A2 Refresh (already Active)
+- Given: (Active, false)
+- When: ScanModeEnabled
+- Then: (Active, false)
+- Actions: AcquireSession + ResumeTiming
+- Must NOT: StartMainLoop, EnsureScanStepInGrid, StartScanTiming, ResetScanTiming
+
+A3 Enable while resetting ignored
+- Given: (*, true)
+- When: ScanModeEnabled
+- Then: no-op
+- Actions: None
+
+##### B. ScanModeDisabledSoft (IsScanModeEnabled==false && SoftReason==true)
+
+B1 Soft deactivation keeps activation context
+- Given: (Active, false)
+- When: ScanModeDisabledSoft
+- Then: (Active, false)
+- Actions: PauseAllTiming + ReleaseSession
+- Must NOT: CancelMainLoop, ClearGridAllExceptScan
+
+B2 Soft disable idempotent
+- Given: (Active, false)
+- When: ScanModeDisabledSoft again
+- Then: (Active, false)
+- Actions: PauseAllTiming + ReleaseSession (idempotent)
+
+B3 Soft disable while inactive no-op
+- Given: (Inactive, false)
+- When: ScanModeDisabledSoft
+- Then: no-op
+- Actions: None
+
+B4 Soft disable while resetting ignored
+- Given: (*, true)
+- When: ScanModeDisabledSoft
+- Then: no-op
+- Actions: None
+
+B5 Logout + execution active still uses SOFT (current behavior)
+- Facts: IsOperatorAuthenticated=false, IsExecutionActive=true
+- Expected: ScanModeDisabledSoft path (PauseAllTiming + ReleaseSession), MUST NOT cancel loop or clear grid
+
+##### C. ScanModeDisabledHard (IsScanModeEnabled==false && SoftReason==false)
+
+C1 Hard deactivation cancels loop and clears activation
+- Given: (Active, false)
+- When: ScanModeDisabledHard(IsOperatorAuthenticated)
+- Then: (Inactive, false)
+- Actions: PauseAllTiming + ReleaseSession + CancelMainLoop
+- Extra: if IsOperatorAuthenticated==false => + ClearGridAllExceptScan
+- Must NOT: StartMainLoop, AcquireSession, EnsureScanStepInGrid, StartScanTiming, ResetScanTiming
+
+C2 Hard disable while inactive no-op
+- Given: (Inactive, false)
+- When: ScanModeDisabledHard(any)
+- Then: no-op
+- Actions: None
+
+C3 Hard disable while resetting ignored
+- Given: (*, true)
+- When: ScanModeDisabledHard(any)
+- Then: no-op
+- Actions: None
+
+##### D. PLC reset start (HandleResetStarting equivalence)
+
+D1 Reset start from scan phase
+- Given: (Active, false)
+- When: PlcResetStarting
+- Then: (Active, true)
+- WasInScanPhase: true
+- Actions: PauseAllTiming + ReleaseSession
+
+D2 Reset start from inactive
+- Given: (Inactive, false)
+- When: PlcResetStarting
+- Then: (Inactive, true)
+- WasInScanPhase: false
+- Actions: PauseAllTiming + ReleaseSession
+
+D3 Reset start when already resetting
+- Given: (*, true)
+- When: PlcResetStarting
+- Then: no-op (or keep IsResetting true)
+- WasInScanPhase: false
+- Actions: PauseAllTiming + ReleaseSession allowed (idempotent), no other effects
+
+##### E. PLC reset complete (HandleResetCompleted+TransitionToReadyInternal equivalence)
+
+E1 Reset complete, scan mode disabled now => full stop
+- Given: (*, true), IsScanModeEnabledNow=false
+- When: PlcResetCompleted(false)
+- Then: (Inactive, false)
+- Actions: CancelMainLoop + PauseAllTiming
+- Must NOT: AcquireSession, StartMainLoop, EnsureScanStepInGrid, StartScanTiming, ResetScanTiming, ResumeTiming
+
+E2 Reset complete, enabled now, activation inactive => initial activation
+- Given: (Inactive, true), IsScanModeEnabledNow=true
+- When: PlcResetCompleted(true)
+- Then: (Active, false)
+- Actions: AcquireSession + EnsureScanStepInGrid + StartScanTiming + StartMainLoop
+- Must NOT: ResumeTiming, ResetScanTiming
+
+E3 Reset complete, enabled now, activation already active => ready refresh
+- Given: (Active, true), IsScanModeEnabledNow=true
+- When: PlcResetCompleted(true)
+- Then: (Active, false)
+- Actions: ResetScanTiming + AcquireSession
+- Must NOT: ResumeTiming, StartMainLoop, EnsureScanStepInGrid, StartScanTiming, CancelMainLoop
+
+##### OnStateChanged contract (Phase 2)
+
+- OnStateChanged is raised only after UpdateScanModeState (operator/autoready changes and initial ctor call).
+- PlcResetStarting/Completed do not raise OnStateChanged directly.
+
 ### Step 1 - Add characterization tests (regression lock)
 - Unit tests for `ScanSessionManager`:
   - idempotent acquire/release
@@ -160,4 +312,3 @@ Acceptance gate: no test regressions; code is simpler (fewer branching points).
 - Scanner session management is centralized and lifecycle-driven.
 - Soft deactivation semantics are preserved exactly as in baseline.
 - Tests cover the scenario matrix and pass consistently.
-
