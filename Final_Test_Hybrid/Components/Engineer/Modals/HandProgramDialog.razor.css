@@ -3,6 +3,27 @@
     flex-direction: column;
     height: 100%;
     padding: 4px;
+    position: relative;
+}
+
+.hand-program-debug {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 100;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    font-family: Consolas, 'Segoe UI', monospace;
+    font-size: 12px;
+    line-height: 1.35;
+    pointer-events: none;
+}
+
+.hand-program-debug-title {
+    font-weight: 700;
+    margin-bottom: 6px;
 }
 
 .tabs-shell,

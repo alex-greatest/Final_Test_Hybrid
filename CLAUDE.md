@@ -40,6 +40,11 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - Логируй важные события, ошибки и состояния системы
 - Формат: `_logger.Info/Debug/Error/Warn("сообщение")`
 
+## OPC-UA подписки (OpcUaSubscription)
+- `OpcUaSubscription` кеширует последнее значение тега и по умолчанию может сразу вызвать callback при подписке (`emitCachedValueImmediately=true`)
+- Если нужно ждать **следующее** изменение (а не текущее значение) — используй `TagWaiter.WaitForChangeAsync` или подписывайся с `emitCachedValueImmediately: false`
+- Callback-и подписок должны быть идемпотентными и не должны выполнять необратимые действия без дополнительной проверки (т.к. могут вызываться сразу при подписке)
+
 ## XML-документация
 - Все методы должны иметь XML-документацию
 - Приватные методы: только `<summary>`

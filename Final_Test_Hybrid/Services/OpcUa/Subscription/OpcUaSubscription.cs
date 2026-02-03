@@ -11,6 +11,13 @@ using Opc.Ua.Client;
 
 namespace Final_Test_Hybrid.Services.OpcUa.Subscription;
 
+public readonly record struct OpcUaSubscriptionDebugSnapshot(
+    bool HasInternalSubscription,
+    int MonitoredItemsCount,
+    int NodeIdsWithCallbacksCount,
+    int TotalCallbacksCount,
+    DateTimeOffset? LastNotificationAtUtc);
+
 public class OpcUaSubscription(
     OpcUaConnectionState connectionState,
     IOptions<OpcUaSettings> settingsOptions,
@@ -23,6 +30,7 @@ public class OpcUaSubscription(
     private readonly ConcurrentDictionary<string, MonitoredItem> _monitoredItems = new();
     private readonly SemaphoreSlim _subscriptionLock = new(1, 1);
     private Opc.Ua.Client.Subscription? _subscription;
+    private long _lastNotificationUnixTimeMilliseconds;
 
     public async Task CreateAsync(ISession session, CancellationToken ct = default)
     {
@@ -123,7 +131,44 @@ public class OpcUaSubscription(
             .Where(error => error != null)
             .ToList()!;
 
-    public async Task SubscribeAsync(string nodeId, Func<object?, Task> callback, CancellationToken ct = default)
+    public OpcUaSubscriptionDebugSnapshot GetDebugSnapshot()
+    {
+        var nodeIdsWithCallbacksCount = 0;
+        var totalCallbacksCount = 0;
+
+        lock (_callbacksLock)
+        {
+            foreach (var callbacks in _callbacks.Values)
+            {
+                var count = callbacks.Count;
+                if (count <= 0)
+                {
+                    continue;
+                }
+
+                nodeIdsWithCallbacksCount++;
+                totalCallbacksCount += count;
+            }
+        }
+
+        var lastNotificationMs = Interlocked.Read(ref _lastNotificationUnixTimeMilliseconds);
+        DateTimeOffset? lastNotificationAtUtc = lastNotificationMs > 0
+            ? DateTimeOffset.FromUnixTimeMilliseconds(lastNotificationMs)
+            : null;
+
+        return new OpcUaSubscriptionDebugSnapshot(
+            HasInternalSubscription: _subscription != null,
+            MonitoredItemsCount: _monitoredItems.Count,
+            NodeIdsWithCallbacksCount: nodeIdsWithCallbacksCount,
+            TotalCallbacksCount: totalCallbacksCount,
+            LastNotificationAtUtc: lastNotificationAtUtc);
+    }
+
+    public async Task SubscribeAsync(
+        string nodeId,
+        Func<object?, Task> callback,
+        CancellationToken ct = default,
+        bool emitCachedValueImmediately = true)
     {
         var error = await EnsureTagExistsAsync(nodeId, ct).ConfigureAwait(false);
         if (error != null)
@@ -131,6 +176,13 @@ public class OpcUaSubscription(
             throw new InvalidOperationException($"Не удалось подписаться на тег {nodeId}: {error.Message}");
         }
         AddCallback(nodeId, callback);
+
+        // Push cached value to late subscribers (e.g., dialogs opened after the main screen).
+        if (emitCachedValueImmediately && _values.TryGetValue(nodeId, out var cachedValue))
+        {
+            callback(cachedValue).SafeFireAndForget(ex =>
+                logger.LogError(ex, "Ошибка в callback для тега {NodeId}", nodeId));
+        }
     }
 
     private Task<TagError?> EnsureTagExistsAsync(string nodeId, CancellationToken ct) =>
@@ -147,6 +199,7 @@ public class OpcUaSubscription(
                 _callbacks[nodeId] = list = [];
             }
             list.Add(callback);
+            logger.LogInformation("AddCallback: {NodeId}, total callbacks: {Count}", nodeId, list.Count);
         }
     }
 
@@ -242,6 +295,7 @@ public class OpcUaSubscription(
         {
             return;
         }
+        Interlocked.Exchange(ref _lastNotificationUnixTimeMilliseconds, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
         var nodeId = item.StartNodeId.ToString();
         var value = notification.Value?.Value;
         StoreAndLogValue(nodeId, value);

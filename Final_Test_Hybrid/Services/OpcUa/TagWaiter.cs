@@ -122,7 +122,7 @@ public class TagWaiter(
             return Task.CompletedTask;
         }
 
-        await subscription.SubscribeAsync(nodeId, OnValueChanged, ct);
+        await subscription.SubscribeAsync(nodeId, OnValueChanged, ct, emitCachedValueImmediately: false);
 
         try
         {
