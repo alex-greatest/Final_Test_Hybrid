@@ -293,7 +293,7 @@ public async Task<TestStepResult> ExecuteAsync(...)
 - При Skip — координатор вызывает `ResetBlockStartAsync(step)` через `PlcBlockTagHelper.GetStartTag()`
 - При Retry — шаг перезапускается, Start запишется заново
 
-**См. также:** `TestExecutionCoordinator.ErrorHandling.cs:369` — `ProcessSkipAsync`
+**См. также:** `TestExecutionCoordinator.ErrorResolution.cs` — `ProcessSkipAsync`
 
 ---
 

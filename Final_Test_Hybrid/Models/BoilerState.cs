@@ -288,7 +288,10 @@ public class BoilerState
     {
         lock (_lock)
         {
-            _lastSerialNumber = _serialNumber;
+            if (_serialNumber != null)
+            {
+                _lastSerialNumber = _serialNumber;
+            }
             _lastTestCompletedAt = DateTime.Now;
             _isTestRunning = false;
             _testTimer?.Dispose();
@@ -309,8 +312,27 @@ public class BoilerState
     {
         lock (_lock)
         {
-            _lastSerialNumber = _serialNumber;
+            if (_serialNumber != null)
+            {
+                _lastSerialNumber = _serialNumber;
+            }
             _lastTestCompletedAt = DateTime.Now;
+        }
+        NotifyChanged();
+    }
+
+    /// <summary>
+    /// Сохраняет текущий серийный номер как "последний", не изменяя время.
+    /// Вызывается при старте теста для фиксации серийника.
+    /// </summary>
+    public void SaveLastSerialNumber()
+    {
+        lock (_lock)
+        {
+            if (_serialNumber != null)
+            {
+                _lastSerialNumber = _serialNumber;
+            }
         }
         NotifyChanged();
     }

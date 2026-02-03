@@ -447,7 +447,10 @@ public enum ExecutionState
 ## TestExecutionCoordinator: Channel-based Error Handling
 
 **Файлы:**
-- `Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.ErrorHandling.cs`
+- `Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.ErrorSignals.cs`
+- `Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.ErrorQueue.cs`
+- `Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.ErrorResolution.cs`
+- `Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.PlcErrorSignals.cs`
 - `Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.Execution.cs`
 
 ### Проблема (до)

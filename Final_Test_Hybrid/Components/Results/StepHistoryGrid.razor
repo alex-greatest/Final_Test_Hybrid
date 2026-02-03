@@ -13,8 +13,11 @@
         @if (!string.IsNullOrEmpty(BoilerState.LastSerialNumber))
         {
             <div class="last-test-header">
-                <div>@BoilerState.LastTestCompletedAt?.ToString("dd.MM.yyyy HH:mm:ss")</div>
-                <div>@BoilerState.LastSerialNumber</div>
+                @if (BoilerState.LastTestCompletedAt.HasValue)
+                {
+                    <div>Дата/время: @BoilerState.LastTestCompletedAt?.ToString("dd.MM.yyyy HH:mm:ss")</div>
+                }
+                <div>Серийный номер: @BoilerState.LastSerialNumber</div>
             </div>
         }
         else
@@ -22,7 +25,7 @@
             <div></div>
         }
         <div class="toolbar-buttons">
-            <RadzenButton Icon="file_download" Text="Выгрузить в Excel"
+            <RadzenButton Icon="file_download" Text="Сохранить в Excel"
                           Click="@ExportToExcel"
                           Disabled="@(!_data.Any())" />
         </div>

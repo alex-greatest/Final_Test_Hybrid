@@ -1,11 +1,58 @@
-
-Создать шаг Coms/CH_Start_Max_Heatout с описанием: Запуск максимального нагрева контура Отопления. шаг c блоком "DB_VI".Coms.CH_Start_Max_Heatout. Так же как обычно подписываемся на End и Error, которые определяют ок шаг или нет. Эти два сигнала в приоритете!.  И так же ждём сигнала Ready_1. Как получаем Ready_1, то: "Стенд переключает котёл через функцию 1.2.F в режим работы на максимуме (4)", если всё ок: надо вывести в грид сообщение: "Команда максимального нагрева отправлена успешно". и пишем в плк сигнал  Сontinua_1, если не ок, то Fault (тут уже в грид ошибка как обычно). когда всё ок и записали Сontinua_1, то начианем ждать Ready_2. Как получаем Ready_2:
-
-
-Проверка работы горелки, получение значения функции 2.0.b
-Если 1 мкА < ток ионизации ≤15 мкА, то это ок, пишем в плк Сontinua_2 и продолжаем ждать End или Error (нужно это вывести в пределах GetLimits [1 .. 15])
-
-Дальше идут не ок (запомнили ошибку ниже написано, вовзращаем её и ток иониазации, если получчим от плк End или Error не важно), пишем Fault = true в плк и и продолжаем ждать End или Error
-
-Если значение тока >15 мкА - это не ок - ток ионизации превышен.
-Если ток ионизации < 1 мкА на протяжении 10 сек - это ок - нет розжега котла.
+App_Version		170.1		not/ok		ScanBarcode
+Blr_Gas_Pres_Max	19.70	20.10	20.30	not/ok	мбар	Gas/Set_Gas_and_P_Burner_Max_Levels
+Blr_Gas_Pres_Min	19.70	20.10	20.30	not/ok	мбар	Gas/Set_Gas_and_P_Burner_Min_Levels
+Blr_Supply	207.00	235.12	240.00	not/ok	В	Elec/Power_Supply_Test
+Bnr_Gas_Pres_Max	8.50	9.36	9.50	not/ok	мбар	Gas/Set_Gas_and_P_Burner_Max_Levels
+Bnr_Gas_Pres_Min	0.90	1.05	1.10	not/ok	мбар	Gas/Set_Gas_and_P_Burner_Min_Levels
+Boiler_Type	0	2	4	not/ok		Coms/Read_Soft_Code_Plug
+CH_Flow_NTC_Temp_Rise	15.0	20.1	87.0	not/ok	град.	CH/Check_Flow_Temperature_Rise
+CH_Flow_Press	2.20	2.51	2.70	not/ok	бар	CH/Slow_Fill_Circuit
+CH_Flow_Rate	10.00	12.95	25.00	not/ok	л/мин	CH/Check_Water_Flow
+CH_Flw_Temp_Cold		29.81		not/ok	град.	CH/Get_CHW_Flow_NTC_Cold
+CH_Flw_Temp_Hot		49.9		not/ok	град.	CH/Check_Flow_Temperature_Rise
+CH_Temp_SP	40.0	40.0	80	not/ok	град.	Coms/Read_CH_Poti_Setpoint
+Change_Over_Time		265.02		not/ok	сек.	
+Comfort_Hysteresis	0	10	30			Coms/Read_Soft_Code_Plug
+Complete_Time		236.00		not/ok	сек.	
+Counter_Number	0	уникальный порядковый номер платы	999999			Coms/Read_Soft_Code_Plug
+Current_Offset	0	0	30	not/ok		Coms/Read_Soft_Code_Plug
+Delta_CH_Flow_Temp_Cold	0.00	2.50	3.00	not/ok	град.	CH/Compare_Flow_NTC_Temperature_Cold
+Delta_CH_Flow_Temp_Hot	0.00	2.00	3.00	not/ok	град.	CH/Compare_Flow_NTC_Temperatures_Hot
+DHW_Temp_SP	30	35.0	60	not/ok	град.	Coms/Read_DHW_Poti_Setpoint
+Error_ID		"Уникальный код ошибки
+(Код ошибки_стенд_дата)"		not/ok		
+Final_result		nok/ok		not/ok		
+Flow_Coefficient	-100.0	-0.3	100.0			Coms/Read_Soft_Code_Plug
+Gas_Flow_Max	38.8	48.9	50.8	not/ok	л/мин	Gas/Set_Gas_and_P_Burner_Max_Levels
+Gas_Flow_Min	10.3	14.15	16.3	not/ok	л/мин	Gas/Set_Gas_and_P_Burner_Min_Levels
+Gas_Temp		26.5		not/ok	град.	Gas/Get_Temperature
+Gas_Type	0	0	1	not/ok		Coms/Read_Soft_Code_Plug
+Gas_Valve_Type	0	1	2	not/ok		Coms/Read_Soft_Code_Plug
+Max_CH_HeatOut 	30	200	200	not/ok		Coms/Read_Soft_Code_Plug
+Max_DHW_HeatOut 	30	160	200	not/ok		Coms/Read_Soft_Code_Plug
+Max_Flow_Temperature 	40	82	82			Coms/Read_Soft_Code_Plug
+Max_Pump_AutoModePower	10	0	60			Coms/Read_Soft_Code_Plug
+Min_CH_HeatOut 	30	30	200	not/ok		Coms/Read_Soft_Code_Plug
+Min_Pump_AutoModePower	10	0	60			Coms/Read_Soft_Code_Plug
+Month_Date		дата производства платы				Coms/Read_Soft_Code_Plug
+Nomenclature_EngP3		8732302018 (наша 10 значка на плату)				Coms/Read_Soft_Code_Plug
+Nomenclature_ITELMA		уникальный номер платы (ИТЭЛМА)				Coms/Read_Soft_Code_Plug
+Plant_ID		EngP3		not/ok		
+Pres_atmosph.		1.0379		not/ok	бар	
+Pres_in_gas		39.15		not/ok	мбар	
+Pres_sensor	0	1	2	not/ok		Coms/Read_Soft_Code_Plug
+Pump_Mode	0	0	2	not/ok		Coms/Read_Soft_Code_Plug
+Pump_Power	0	55	60	not/ok		Coms/Read_Soft_Code_Plug
+Safety_time	0.00	5.63	12.00	not/ok	sec	Coms/Safety_Time
+Shift_No		1		not/ok		
+Soft_Code_Plug		8732301814		not/ok		Coms/Read_Soft_Code_Plug
+Supplier_Code	0	00000625	99999999			Coms/Read_Soft_Code_Plug
+Tank_DHW_Mode	5	5,23	60	nok/ok	л/мин	DHW/Set_Tank_Mode
+Tank_DHW_Press	2	2,02	2,7	nok/ok	бар	DHW/Check_Tank_Mode
+Test_Time		456.66		not/ok	сек.	
+Tester_No		5346		not/ok		
+Testing_date		25.09.2025		not/ok		
+Timer_1		183.8		not/ok	сек.	Misc/StopTimer1
+Timer_2		167.9		not/ok	сек.	Misc/StopTimer2
+Type_pumps	0	1	3	not/ok		Coms/Read_Soft_Code_Plug
+Version	110.11	110.11	110.19	not/ok		Coms/Read_ECU_Version

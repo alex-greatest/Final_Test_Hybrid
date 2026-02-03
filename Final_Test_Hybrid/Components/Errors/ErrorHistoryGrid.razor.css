@@ -4,4 +4,7 @@
     font-size: 1.5rem;
     font-weight: 700;
     margin-bottom: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }

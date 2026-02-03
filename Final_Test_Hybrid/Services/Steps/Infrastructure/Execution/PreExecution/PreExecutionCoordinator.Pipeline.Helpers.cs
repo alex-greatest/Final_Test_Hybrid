@@ -14,6 +14,7 @@ public partial class PreExecutionCoordinator
     private void InitializeTestRunning()
     {
         ClearForNewTestStart();
+        state.BoilerState.SaveLastSerialNumber();
         AddAppVersionToResults();
         infra.ErrorService.IsHistoryEnabled = true;
         state.BoilerState.SetTestRunning(true);

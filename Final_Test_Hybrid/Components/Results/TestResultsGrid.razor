@@ -17,8 +17,11 @@ else
     @if (!string.IsNullOrEmpty(BoilerState.LastSerialNumber))
     {
         <div class="last-test-header">
-            <div>@BoilerState.LastTestCompletedAt?.ToString("dd.MM.yyyy HH:mm:ss")</div>
-            <div>@BoilerState.LastSerialNumber</div>
+            @if (BoilerState.LastTestCompletedAt.HasValue)
+            {
+                <div>Дата/время: @BoilerState.LastTestCompletedAt?.ToString("dd.MM.yyyy HH:mm:ss")</div>
+            }
+            <div>Серийный номер: @BoilerState.LastSerialNumber</div>
         </div>
     }
     <RadzenDataGrid Data="@_results" TItem="TestResultItem"
@@ -83,6 +86,7 @@ else
     protected override void OnInitialized()
     {
         TestResultsService.OnChanged += OnResultsChanged;
+        BoilerState.OnChanged += OnBoilerStateChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -118,6 +122,6 @@ else
     {
         _disposed = true;
         TestResultsService.OnChanged -= OnResultsChanged;
-        BoilerState.OnCleared -= OnBoilerStateChanged;
+        BoilerState.OnChanged -= OnBoilerStateChanged;
     }
 }

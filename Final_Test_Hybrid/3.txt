@@ -1,16 +1,11 @@
-﻿fail: Final_Test_Hybrid.Settings.Spring.SpringBootHttpClient[0]
-      GET /api/shift/request?nameStation=FT%2068 failed
-      System.Net.Http.HttpRequestException: ����������� �� �����������, �.�. �������� ��������� ������ ������ �� �����������. (localhost:8080)
-       ---> System.Net.Sockets.SocketException (10061): ����������� �� �����������, �.�. �������� ��������� ������ ������ �� �����������.
-         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)
-         at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.System.Threading.Tasks.Sources.IValueTaskSource.GetResult(Int16 token)
-         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
-         --- End of inner exception stack trace ---
-         at System.Net.Http.HttpConnectionPool.ConnectToTcpHostAsync(String host, Int32 port, HttpRequestMessage initialRequest, Boolean async, CancellationToken cancellationToken)
-         at System.Net.Http.HttpConnectionPool.ConnectAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-         at System.Net.Http.HttpConnectionPool.CreateHttp11ConnectionAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-         at System.Net.Http.HttpConnectionPool.InjectNewHttp11ConnectionAsync(QueueItem queueItem)
-         at System.Threading.Tasks.TaskCompletionSourceWithCancellation`1.WaitWithCancellationAsync(CancellationToken cancellationToken)
-         at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
-         at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
-         at System.Net.Http.HttpClient.<SendAsync>g__Core|83_0(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationTokenSource cts, Boolean disposeCts, CancellationTokenSource pendingRequestsCts, CancellationToken originalCancellationToken)
+﻿AlwaysFailStep1	CH/Slow_Fill_Circuit	Elec/Boiler_Power_ON	DHW/High_Pressure_Test
+CH/Flush_Circuit	CH/Fast_Fill_Circuit	Elec/Boiler_Power_OFF	DHW/Fill_Circuit_Normal_Direction
+<TEST STEP>	<TEST STEP>	<TEST STEP>	<TEST STEP>
+Coms/Check_Comms			
+Coms/Write_Test_Byte_ON			
+Coms/Check_Test_Byte_ON			
+Coms/Write_Soft_Code_Plug			
+Coms/Read_Soft_Code_Plug			
+Coms/Read_ECU_Version			
+Coms/Set_Fan_Map			
+<TEST STEP>	<TEST STEP>	<TEST STEP>	<TEST STEP>

@@ -226,7 +226,7 @@ private async Task ExecuteRetryInBackgroundAsync(StepError error, ColumnExecutor
 | Файл | Назначение |
 |------|------------|
 | `ColumnExecutor.cs` | Gate, SemaphoreSlim, RetryLastFailedStepAsync |
-| `TestExecutionCoordinator.ErrorHandling.cs` | ProcessRetryAsync, ExecuteRetryInBackgroundAsync |
+| `TestExecutionCoordinator.ErrorResolution.cs` | ProcessRetryAsync, ExecuteRetryInBackgroundAsync |
 | `ErrorCoordinator.Interrupts.cs` | WaitForResolutionAsync, SendAskRepeatAsync |
 | `AsyncManualResetEvent.cs` | Gate implementation |
 

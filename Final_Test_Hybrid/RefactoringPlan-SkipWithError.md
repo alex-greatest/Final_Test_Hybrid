@@ -136,7 +136,7 @@ private async Task<ErrorResolution> WaitForOperatorSignalAsync(string? blockErro
 
 ### 6. Обновить вызовы WaitForResolutionAsync
 
-**Файл:** `Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.ErrorHandling.cs`
+**Файл:** `Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.ErrorResolution.cs`
 - Получить blockErrorTag из StepError (добавить поле BlockErrorTag в StepError)
 - Передать в WaitForResolutionAsync
 
@@ -150,7 +150,7 @@ private async Task<ErrorResolution> WaitForOperatorSignalAsync(string? blockErro
 | 2 | `Services/OpcUa/WaitGroup/WaitGroupBuilder{T}.cs` | Добавить `WaitForAllTrue` метод |
 | 3 | `Services/OpcUa/TagWaiter.cs` | Поддержка AND-логики |
 | 4 | `Services/Steps/Infrastructure/Execution/ErrorCoordinator/ErrorCoordinator.Interrupts.cs` | Параметр blockErrorTag |
-| 5 | `Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.ErrorHandling.cs` | Передать blockErrorTag |
+| 5 | `Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.ErrorResolution.cs` | Передать blockErrorTag |
 | 6 | `Models/Steps/StepError.cs` | Добавить BlockErrorTag (опционально) |
 
 ---
