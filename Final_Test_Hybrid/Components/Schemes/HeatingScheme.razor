@@ -1,8 +1,10 @@
 @using Final_Test_Hybrid.Services.OpcUa.Subscription
 @using Final_Test_Hybrid.Services.OpcUa
 @using Final_Test_Hybrid.Models.Plc.Tags
+@using Final_Test_Hybrid.Services.Common.Logging
 @inject OpcUaSubscription Subscription
 @inject OpcUaTagService TagService
+@inject DualLogger<HeatingScheme> Logger
 @implements IAsyncDisposable
 
 <div class="scheme-container">
@@ -4202,6 +4204,7 @@
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
+        Logger.LogInformation("HeatingScheme.OnInitializedAsync called");
         await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_1_Purge, OnVp1_1Changed);
         await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_2_Purge, OnVp1_2Changed);
         await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_3_Fill, OnVp1_3Changed);
@@ -4253,6 +4256,7 @@
     /// </summary>
     private async Task OnValveChangedAsync(string valveId, object? value)
     {
+        Logger.LogInformation("HeatingScheme.OnValveChanged: {ValveId} = {Value}", valveId, value);
         if (_disposed)
         {
             return;

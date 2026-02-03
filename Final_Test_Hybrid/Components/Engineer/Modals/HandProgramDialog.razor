@@ -1,5 +1,12 @@
 @using Final_Test_Hybrid.Components.Schemes
 @using Final_Test_Hybrid.Components.Overview
+@using Final_Test_Hybrid.Services.OpcUa
+@using Final_Test_Hybrid.Services.OpcUa.Connection
+@using Final_Test_Hybrid.Services.Common.UI
+@inject PlcSubscriptionState SubscriptionState
+@inject OpcUaConnectionState ConnectionState
+@inject BlazorDispatcherAccessor BlazorDispatcherAccessor
+@implements IDisposable
 
 <div class="hand-program-container">
     <div class="tabs-shell">
@@ -32,7 +39,46 @@
                 <RadzenTabsItem Text="Выходы 2">
                     <OutputsPanel2 />
                 </RadzenTabsItem>
+                <RadzenTabsItem Text="Тест связи">
+                    <ConnectionTestPanel />
+                </RadzenTabsItem>
             </Tabs>
         </RadzenTabs>
     </div>
 </div>
+
+@code {
+    private bool _disposed;
+
+    protected override void OnInitialized()
+    {
+        BlazorDispatcherAccessor.Initialize(action => InvokeAsync(action), StateHasChanged);
+        SubscriptionState.OnStateChanged += HandleStateChanged;
+        ConnectionState.ConnectionStateChanged += HandleConnectionChanged;
+    }
+
+    private void HandleStateChanged()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleConnectionChanged(bool isConnected)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        SubscriptionState.OnStateChanged -= HandleStateChanged;
+        ConnectionState.ConnectionStateChanged -= HandleConnectionChanged;
+    }
+}

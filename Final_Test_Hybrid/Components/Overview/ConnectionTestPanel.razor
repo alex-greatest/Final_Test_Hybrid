@@ -1,0 +1,521 @@
+@using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue
+@using Final_Test_Hybrid.Services.Diagnostic.Protocol
+@using Final_Test_Hybrid.Services.Diagnostic.Models
+@using Final_Test_Hybrid.Services.Diagnostic.Connection
+@using Microsoft.Extensions.Options
+@inject IModbusDispatcher Dispatcher
+@inject RegisterReader Reader
+@inject RegisterWriter Writer
+@inject IOptions<DiagnosticSettings> Settings
+@implements IAsyncDisposable
+
+<div class="connection-test-container">
+    <!-- Status Panel -->
+    <div class="status-panel">
+        <div class="status-title">СТАТУС СОЕДИНЕНИЯ</div>
+        <div class="status-indicators">
+            <div class="status-item">
+                <div class="led @(_isStarted ? "led-green" : "led-gray")"></div>
+                <span>Запущен</span>
+            </div>
+            <div class="status-item">
+                <div class="led @(_isConnected ? "led-green" : "led-gray")"></div>
+                <span>Подключен</span>
+            </div>
+            <div class="status-item">
+                <div class="led @(_isReconnecting ? "led-yellow" : "led-gray")"></div>
+                <span>Переподключение</span>
+            </div>
+        </div>
+        <div class="status-values">
+            <span>ModeKey: @FormatModeKey(_pingData?.ModeKey)</span>
+            <span>BoilerStatus: @(_pingData?.BoilerStatus.ToString() ?? "—")</span>
+        </div>
+    </div>
+
+    <div class="panels-row">
+        <!-- Read Panel -->
+        <div class="operation-panel">
+            <div class="panel-title">ЧТЕНИЕ РЕГИСТРА</div>
+
+            <div class="row-item">
+                <span class="field-label">Регистр:</span>
+                <RadzenDropDown TValue="RegisterPreset"
+                                Data="@ReadPresets"
+                                TextProperty="Name"
+                                @bind-Value="_selectedReadPreset"
+                                Change="@OnReadPresetChanged"
+                                class="scada-dropdown" />
+            </div>
+
+            @if (_selectedReadPreset?.Address == 0)
+            {
+                <div class="row-item">
+                    <span class="field-label">Адрес:</span>
+                    <RadzenNumeric TValue="ushort"
+                                   @bind-Value="_readAddress"
+                                   class="scada-input" />
+                </div>
+            }
+
+            <div class="row-item">
+                <span class="field-label">Тип:</span>
+                <RadzenDropDown TValue="string"
+                                Data="@DataTypes"
+                                @bind-Value="_selectedReadType"
+                                class="scada-dropdown" />
+            </div>
+
+            <div class="row-item">
+                <RadzenButton Text="ЧИТАТЬ"
+                              Click="@ReadRegisterAsync"
+                              Disabled="@(_isReading || !_isConnected)"
+                              class="scada-button" />
+            </div>
+
+            <div class="result-area">
+                @if (!string.IsNullOrEmpty(_readError))
+                {
+                    <span class="error-text">Ошибка: @_readError</span>
+                }
+                else if (!string.IsNullOrEmpty(_readResult))
+                {
+                    <span class="result-text">Результат: @_readResult</span>
+                }
+            </div>
+
+            @if (_selectedReadPreset != null && !string.IsNullOrEmpty(_selectedReadPreset.Description))
+            {
+                <div class="description-text">@_selectedReadPreset.Description</div>
+            }
+        </div>
+
+        <!-- Write Panel -->
+        <div class="operation-panel">
+            <div class="panel-title">ЗАПИСЬ РЕГИСТРА</div>
+
+            <div class="row-item">
+                <span class="field-label">Регистр:</span>
+                <RadzenDropDown TValue="RegisterPreset"
+                                Data="@WritePresets"
+                                TextProperty="Name"
+                                @bind-Value="_selectedWritePreset"
+                                Change="@OnWritePresetChanged"
+                                class="scada-dropdown" />
+            </div>
+
+            @if (_selectedWritePreset?.Address == 0)
+            {
+                <div class="row-item">
+                    <span class="field-label">Адрес:</span>
+                    <RadzenNumeric TValue="ushort"
+                                   @bind-Value="_writeAddress"
+                                   class="scada-input" />
+                </div>
+            }
+
+            <div class="row-item">
+                <span class="field-label">Тип:</span>
+                <RadzenDropDown TValue="string"
+                                Data="@DataTypes"
+                                @bind-Value="_selectedWriteType"
+                                class="scada-dropdown" />
+            </div>
+
+            <div class="row-item">
+                <span class="field-label">Значение:</span>
+                <RadzenTextBox @bind-Value="_writeValue" class="scada-input" />
+            </div>
+
+            <div class="row-item">
+                <RadzenButton Text="ЗАПИСАТЬ"
+                              Click="@WriteRegisterAsync"
+                              Disabled="@(_isWriting || !_isConnected)"
+                              class="scada-button" />
+            </div>
+
+            <div class="result-area">
+                @if (!string.IsNullOrEmpty(_writeError))
+                {
+                    <span class="error-text">Ошибка: @_writeError</span>
+                }
+                else if (_writeSuccess)
+                {
+                    <span class="result-text">Результат: OK</span>
+                }
+            </div>
+
+            @if (_selectedWritePreset != null && !string.IsNullOrEmpty(_selectedWritePreset.Description))
+            {
+                <div class="description-text">@_selectedWritePreset.Description</div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private static readonly RegisterPreset[] ReadPresets =
+    [
+        new("Ключ режима", 1000, "UInt32", "Ключ режима (стенд/инженер)"),
+        new("Статус котла", 1005, "Int16", "Статус котла (-1=тест, 0=вкл, 1-10=режимы)"),
+        new("Тип мощности", 1002, "UInt16", "Тип мощности котла"),
+        new("Тип насоса", 1003, "UInt16", "Тип насоса"),
+        new("Тип датчика давл.", 1004, "UInt16", "Тип датчика давления"),
+        new("Тип подключения", 1054, "UInt16", "Тип подключения системы"),
+        new("Термостат STB", 1066, "UInt16", "Термостат STB (0=closed, 1=open)"),
+        new("Пневмовыключатель", 1067, "UInt16", "Пневматический выключатель"),
+        new("Датчик давления", 1068, "UInt16", "Датчик давления воды"),
+        new("Трёхход. клапан", 1069, "UInt16", "Трёхходовой клапан"),
+        new("Состояние насоса", 1070, "UInt16", "Состояние насоса"),
+        new("Комн. термостат", 1071, "UInt16", "Комнатный термостат"),
+        new("Тип газ. регулятора", 1157, "UInt16", "Тип регулятора газа"),
+        new("Вручную...", 0, "UInt16", "Ввести адрес вручную"),
+    ];
+
+    private static readonly RegisterPreset[] WritePresets =
+    [
+        new("Выбег насоса", 1060, "UInt16", "Время выбега насоса ОС (0-600 сек)"),
+        new("Уставка ГВС", 1013, "UInt16", "Температура уставки ГВС (°C)"),
+        new("Макс. темп. ГВС", 1043, "UInt16", "Максимальная температура ГВС (°C)"),
+        new("Вручную...", 0, "UInt16", "Ввести адрес вручную"),
+    ];
+
+    private static readonly string[] DataTypes = ["UInt16", "Int16", "UInt32", "Float"];
+
+    // Status (reactive from events)
+    private bool _isStarted;
+    private bool _isConnected;
+    private bool _isReconnecting;
+    private DiagnosticPingData? _pingData;
+    private bool _disposed;
+
+    // Read state
+    private RegisterPreset? _selectedReadPreset = ReadPresets[0];
+    private ushort _readAddress = 1005;
+    private string _selectedReadType = "UInt32";
+    private string _readResult = "";
+    private string? _readError;
+    private bool _isReading;
+
+    // Write state
+    private RegisterPreset? _selectedWritePreset = WritePresets[0];
+    private ushort _writeAddress = 1060;
+    private string _selectedWriteType = "UInt16";
+    private string _writeValue = "";
+    private string? _writeError;
+    private bool _writeSuccess;
+    private bool _isWriting;
+
+    /// <inheritdoc />
+    protected override async Task OnInitializedAsync()
+    {
+        // Subscribe to dispatcher events
+        Dispatcher.Connected += OnConnected;
+        Dispatcher.Disconnecting += OnDisconnecting;
+        Dispatcher.Stopped += OnStopped;
+        Dispatcher.PingDataUpdated += OnPingDataUpdated;
+
+        // Start dispatcher
+        await Dispatcher.StartAsync();
+
+        // Update initial state
+        UpdateStatus();
+    }
+
+    /// <summary>
+    /// Обновляет статус подключения из диспетчера.
+    /// </summary>
+    private void UpdateStatus()
+    {
+        _isStarted = Dispatcher.IsStarted;
+        _isConnected = Dispatcher.IsConnected;
+        _isReconnecting = Dispatcher.IsReconnecting;
+        _pingData = Dispatcher.LastPingData;
+    }
+
+    /// <summary>
+    /// Обработчик события подключения.
+    /// </summary>
+    private void OnConnected()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+        _ = InvokeAsync(() =>
+        {
+            UpdateStatus();
+            StateHasChanged();
+        });
+    }
+
+    /// <summary>
+    /// Обработчик события отключения.
+    /// </summary>
+    private Task OnDisconnecting()
+    {
+        if (_disposed)
+        {
+            return Task.CompletedTask;
+        }
+        return InvokeAsync(() =>
+        {
+            UpdateStatus();
+            StateHasChanged();
+        });
+    }
+
+    /// <summary>
+    /// Обработчик события остановки.
+    /// </summary>
+    private void OnStopped()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+        _ = InvokeAsync(() =>
+        {
+            UpdateStatus();
+            StateHasChanged();
+        });
+    }
+
+    /// <summary>
+    /// Обработчик обновления данных ping.
+    /// </summary>
+    private void OnPingDataUpdated(DiagnosticPingData data)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+        _ = InvokeAsync(() =>
+        {
+            _pingData = data;
+            _isConnected = Dispatcher.IsConnected;
+            _isReconnecting = Dispatcher.IsReconnecting;
+            StateHasChanged();
+        });
+    }
+
+    /// <summary>
+    /// Обработчик изменения preset чтения.
+    /// </summary>
+    private void OnReadPresetChanged()
+    {
+        if (_selectedReadPreset == null)
+        {
+            return;
+        }
+        if (_selectedReadPreset.Address > 0)
+        {
+            _readAddress = _selectedReadPreset.Address;
+            _selectedReadType = _selectedReadPreset.Type;
+        }
+        _readResult = "";
+        _readError = null;
+    }
+
+    /// <summary>
+    /// Обработчик изменения preset записи.
+    /// </summary>
+    private void OnWritePresetChanged()
+    {
+        if (_selectedWritePreset == null)
+        {
+            return;
+        }
+        if (_selectedWritePreset.Address > 0)
+        {
+            _writeAddress = _selectedWritePreset.Address;
+            _selectedWriteType = _selectedWritePreset.Type;
+        }
+        _writeError = null;
+        _writeSuccess = false;
+    }
+
+    /// <summary>
+    /// Читает регистр по выбранному типу.
+    /// </summary>
+    private async Task ReadRegisterAsync()
+    {
+        _isReading = true;
+        _readResult = "";
+        _readError = null;
+
+        try
+        {
+            var docAddress = _selectedReadPreset?.Address > 0 ? _selectedReadPreset.Address : _readAddress;
+            var address = (ushort)(docAddress - Settings.Value.BaseAddressOffset);
+
+            switch (_selectedReadType)
+            {
+                case "UInt16":
+                    var resultU16 = await Reader.ReadUInt16Async(address);
+                    if (resultU16.Success)
+                    {
+                        _readResult = resultU16.Value.ToString();
+                    }
+                    else
+                    {
+                        _readError = resultU16.Error;
+                    }
+                    break;
+
+                case "Int16":
+                    var resultI16 = await Reader.ReadInt16Async(address);
+                    if (resultI16.Success)
+                    {
+                        _readResult = resultI16.Value.ToString();
+                    }
+                    else
+                    {
+                        _readError = resultI16.Error;
+                    }
+                    break;
+
+                case "UInt32":
+                    var resultU32 = await Reader.ReadUInt32Async(address);
+                    if (resultU32.Success)
+                    {
+                        _readResult = $"{resultU32.Value} (0x{resultU32.Value:X8})";
+                    }
+                    else
+                    {
+                        _readError = resultU32.Error;
+                    }
+                    break;
+
+                case "Float":
+                    var resultFloat = await Reader.ReadFloatAsync(address);
+                    if (resultFloat.Success)
+                    {
+                        _readResult = resultFloat.Value.ToString("F4");
+                    }
+                    else
+                    {
+                        _readError = resultFloat.Error;
+                    }
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            _readError = ex.Message;
+        }
+        finally
+        {
+            _isReading = false;
+        }
+    }
+
+    /// <summary>
+    /// Записывает регистр по выбранному типу.
+    /// </summary>
+    private async Task WriteRegisterAsync()
+    {
+        _isWriting = true;
+        _writeError = null;
+        _writeSuccess = false;
+
+        try
+        {
+            var docAddress = _selectedWritePreset?.Address > 0 ? _selectedWritePreset.Address : _writeAddress;
+            var address = (ushort)(docAddress - Settings.Value.BaseAddressOffset);
+
+            switch (_selectedWriteType)
+            {
+                case "UInt16":
+                    if (!ushort.TryParse(_writeValue, out var u16Value))
+                    {
+                        _writeError = "Неверный формат UInt16";
+                        return;
+                    }
+                    var resultU16 = await Writer.WriteUInt16Async(address, u16Value);
+                    _writeSuccess = resultU16.Success;
+                    _writeError = resultU16.Error;
+                    break;
+
+                case "Int16":
+                    if (!short.TryParse(_writeValue, out var i16Value))
+                    {
+                        _writeError = "Неверный формат Int16";
+                        return;
+                    }
+                    var resultI16 = await Writer.WriteInt16Async(address, i16Value);
+                    _writeSuccess = resultI16.Success;
+                    _writeError = resultI16.Error;
+                    break;
+
+                case "UInt32":
+                    if (!uint.TryParse(_writeValue, out var u32Value))
+                    {
+                        _writeError = "Неверный формат UInt32";
+                        return;
+                    }
+                    var resultU32 = await Writer.WriteUInt32Async(address, u32Value);
+                    _writeSuccess = resultU32.Success;
+                    _writeError = resultU32.Error;
+                    break;
+
+                case "Float":
+                    if (!float.TryParse(_writeValue, out var floatValue))
+                    {
+                        _writeError = "Неверный формат Float";
+                        return;
+                    }
+                    var resultFloat = await Writer.WriteFloatAsync(address, floatValue);
+                    _writeSuccess = resultFloat.Success;
+                    _writeError = resultFloat.Error;
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            _writeError = ex.Message;
+        }
+        finally
+        {
+            _isWriting = false;
+        }
+    }
+
+    /// <summary>
+    /// Форматирует ModeKey для отображения.
+    /// </summary>
+    private static string FormatModeKey(uint? modeKey)
+    {
+        if (modeKey == null)
+        {
+            return "—";
+        }
+        var suffix = modeKey switch
+        {
+            0xD7F8DB56 => " (стенд)",
+            0xFA87CD5E => " (инженер)",
+            _ => ""
+        };
+        return $"0x{modeKey:X8}{suffix}";
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+
+        // Unsubscribe from events
+        Dispatcher.Connected -= OnConnected;
+        Dispatcher.Disconnecting -= OnDisconnecting;
+        Dispatcher.Stopped -= OnStopped;
+        Dispatcher.PingDataUpdated -= OnPingDataUpdated;
+
+        // Stop dispatcher
+        await Dispatcher.StopAsync();
+    }
+
+    /// <summary>
+    /// Предустановка регистра для выбора.
+    /// </summary>
+    private record RegisterPreset(string Name, ushort Address, string Type, string Description);
+}

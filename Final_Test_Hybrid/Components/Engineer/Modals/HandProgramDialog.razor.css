@@ -95,3 +95,13 @@
 ::deep .hand-program-tabs .rz-tabview-title {
     font-size: 22px;
 }
+
+/* Grid для панелей Входы/Выходы */
+::deep .panel-grid {
+    display: inline-grid;
+    grid-template-columns: repeat(4, max-content);
+    gap: 10px;
+    padding: 35px;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    align-items: start;
+}

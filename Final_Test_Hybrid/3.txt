@@ -1,6 +1,54 @@
-﻿"DB_Measure".Temper.DHW_TUS - <text transform="translate(842.681 89.799) scale(.576 1)" style="font-family: ArialMT, Arial; font-size: 30px;" b-5jnngoa4hi=""><tspan x="0" y="0" b-5jnngoa4hi="">0.00</tspan></text>
-"DB_Measure".Sensor.DHW_PES - <text transform="translate(1478.398 80.634) scale(.576 1)" style="font-family: ArialMT, Arial; font-size: 30px;" b-5jnngoa4hi=""><tspan x="0" y="0" b-5jnngoa4hi="">0.00</tspan></text>
-"DB_Measure".Temper.DHW_TES - <text transform="translate(1698.002 280.948) scale(.576 1)" style="font-family: ArialMT, Arial; font-size: 30px;" b-5jnngoa4hi=""><tspan x="0" y="0" b-5jnngoa4hi="">0.00</tspan></text>
-"DB_Measure".Sensor.DHW_FS - <text transform="translate(992.78 783.032) scale(.576 1)" style="font-family: ArialMT, Arial; font-size: 30px;" b-5jnngoa4hi=""><tspan x="0" y="0" b-5jnngoa4hi="">0.00</tspan></text>
-"DB_ControlValve".VPP3_1.ActuelValue - <text transform="translate(722.657 917.383) scale(.576 1)" style="font-family: ArialMT, Arial; font-size: 30px;" b-5jnngoa4hi=""><tspan x="0" y="0" b-5jnngoa4hi="">0.00</tspan></text>
-
+﻿11:39:18 [INF] HeatingScheme.OnInitializedAsync called
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_1"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_2"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_3"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_4"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_5"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_6"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_7"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_8"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_9"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_10"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_11"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_12"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_Measure"."Sensor"."CH_PMR", total callbacks: 4
+11:39:18 [INF] AddCallback: ns=3;s="DB_Measure"."Temper"."CH_TMR", total callbacks: 4
+11:39:18 [INF] AddCallback: ns=3;s="DB_Measure"."Temper"."CH_TRR", total callbacks: 4
+11:39:18 [INF] AddCallback: ns=3;s="DB_Measure"."Sensor"."CH_FR", total callbacks: 4
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."DHW"."VP2_1"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."DHW"."VP2_2"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."DHW"."VP2_3"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."DHW"."VP2_4"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."DHW"."VP2_5"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."DHW"."VP2_6"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."DHW"."VP2_7"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."DHW"."VP2_8"."HMI"."xOut_Open", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="DB_Measure"."Temper"."DHW_TUS", total callbacks: 4
+11:39:18 [INF] AddCallback: ns=3;s="DB_Measure"."Sensor"."DHW_PES", total callbacks: 4
+11:39:18 [INF] AddCallback: ns=3;s="DB_Measure"."Temper"."DHW_TES", total callbacks: 4
+11:39:18 [INF] AddCallback: ns=3;s="DB_Measure"."Sensor"."DHW_FS", total callbacks: 4
+11:39:18 [INF] AddCallback: ns=3;s="DB_ControlValve"."VPP3_1"."ActuelValue", total callbacks: 5
+11:39:18 [DBG] Settling delay 300ms перед активацией порта
+11:39:18 [INF] ModbusDispatcher запущен
+11:39:18 [INF] AddCallback: ns=3;s="PC_ON", total callbacks: 3
+11:39:18 [INF] AddCallback: ns=3;s="6K1_NOK", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="6K1_OK", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="6K2_NOK", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="6K2_OK", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="Plug_Ins", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="7K3_ON", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="Isometer_Alarm", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="FA_AlarmCondensat", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="FA_AlarmHeatLine", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="FA_AlarmGasCooler", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="FA_Trip", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="FA_NoReady", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="E14_1", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="FA_RangeO2", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="Adapter_Inserted", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="30SB4", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="E57_1", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="30SB5", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="30SB6", total callbacks: 2
+11:39:18 [INF] AddCallback: ns=3;s="30SA7_1", total callbacks: 2
+"3"

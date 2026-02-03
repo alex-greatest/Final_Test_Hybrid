@@ -306,6 +306,55 @@ svg {
     padding: 0 !important;
 }
 
+/* ===== HAND PROGRAM DIALOG ===== */
+.hand-program-dialog .rz-dialog-titlebar {
+    padding: 0 !important;
+    min-height: auto !important;
+    height: 46px !important;
+    background-color: #f0f0f0 !important;
+    border-bottom: 1px solid #ccc !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+.hand-program-dialog .rz-dialog-title {
+    font-size: 26px !important;
+    font-weight: bold !important;
+    margin-left: 15px !important;
+    line-height: 46px !important;
+    color: #333;
+}
+
+.hand-program-dialog .rz-dialog-titlebar-close {
+    width: 66px !important;
+    height: 46px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background-color: transparent !important;
+    opacity: 1 !important;
+}
+
+.hand-program-dialog .rz-dialog-titlebar-close:hover {
+    background-color: #e81123 !important;
+    color: white !important;
+}
+
+.hand-program-dialog .rz-dialog-titlebar-close .rzi {
+    font-size: 20px !important;
+    transform: scale(1.4) !important;
+    font-weight: 900 !important;
+    display: block !important;
+}
+
+.hand-program-dialog .rz-dialog-content {
+    height: calc(100% - 46px) !important;
+    padding: 0 !important;
+}
+
 /* ===== RECIPES GRID - GLOBAL STYLES ===== */
 /* Popup dropdown рендерится вне компонента, нужны глобальные стили */
 
@@ -456,11 +505,23 @@ svg {
     padding: 10px !important;
 }
 
-/* DropDown Panel - глобально */
+/* DropDown Panel - глобально (SCADA-стиль) */
+.rz-dropdown-panel {
+    background-color: #cfcfcf !important;
+    border: 1px solid #888 !important;
+    border-right-color: #fff !important;
+    border-bottom-color: #fff !important;
+    border-radius: 0 !important;
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.3) !important;
+}
+
 .rz-dropdown-panel .rz-dropdown-filter-container input {
     font-size: 18px !important;
     font-weight: bold !important;
     color: #000 !important;
+    background-color: #e0e0e0 !important;
+    border: 1px solid #888 !important;
+    border-radius: 0 !important;
 }
 
 .rz-dropdown-panel .rz-dropdown-item {
@@ -468,15 +529,16 @@ svg {
     font-weight: bold !important;
     color: #000 !important;
     padding: 10px 12px !important;
+    background-color: transparent !important;
 }
 
 .rz-dropdown-panel .rz-dropdown-item:hover {
-    background-color: #e3f2fd !important;
+    background-color: #b0b0b0 !important;
 }
 
 .rz-dropdown-panel .rz-dropdown-item.rz-state-highlight {
-    background-color: #1976d2 !important;
-    color: #fff !important;
+    background-color: #888 !important;
+    color: #000 !important;
 }
 
 /* ===== REWORK DIALOGS COMMON STYLES ===== */
