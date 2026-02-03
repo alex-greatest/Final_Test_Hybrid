@@ -1,6 +1,6 @@
 using Final_Test_Hybrid.Models.Steps;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 
@@ -153,8 +153,18 @@ public partial class TestExecutionCoordinator
     /// </summary>
     private async Task RunCurrentMap(TestMap map, int totalMaps, CancellationToken token)
     {
+        await WaitForExecutorsIdleAsync(token);
         LogMapStart(totalMaps);
-        await ExecuteMapOnAllColumns(map, token);
+        var runId = ActivateMap(CurrentMapIndex);
+        var startTimestamp = Stopwatch.GetTimestamp();
+        try
+        {
+            await ExecuteMapOnAllColumns(map, CurrentMapIndex, runId, token);
+        }
+        finally
+        {
+            DeactivateMap(CurrentMapIndex, runId, startTimestamp);
+        }
     }
 
     /// <summary>
@@ -180,11 +190,11 @@ public partial class TestExecutionCoordinator
     /// <summary>
     /// Выполняет карту на всех колонках с параллельной обработкой ошибок.
     /// </summary>
-    private Task ExecuteMapOnAllColumns(TestMap map, CancellationToken token)
+    private Task ExecuteMapOnAllColumns(TestMap map, int mapIndex, Guid mapRunId, CancellationToken token)
     {
         var errorChannel = StartErrorSignalChannel();
         var errorLoopTask = RunErrorHandlingLoopAsync(errorChannel.Reader, token);
-        var executionTask = RunExecutorsAsync(map, token);
+        var executionTask = RunExecutorsAsync(map, mapIndex, mapRunId, token);
         var completionTask = executionTask.ContinueWith(
             _ => CompleteErrorSignalChannel(),
             CancellationToken.None,
@@ -196,10 +206,62 @@ public partial class TestExecutionCoordinator
     /// <summary>
     /// Запускает выполнение карты на всех колонках.
     /// </summary>
-    private Task RunExecutorsAsync(TestMap map, CancellationToken token)
+    private Task RunExecutorsAsync(TestMap map, int mapIndex, Guid mapRunId, CancellationToken token)
     {
-        var executionTasks = _executors.Select(executor => executor.ExecuteMapAsync(map, token));
+        var executionTasks = _executors.Select(executor => executor.ExecuteMapAsync(map, mapIndex, mapRunId, token));
         return Task.WhenAll(executionTasks);
+    }
+
+    private Guid ActivateMap(int mapIndex)
+    {
+        var runId = Guid.NewGuid();
+        lock (_stateLock)
+        {
+            _activeMapIndex = mapIndex;
+            _activeMapRunId = runId;
+            _mapGate.Set();
+        }
+        _logger.LogDebug("Map gate opened: {MapIndex}, RunId={RunId}", mapIndex, runId);
+        return runId;
+    }
+
+    private void DeactivateMap(int mapIndex, Guid runId, long startTimestamp)
+    {
+        lock (_stateLock)
+        {
+            _activeMapIndex = -1;
+            _activeMapRunId = Guid.Empty;
+            _mapGate.Reset();
+        }
+        var elapsed = Stopwatch.GetElapsedTime(startTimestamp);
+        _logger.LogDebug(
+            "Map gate closed: {MapIndex}, RunId={RunId}, Duration={DurationMs}ms",
+            mapIndex,
+            runId,
+            elapsed.TotalMilliseconds);
+    }
+
+    private async Task WaitForExecutorsIdleAsync(CancellationToken ct)
+    {
+        if (AreExecutorsIdle())
+        {
+            return;
+        }
+        await Task.Delay(50, ct);
+        await WaitForExecutorsIdleAsync(ct);
+    }
+
+    private bool AreExecutorsIdle()
+    {
+        return _executors.All(executor => !executor.IsVisible);
+    }
+
+    private (int MapIndex, Guid RunId) GetActiveMapSnapshot()
+    {
+        lock (_stateLock)
+        {
+            return (_activeMapIndex, _activeMapRunId);
+        }
     }
 
     /// <summary>

@@ -17,12 +17,17 @@ public class ColumnExecutor(
     StepStatusReporter statusReporter,
     PauseTokenSource pauseToken,
     IErrorService errorService,
-    IStepTimingService stepTimingService)
+    IStepTimingService stepTimingService,
+    AsyncManualResetEvent mapGate,
+    Func<(int MapIndex, Guid RunId)> getMapSnapshot)
 {
     private readonly AsyncManualResetEvent _continueGate = new(true);
     private readonly SemaphoreSlim _retrySemaphore = new(1, 1);
+    private readonly AsyncManualResetEvent _mapGate = mapGate;
+    private readonly Func<(int MapIndex, Guid RunId)> _getMapSnapshot = getMapSnapshot;
     private ErrorScope? _errorScope;
     private int _progressCompleted;
+    private const int MapGateRetryDelayMs = 50;
 
     private record StepState(
         string? Name,
@@ -51,7 +56,7 @@ public class ColumnExecutor(
     public Guid UiStepId => _state.UiStepId;
     public event Action? OnStateChanged;
 
-    public async Task ExecuteMapAsync(TestMap map, CancellationToken ct)
+    public async Task ExecuteMapAsync(TestMap map, int mapIndex, Guid mapRunId, CancellationToken ct)
     {
         if (!_state.HasFailed)
         {
@@ -78,10 +83,34 @@ public class ColumnExecutor(
             }
 
             await pauseToken.WaitWhilePausedAsync(ct);
+            await WaitForMapAccessAsync(mapIndex, mapRunId, ct);
             await ExecuteStep(step!, ct);
         }
 
         ClearStatusIfNotFailed();
+    }
+
+    private async Task WaitForMapAccessAsync(int mapIndex, Guid mapRunId, CancellationToken ct)
+    {
+        await _mapGate.WaitAsync(ct);
+        var snapshot = _getMapSnapshot();
+        if (snapshot.MapIndex == mapIndex && snapshot.RunId == mapRunId)
+        {
+            return;
+        }
+        LogMapGateBlocked(mapIndex, mapRunId, snapshot);
+        await Task.Delay(MapGateRetryDelayMs, ct);
+        await WaitForMapAccessAsync(mapIndex, mapRunId, ct);
+    }
+
+    private void LogMapGateBlocked(int mapIndex, Guid mapRunId, (int MapIndex, Guid RunId) snapshot)
+    {
+        logger.LogDebug(
+            "Шаг заблокирован барьером Map. Expected={ExpectedMap}/{ExpectedRun}, Active={ActiveMap}/{ActiveRun}",
+            mapIndex,
+            mapRunId,
+            snapshot.MapIndex,
+            snapshot.RunId);
     }
 
     /// <summary>

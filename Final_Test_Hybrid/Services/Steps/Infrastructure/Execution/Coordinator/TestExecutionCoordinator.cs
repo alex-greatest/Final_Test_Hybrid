@@ -32,13 +32,15 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly ExecutionFlowState _flowState;
     private readonly PausableRegisterReader _pausableRegisterReader;
     private readonly PausableRegisterWriter _pausableRegisterWriter;
-    private readonly RangeSliderUiState _rangeSliderUiState;
     private readonly StepStatusReporter _statusReporter;
     private readonly Lock _stateLock = new();
     private readonly object _enqueueLock = new();
+    private readonly AsyncManualResetEvent _mapGate = new(false);
     private readonly Action _onExecutorStateChanged;
     private List<TestMap> _maps = [];
     private CancellationTokenSource? _cts;
+    private int _activeMapIndex = -1;
+    private Guid _activeMapRunId = Guid.Empty;
     public event Action? OnStateChanged;
     public event Action? OnSequenceCompleted;
     public event Action<StepError>? OnErrorOccurred;
@@ -91,7 +93,6 @@ public partial class TestExecutionCoordinator : IDisposable
         _flowState = flowState;
         _pausableRegisterReader = pausableRegisterReader;
         _pausableRegisterWriter = pausableRegisterWriter;
-        _rangeSliderUiState = rangeSliderUiState;
         _statusReporter = statusReporter;
         _onExecutorStateChanged = HandleExecutorStateChanged;
         _executors = CreateAllExecutors(pausableOpcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider, rangeSliderUiState);
@@ -142,7 +143,7 @@ public partial class TestExecutionCoordinator : IDisposable
             .Select(index => CreateExecutor(
                 index, opcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider,
                 _pauseToken, _errorService, _stepTimingService, _pausableRegisterReader, _pausableRegisterWriter,
-                _pausableTagWaiter, rangeSliderUiState))
+                _pausableTagWaiter, rangeSliderUiState, _mapGate, GetActiveMapSnapshot))
             .ToArray();
     }
 
@@ -159,14 +160,25 @@ public partial class TestExecutionCoordinator : IDisposable
         PausableRegisterReader pausableRegisterReader,
         PausableRegisterWriter pausableRegisterWriter,
         PausableTagWaiter pausableTagWaiter,
-        RangeSliderUiState rangeSliderUiState)
+        RangeSliderUiState rangeSliderUiState,
+        AsyncManualResetEvent mapGate,
+        Func<(int MapIndex, Guid RunId)> getMapSnapshot)
     {
         var context = new TestStepContext(
             index, opcUa, loggerFactory.CreateLogger($"Column{index}"), recipeProvider, pauseToken,
             pausableRegisterReader, pausableRegisterWriter, pausableTagWaiter, rangeSliderUiState);
         var executorLogger = loggerFactory.CreateLogger<ColumnExecutor>();
         var dualLogger = new DualLogger<ColumnExecutor>(executorLogger, testLogger);
-        return new ColumnExecutor(index, context, dualLogger, statusReporter, pauseToken, errorService, stepTimingService);
+        return new ColumnExecutor(
+            index,
+            context,
+            dualLogger,
+            statusReporter,
+            pauseToken,
+            errorService,
+            stepTimingService,
+            mapGate,
+            getMapSnapshot);
     }
 
     private void SubscribeToExecutorEvents()
