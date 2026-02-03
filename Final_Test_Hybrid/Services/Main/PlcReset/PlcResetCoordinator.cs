@@ -22,6 +22,13 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
     private int _isHandlingReset;
     private volatile bool _disposed;
     private static readonly TimeSpan AskEndTimeout = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// Одноразовый маркер: 1 = PLC Reset в процессе (между началом и Reset()/ForceStop()).
+    /// Используется для определения источника HardReset.
+    /// </summary>
+    public int PlcHardResetPending;
+
     public bool IsActive { get; private set; }
     public event Action? OnActiveChanged;
     public event Action? OnForceStop;
@@ -104,7 +111,9 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
         else
         {
             _logger.LogInformation("Полный сброс (тест выполнялся) — очищаем BoilerState");
+            Volatile.Write(ref PlcHardResetPending, 1);
             _errorCoordinator.Reset();
+            Volatile.Write(ref PlcHardResetPending, 0);
         }
 
         InvokeEventSafe(OnResetCompleted);
@@ -129,7 +138,9 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
                 break;
             default:
                 _logger.LogError(ex, "Неожиданная ошибка PLC Reset — полный сброс");
+                Volatile.Write(ref PlcHardResetPending, 1);
                 _errorCoordinator.Reset();
+                Volatile.Write(ref PlcHardResetPending, 0);
                 InvokeEventSafe(OnResetCompleted);
                 break;
         }

@@ -221,6 +221,10 @@ public partial class PreExecutionCoordinator
     private void HandleHardReset()
     {
         TryCompletePlcReset();
+        // Атомарно читаем и сбрасываем - определяем источник
+        var isPending = Interlocked.Exchange(ref coordinators.PlcResetCoordinator.PlcHardResetPending, 0);
+        var origin = isPending == 1 ? ResetOriginPlc : ResetOriginNonPlc;
+        Volatile.Write(ref _lastHardResetOrigin, origin);
         HandleStopSignal(PreExecutionResolution.HardReset);
         infra.StatusReporter.ClearAllExceptScan();
     }

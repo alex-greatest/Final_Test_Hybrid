@@ -21,51 +21,66 @@ public partial class PreExecutionCoordinator
         infra.Logger.LogInformation("Вход в ExecuteRetryLoopAsync для {StepName}", step.Name);
         var errorScope = new ErrorScope(infra.ErrorService);
         var currentResult = initialResult;
+
+        async Task<(PreExecutionResult Result, bool ShouldExit)> ProcessIterationAsync(PreExecutionResult result)
+        {
+            infra.Logger.LogInformation("Retry loop: IsRetryable=true, показываем диалог");
+            await SetSelectedAsync(step);
+            errorScope.Raise(result.Errors, step.Id, step.Name);
+            infra.StatusReporter.ReportError(stepId, result.ErrorMessage!);
+
+            await coordinators.DialogCoordinator.ShowBlockErrorDialogAsync(
+                step.Name,
+                result.UserMessage ?? result.ErrorMessage!,
+                step.ErrorSourceTitle);
+
+            infra.Logger.LogInformation("Диалог показан, ожидаем WaitForResolutionAsync...");
+            var resolution = await WaitForResolutionAsync(step, ct);
+            infra.Logger.LogInformation("WaitForResolutionAsync вернул: {Resolution}", resolution);
+
+            if (resolution == PreExecutionResolution.Retry)
+            {
+                var retryResult = await ExecuteRetryAsync();
+                return (retryResult, !retryResult.IsRetryable);
+            }
+
+            coordinators.DialogCoordinator.CloseBlockErrorDialog();
+            infra.Logger.LogInformation("Не Retry, выходим из цикла с {Resolution}", resolution);
+            return (CreateExitResult(resolution, result), true);
+        }
+
+        async Task<PreExecutionResult> ExecuteRetryAsync()
+        {
+            infra.Logger.LogInformation("Отправляем SendAskRepeatAsync...");
+            var errorTag = GetBlockErrorTag(step);
+            try
+            {
+                await coordinators.ErrorCoordinator.SendAskRepeatAsync(errorTag, ct);
+            }
+            catch (TimeoutException)
+            {
+                infra.Logger.LogError("Block.Error не сброшен за 5 сек — жёсткий стоп pre-execution");
+                coordinators.DialogCoordinator.CloseBlockErrorDialog();
+                await coordinators.ErrorCoordinator.HandleInterruptAsync(
+                    ErrorCoordinator.InterruptReason.TagTimeout, ct);
+                return PreExecutionResult.Fail("Таймаут ожидания Block.Error");
+            }
+            coordinators.DialogCoordinator.CloseBlockErrorDialog();
+            infra.Logger.LogInformation("SendAskRepeatAsync отправлен, повторяем шаг");
+            errorScope.Clear();
+            return await RetryStepAsync(step, context, stepId, ct);
+        }
+
         try
         {
             while (currentResult.IsRetryable)
             {
-                infra.Logger.LogInformation("Retry loop: IsRetryable=true, показываем диалог");
-                await SetSelectedAsync(step);
-                errorScope.Raise(currentResult.Errors, step.Id, step.Name);
-                infra.StatusReporter.ReportError(stepId, currentResult.ErrorMessage!);
-
-                await coordinators.DialogCoordinator.ShowBlockErrorDialogAsync(
-                    step.Name,
-                    currentResult.UserMessage ?? currentResult.ErrorMessage!,
-                    step.ErrorSourceTitle);
-
-                infra.Logger.LogInformation("Диалог показан, ожидаем WaitForResolutionAsync...");
-                var resolution = await WaitForResolutionAsync(step, ct);
-                infra.Logger.LogInformation("WaitForResolutionAsync вернул: {Resolution}", resolution);
-
-                if (resolution == PreExecutionResolution.Retry)
+                var iteration = await ProcessIterationAsync(currentResult);
+                if (iteration.ShouldExit)
                 {
-                    infra.Logger.LogInformation("Отправляем SendAskRepeatAsync...");
-                    var errorTag = GetBlockErrorTag(step);
-                    try
-                    {
-                        await coordinators.ErrorCoordinator.SendAskRepeatAsync(errorTag, ct);
-                    }
-                    catch (TimeoutException)
-                    {
-                        infra.Logger.LogError("Block.Error не сброшен за 5 сек — жёсткий стоп pre-execution");
-                        coordinators.DialogCoordinator.CloseBlockErrorDialog();
-                        await coordinators.ErrorCoordinator.HandleInterruptAsync(
-                            ErrorCoordinator.InterruptReason.TagTimeout, ct);
-                        return PreExecutionResult.Fail("Таймаут ожидания Block.Error");
-                    }
-                    coordinators.DialogCoordinator.CloseBlockErrorDialog();
-                    infra.Logger.LogInformation("SendAskRepeatAsync отправлен, повторяем шаг");
-                    errorScope.Clear();
-                    currentResult = await RetryStepAsync(step, context, stepId, ct);
+                    return iteration.Result;
                 }
-                else
-                {
-                    coordinators.DialogCoordinator.CloseBlockErrorDialog();
-                    infra.Logger.LogInformation("Не Retry, выходим из цикла с {Resolution}", resolution);
-                    return CreateExitResult(resolution, currentResult);
-                }
+                currentResult = iteration.Result;
             }
             return currentResult;
         }

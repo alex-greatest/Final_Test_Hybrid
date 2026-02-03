@@ -147,37 +147,11 @@ public partial class PreExecutionCoordinator
     {
         switch (reason)
         {
-            case CycleExitReason.TestCompleted:
-                state.BoilerState.SetTestRunning(false);
-                ClearForTestCompletion();
-                StartChangeoverTimerForImmediateReset();
-                break;
-
-            case CycleExitReason.SoftReset:
-                // Ничего - очистка произойдёт по AskEnd в HandleGridClear
-                HandleChangeoverAfterReset(GetChangeoverResetMode());
-                break;
-
-            case CycleExitReason.HardReset:
-            {
-                var changeoverMode = GetChangeoverResetMode();
-                ClearStateOnReset();
-                infra.StatusReporter.ClearAllExceptScan();
-                HandleChangeoverAfterReset(changeoverMode);
-                break;
-            }
-
-            case CycleExitReason.RepeatRequested:
-                ClearForRepeat();
-                _skipNextScan = true;
-                break;
-
-            case CycleExitReason.NokRepeatRequested:
-                ClearForNokRepeat();
-                _skipNextScan = true;
-                _executeFullPreparation = true;
-                break;
-
+            case CycleExitReason.TestCompleted: HandleTestCompletedExit(); break;
+            case CycleExitReason.SoftReset: HandleSoftResetExit(); break;
+            case CycleExitReason.HardReset: HandleHardResetExit(); break;
+            case CycleExitReason.RepeatRequested: HandleRepeatRequestedExit(); break;
+            case CycleExitReason.NokRepeatRequested: HandleNokRepeatRequestedExit(); break;
             case CycleExitReason.PipelineFailed:
             case CycleExitReason.PipelineCancelled:
                 // Ничего — состояние сохраняется для retry или следующей попытки

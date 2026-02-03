@@ -11,6 +11,16 @@ public partial class PreExecutionCoordinator
         return result;
     }
 
+    private void InitializeTestRunning()
+    {
+        ClearForNewTestStart();
+        AddAppVersionToResults();
+        infra.ErrorService.IsHistoryEnabled = true;
+        state.BoilerState.SetTestRunning(true);
+        state.BoilerState.StartTestTimer();
+        StopChangeoverAndAllowRestart();
+    }
+
     private void ReportBlockStepResult(Guid stepId, PreExecutionResult result)
     {
         switch (result.Status)

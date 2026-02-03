@@ -16,6 +16,7 @@ public partial class PreExecutionCoordinator
     private int _changeoverPendingSequence;
     private int _changeoverAskEndSequence;
     private int _changeoverReasonSaved;
+    private int _changeoverStartedSequence = -1;
 
     private enum ChangeoverResetMode
     {
@@ -155,6 +156,9 @@ public partial class PreExecutionCoordinator
 
     private void StartChangeoverTimerImmediate()
     {
+        // Запомнить seq для которого стартуем (защита от повторного запуска)
+        var currentSeq = GetResetSequenceSnapshot();
+        Volatile.Write(ref _changeoverStartedSequence, currentSeq);
         state.BoilerState.ResetAndStartChangeoverTimer();
     }
 
@@ -168,19 +172,32 @@ public partial class PreExecutionCoordinator
 
     private void HandleChangeoverAfterReset(ChangeoverResetMode mode)
     {
-        var resetSequence = GetResetSequenceSnapshot();
         switch (mode)
         {
-            case ChangeoverResetMode.WaitForReason:
-                ArmChangeoverPendingForReset(resetSequence, ChangeoverTriggerReasonSaved);
-                break;
-            case ChangeoverResetMode.WaitForAskEndOnly:
-                ArmChangeoverPendingForReset(resetSequence, ChangeoverTriggerAskEndOnly);
-                break;
-            default:
+            case ChangeoverResetMode.Immediate:
+                // Immediate всегда стартует - без guard!
                 StartChangeoverTimerForImmediateReset();
                 break;
+            case ChangeoverResetMode.WaitForReason:
+                TryArmChangeoverPending(ChangeoverTriggerReasonSaved);
+                break;
+            case ChangeoverResetMode.WaitForAskEndOnly:
+                TryArmChangeoverPending(ChangeoverTriggerAskEndOnly);
+                break;
         }
+    }
+
+    /// <summary>
+    /// Guard: не перезапускать pending для того же seq.
+    /// </summary>
+    private void TryArmChangeoverPending(int trigger)
+    {
+        var resetSequence = GetResetSequenceSnapshot();
+        if (resetSequence == Volatile.Read(ref _changeoverStartedSequence))
+        {
+            return;
+        }
+        ArmChangeoverPendingForReset(resetSequence, trigger);
     }
 
     private void StopChangeoverTimerForReset(ChangeoverResetMode mode)
@@ -189,6 +206,42 @@ public partial class PreExecutionCoordinator
         {
             return;
         }
+        StopChangeoverAndAllowRestart();
+    }
+
+    /// <summary>
+    /// Останавливает таймер и разрешает перезапуск (сбрасывает seq).
+    /// </summary>
+    private void StopChangeoverAndAllowRestart()
+    {
         state.BoilerState.StopChangeoverTimer();
+        Volatile.Write(ref _changeoverStartedSequence, -1);
+    }
+
+    /// <summary>
+    /// Для не-PLC reset отправляет синтетические сигналы changeover.
+    /// </summary>
+    private void TrySendSyntheticChangeoverSignals(ChangeoverResetMode mode)
+    {
+        switch (Volatile.Read(ref _lastHardResetOrigin))
+        {
+            case ResetOriginNonPlc:
+                SendSyntheticChangeoverSignals(mode);
+                break;
+        }
+    }
+
+    private void SendSyntheticChangeoverSignals(ChangeoverResetMode mode)
+    {
+        switch (mode)
+        {
+            case ChangeoverResetMode.WaitForReason:
+                MarkChangeoverReasonSaved();
+                RecordAskEndSequence();
+                break;
+            case ChangeoverResetMode.WaitForAskEndOnly:
+                RecordAskEndSequence();
+                break;
+        }
     }
 }

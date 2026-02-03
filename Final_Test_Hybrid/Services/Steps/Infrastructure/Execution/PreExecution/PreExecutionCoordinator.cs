@@ -40,6 +40,12 @@ public partial class PreExecutionCoordinator(
     private bool _executeFullPreparation;
     private PreExecutionContext? _lastSuccessfulContext;
 
+    // === Отслеживание источника reset ===
+    private const int ResetOriginNone = 0;
+    private const int ResetOriginPlc = 1;
+    private const int ResetOriginNonPlc = 2;
+    private int _lastHardResetOrigin;
+
     public bool IsAcceptingInput { get; private set; }
     public bool IsProcessing => !IsAcceptingInput && state.ActivityTracker.IsPreExecutionActive;
     public string? CurrentBarcode { get; private set; }
