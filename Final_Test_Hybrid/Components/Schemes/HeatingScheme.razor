@@ -4205,6 +4205,7 @@
     protected override async Task OnInitializedAsync()
     {
         Logger.LogInformation("HeatingScheme.OnInitializedAsync called");
+        // Подписка на xOut_Open для индикации
         await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_1_Purge, OnVp1_1Changed);
         await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_2_Purge, OnVp1_2Changed);
         await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_3_Fill, OnVp1_3Changed);
@@ -4281,8 +4282,11 @@
             return;
         }
 
-        var newValue = !(_valveStates.TryGetValue(valveId, out var current) && current);
-        await TagService.WriteAsync(nodeId, newValue);
+        var result = await TagService.ReadAsync<bool>(nodeId);
+        if (result.Success)
+        {
+            await TagService.WriteAsync(nodeId, !result.Value);
+        }
     }
 
     /// <summary>
@@ -4525,6 +4529,7 @@
     {
         _disposed = true;
 
+        // Отписка от xOut_Open
         await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp1_1_Purge, OnVp1_1Changed);
         await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp1_2_Purge, OnVp1_2Changed);
         await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp1_3_Fill, OnVp1_3Changed);

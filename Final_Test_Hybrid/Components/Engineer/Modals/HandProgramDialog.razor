@@ -2,25 +2,11 @@
 @using Final_Test_Hybrid.Components.Overview
 @using Final_Test_Hybrid.Services.OpcUa
 @using Final_Test_Hybrid.Services.OpcUa.Connection
-@using Final_Test_Hybrid.Services.OpcUa.Subscription
 @inject PlcSubscriptionState SubscriptionState
 @inject OpcUaConnectionState ConnectionState
-@inject OpcUaSubscription OpcUaSubscription
 @implements IDisposable
 
 <div class="hand-program-container">
-    @if (ShowDebugOverlay)
-    {
-        <div class="hand-program-debug">
-            <div class="hand-program-debug-title">HandProgramDialog debug</div>
-            <div>OPC Connected: @ConnectionState.IsConnected</div>
-            <div>PLC Init Completed: @SubscriptionState.IsCompleted</div>
-            <div>UA Subscription Created: @_opcUaSnapshot.HasInternalSubscription</div>
-            <div>Monitored Items: @_opcUaSnapshot.MonitoredItemsCount</div>
-            <div>Callbacks: @_opcUaSnapshot.NodeIdsWithCallbacksCount / @_opcUaSnapshot.TotalCallbacksCount</div>
-            <div>Last notif (UTC): @(_opcUaSnapshot.LastNotificationAtUtc?.ToString("HH:mm:ss.fff") ?? "—")</div>
-        </div>
-    }
     <div class="tabs-shell">
         <RadzenTabs RenderMode="TabRenderMode.Client" class="hand-program-tabs">
             <Tabs>
@@ -43,10 +29,10 @@
                     <InputsPanel2 />
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Выходы 1">
-                    <OutputsPanel1 />
+                    <OutputsPanel1 IsInteractive="true" />
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Пн. выходы">
-                    <PneumaticOutputsPanel />
+                    <PneumaticOutputsPanel IsInteractive="true" />
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Выходы 2">
                     <OutputsPanel2 />
@@ -61,56 +47,12 @@
 
 @code {
     private bool _disposed;
-    private OpcUaSubscriptionDebugSnapshot _opcUaSnapshot;
-
-    private static readonly bool ShowDebugOverlay =
-#if DEBUG
-        true;
-#else
-        false;
-#endif
-
-#if DEBUG
-    private CancellationTokenSource? _debugCts;
-#endif
 
     protected override void OnInitialized()
     {
         SubscriptionState.OnStateChanged += HandleStateChanged;
         ConnectionState.ConnectionStateChanged += HandleConnectionChanged;
-
-        if (ShowDebugOverlay)
-        {
-            _opcUaSnapshot = OpcUaSubscription.GetDebugSnapshot();
-        }
-
-#if DEBUG
-        if (ShowDebugOverlay)
-        {
-            _debugCts = new CancellationTokenSource();
-            _ = RunDebugLoopAsync(_debugCts.Token);
-        }
-#endif
     }
-
-#if DEBUG
-    private async Task RunDebugLoopAsync(CancellationToken ct)
-    {
-        try
-        {
-            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
-            while (await timer.WaitForNextTickAsync(ct))
-            {
-                _opcUaSnapshot = OpcUaSubscription.GetDebugSnapshot();
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // ignore
-        }
-    }
-#endif
 
     private void HandleStateChanged()
     {
@@ -133,10 +75,6 @@
     public void Dispose()
     {
         _disposed = true;
-#if DEBUG
-        _debugCts?.Cancel();
-        _debugCts?.Dispose();
-#endif
         SubscriptionState.OnStateChanged -= HandleStateChanged;
         ConnectionState.ConnectionStateChanged -= HandleConnectionChanged;
     }

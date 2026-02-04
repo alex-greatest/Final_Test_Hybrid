@@ -1,0 +1,35 @@
+.row-item {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.row-item.interactive {
+    cursor: pointer;
+}
+
+.row-item.interactive:hover .lamp-rect {
+    filter: brightness(1.2);
+}
+
+.row-item span {
+    font-size: 20px;
+    font-weight: 700;
+    color: black;
+    text-align: right;
+    line-height: 1.1;
+    margin-right: 8px;
+    white-space: nowrap;
+}
+
+.scada-lamp-square {
+    width: 35px;
+    height: 35px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.lamp-rect {
+    transition: fill 0.2s, stroke 0.2s, filter 0.15s;
+}

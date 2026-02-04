@@ -3087,6 +3087,7 @@
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
+        // Подписка на xOut_Open для индикации
         await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_1_Purge, OnVp2_1Changed);
         await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_2_Purge, OnVp2_2Changed);
         await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_3_HighPressure, OnVp2_3Changed);
@@ -3138,8 +3139,11 @@
             return;
         }
 
-        var newValue = !(_valveStates.TryGetValue(valveId, out var current) && current);
-        await TagService.WriteAsync(nodeId, newValue);
+        var result = await TagService.ReadAsync<bool>(nodeId);
+        if (result.Success)
+        {
+            await TagService.WriteAsync(nodeId, !result.Value);
+        }
     }
 
     private async Task OnDhwTusChanged(object? v)
@@ -3181,6 +3185,7 @@
     public async ValueTask DisposeAsync()
     {
         _disposed = true;
+        // Отписка от xOut_Open
         await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp2_1_Purge, OnVp2_1Changed);
         await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp2_2_Purge, OnVp2_2Changed);
         await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp2_3_HighPressure, OnVp2_3Changed);

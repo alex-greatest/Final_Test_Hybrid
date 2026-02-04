@@ -1,54 +1,27 @@
-﻿11:39:18 [INF] HeatingScheme.OnInitializedAsync called
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_1"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_2"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_3"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_4"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_5"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_6"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_7"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_8"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_9"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_10"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_11"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."CH"."VP1_12"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_Measure"."Sensor"."CH_PMR", total callbacks: 4
-11:39:18 [INF] AddCallback: ns=3;s="DB_Measure"."Temper"."CH_TMR", total callbacks: 4
-11:39:18 [INF] AddCallback: ns=3;s="DB_Measure"."Temper"."CH_TRR", total callbacks: 4
-11:39:18 [INF] AddCallback: ns=3;s="DB_Measure"."Sensor"."CH_FR", total callbacks: 4
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."DHW"."VP2_1"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."DHW"."VP2_2"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."DHW"."VP2_3"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."DHW"."VP2_4"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."DHW"."VP2_5"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."DHW"."VP2_6"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."DHW"."VP2_7"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_PneuValve"."DHW"."VP2_8"."HMI"."xOut_Open", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="DB_Measure"."Temper"."DHW_TUS", total callbacks: 4
-11:39:18 [INF] AddCallback: ns=3;s="DB_Measure"."Sensor"."DHW_PES", total callbacks: 4
-11:39:18 [INF] AddCallback: ns=3;s="DB_Measure"."Temper"."DHW_TES", total callbacks: 4
-11:39:18 [INF] AddCallback: ns=3;s="DB_Measure"."Sensor"."DHW_FS", total callbacks: 4
-11:39:18 [INF] AddCallback: ns=3;s="DB_ControlValve"."VPP3_1"."ActuelValue", total callbacks: 5
-11:39:18 [DBG] Settling delay 300ms перед активацией порта
-11:39:18 [INF] ModbusDispatcher запущен
-11:39:18 [INF] AddCallback: ns=3;s="PC_ON", total callbacks: 3
-11:39:18 [INF] AddCallback: ns=3;s="6K1_NOK", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="6K1_OK", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="6K2_NOK", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="6K2_OK", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="Plug_Ins", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="7K3_ON", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="Isometer_Alarm", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="FA_AlarmCondensat", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="FA_AlarmHeatLine", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="FA_AlarmGasCooler", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="FA_Trip", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="FA_NoReady", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="E14_1", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="FA_RangeO2", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="Adapter_Inserted", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="30SB4", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="E57_1", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="30SB5", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="30SB6", total callbacks: 2
-11:39:18 [INF] AddCallback: ns=3;s="30SA7_1", total callbacks: 2
-"3"
+﻿Управление вкл. – 51H1
+Автомат вкл. – 30Н6
+Тест выполняется – 51Н2
+Одиночный шаг – 32Н7
+EV0.3 подача газа в котел – DB_PneuValve.GAS.EV0_3.HMI.xOutOpen
+EV3.1 подача воздуха - DB_PneuValve.EV3_1.AirOn
+EV3.2 блокировка котла – DB_PneuValve.EV3_2.HMI.xOut_Work – выход на вкл. блокировки
+							       xSB_Work – кнопка заблокировать
+							       xEn_Work – разрешение заблокир.
+							       xPos_Work – котел заблокирован
+EV3.2 разблокировать котел – DB_PneuValve.EV3_2.HMI.xOut_Home – выход на разблокировку
+							       xSB_Home – кнопка разблокировать
+							       xEn_Home – разрешение разблокир.
+							       xPos_Home – котел разблокирован
+Pump 1.1 насос подачи воды - DB_PneuValve.CH.PUMP1_1.xOut_Open
+
+
+Для следующих выходов:
+Управление – взвести бит в структуре DB_HMI.Button.SB (только Set, reset в PLC)
+Состояние – бит в структуре DB_HMI.Button.Stat_SB
+
+Питание котла вкл. – 7K1_BoilerON
+Компаратор вкл. – 7K2_CompOn
+Токовые клещи вкл. – 7K3_CurTongsOn
+Заземление котла вкл. – 7К4_NeitralOn
+Переключатель вилка/адаптер – 7K5_SelShukoAdapter
+

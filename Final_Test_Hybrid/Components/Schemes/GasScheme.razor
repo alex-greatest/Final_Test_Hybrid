@@ -2608,7 +2608,7 @@
             d="M780.693,448.642c-7.189-10.056-14.665-21.077-13.592-32.979.943-10.468,8.409-19.529,16.586-27.057,21.579-19.866,50.308-33.403,80.811-38.075"
             style="fill: none; stroke: #1d1d1b; stroke-linecap: round; stroke-miterlimit: 10;"/>
         <rect x="802.155" y="630.33" width="15.502" height="60.489"
-              style="fill: @GetPipeGradient("EV0_3", "_Безымянный_градиент_45-32");"/>
+              style="fill: @GetPipeGradientForAny(new[]{"VP0_1","VP0_2","VP0_3"}, "_Безымянный_градиент_45-32");"/>
         <rect x="697.577" y="544.287" width="237" height="93"
               style="fill: #93d2e0; stroke: #93d2e0;"/>
         <rect x="770.495" y="563.271" width="94.631" height="29.017"
@@ -2926,7 +2926,7 @@
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
-        // Клапаны
+        // Клапаны (подписка на xOut_Open для индикации)
         await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_1_GasG20, OnVp01Changed);
         await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_2_GasG25, OnVp02Changed);
         await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_3_LpgG30, OnVp03Changed);
@@ -2977,8 +2977,11 @@
             return;
         }
 
-        var newValue = !(_valveStates.TryGetValue(valveId, out var current) && current);
-        await TagService.WriteAsync(nodeId, newValue);
+        var result = await TagService.ReadAsync<bool>(nodeId);
+        if (result.Success)
+        {
+            await TagService.WriteAsync(nodeId, !result.Value);
+        }
     }
 
     private async Task OnVpp31Changed(object? v) { if (_disposed) return; _vpp3_1Value = ToDouble(v); await InvokeAsync(StateHasChanged); }
@@ -3054,7 +3057,7 @@
     {
         _disposed = true;
 
-        // Клапаны
+        // Клапаны (отписка от xOut_Open)
         await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp0_1_GasG20, OnVp01Changed);
         await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp0_2_GasG25, OnVp02Changed);
         await Subscription.UnsubscribeAsync(PneumaticValveTags.Vp0_3_LpgG30, OnVp03Changed);

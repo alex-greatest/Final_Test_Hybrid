@@ -1,0 +1,124 @@
+@using Final_Test_Hybrid.Services.OpcUa
+@using Final_Test_Hybrid.Services.OpcUa.Subscription
+@using Microsoft.Extensions.Logging
+@inject OpcUaSubscription Subscription
+@inject OpcUaTagService TagService
+@inject ILogger<InteractiveLampOutput> Logger
+@implements IAsyncDisposable
+
+<div class="row-item @(IsInteractive ? "interactive" : "")" @onclick="@(IsInteractive ? OnClickAsync : null)">
+    <span>@Label</span>
+    <svg class="scada-lamp-square" viewBox="0 0 20 20">
+        <path d="M0,20 L0,0 L20,0 L18,2 L2,2 L2,18 Z" fill="#404040"/>
+        <path d="M20,0 L20,20 L0,20 L2,18 L18,18 L18,2 Z" fill="#ffffff"/>
+        <rect class="lamp-rect" x="2" y="2" width="16" height="16" stroke-width="1"
+              fill="@(_isOn ? "#00ff00" : "#606060")"
+              stroke="@(_isOn ? "#004d00" : "#333333")"/>
+    </svg>
+</div>
+
+@code {
+    /// <summary>
+    /// Отображаемая метка.
+    /// </summary>
+    [Parameter] public string Label { get; set; } = "";
+
+    /// <summary>
+    /// OPC-UA тег для чтения состояния.
+    /// </summary>
+    [Parameter] public string? StatusTag { get; set; }
+
+    /// <summary>
+    /// OPC-UA тег для записи управления.
+    /// Если null — режим toggle (запись в StatusTag).
+    /// Если указан — режим set (запись true в ControlTag).
+    /// </summary>
+    [Parameter] public string? ControlTag { get; set; }
+
+    /// <summary>
+    /// Разрешает клики по элементу (по умолчанию false — только просмотр).
+    /// </summary>
+    [Parameter] public bool IsInteractive { get; set; }
+
+    /// <summary>
+    /// Использовать toggle-режим для ControlTag (инверсия вместо set).
+    /// </summary>
+    [Parameter] public bool UseToggleMode { get; set; }
+
+    private bool _isOn;
+    private string? _subscribedTag;
+    private bool _disposed;
+
+    /// <inheritdoc />
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(StatusTag))
+        {
+            Logger.LogWarning("InteractiveLampOutput: StatusTag is empty for Label={Label}, skipping subscription", Label);
+            return;
+        }
+
+        _subscribedTag = StatusTag;
+        await Subscription.SubscribeAsync(_subscribedTag, OnValueChanged);
+    }
+
+    /// <summary>
+    /// Обработчик изменения значения тега.
+    /// </summary>
+    private async Task OnValueChanged(object? value)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _isOn = value is true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Обработчик клика.
+    /// </summary>
+    private async Task OnClickAsync()
+    {
+        if (ControlTag != null)
+        {
+            if (UseToggleMode)
+            {
+                // Toggle-режим: читаем текущее значение ControlTag и инвертируем
+                var result = await TagService.ReadAsync<bool>(ControlTag);
+                if (result.Success)
+                {
+                    await TagService.WriteAsync(ControlTag, !result.Value);
+                }
+            }
+            else
+            {
+                // Set-режим: пишем true в ControlTag
+                await TagService.WriteAsync(ControlTag, true);
+            }
+        }
+        else if (StatusTag != null)
+        {
+            // Toggle-режим без ControlTag: читаем текущее значение и инвертируем
+            var result = await TagService.ReadAsync<bool>(StatusTag);
+            if (result.Success)
+            {
+                await TagService.WriteAsync(StatusTag, !result.Value);
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+
+        if (string.IsNullOrEmpty(_subscribedTag))
+        {
+            return;
+        }
+
+        await Subscription.UnsubscribeAsync(_subscribedTag, OnValueChanged, removeTag: false, ct: CancellationToken.None);
+    }
+}

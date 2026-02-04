@@ -1,56 +1,10 @@
-﻿Отлично! Разобьём на этапы:
-
-  Этап 1: Базовая инфраструктура
-
-  - CompletionModels.cs — enum'ы и модели
-  - TestCompletionUiState.cs — состояние UI для картинки
-  - Регистрация в DI
-
-  Результат: Можно показывать/скрывать картинку (пока вручную)
-
-  ---
-  Этап 2: UI — картинка вместо грида
-
-  - Изменения в MyComponent.razor
-  - CSS стили
-  - Подписка на OnStateChanged
-
-  Результат: Картинка отображается когда ShowResultImage = true
-
-  ---
-  Этап 3: Основной координатор (без сохранения)
-
-  - TestCompletionCoordinator.cs — базовый класс
-  - TestCompletionCoordinator.Flow.cs — логика End/Req_Repeat
-  - Интеграция в PreExecutionCoordinator
-  - Новый CycleExitReason.RepeatRequested
-
-  Результат: OK повтор работает (без сохранения), картинка появляется/исчезает
-
-  ---
-  Этап 4: Заглушка сохранения
-
-  - ITestResultStorage.cs
-  - TestResultStorageStub.cs
-  - Диалог "Не удалось сохранить результаты"
-
-  Результат: Завершение с "сохранением" (заглушка)
-
-  ---
-  Этап 5: NOK повтор с подготовкой
-
-  - TestCompletionCoordinator.Repeat.cs
-  - ScanStepBase.ExecuteWithoutScanAsync()
-  - Диалог "Не удалось запустить тест"
-  - Интеграция с ReworkDialogService
-
-  Результат: Полный NOK flow с подготовкой
-
-  ---
-  Этап 6: Обработка сбросов
-
-  - Подписка на PlcResetCoordinator.OnForceStop
-  - Подписка на ErrorCoordinator.OnReset
-  - Закрытие диалогов при сбросе
-
-  Результат: Корректная отмена при сбросах PLC
+﻿	VP0_1	"ST_Pneu_Valve"			False	True	True	True	False		Подача газа G20
+	Pos_Close	Bool	false	FALSE	False	True	True	True	False		
+	Pos_Open	Bool	false	FALSE	False	True	True	True	False		
+	Req_Open	Bool	false	FALSE	False	True	True	True	False		Запрос перемещения открытия клапана
+	Req_Close	Bool	false	FALSE	False	True	True	True	False		Запрос перемещения закрытия клапана
+	En_Open	Bool	false	FALSE	False	True	True	True	False		Разрешение открытия клапана
+	HMI	"ST_Pneu_Valve_HMI"			False	True	True	True	False		
+	.///	Bool	false	TRUE	False	True	True	True	False		Open button HMI / Кнопка открыть HMI
+	xEn_Open	Bool	false	FALSE	False	True	True	True	False		Enable opening / Разрешение открытия
+	xOut_Open	Bool	false	FALSE	False	True	True	True	False		Opening output signal / Выход на открытие
