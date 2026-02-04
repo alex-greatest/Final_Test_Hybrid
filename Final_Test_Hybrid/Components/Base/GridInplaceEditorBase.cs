@@ -9,6 +9,13 @@ public abstract class GridInplaceEditorBase<TItem> : ComponentBase, IAsyncDispos
 {
     [Inject]
     protected IJSRuntime JsRuntime { get; set; } = null!;
+
+    /// <summary>
+    /// Отключает редактирование ячеек в таблице.
+    /// </summary>
+    [Parameter]
+    public bool IsReadOnly { get; set; } = true;
+
     protected RadzenDataGrid<TItem> Grid { get; set; } = null!;
     protected List<TItem> Items { get; set; } = [];
     private TItem? _itemToUpdate;
@@ -25,13 +32,15 @@ public abstract class GridInplaceEditorBase<TItem> : ComponentBase, IAsyncDispos
         }
     }
 
-    protected bool IsEditing(string propertyName)
-    {
-        return _editingColumn == propertyName;
-    }
+    protected bool IsEditing(string propertyName) => _editingColumn == propertyName;
 
     protected async Task OnCellClick(DataGridCellMouseEventArgs<TItem> args)
     {
+        if (IsReadOnly)
+        {
+            return;
+        }
+
         await SwitchEditMode(args.Data, args.Column.Property);
     }
 
@@ -53,6 +62,7 @@ public abstract class GridInplaceEditorBase<TItem> : ComponentBase, IAsyncDispos
         _editingColumn = property;
 
         await Grid.EditRow(item);
+        StateHasChanged();
     }
 
     private async Task CommitPreviousChanges()

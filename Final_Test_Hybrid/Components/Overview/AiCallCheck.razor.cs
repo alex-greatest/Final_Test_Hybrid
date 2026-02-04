@@ -28,6 +28,7 @@ public partial class AiCallCheck : GridInplaceEditorBase<AiCallCheck.AiCallCheck
     /// </summary>
     protected new async Task OnCellClick(DataGridCellMouseEventArgs<AiCallCheckItem> args)
     {
+        Logger.LogWarning("=== CLICK: IsReadOnly = {IsReadOnly} ===", IsReadOnly);
         await base.OnCellClick(args);
         _pendingEdits[args.Data] = args.Column.Property;
     }

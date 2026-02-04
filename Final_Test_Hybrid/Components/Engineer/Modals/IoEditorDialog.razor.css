@@ -1,0 +1,124 @@
+.io-editor-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 4px;
+}
+
+.tabs-shell,
+::deep .io-editor-tabs {
+    --app-tabs-bg: rgb(180, 180, 180);
+    --app-tabs-active-bg: rgb(106, 106, 106);
+
+    --rz-tabs-tab-selected-color: black;
+    --rz-tabs-tab-color: black;
+    --rz-tabs-tab-background-color: var(--app-tabs-bg);
+    --rz-tabs-background-color: var(--app-tabs-bg);
+    --rz-tabs-tab-hover-background-color: var(--app-tabs-bg);
+    --rz-tabs-tab-hover-color: white;
+    --rz-tabs-tab-selected-top-border-color: transparent;
+}
+
+.tabs-shell {
+    background: var(--app-tabs-bg);
+    padding: 4px;
+    border-radius: 4px;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    border-top: 2px solid #d0d0d0;
+    border-left: 2px solid #d0d0d0;
+    border-bottom: 2px solid #4a4a4a;
+    border-right: 2px solid #4a4a4a;
+}
+
+.tabs-shell *:focus,
+.tabs-shell *:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+::deep .io-editor-tabs {
+    height: 100%;
+}
+
+::deep .io-editor-tabs .rz-tabview-nav {
+    gap: 2px;
+}
+
+::deep .io-editor-tabs .rz-tabview-nav li {
+    margin-bottom: 0 !important;
+    border-bottom: 3px solid var(--app-tabs-bg) !important;
+    background-color: var(--app-tabs-bg) !important;
+}
+
+::deep .io-editor-tabs .rz-tabview-nav li.rz-tabview-selected {
+    border-bottom-color: black !important;
+    background-color: var(--app-tabs-active-bg) !important;
+}
+
+::deep .io-editor-tabs .rz-tabview-nav li .rz-tabview-nav-link {
+    background-color: transparent !important;
+    color: black !important;
+}
+
+::deep .io-editor-tabs .rz-tabview-nav li.rz-tabview-selected .rz-tabview-nav-link {
+    background-color: var(--app-tabs-active-bg) !important;
+    color: black !important;
+}
+
+::deep .io-editor-tabs .rz-tabview-panels {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: none;
+    border-top: 1px solid rgb(80, 77, 77);
+    padding: 0 !important;
+}
+
+::deep .io-editor-tabs .rz-tabview-panel {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 20px !important;
+}
+
+::deep .io-editor-tabs {
+    --rz-tabs-tab-padding-block: 5px;
+    --rz-tabs-tab-padding-inline: 24px;
+}
+
+::deep .io-editor-tabs .rz-tabview-title {
+    font-size: 22px;
+}
+
+/* Стили для RadzenDataGrid - унификация с Overview компонентами (16px) */
+::deep .rz-data-grid {
+    font-size: 16px;
+}
+
+::deep .rz-data-grid .rz-cell-data {
+    font-size: 16px;
+}
+
+::deep .rz-data-grid .rz-column-title,
+::deep .rz-data-grid .rz-column-title-content {
+    font-size: 16px;
+}
+
+::deep .rz-data-grid .rz-textbox,
+::deep .rz-data-grid .rz-textbox input {
+    font-size: 16px;
+}
+
+::deep .rz-data-grid .rz-dropdown,
+::deep .rz-data-grid .rz-dropdown-label {
+    font-size: 16px;
+}
+
+::deep .rz-numeric input {
+    font-size: 16px;
+}

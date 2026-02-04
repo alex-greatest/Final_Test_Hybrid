@@ -28,6 +28,7 @@ public partial class RtdCalCheck : GridInplaceEditorBase<RtdCalCheck.RtdCalCheck
     /// </summary>
     protected new async Task OnCellClick(DataGridCellMouseEventArgs<RtdCalCheckItem> args)
     {
+        Logger.LogWarning("=== CLICK: IsReadOnly = {IsReadOnly} ===", IsReadOnly);
         await base.OnCellClick(args);
         _pendingEdits[args.Data] = args.Column.Property;
     }
