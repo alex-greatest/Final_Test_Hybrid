@@ -5,6 +5,43 @@
     padding: 4px;
 }
 
+.tab-toolbar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+}
+
+.toolbar-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+/* Кнопки в toolbar */
+.toolbar-buttons ::deep .rz-button {
+    font-size: 20px;
+    padding: 12px 24px;
+}
+
+.cell-modified {
+    background-color: #fff3cd;
+    padding: 4px 8px;
+    border-radius: 3px;
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    height: 200px;
+    color: #333;
+}
+
 .tabs-shell,
 ::deep .io-editor-tabs {
     --app-tabs-bg: rgb(180, 180, 180);
