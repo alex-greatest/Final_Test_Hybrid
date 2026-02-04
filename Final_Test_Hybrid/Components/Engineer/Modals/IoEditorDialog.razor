@@ -2,10 +2,6 @@
 @using Final_Test_Hybrid.Models.Plc.Tags
 @using Final_Test_Hybrid.Services.OpcUa
 @using Final_Test_Hybrid.Services.OpcUa.Connection
-@inherits Final_Test_Hybrid.Components.Base.GridInplaceEditorBase<IoEditorDialog.AiCalibrationItem>
-@inject PlcSubscriptionState SubscriptionState
-@inject OpcUaConnectionState ConnectionState
-@inject OpcUaTagService TagService
 
 <div class="io-editor-container">
     <div class="tabs-shell">
@@ -15,10 +11,10 @@
                     <div class="tab-toolbar">
                         <div class="toolbar-buttons">
                             <RadzenButton Text="Сохранить" Icon="save"
-                                          Click="@SaveAsync" Disabled="@(!HasUnsavedChanges)"
+                                          Click="@SaveAiAsync" Disabled="@(!HasAiUnsavedChanges)"
                                           ButtonStyle="ButtonStyle.Primary" />
                             <RadzenButton Text="Сброс" Icon="undo"
-                                          Click="@ResetChanges" Disabled="@(!HasUnsavedChanges)"
+                                          Click="@ResetAiChanges" Disabled="@(!HasAiUnsavedChanges)"
                                           ButtonStyle="ButtonStyle.Light" />
                         </div>
                     </div>
@@ -32,354 +28,369 @@
                     }
                     else
                     {
-                        <div id="@ContainerId">
-                            <RadzenDataGrid @ref="Grid" Data="@_aiItems" TItem="AiCalibrationItem"
-                                            EditMode="DataGridEditMode.Single"
-                                            CellClick="@OnCellClick"
-                                            RowUpdate="@OnUpdateRow"
-                                            ColumnWidth="120px">
-                                <Columns>
-                                    <RadzenDataGridColumn TItem="AiCalibrationItem" Property="SensorName" Title="Датчик" Width="130px">
-                                        <Template Context="item">
-                                            @item.SensorName
-                                        </Template>
-                                    </RadzenDataGridColumn>
-                                    <RadzenDataGridColumn TItem="AiCalibrationItem" Property="Description" Title="Описание" Width="220px">
-                                        <Template Context="item">
-                                            @item.Description
-                                        </Template>
-                                    </RadzenDataGridColumn>
-                                    <RadzenDataGridColumn TItem="AiCalibrationItem" Property="Min" Title="Мин" Width="110px">
-                                        <Template Context="item">
-                                            <span class="@(IsMinChanged(item) ? "cell-modified" : "")">
+                        <RadzenDataGrid @ref="_aiGrid" Data="@_aiItems" TItem="AiCalibrationItem"
+                                        EditMode="DataGridEditMode.Single"
+                                        CellClick="@OnAiCellClick"
+                                        RowUpdate="@OnAiUpdateRow"
+                                        ColumnWidth="120px">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="AiCalibrationItem" Property="SensorName" Title="Датчик" Width="130px">
+                                    <Template Context="item">
+                                        @item.SensorName
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="AiCalibrationItem" Property="Description" Title="Описание" Width="220px">
+                                    <Template Context="item">
+                                        @item.Description
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="AiCalibrationItem" Property="Min" Title="Мин" Width="110px">
+                                    <Template Context="item">
+                                        <span class="@(IsAiMinChanged(item) ? "cell-modified" : "")">
+                                            @item.Min.ToString("F2")
+                                        </span>
+                                    </Template>
+                                    <EditTemplate Context="item">
+                                        @if (IsAiEditing(nameof(item.Min)))
+                                        {
+                                            <RadzenNumeric TValue="double" @bind-Value="item.Min" class="w-full" />
+                                        }
+                                        else
+                                        {
+                                            <span class="@(IsAiMinChanged(item) ? "cell-modified" : "")">
                                                 @item.Min.ToString("F2")
                                             </span>
-                                        </Template>
-                                        <EditTemplate Context="item">
-                                            @if (IsEditing(nameof(item.Min)))
-                                            {
-                                                <RadzenNumeric TValue="double" @bind-Value="item.Min" class="w-full" />
-                                            }
-                                            else
-                                            {
-                                                <span class="@(IsMinChanged(item) ? "cell-modified" : "")">
-                                                    @item.Min.ToString("F2")
-                                                </span>
-                                            }
-                                        </EditTemplate>
-                                    </RadzenDataGridColumn>
-                                    <RadzenDataGridColumn TItem="AiCalibrationItem" Property="Max" Title="Макс" Width="110px">
-                                        <Template Context="item">
-                                            <span class="@(IsMaxChanged(item) ? "cell-modified" : "")">
+                                        }
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="AiCalibrationItem" Property="Max" Title="Макс" Width="110px">
+                                    <Template Context="item">
+                                        <span class="@(IsAiMaxChanged(item) ? "cell-modified" : "")">
+                                            @item.Max.ToString("F2")
+                                        </span>
+                                    </Template>
+                                    <EditTemplate Context="item">
+                                        @if (IsAiEditing(nameof(item.Max)))
+                                        {
+                                            <RadzenNumeric TValue="double" @bind-Value="item.Max" class="w-full" />
+                                        }
+                                        else
+                                        {
+                                            <span class="@(IsAiMaxChanged(item) ? "cell-modified" : "")">
                                                 @item.Max.ToString("F2")
                                             </span>
-                                        </Template>
-                                        <EditTemplate Context="item">
-                                            @if (IsEditing(nameof(item.Max)))
-                                            {
-                                                <RadzenNumeric TValue="double" @bind-Value="item.Max" class="w-full" />
-                                            }
-                                            else
-                                            {
-                                                <span class="@(IsMaxChanged(item) ? "cell-modified" : "")">
-                                                    @item.Max.ToString("F2")
-                                                </span>
-                                            }
-                                        </EditTemplate>
-                                    </RadzenDataGridColumn>
-                                    <RadzenDataGridColumn TItem="AiCalibrationItem" Property="Multiplier" Title="Множитель" Width="110px">
-                                        <Template Context="item">
-                                            <span class="@(IsMultiplierChanged(item) ? "cell-modified" : "")">
+                                        }
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="AiCalibrationItem" Property="Multiplier" Title="Множитель" Width="110px">
+                                    <Template Context="item">
+                                        <span class="@(IsAiMultiplierChanged(item) ? "cell-modified" : "")">
+                                            @item.Multiplier.ToString("F2")
+                                        </span>
+                                    </Template>
+                                    <EditTemplate Context="item">
+                                        @if (IsAiEditing(nameof(item.Multiplier)))
+                                        {
+                                            <RadzenNumeric TValue="double" @bind-Value="item.Multiplier" class="w-full" />
+                                        }
+                                        else
+                                        {
+                                            <span class="@(IsAiMultiplierChanged(item) ? "cell-modified" : "")">
                                                 @item.Multiplier.ToString("F2")
                                             </span>
-                                        </Template>
-                                        <EditTemplate Context="item">
-                                            @if (IsEditing(nameof(item.Multiplier)))
-                                            {
-                                                <RadzenNumeric TValue="double" @bind-Value="item.Multiplier" class="w-full" />
-                                            }
-                                            else
-                                            {
-                                                <span class="@(IsMultiplierChanged(item) ? "cell-modified" : "")">
-                                                    @item.Multiplier.ToString("F2")
-                                                </span>
-                                            }
-                                        </EditTemplate>
-                                    </RadzenDataGridColumn>
-                                    <RadzenDataGridColumn TItem="AiCalibrationItem" Property="Offset" Title="Смещение" Width="110px">
-                                        <Template Context="item">
-                                            <span class="@(IsOffsetChanged(item) ? "cell-modified" : "")">
+                                        }
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="AiCalibrationItem" Property="Offset" Title="Смещение" Width="110px">
+                                    <Template Context="item">
+                                        <span class="@(IsAiOffsetChanged(item) ? "cell-modified" : "")">
+                                            @item.Offset.ToString("F2")
+                                        </span>
+                                    </Template>
+                                    <EditTemplate Context="item">
+                                        @if (IsAiEditing(nameof(item.Offset)))
+                                        {
+                                            <RadzenNumeric TValue="double" @bind-Value="item.Offset" class="w-full" />
+                                        }
+                                        else
+                                        {
+                                            <span class="@(IsAiOffsetChanged(item) ? "cell-modified" : "")">
                                                 @item.Offset.ToString("F2")
                                             </span>
-                                        </Template>
-                                        <EditTemplate Context="item">
-                                            @if (IsEditing(nameof(item.Offset)))
-                                            {
-                                                <RadzenNumeric TValue="double" @bind-Value="item.Offset" class="w-full" />
-                                            }
-                                            else
-                                            {
-                                                <span class="@(IsOffsetChanged(item) ? "cell-modified" : "")">
-                                                    @item.Offset.ToString("F2")
-                                                </span>
-                                            }
-                                        </EditTemplate>
-                                    </RadzenDataGridColumn>
-                                </Columns>
-                            </RadzenDataGrid>
-                        </div>
+                                        }
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
                     }
                 </RadzenTabsItem>
 
                 <RadzenTabsItem Text="RTD Calibration">
-                    <RtdCalCheck IsReadOnly="true" />
+                    <div class="tab-toolbar">
+                        <div class="toolbar-buttons">
+                            <RadzenButton Text="Сохранить" Icon="save"
+                                          Click="@SaveRtdAsync" Disabled="@(!HasRtdUnsavedChanges)"
+                                          ButtonStyle="ButtonStyle.Primary" />
+                            <RadzenButton Text="Сброс" Icon="undo"
+                                          Click="@ResetRtdChanges" Disabled="@(!HasRtdUnsavedChanges)"
+                                          ButtonStyle="ButtonStyle.Light" />
+                        </div>
+                    </div>
+
+                    @if (_isLoading)
+                    {
+                        <div class="loading-container">
+                            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                            <span>Загрузка данных...</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <RadzenDataGrid @ref="_rtdGrid" Data="@_rtdItems" TItem="RtdCalibrationItem"
+                                        EditMode="DataGridEditMode.Single"
+                                        CellClick="@OnRtdCellClick"
+                                        RowUpdate="@OnRtdUpdateRow"
+                                        ColumnWidth="120px">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="RtdCalibrationItem" Property="PlcTag" Title="PLC Tag" Width="150px">
+                                    <Template Context="item">
+                                        @item.PlcTag
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="RtdCalibrationItem" Property="Type" Title="Type" Width="180px">
+                                    <Template Context="item">
+                                        @item.Type
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="RtdCalibrationItem" Property="Raw" Title="Raw" Width="120px">
+                                    <Template Context="item">
+                                        @item.Raw.ToString("F3")
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="RtdCalibrationItem" Property="Multiplier" Title="Multiplier" Width="120px">
+                                    <Template Context="item">
+                                        <span class="@(IsRtdMultiplierChanged(item) ? "cell-modified" : "")">
+                                            @item.Multiplier.ToString("F3")
+                                        </span>
+                                    </Template>
+                                    <EditTemplate Context="item">
+                                        @if (IsRtdEditing(nameof(item.Multiplier)))
+                                        {
+                                            <RadzenNumeric TValue="double" @bind-Value="item.Multiplier" class="w-full" />
+                                        }
+                                        else
+                                        {
+                                            <span class="@(IsRtdMultiplierChanged(item) ? "cell-modified" : "")">
+                                                @item.Multiplier.ToString("F3")
+                                            </span>
+                                        }
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="RtdCalibrationItem" Property="Offset" Title="Offset" Width="120px">
+                                    <Template Context="item">
+                                        <span class="@(IsRtdOffsetChanged(item) ? "cell-modified" : "")">
+                                            @item.Offset.ToString("F3")
+                                        </span>
+                                    </Template>
+                                    <EditTemplate Context="item">
+                                        @if (IsRtdEditing(nameof(item.Offset)))
+                                        {
+                                            <RadzenNumeric TValue="double" @bind-Value="item.Offset" class="w-full" />
+                                        }
+                                        else
+                                        {
+                                            <span class="@(IsRtdOffsetChanged(item) ? "cell-modified" : "")">
+                                                @item.Offset.ToString("F3")
+                                            </span>
+                                        }
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="RtdCalibrationItem" Property="Calculated" Title="Calculated" Width="120px">
+                                    <Template Context="item">
+                                        @item.Calculated.ToString("F3")
+                                    </Template>
+                                </RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
+                    }
                 </RadzenTabsItem>
 
                 <RadzenTabsItem Text="PID Regulator">
-                    <PidRegulatorCheck IsReadOnly="true" />
+                    <div class="tab-toolbar">
+                        <div class="toolbar-buttons">
+                            <RadzenButton Text="Сохранить" Icon="save"
+                                          Click="@SavePidAsync" Disabled="@(!HasPidUnsavedChanges)"
+                                          ButtonStyle="ButtonStyle.Primary" />
+                            <RadzenButton Text="Сброс" Icon="undo"
+                                          Click="@ResetPidChanges" Disabled="@(!HasPidUnsavedChanges)"
+                                          ButtonStyle="ButtonStyle.Light" />
+                        </div>
+                    </div>
+
+                    @if (_isLoading)
+                    {
+                        <div class="loading-container">
+                            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                            <span>Загрузка данных...</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <RadzenDataGrid @ref="_pidGrid" Data="@_pidItems" TItem="PidRegulatorItem"
+                                        EditMode="DataGridEditMode.Single"
+                                        CellClick="@OnPidCellClick"
+                                        RowUpdate="@OnPidUpdateRow"
+                                        ColumnWidth="100px">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="PidRegulatorItem" Property="PlcTag" Title="PLC Tag" Width="120px">
+                                    <Template Context="item">
+                                        @item.PlcTag
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Type" Title="Type" Width="120px">
+                                    <Template Context="item">
+                                        @item.Type
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="PidRegulatorItem" Property="SetPoint" Title="SetPoint" Width="100px">
+                                    <Template Context="item">
+                                        @item.SetPoint.ToString("F3")
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="PidRegulatorItem" Property="ActuelValue" Title="ActuelValue" Width="100px">
+                                    <Template Context="item">
+                                        @item.ActuelValue.ToString("F3")
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="PidRegulatorItem" Property="ManualValue" Title="ManualValue" Width="100px">
+                                    <Template Context="item">
+                                        @item.ManualValue.ToString("F3")
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="PidRegulatorItem" Property="ActuelloutValue" Title="ActuelloutValue" Width="100px">
+                                    <Template Context="item">
+                                        @item.ActuelloutValue.ToString("F3")
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Gain1" Title="Gain1" Width="100px">
+                                    <Template Context="item">
+                                        <span class="@(IsPidGain1Changed(item) ? "cell-modified" : "")">
+                                            @item.Gain1.ToString("F3")
+                                        </span>
+                                    </Template>
+                                    <EditTemplate Context="item">
+                                        @if (IsPidEditing(nameof(item.Gain1)))
+                                        {
+                                            <RadzenNumeric TValue="double" @bind-Value="item.Gain1" class="w-full" />
+                                        }
+                                        else
+                                        {
+                                            <span class="@(IsPidGain1Changed(item) ? "cell-modified" : "")">
+                                                @item.Gain1.ToString("F3")
+                                            </span>
+                                        }
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Ti1" Title="Ti1" Width="100px">
+                                    <Template Context="item">
+                                        <span class="@(IsPidTi1Changed(item) ? "cell-modified" : "")">
+                                            @item.Ti1.ToString("F3")
+                                        </span>
+                                    </Template>
+                                    <EditTemplate Context="item">
+                                        @if (IsPidEditing(nameof(item.Ti1)))
+                                        {
+                                            <RadzenNumeric TValue="double" @bind-Value="item.Ti1" class="w-full" />
+                                        }
+                                        else
+                                        {
+                                            <span class="@(IsPidTi1Changed(item) ? "cell-modified" : "")">
+                                                @item.Ti1.ToString("F3")
+                                            </span>
+                                        }
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Td1" Title="Td1" Width="100px">
+                                    <Template Context="item">
+                                        <span class="@(IsPidTd1Changed(item) ? "cell-modified" : "")">
+                                            @item.Td1.ToString("F3")
+                                        </span>
+                                    </Template>
+                                    <EditTemplate Context="item">
+                                        @if (IsPidEditing(nameof(item.Td1)))
+                                        {
+                                            <RadzenNumeric TValue="double" @bind-Value="item.Td1" class="w-full" />
+                                        }
+                                        else
+                                        {
+                                            <span class="@(IsPidTd1Changed(item) ? "cell-modified" : "")">
+                                                @item.Td1.ToString("F3")
+                                            </span>
+                                        }
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Gain2" Title="Gain2" Width="100px">
+                                    <Template Context="item">
+                                        <span class="@(IsPidGain2Changed(item) ? "cell-modified" : "")">
+                                            @item.Gain2.ToString("F3")
+                                        </span>
+                                    </Template>
+                                    <EditTemplate Context="item">
+                                        @if (IsPidEditing(nameof(item.Gain2)))
+                                        {
+                                            <RadzenNumeric TValue="double" @bind-Value="item.Gain2" class="w-full" />
+                                        }
+                                        else
+                                        {
+                                            <span class="@(IsPidGain2Changed(item) ? "cell-modified" : "")">
+                                                @item.Gain2.ToString("F3")
+                                            </span>
+                                        }
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Ti2" Title="Ti2" Width="100px">
+                                    <Template Context="item">
+                                        <span class="@(IsPidTi2Changed(item) ? "cell-modified" : "")">
+                                            @item.Ti2.ToString("F3")
+                                        </span>
+                                    </Template>
+                                    <EditTemplate Context="item">
+                                        @if (IsPidEditing(nameof(item.Ti2)))
+                                        {
+                                            <RadzenNumeric TValue="double" @bind-Value="item.Ti2" class="w-full" />
+                                        }
+                                        else
+                                        {
+                                            <span class="@(IsPidTi2Changed(item) ? "cell-modified" : "")">
+                                                @item.Ti2.ToString("F3")
+                                            </span>
+                                        }
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Td2" Title="Td2" Width="100px">
+                                    <Template Context="item">
+                                        <span class="@(IsPidTd2Changed(item) ? "cell-modified" : "")">
+                                            @item.Td2.ToString("F3")
+                                        </span>
+                                    </Template>
+                                    <EditTemplate Context="item">
+                                        @if (IsPidEditing(nameof(item.Td2)))
+                                        {
+                                            <RadzenNumeric TValue="double" @bind-Value="item.Td2" class="w-full" />
+                                        }
+                                        else
+                                        {
+                                            <span class="@(IsPidTd2Changed(item) ? "cell-modified" : "")">
+                                                @item.Td2.ToString("F3")
+                                            </span>
+                                        }
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
+                    }
                 </RadzenTabsItem>
             </Tabs>
         </RadzenTabs>
     </div>
 </div>
-
-@code {
-    private List<AiCalibrationItem> _aiItems = [];
-    private List<AiCalibrationItem> _aiSnapshot = [];
-    private bool _isLoading = true;
-    private bool _disposed;
-
-    /// <summary>
-    /// Инициализирует компонент: подписывается на события и загружает данные.
-    /// </summary>
-    protected override async Task OnInitializedAsync()
-    {
-        IsReadOnly = false;
-
-        SubscriptionState.OnStateChanged += HandleStateChanged;
-        ConnectionState.ConnectionStateChanged += HandleConnectionChanged;
-
-        await LoadAiDataAsync();
-        CreateSnapshot();
-        _isLoading = false;
-    }
-
-    /// <summary>
-    /// Загружает данные AI Calibration из OPC.
-    /// </summary>
-    private async Task LoadAiDataAsync()
-    {
-        _aiItems = [];
-
-        foreach (var sensor in AiCallCheckTags.Sensors)
-        {
-            var min = await TagService.ReadAsync<float>(
-                AiCallCheckTags.BuildNodeId(sensor.Name, AiCallCheckTags.Fields.LimMin));
-            var max = await TagService.ReadAsync<float>(
-                AiCallCheckTags.BuildNodeId(sensor.Name, AiCallCheckTags.Fields.LimMax));
-            var mult = await TagService.ReadAsync<float>(
-                AiCallCheckTags.BuildNodeId(sensor.Name, AiCallCheckTags.Fields.Gain));
-            var offset = await TagService.ReadAsync<float>(
-                AiCallCheckTags.BuildNodeId(sensor.Name, AiCallCheckTags.Fields.Offset));
-
-            _aiItems.Add(new AiCalibrationItem
-            {
-                SensorName = sensor.Name,
-                Description = sensor.Description,
-                Min = min.Value,
-                Max = max.Value,
-                Multiplier = mult.Value,
-                Offset = offset.Value
-            });
-        }
-    }
-
-    /// <summary>
-    /// Создаёт снимок текущих значений для отслеживания изменений.
-    /// </summary>
-    private void CreateSnapshot()
-    {
-        _aiSnapshot = _aiItems.Select(item => new AiCalibrationItem
-        {
-            SensorName = item.SensorName,
-            Description = item.Description,
-            Min = item.Min,
-            Max = item.Max,
-            Multiplier = item.Multiplier,
-            Offset = item.Offset
-        }).ToList();
-    }
-
-    /// <summary>
-    /// Проверяет, изменилось ли значение Min для элемента.
-    /// </summary>
-    private bool IsMinChanged(AiCalibrationItem item)
-    {
-        var index = _aiItems.IndexOf(item);
-        if (index < 0 || index >= _aiSnapshot.Count)
-        {
-            return false;
-        }
-        return Math.Abs(item.Min - _aiSnapshot[index].Min) > 0.0001;
-    }
-
-    /// <summary>
-    /// Проверяет, изменилось ли значение Max для элемента.
-    /// </summary>
-    private bool IsMaxChanged(AiCalibrationItem item)
-    {
-        var index = _aiItems.IndexOf(item);
-        if (index < 0 || index >= _aiSnapshot.Count)
-        {
-            return false;
-        }
-        return Math.Abs(item.Max - _aiSnapshot[index].Max) > 0.0001;
-    }
-
-    /// <summary>
-    /// Проверяет, изменилось ли значение Multiplier для элемента.
-    /// </summary>
-    private bool IsMultiplierChanged(AiCalibrationItem item)
-    {
-        var index = _aiItems.IndexOf(item);
-        if (index < 0 || index >= _aiSnapshot.Count)
-        {
-            return false;
-        }
-        return Math.Abs(item.Multiplier - _aiSnapshot[index].Multiplier) > 0.0001;
-    }
-
-    /// <summary>
-    /// Проверяет, изменилось ли значение Offset для элемента.
-    /// </summary>
-    private bool IsOffsetChanged(AiCalibrationItem item)
-    {
-        var index = _aiItems.IndexOf(item);
-        if (index < 0 || index >= _aiSnapshot.Count)
-        {
-            return false;
-        }
-        return Math.Abs(item.Offset - _aiSnapshot[index].Offset) > 0.0001;
-    }
-
-    /// <summary>
-    /// Проверяет наличие несохранённых изменений.
-    /// </summary>
-    private bool HasUnsavedChanges
-    {
-        get
-        {
-            if (_aiItems.Count != _aiSnapshot.Count)
-            {
-                return false;
-            }
-
-            for (var i = 0; i < _aiItems.Count; i++)
-            {
-                var item = _aiItems[i];
-                var snapshot = _aiSnapshot[i];
-                if (Math.Abs(item.Min - snapshot.Min) > 0.0001 ||
-                    Math.Abs(item.Max - snapshot.Max) > 0.0001 ||
-                    Math.Abs(item.Multiplier - snapshot.Multiplier) > 0.0001 ||
-                    Math.Abs(item.Offset - snapshot.Offset) > 0.0001)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Сохраняет изменения в OPC.
-    /// </summary>
-    private async Task SaveAsync()
-    {
-        for (var i = 0; i < _aiItems.Count; i++)
-        {
-            var item = _aiItems[i];
-            var snapshot = _aiSnapshot[i];
-
-            if (Math.Abs(item.Min - snapshot.Min) > 0.0001)
-            {
-                await TagService.WriteAsync(
-                    AiCallCheckTags.BuildNodeId(item.SensorName, AiCallCheckTags.Fields.LimMin), (float)item.Min);
-            }
-
-            if (Math.Abs(item.Max - snapshot.Max) > 0.0001)
-            {
-                await TagService.WriteAsync(
-                    AiCallCheckTags.BuildNodeId(item.SensorName, AiCallCheckTags.Fields.LimMax), (float)item.Max);
-            }
-
-            if (Math.Abs(item.Multiplier - snapshot.Multiplier) > 0.0001)
-            {
-                await TagService.WriteAsync(
-                    AiCallCheckTags.BuildNodeId(item.SensorName, AiCallCheckTags.Fields.Gain), (float)item.Multiplier);
-            }
-
-            if (Math.Abs(item.Offset - snapshot.Offset) > 0.0001)
-            {
-                await TagService.WriteAsync(
-                    AiCallCheckTags.BuildNodeId(item.SensorName, AiCallCheckTags.Fields.Offset), (float)item.Offset);
-            }
-        }
-
-        CreateSnapshot();
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// Сбрасывает изменения к исходным значениям.
-    /// </summary>
-    private void ResetChanges()
-    {
-        for (var i = 0; i < _aiItems.Count; i++)
-        {
-            _aiItems[i].Min = _aiSnapshot[i].Min;
-            _aiItems[i].Max = _aiSnapshot[i].Max;
-            _aiItems[i].Multiplier = _aiSnapshot[i].Multiplier;
-            _aiItems[i].Offset = _aiSnapshot[i].Offset;
-        }
-        StateHasChanged();
-    }
-
-    private void HandleStateChanged()
-    {
-        if (_disposed)
-        {
-            return;
-        }
-        _ = InvokeAsync(StateHasChanged);
-    }
-
-    private void HandleConnectionChanged(bool isConnected)
-    {
-        if (_disposed)
-        {
-            return;
-        }
-        _ = InvokeAsync(StateHasChanged);
-    }
-
-    /// <summary>
-    /// Освобождает ресурсы компонента.
-    /// </summary>
-    public override async ValueTask DisposeAsync()
-    {
-        _disposed = true;
-        SubscriptionState.OnStateChanged -= HandleStateChanged;
-        ConnectionState.ConnectionStateChanged -= HandleConnectionChanged;
-        await base.DisposeAsync();
-    }
-
-    public class AiCalibrationItem
-    {
-        public string SensorName { get; set; } = "";
-        public string Description { get; set; } = "";
-        public double Min { get; set; }
-        public double Max { get; set; }
-        public double Multiplier { get; set; }
-        public double Offset { get; set; }
-    }
-}
