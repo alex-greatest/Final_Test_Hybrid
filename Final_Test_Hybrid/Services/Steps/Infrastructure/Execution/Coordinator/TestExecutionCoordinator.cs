@@ -39,6 +39,8 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly Action _onExecutorStateChanged;
     private List<TestMap> _maps = [];
     private CancellationTokenSource? _cts;
+    private ExecutionStopReason _latchedStopReason = ExecutionStopReason.None;
+    private bool _latchedStopAsFailure;
     private int _activeMapIndex = -1;
     private Guid _activeMapRunId = Guid.Empty;
     public event Action? OnStateChanged;

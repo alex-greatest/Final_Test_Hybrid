@@ -1,5 +1,6 @@
-using Final_Test_Hybrid.Models.Steps;
+﻿using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
+using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 
@@ -10,8 +11,23 @@ public partial class TestExecutionCoordinator
     /// </summary>
     private void HandleExecutorStateChanged()
     {
-        OnStateChanged?.Invoke();
+        TryPublishEvent(new ExecutionEvent(ExecutionEventKind.StateChanged));
         EnqueueFailedExecutors();
+    }
+
+    /// <summary>
+    /// Безопасно вызывает событие OnStateChanged.
+    /// </summary>
+    private void InvokeStateChangedSafely()
+    {
+        try
+        {
+            OnStateChanged?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Ошибка в обработчике OnStateChanged");
+        }
     }
 
     /// <summary>
@@ -35,7 +51,7 @@ public partial class TestExecutionCoordinator
             }
             if (!hadErrors && StateManager.HasPendingErrors)
             {
-                SignalErrorDetected();
+                QueueErrorDetected();
             }
         }
     }
@@ -57,4 +73,3 @@ public partial class TestExecutionCoordinator
             CanSkip: executor.CanSkip);
     }
 }
-

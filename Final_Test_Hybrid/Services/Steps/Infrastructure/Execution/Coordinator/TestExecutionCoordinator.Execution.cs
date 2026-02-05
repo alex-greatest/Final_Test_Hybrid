@@ -1,6 +1,5 @@
 using Final_Test_Hybrid.Models.Steps;
 using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 
@@ -15,7 +14,7 @@ public partial class TestExecutionCoordinator
         {
             return;
         }
-        await RunWithErrorHandlingAsync();
+        await RunEventLoopAsync();
     }
 
     /// <summary>
@@ -27,17 +26,8 @@ public partial class TestExecutionCoordinator
         {
             return false;
         }
-        _ = RunWithErrorHandlingAsync();
+        _ = RunEventLoopAsync();
         return true;
-    }
-
-    /// <summary>
-    /// Логирует необработанное исключение.
-    /// </summary>
-    private void LogUnhandledException(Exception ex)
-    {
-        _logger.LogError(ex, "Необработанная ошибка в TestExecutionCoordinator");
-        _testLogger.LogError(ex, "Критическая ошибка выполнения тестов");
     }
 
     /// <summary>
@@ -61,18 +51,7 @@ public partial class TestExecutionCoordinator
     /// </summary>
     private async Task RunWithErrorHandlingAsync()
     {
-        try
-        {
-            await RunAllMaps();
-        }
-        catch (Exception ex)
-        {
-            LogUnhandledException(ex);
-        }
-        finally
-        {
-            Complete();
-        }
+        await RunEventLoopAsync();
     }
 
     /// <summary>
@@ -123,10 +102,8 @@ public partial class TestExecutionCoordinator
     /// </summary>
     private void BeginExecution()
     {
-        _flowState.ClearStop();
-        StateManager.TransitionTo(ExecutionState.Running);
-        StateManager.ClearErrors();
-        StateManager.ResetErrorTracking();
+        _latchedStopReason = ExecutionStopReason.None;
+        _latchedStopAsFailure = false;
         _activityTracker.SetTestExecutionActive(true);
         _cts?.Dispose();
         _cts = new CancellationTokenSource();
@@ -135,148 +112,24 @@ public partial class TestExecutionCoordinator
     }
 
     /// <summary>
-    /// Выполняет все карты последовательно.
-    /// </summary>
-    private async Task RunAllMaps()
-    {
-        var token = GetCancellationToken();
-        var maps = _maps;
-        var totalMaps = maps.Count;
-        for (CurrentMapIndex = 0; CurrentMapIndex < totalMaps && !ShouldStop; CurrentMapIndex++)
-        {
-            await RunCurrentMap(maps[CurrentMapIndex], totalMaps, token);
-        }
-    }
-
-    /// <summary>
-    /// Выполняет текущую карту.
-    /// </summary>
-    private async Task RunCurrentMap(TestMap map, int totalMaps, CancellationToken token)
-    {
-        await WaitForExecutorsIdleAsync(token);
-        LogMapStart(totalMaps);
-        var runId = ActivateMap(CurrentMapIndex);
-        var startTimestamp = Stopwatch.GetTimestamp();
-        try
-        {
-            await ExecuteMapOnAllColumns(map, CurrentMapIndex, runId, token);
-        }
-        finally
-        {
-            DeactivateMap(CurrentMapIndex, runId, startTimestamp);
-        }
-    }
-
-    /// <summary>
-    /// Логирует начало выполнения карты.
-    /// </summary>
-    private void LogMapStart(int totalMaps)
-    {
-        _logger.LogInformation("Map {Index}/{Total}", CurrentMapIndex + 1, totalMaps);
-        _testLogger.LogInformation("─── Блок {Index} из {Total} ───", CurrentMapIndex + 1, totalMaps);
-    }
-
-    /// <summary>
-    /// Возвращает токен отмены.
-    /// </summary>
-    private CancellationToken GetCancellationToken()
-    {
-        lock (_stateLock)
-        {
-            return _cts?.Token ?? CancellationToken.None;
-        }
-    }
-
-    /// <summary>
-    /// Выполняет карту на всех колонках с параллельной обработкой ошибок.
-    /// </summary>
-    private Task ExecuteMapOnAllColumns(TestMap map, int mapIndex, Guid mapRunId, CancellationToken token)
-    {
-        var errorChannel = StartErrorSignalChannel();
-        var errorLoopTask = RunErrorHandlingLoopAsync(errorChannel.Reader, token);
-        var executionTask = RunExecutorsAsync(map, mapIndex, mapRunId, token);
-        var completionTask = executionTask.ContinueWith(
-            _ => CompleteErrorSignalChannel(),
-            CancellationToken.None,
-            TaskContinuationOptions.ExecuteSynchronously,
-            TaskScheduler.Default);
-        return Task.WhenAll(executionTask, errorLoopTask, completionTask);
-    }
-
-    /// <summary>
-    /// Запускает выполнение карты на всех колонках.
-    /// </summary>
-    private Task RunExecutorsAsync(TestMap map, int mapIndex, Guid mapRunId, CancellationToken token)
-    {
-        var executionTasks = _executors.Select(executor => executor.ExecuteMapAsync(map, mapIndex, mapRunId, token));
-        return Task.WhenAll(executionTasks);
-    }
-
-    private Guid ActivateMap(int mapIndex)
-    {
-        var runId = Guid.NewGuid();
-        lock (_stateLock)
-        {
-            _activeMapIndex = mapIndex;
-            _activeMapRunId = runId;
-            _mapGate.Set();
-        }
-        _logger.LogDebug("Map gate opened: {MapIndex}, RunId={RunId}", mapIndex, runId);
-        return runId;
-    }
-
-    private void DeactivateMap(int mapIndex, Guid runId, long startTimestamp)
-    {
-        lock (_stateLock)
-        {
-            _activeMapIndex = -1;
-            _activeMapRunId = Guid.Empty;
-            _mapGate.Reset();
-        }
-        var elapsed = Stopwatch.GetElapsedTime(startTimestamp);
-        _logger.LogDebug(
-            "Map gate closed: {MapIndex}, RunId={RunId}, Duration={DurationMs}ms",
-            mapIndex,
-            runId,
-            elapsed.TotalMilliseconds);
-    }
-
-    private async Task WaitForExecutorsIdleAsync(CancellationToken ct)
-    {
-        if (AreExecutorsIdle())
-        {
-            return;
-        }
-        await Task.Delay(50, ct);
-        await WaitForExecutorsIdleAsync(ct);
-    }
-
-    private bool AreExecutorsIdle()
-    {
-        return _executors.All(executor => !executor.IsVisible);
-    }
-
-    private (int MapIndex, Guid RunId) GetActiveMapSnapshot()
-    {
-        lock (_stateLock)
-        {
-            return (_activeMapIndex, _activeMapRunId);
-        }
-    }
-
-    /// <summary>
     /// Завершает выполнение и освобождает ресурсы.
     /// </summary>
     private void Complete()
     {
         var flowSnapshot = _flowState.GetSnapshot();
-        var isSuccessful = !(StateManager.State == ExecutionState.Failed || HasErrors || flowSnapshot.StopAsFailure);
+        var latchedSnapshot = GetLatchedStopSnapshot();
+        var finalStopAsFailure = flowSnapshot.StopAsFailure || latchedSnapshot.StopAsFailure;
+        var finalReason = flowSnapshot.Reason != ExecutionStopReason.None
+            ? flowSnapshot.Reason
+            : latchedSnapshot.Reason;
+        var finalSnapshot = (Reason: finalReason, StopAsFailure: finalStopAsFailure);
+        var isSuccessful = !(StateManager.State == ExecutionState.Failed || HasErrors || finalSnapshot.StopAsFailure);
         var finalState = isSuccessful ? ExecutionState.Completed : ExecutionState.Failed;
         StateManager.TransitionTo(finalState);
         _activityTracker.SetTestExecutionActive(false);
         _errorService.ClearActiveApplicationErrors();
-        LogExecutionCompleted(isSuccessful, flowSnapshot);
-        InvokeSequenceCompletedSafely();
+        LogExecutionCompleted(isSuccessful, finalSnapshot);
+        DispatchEvent(new ExecutionEvent(ExecutionEventKind.SequenceCompleted));
         lock (_stateLock)
         {
             _cts?.Dispose();
@@ -295,7 +148,7 @@ public partial class TestExecutionCoordinator
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка в обработчике OnSequenceCompleted");
+            _logger.LogWarning(ex, "Ошибка в обработчике OnSequenceCompleted");
         }
     }
 
@@ -326,8 +179,38 @@ public partial class TestExecutionCoordinator
     /// </summary>
     public void Stop(ExecutionStopReason stopReason, string reason, bool markFailed = false)
     {
+        LatchStop(stopReason, markFailed);
         _flowState.RequestStop(stopReason, markFailed);
         CancelExecution(reason);
+    }
+
+    /// <summary>
+    /// Запрашивает остановку как ошибку без немедленной отмены.
+    /// </summary>
+    private void RequestStopAsFailure(ExecutionStopReason reason)
+    {
+        LatchStop(reason, stopAsFailure: true);
+        _flowState.RequestStop(reason, stopAsFailure: true);
+    }
+
+    private void LatchStop(ExecutionStopReason stopReason, bool stopAsFailure)
+    {
+        lock (_stateLock)
+        {
+            if (_latchedStopReason == ExecutionStopReason.None)
+            {
+                _latchedStopReason = stopReason;
+            }
+            _latchedStopAsFailure |= stopAsFailure;
+        }
+    }
+
+    private (ExecutionStopReason Reason, bool StopAsFailure) GetLatchedStopSnapshot()
+    {
+        lock (_stateLock)
+        {
+            return (_latchedStopReason, _latchedStopAsFailure);
+        }
     }
 
     /// <summary>
@@ -355,3 +238,4 @@ public partial class TestExecutionCoordinator
         _testLogger.LogWarning("Тестирование остановлено {Reason}", reason);
     }
 }
+

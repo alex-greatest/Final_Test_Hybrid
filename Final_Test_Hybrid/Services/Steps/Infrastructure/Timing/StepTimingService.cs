@@ -9,18 +9,18 @@ public interface IStepTimingService
     IReadOnlyList<StepTimingRecord> GetAll();
     void Clear(bool preserveScanState = false);
 
-    // РњРµС‚РѕРґС‹ РґР»СЏ С€Р°РіР° СЃРєР°РЅРёСЂРѕРІР°РЅРёСЏ (С‚Р°Р№РјРµСЂ РІ СЂРµР°Р»СЊРЅРѕРј РІСЂРµРјРµРЅРё)
+    // Методы для шага сканирования (таймер в реальном времени)
     void StartScanTiming(string name, string description);
     void StopScanTiming();
     void ResetScanTiming();
 
-    // РњРµС‚РѕРґС‹ РґР»СЏ С€Р°РіРѕРІ РєРѕР»РѕРЅРѕРє (4 РїР°СЂР°Р»Р»РµР»СЊРЅС‹С… С‚Р°Р№РјРµСЂР°)
+    // Методы для шагов колонок (4 параллельных таймера)
     void StartColumnStepTiming(int columnIndex, string name, string description);
     void StopColumnStepTiming(int columnIndex);
     void PauseAllColumnsTiming();
     void ResumeAllColumnsTiming();
 
-    // РњРµС‚РѕРґС‹ РґР»СЏ pre-execution С€Р°РіРѕРІ (РёСЃРїРѕР»СЊР·СѓСЋС‚ РєРѕР»РѕРЅРєСѓ 0, С‚.Рє. РІС‹РїРѕР»РЅСЏСЋС‚СЃСЏ РґРѕ РїР°СЂР°Р»Р»РµР»СЊРЅС‹С… РєРѕР»РѕРЅРѕРє)
+    // Методы для pre-execution шагов (используют колонку 0, т.к. выполняются до параллельных колонок)
     void StartCurrentStepTiming(string name, string description);
     void StopCurrentStepTiming();
 }

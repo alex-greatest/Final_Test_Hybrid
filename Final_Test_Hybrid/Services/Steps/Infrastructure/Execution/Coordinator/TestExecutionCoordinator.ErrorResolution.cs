@@ -1,4 +1,4 @@
-using Final_Test_Hybrid.Models.Steps;
+﻿using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Microsoft.Extensions.Logging;
 
@@ -28,7 +28,7 @@ public partial class TestExecutionCoordinator
             StateManager.TransitionTo(ExecutionState.PausedOnError);
             await SetSelectedAsync(error, true);
             await SetFaultIfNoBlockAsync(error.FailedStep, cts.Token);
-            OnErrorOccurred?.Invoke(error);
+            TryPublishEvent(new ExecutionEvent(ExecutionEventKind.ErrorOccurred, StepError: error));
             ErrorResolution resolution;
             try
             {
@@ -77,6 +77,7 @@ public partial class TestExecutionCoordinator
         }
 
         _logger.LogWarning("TagTimeout во время {Context} — жёсткий стоп теста", context);
+        RequestStopAsFailure(ExecutionStopReason.Operator);
         await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout, ct);
         await cts.CancelAsync();
     }
@@ -118,8 +119,23 @@ public partial class TestExecutionCoordinator
     }
 
     /// <summary>
+    /// Безопасно вызывает событие OnErrorOccurred.
+    /// </summary>
+    private void InvokeErrorOccurredSafely(StepError error)
+    {
+        try
+        {
+            OnErrorOccurred?.Invoke(error);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Ошибка в обработчике OnErrorOccurred");
+        }
+    }
+
+    /// <summary>
     /// Обрабатывает повтор шага.
-    /// Fire-and-forget для retry, чтобы диалог следующей ошибки появился сразу.
+    /// Retry запускается в фоне через event loop и отслеживается, чтобы диалог следующей ошибки появился сразу.
     /// </summary>
     private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
     {
@@ -142,7 +158,7 @@ public partial class TestExecutionCoordinator
             return;
         }
 
-        InvokeRetryStartedSafely();
+        TryPublishEvent(new ExecutionEvent(ExecutionEventKind.RetryStarted));
 
         try
         {
@@ -155,9 +171,13 @@ public partial class TestExecutionCoordinator
             return;
         }
 
+        _retryState.MarkStarted();
         StateManager.DequeueError();
 
-        _ = ExecuteRetryInBackgroundAsync(error, executor, ct);
+        await PublishEventCritical(new ExecutionEvent(
+            ExecutionEventKind.RetryRequested,
+            StepError: error,
+            ColumnExecutor: executor));
     }
 
     /// <summary>
@@ -189,6 +209,14 @@ public partial class TestExecutionCoordinator
         {
             _logger.LogError(ex, "Ошибка Retry в фоне для колонки {Column}", error.ColumnIndex);
         }
+        finally
+        {
+            _retryState.MarkCompleted();
+            TryPublishEvent(new ExecutionEvent(
+                ExecutionEventKind.RetryCompleted,
+                StepError: error,
+                ColumnExecutor: executor));
+        }
     }
 
     /// <summary>
@@ -208,7 +236,7 @@ public partial class TestExecutionCoordinator
         }
         catch (TimeoutException)
         {
-            _logger.LogWarning(">>> ProcessSkipAsync: TIMEOUT РѕР¶РёРґР°РЅРёСЏ СЃР±СЂРѕСЃР° СЃРёРіРЅР°Р»РѕРІ");
+            _logger.LogWarning(">>> ProcessSkipAsync: TIMEOUT ожидания сброса сигналов");
             await HandleTagTimeoutAsync("сброс сигналов Skip", ct);
             return;
         }

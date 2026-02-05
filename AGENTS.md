@@ -1,30 +1,11 @@
-<!-- OPENSPEC:START -->
-# OpenSpec Instructions
+# Final_Test_Hybrid
 
-These instructions are for AI assistants working in this project.
-
-Always open `@/openspec/AGENTS.md` when the request:
-- Mentions planning or proposals (words like proposal, spec, change, plan)
-- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
-- Sounds ambiguous and you need the authoritative spec before coding
-
-Use `@/openspec/AGENTS.md` to learn:
-- How to create and apply change proposals
-- Spec format and conventions
-- Project structure and guidelines
-
-Keep this managed block so 'openspec update' can refresh the instructions.
-
-<!-- OPENSPEC:END -->
-
-# Final_Test_Hybrid (Codex Guide)
-
-SCADA test system for industrial testing. Treat changes as safety-critical.
+> **SCADA-система промышленных тестов. От кода зависят жизни — думай дважды, проверяй трижды.**
 
 ## Stack
 
-| Component | Technology |
-| --- | --- |
+| Компонент | Технология |
+|-----------|------------|
 | Framework | .NET 10, WinForms + Blazor Hybrid |
 | UI | Radzen Blazor 8.3 |
 | OPC-UA | OPCFoundation 1.5 |
@@ -33,74 +14,86 @@ SCADA test system for industrial testing. Treat changes as safety-critical.
 | Logging | Serilog + DualLogger |
 | Excel | EPPlus 8.3 |
 
-Build: `dotnet build && dotnet run`
+**Build:** `dotnet build && dotnet run`
+**Обязательная проверка:** запускать `dotnet build`.
 
-## Architecture (high-level)
+## Архитектура
 
 ```
-Program.cs -> Form1.cs (DI) -> BlazorWebView -> Radzen UI
+Program.cs → Form1.cs (DI) → BlazorWebView → Radzen UI
 
-[Barcode] -> PreExecutionCoordinator -> TestExecutionCoordinator -> [OK/NOK]
-                 |                           |
-         ScanSteps (pre-exec)         4 x ColumnExecutor
-                 v                           v
-         StartTestExecution()        OnSequenceCompleted
+[Barcode] → PreExecutionCoordinator → TestExecutionCoordinator → [OK/NOK]
+                    │                           │
+            ScanSteps (pre-exec)         4 × ColumnExecutor
+                    ↓                           ↓
+            StartTestExecution()        OnSequenceCompleted
 ```
 
-## Key Patterns
+## Ключевые паттерны
 
-### DualLogger (required)
+### DualLogger (обязательно)
 ```csharp
 public class MyService(DualLogger<MyService> logger)
 {
-    logger.LogInformation("msg"); // file + UI test log
+    logger.LogInformation("msg"); // → файл + UI теста
 }
 ```
 
 ### Pausable Decorators
-| Context | Service |
-| --- | --- |
-| Test steps (OPC-UA) | `PausableOpcUaTagService`, `PausableTagWaiter` |
-| Test steps (Modbus) | `PausableRegisterReader/Writer` |
-| System ops | `OpcUaTagService`, `RegisterReader/Writer` (not pausable) |
+| Контекст | Сервис |
+|----------|--------|
+| Тестовые шаги (OPC-UA) | `PausableOpcUaTagService`, `PausableTagWaiter` |
+| Тестовые шаги (Modbus) | `PausableRegisterReader/Writer` |
+| Системные операции | `OpcUaTagService`, `RegisterReader/Writer` (НЕ паузятся) |
 
-In steps: use `context.DelayAsync()`, `context.DiagReader/Writer` (pause-aware).
+**В шагах:** `context.DelayAsync()`, `context.DiagReader/Writer` — паузятся автоматически.
 
 ### Primary Constructors
 ```csharp
-public class MyStep(DualLogger<MyStep> logger, IOpcUaTagService tags) : ITestStep
+public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestStep
 ```
 
-## Coding Rules
+## Правила кодирования
 
-- One `if`/`for`/`while`/`switch`/`try` per method (guard clauses OK).
-- Use `var` everywhere; `{}` required; max 300 lines -> split via partial classes.
-- PascalCase: types/methods. camelCase: locals/parameters.
-- Prefer `switch`/ternary when reasonable.
+- ***простота, без не нужных усложнений.***
+- ***чистый простой и понятный код. минимум defense programm***
+- ***никакого оверинжиниринг***
+- **Один** `if`/`for`/`while`/`switch`/`try` на метод (guard clauses OK) ***метод ~50 строк не больше***
+- `var` везде, `{}` обязательны, **max 300 строк** сервисы  → partial classes
+- **PascalCase:** типы, методы | **camelCase:** локальные, параметры
+- Предпочитай `switch` и тернарный оператор где разумно
 
-### What is NOT required
+## Язык и кодировка
 
-| Pattern | When not needed |
-| --- | --- |
-| `IDisposable`, locks | singleton without concurrency |
-| `CancellationToken`, retry | short ops (<2s) |
-| null-check DI | internal code |
+- Документация и комментарии в новых/переименованных файлах — на русском языке.
+- Файлы сохранять в `UTF-8` (если файл уже с BOM — сохранять с BOM). Не использовать ANSI/1251.
+- После сохранения проверять отсутствие «кракозябр» (типичный признак неверной перекодировки UTF-8/ANSI).
+- Если в тексте появились строки вида `РџР.../РѕР...` — файл почти наверняка открыли/сохранили не в той кодировке: пересохранить в `UTF-8` (для Windows-инструментов надёжнее `UTF-8 with BOM`).
 
-Checks ARE required at system boundaries, for external input, and during deserialization.
+### Что НЕ нужно
+| Паттерн | Когда не нужен |
+|---------|----------------|
+| `IDisposable`, блокировки | Singleton без конкуренции |
+| `CancellationToken`, retry | Короткие операции (<2 сек) |
+| null-проверки DI | Внутренний код |
 
-## XML Documentation
+**Проверки НУЖНЫ:** границы системы, внешний ввод, десериализация.
 
-- Private: `<summary>` only.
-- Public: `<summary>`, `<param>`, `<returns>`, `<exception>`.
+## XML-документация
 
-## Docs to Read
+- Приватные: только `<summary>`
+- Публичные: `<summary>`, `<param>`, `<returns>`, `<exception>`
 
-| Topic | File |
-| --- | --- |
-| State Management | `Final_Test_Hybrid/Docs/StateManagementGuide.md` |
-| Error Handling | `Final_Test_Hybrid/Docs/ErrorCoordinatorGuide.md` |
-| PLC Reset | `Final_Test_Hybrid/Docs/PlcResetGuide.md` |
-| Steps | `Final_Test_Hybrid/Docs/StepsGuide.md` |
-| Cancellation | `Final_Test_Hybrid/Docs/CancellationGuide.md` |
-| Modbus | `Final_Test_Hybrid/Docs/DiagnosticGuide.md` |
-| TagWaiter | `Final_Test_Hybrid/Docs/TagWaiterGuide.md` |
+## Документация
+
+| Тема | Файл |
+|------|------|
+| State Management | [Docs/StateManagementGuide.md](Final_Test_Hybrid/Docs/StateManagementGuide.md) |
+| Error Handling | [Docs/ErrorCoordinatorGuide.md](Final_Test_Hybrid/Docs/ErrorCoordinatorGuide.md) |
+| PLC Reset | [Docs/PlcResetGuide.md](Final_Test_Hybrid/Docs/PlcResetGuide.md) |
+| Steps | [Docs/StepsGuide.md](Final_Test_Hybrid/Docs/StepsGuide.md) |
+| Cancellation | [Docs/CancellationGuide.md](Final_Test_Hybrid/Docs/CancellationGuide.md) |
+| Modbus | [Docs/DiagnosticGuide.md](Final_Test_Hybrid/Docs/DiagnosticGuide.md) |
+| TagWaiter | [Docs/TagWaiterGuide.md](Final_Test_Hybrid/Docs/TagWaiterGuide.md) |
+
+**Детальная документация:** [Final_Test_Hybrid/CLAUDE.md](Final_Test_Hybrid/CLAUDE.md)
