@@ -38,7 +38,7 @@
 ```
 PreExecutionCoordinator                    TestExecutionCoordinator
         │                                            │
-   _loopCts.Token                               _currentCts.Token
+   _currentCts.Token                            _cts.Token
         │                                            │
         ▼                                            ▼
 PreExecutionStep.ExecuteAsync(ctx, ct)    ColumnExecutor.ExecuteMapAsync(map, ct)
@@ -56,17 +56,17 @@ PreExecutionStep.ExecuteAsync(ctx, ct)    ColumnExecutor.ExecuteMapAsync(map, ct
 
 | Координатор | CTS | Lifecycle |
 |-------------|-----|-----------|
-| `PreExecutionCoordinator` | `_loopCts` | Создаётся при входе в цикл, отменяется при logout/stop |
-| `TestExecutionCoordinator` | `_currentCts` | Создаётся для каждого теста, отменяется при stop/reset |
+| `ScanModeController` | `_loopCts` | Создаётся при активации scan mode, отменяется при logout/disable scan mode |
+| `PreExecutionCoordinator` | `_currentCts` | Создаётся на каждый цикл (после скана), отменяется при soft/hard reset |
+| `TestExecutionCoordinator` | `_cts` | Создаётся для каждого запуска тестов, отменяется при stop/reset/timeout |
 
 **Кто вызывает Cancel:**
 
 | Событие | Что отменяется |
 |---------|----------------|
-| `ErrorCoordinator.Reset()` | `_loopCts`, `_currentCts` |
-| `ErrorCoordinator.ForceStop()` | `_currentCts` |
-| PLC Reset | Через `PlcResetCoordinator` → `ErrorCoordinator` |
-| Logout | `_loopCts` |
+| `PlcResetCoordinator.OnForceStop` | `_currentCts` (цикл), `_cts` (тест) |
+| `ErrorCoordinator.OnReset` | `_currentCts` (цикл), `_cts` (тест) |
+| Logout / disable scan mode | `_loopCts` (и как следствие `_currentCts`) |
 
 ---
 
@@ -78,8 +78,9 @@ PreExecutionStep.ExecuteAsync(ctx, ct)    ColumnExecutor.ExecuteMapAsync(map, ct
 
 | Источник | CTS | Что отменяет |
 |----------|-----|--------------|
-| `TestExecutionCoordinator` | `_currentCts` | Текущий тест |
-| `PreExecutionCoordinator` | `_loopCts` | Цикл сканирования |
+| `TestExecutionCoordinator` | `_cts` | Текущий запуск тестов (maps) |
+| `PreExecutionCoordinator` | `_currentCts` | Текущий цикл pre-exec/pipeline |
+| `ScanModeController` | `_loopCts` | Главный цикл scan mode |
 
 ### ExecutionFlowState
 
@@ -92,6 +93,9 @@ PreExecutionStep.ExecuteAsync(ctx, ct)    ColumnExecutor.ExecuteMapAsync(map, ct
 | `StopReason` | Причина остановки (для логов) |
 
 **Важно:** `StopReason` используется только для логирования, `StopAsFailure` OR-ится при множественных вызовах.
+
+**Важно (защита от ложного успеха):** `ExecutionFlowState` общий для цикла и может быть очищен (например, в начале нового цикла).
+Поэтому `TestExecutionCoordinator` держит локальную «защёлку» (`StopReason/StopAsFailure`) на время прогона и использует её в `Complete()`.
 
 ### PauseTokenSource
 
@@ -116,7 +120,7 @@ await context.DelayAsync(TimeSpan.FromSeconds(5), ct);  // Pause-aware delay
 
 ### ExecutionStateManager
 
-Глобальное состояние выполнения (`Idle`, `Running`, `Paused`, `Stopping`).
+Глобальное состояние выполнения (`Idle`, `Processing`, `Running`, `PausedOnError`, `Completed`, `Failed`).
 
 ---
 

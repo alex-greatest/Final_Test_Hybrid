@@ -5,12 +5,14 @@
 | Тег | Адрес | Направление | Назначение |
 |-----|-------|-------------|------------|
 | **ErrorRetry** | `DB_Station.Test.Req_Repeat` | PLC → PC | Оператор нажал "Повтор" |
-| **ErrorSkip** | `DB_Station.Test.End` | PLC → PC | Оператор нажал "Один шаг" |
 | **AskRepeat** | `DB_Station.Test.Ask_Repeat` | PC → PLC | PC готов к повтору |
 | **Fault** | `DB_Station.Test.Fault` | PC → PLC | Ошибка шага без блока |
-| **Test_End_Step** | `DB_Station.Test.Test_End_Step` | PLC → PC | PLC сигнал завершения |
+| **EndStep** | `DB_Station.Test.EndStep` | PLC → PC | PLC подтверждает Skip для шага без блока |
 | **Block.Selected** | `DB_VI.Block_X.Selected` | PC → PLC | Какой блок в ошибке |
 | **Block.Error** | `DB_VI.Block_X.Error` | PLC → PC | Флаг ошибки блока |
+| **Block.End** | `DB_VI.Block_X.End` | PLC → PC | Флаг завершения блока (в т.ч. для Skip) |
+
+> **Примечание:** тег `DB_Station.Test.End` (`BaseTags.ErrorSkip`) используется в completion-flow (завершение теста) и в механизме Skip шага не участвует.
 
 ## Retry Flow (Повтор)
 
@@ -24,7 +26,7 @@
     PC:       Показывает диалог
                 ↓
 [3] Ожидание оператора
-    PC ждёт: Req_Repeat=true ИЛИ End=true
+    PC ждёт: Req_Repeat=true ИЛИ Skip-сигнал
     Оператор: "Повтор"
     PLC → PC: Req_Repeat = true
                 ↓
@@ -33,11 +35,11 @@
     PLC:      Block.Error = false
     PC ждёт:  Block.Error = false
                 ↓
-[5] Fire-and-forget retry
+[5] Фоновый retry (tracked task)
     PC: InvokeRetryStartedSafely() → панель закрывается
     PC: WaitForRetrySignalResetAsync() → Req_Repeat = false
     PC: DequeueError() → освобождает очередь
-    PC: ExecuteRetryInBackgroundAsync() → fire-and-forget
+    PC: ExecuteRetryInBackgroundAsync() → фоновой retry (tracked)
                 ↓
 [6] Следующая ошибка (если есть)
     while цикл продолжается → диалог для следующей ошибки
@@ -49,18 +51,18 @@
 | Тип шага | Условие Skip |
 |----------|--------------|
 | **С блоком** | `End=true AND Block.Error=true` |
-| **Без блока** | `End=true` |
+| **Без блока** | `EndStep=true` |
 
 ```
 [1-2] Ошибка + Диалог (как в Retry)
                 ↓
 [3] Оператор: "Один шаг"
-    PLC → PC: End = true
+    PLC → PC: EndStep = true (для шагов без блока)
     PC: проверяет Block.Error = true (для шагов с блоком)
                 ↓
 [4] Ожидание сброса сигналов (защита от stale)
     PC ждёт: Block.Error=false И Block.End=false (для шагов С блоком)
-             ИЛИ Test_End_Step=false (для шагов БЕЗ блока)
+             ИЛИ EndStep=false (для шагов БЕЗ блока)
     Таймаут: 60 сек → жёсткий стоп теста
                 ↓
 [5] Пропуск (порядок важен!)
@@ -131,12 +133,12 @@ public async Task RetryLastFailedStepAsync(CancellationToken ct)
 |----------|-------|------|
 | **Условие** | `Req_Repeat = true` | `End=true (AND Block.Error)` |
 | **AskRepeat** | Да | Нет |
-| **Ждёт PLC** | `Block.Error = false` | Нет |
+| **Ждёт PLC** | `Block.Error = false` + `Req_Repeat = false` | Сброс сигналов Skip (60 сек) |
 | **Шаг выполняется** | Заново | Нет |
 | **Gate** | `OpenGate()` после успеха | `Set()` сразу |
 | **Статус UI** | OK или NOK | NOK |
 
-## Fire-and-Forget Retry
+## Фоновый Retry (tracked task)
 
 Диалог следующей ошибки появляется сразу (~100мс):
 
@@ -148,7 +150,7 @@ public async Task RetryLastFailedStepAsync(CancellationToken ct)
 [00:12] InvokeRetryStartedSafely → панель закрывается
 [00:13] WaitForRetrySignalResetAsync → Req_Repeat=false
 [00:14] DequeueError
-[00:15] ExecuteRetryInBackgroundAsync (fire-and-forget)
+[00:15] ExecuteRetryInBackgroundAsync (фоновой, tracked)
 [00:16] while → HasPendingErrors = true
 [00:17] Диалог Col 1 ← СРАЗУ!
 ```
@@ -188,7 +190,10 @@ private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, C
     }
 
     StateManager.DequeueError();
-    _ = ExecuteRetryInBackgroundAsync(error, executor, ct);
+    await PublishEventCritical(new ExecutionEvent(
+        ExecutionEventKind.RetryRequested,
+        StepError: error,
+        ColumnExecutor: executor));
 }
 ```
 
@@ -227,7 +232,7 @@ private async Task ExecuteRetryInBackgroundAsync(StepError error, ColumnExecutor
 |------|------------|
 | `ColumnExecutor.cs` | Gate, SemaphoreSlim, RetryLastFailedStepAsync |
 | `TestExecutionCoordinator.ErrorResolution.cs` | ProcessRetryAsync, ExecuteRetryInBackgroundAsync |
-| `ErrorCoordinator.Interrupts.cs` | WaitForResolutionAsync, SendAskRepeatAsync |
+| `ErrorCoordinator.Resolution.cs` | WaitForResolutionAsync, SendAskRepeatAsync, WaitForRetrySignalResetAsync |
 | `AsyncManualResetEvent.cs` | Gate implementation |
 
 ## Edge Cases
@@ -250,7 +255,7 @@ SetErrorState() → gate.Reset() → новая ошибка в очередь �
 Если PLC не сбросит сигнал за 60 секунд → `HandleTagTimeoutAsync()` → жёсткий стоп теста.
 Это защита от залипших сигналов, которые могут вызвать автоматический Retry/Skip для другой колонки.
 
-### Cancel во время fire-and-forget Retry
+### Cancel во время фонового Retry
 
 При отмене теста во время фонового Retry: если `executor.HasFailed=false`, открываем gate.
 Это предотвращает зависание колонки (gate закрыт, HasFailed=false, нет ошибки в очереди).

@@ -86,9 +86,9 @@ public partial class TestExecutionCoordinator
             return;
         }
 
-        // Для шагов БЕЗ блока: ждём Test_End_Step=false с таймаутом
+        // Для шагов БЕЗ блока: ждём EndStep=false с таймаутом
         // (PLC сбросит после того как PC сбросит Fault)
-        _logger.LogDebug("Ожидание сброса Test_End_Step");
+        _logger.LogDebug("Ожидание сброса EndStep");
         await _tagWaiter.WaitForFalseAsync(BaseTags.TestEndStep, timeout: TimeSpan.FromSeconds(60), ct);
     }
 

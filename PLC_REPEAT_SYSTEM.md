@@ -12,7 +12,7 @@
 |--------|------------------|----------------|-------------|----------|
 | **Req_Reset** | `BaseTags.ReqReset` | `ns=3;s="DB_Station"."Test"."Req_Reset"` | PLC → PC | Запрос сброса от ПЛК |
 | **Req_Repeat** | `BaseTags.ErrorRetry` | `ns=3;s="DB_Station"."Test"."Req_Repeat"` | PLC → PC | Запрос повтора (при ошибке или после теста) |
-| **End** | `BaseTags.ErrorSkip` | `ns=3;s="DB_Station"."Test"."End"` | PC → PLC | Сигнал завершения теста / пропуска шага |
+| **End** | `BaseTags.ErrorSkip` | `ns=3;s="DB_Station"."Test"."End"` | PC → PLC | Сигнал завершения теста (completion-flow). В Skip шага не используется |
 | **Ask_End** | `BaseTags.AskEnd` | `ns=3;s="DB_Station"."Test"."Ask_End"` | PLC → PC | Подтверждение от ПЛК что сброс обработан |
 | **Ask_Repeat** | `BaseTags.AskRepeat` | `ns=3;s="DB_Station"."Test"."Ask_Repeat"` | PC → PLC | PC подтверждает повтор |
 | **Ask_Auto** | `BaseTags.TestAskAuto` | `ns=3;s="DB_Station"."Test"."Ask_Auto"` | PC → PLC | Запрос автоматического режима |
@@ -20,16 +20,26 @@
 | **Fault** | `BaseTags.Fault` | `ns=3;s="DB_Station"."Test"."Fault"` | PC → PLC | Ошибка шага без блока |
 | **EndStep** | `BaseTags.TestEndStep` | `ns=3;s="DB_Station"."Test"."EndStep"` | PLC → PC | Подтверждение Skip для шага без блока |
 
+> **Важно:** Skip шага НЕ делается через `End` (`BaseTags.ErrorSkip`).  
+> Skip шага определяется так:
+> - **Шаг с PLC-блоком:** `Block.End=true` и `Block.Error=true`
+> - **Шаг без PLC-блока:** `EndStep=true` (`BaseTags.TestEndStep`)
+> Подробно: `Final_Test_Hybrid/Docs/RetrySkipGuide.md`.
+
 ### 1.2 Определения в коде
 
 ```csharp
 // Final_Test_Hybrid/Models/Plc/Tags/BaseTags.cs
 public static class BaseTags
 {
+    public const string TestAskAuto = "ns=3;s=\"DB_Station\".\"Test\".\"Ask_Auto\"";
+
     // Error handling tags
     public const string ErrorRetry = "ns=3;s=\"DB_Station\".\"Test\".\"Req_Repeat\"";
     public const string ErrorSkip = "ns=3;s=\"DB_Station\".\"Test\".\"End\"";
     public const string AskRepeat = "ns=3;s=\"DB_Station\".\"Test\".\"Ask_Repeat\"";
+    public const string Fault = "ns=3;s=\"DB_Station\".\"Test\".\"Fault\"";
+    public const string TestEndStep = "ns=3;s=\"DB_Station\".\"Test\".\"EndStep\"";
 
     // Reset handling tags
     public const string ReqReset = "ns=3;s=\"DB_Station\".\"Test\".\"Req_Reset\"";
@@ -577,7 +587,7 @@ private async Task<CompletionResult> HandleNokRepeatAsync(CancellationToken ct)
 
 ## 8. Связанная документация
 
-- [PlcResetGuide.md](Final_Test_Hybrid/PlcResetGuide.md) — Детали логики сброса
-- [CycleExitGuide.md](Final_Test_Hybrid/CycleExitGuide.md) — Управление состояниями выхода
-- [RetrySkipGuide.md](Final_Test_Hybrid/RetrySkipGuide.md) — Повтор и пропуск шагов
-- [ErrorCoordinatorGuide.md](Final_Test_Hybrid/ErrorCoordinatorGuide.md) — Координатор прерываний
+- [PlcResetGuide.md](Final_Test_Hybrid/Docs/PlcResetGuide.md) — Детали логики сброса
+- [CycleExitGuide.md](Final_Test_Hybrid/Docs/CycleExitGuide.md) — Управление состояниями выхода
+- [RetrySkipGuide.md](Final_Test_Hybrid/Docs/RetrySkipGuide.md) — Повтор и пропуск шагов
+- [ErrorCoordinatorGuide.md](Final_Test_Hybrid/Docs/ErrorCoordinatorGuide.md) — Координатор прерываний

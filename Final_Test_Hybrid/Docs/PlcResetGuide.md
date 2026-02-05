@@ -118,7 +118,7 @@ RunSingleCycleAsync:
 | Аспект | ForceStop() | Reset() |
 |--------|-------------|---------|
 | PauseToken.Resume() | ✓ | ✓ |
-| ClearCurrentInterrupt() | ✗ | ✓ |
+| ClearCurrentInterrupt() | ✓ | ✓ |
 | OnReset event | ✗ | ✓ |
 | Используется | Мягкий сброс | Жёсткий сброс |
 

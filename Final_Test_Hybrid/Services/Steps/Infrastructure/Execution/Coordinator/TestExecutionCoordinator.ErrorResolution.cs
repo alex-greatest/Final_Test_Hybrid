@@ -229,18 +229,17 @@ public partial class TestExecutionCoordinator
         await ResetBlockStartAsync(error.FailedStep, ct);
         await ResetFaultIfNoBlockAsync(error.FailedStep, ct);
 
-        _logger.LogWarning(">>> ProcessSkipAsync: НАЧАЛО ожидания сброса сигналов");
+        _logger.LogDebug("Ожидание сброса сигналов Skip...");
         try
         {
             await WaitForSkipSignalsResetAsync(error.FailedStep, ct);
         }
         catch (TimeoutException)
         {
-            _logger.LogWarning(">>> ProcessSkipAsync: TIMEOUT ожидания сброса сигналов");
             await HandleTagTimeoutAsync("сброс сигналов Skip", ct);
             return;
         }
-        _logger.LogWarning(">>> ProcessSkipAsync: КОНЕЦ ожидания сброса сигналов");
+        _logger.LogDebug("Сброс сигналов Skip завершён");
 
         _statusReporter.ReportSkipped(error.UiStepId);
         StateManager.MarkErrorSkipped();
