@@ -7,7 +7,7 @@
                     RowUpdate="@OnUpdateRow"
                     ColumnWidth="100px">
         <Columns>
-            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="PlcTag" Title="Тэг ПЛК" Width="120px">
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="PlcTag" Title="Параметр" Width="120px">
                 <Template Context="item">
                     @item.PlcTag
                 </Template>
@@ -43,7 +43,7 @@
                 </Template>
             </RadzenDataGridColumn>
 
-            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Gain1" Title="P1">
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Gain1" Title="Gain1">
                 <Template Context="item">
                     @item.Gain1.ToString("F3")
                 </Template>
@@ -59,7 +59,7 @@
                 </EditTemplate>
             </RadzenDataGridColumn>
 
-            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Ti1" Title="I1">
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Ti1" Title="Ti1">
                 <Template Context="item">
                     @item.Ti1.ToString("F3")
                 </Template>
@@ -75,7 +75,7 @@
                 </EditTemplate>
             </RadzenDataGridColumn>
 
-            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Td1" Title="D1">
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Td1" Title="Td1">
                 <Template Context="item">
                     @item.Td1.ToString("F3")
                 </Template>
@@ -91,7 +91,7 @@
                 </EditTemplate>
             </RadzenDataGridColumn>
 
-            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Gain2" Title="P2">
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Gain2" Title="Gain2">
                 <Template Context="item">
                     @item.Gain2.ToString("F3")
                 </Template>
@@ -107,7 +107,7 @@
                 </EditTemplate>
             </RadzenDataGridColumn>
 
-            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Ti2" Title="I2">
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Ti2" Title="Ti2">
                 <Template Context="item">
                     @item.Ti2.ToString("F3")
                 </Template>
@@ -123,7 +123,7 @@
                 </EditTemplate>
             </RadzenDataGridColumn>
 
-            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Td2" Title="D2">
+            <RadzenDataGridColumn TItem="PidRegulatorItem" Property="Td2" Title="Td2">
                 <Template Context="item">
                     @item.Td2.ToString("F3")
                 </Template>

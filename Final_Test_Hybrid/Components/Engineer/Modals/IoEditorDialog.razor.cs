@@ -3,13 +3,14 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using Radzen;
 using Radzen.Blazor;
 
 namespace Final_Test_Hybrid.Components.Engineer.Modals;
 
 /// <summary>
-/// Code-behind для диалога редактирования IO: AI Calibration, RTD Calibration, PID Regulator.
+/// Code-behind для диалога редактирования IO: AI Calibration, RTD Calibration, PID Regulator, Analog Outputs.
 /// </summary>
 public partial class IoEditorDialog : IAsyncDisposable
 {
@@ -26,9 +27,13 @@ public partial class IoEditorDialog : IAsyncDisposable
     [Inject]
     private DualLogger<IoEditorDialog> Logger { get; set; } = null!;
 
+    [Inject]
+    private IJSRuntime JsRuntime { get; set; } = null!;
+
     // === COMMON ===
     private bool _isLoading = true;
     private bool _disposed;
+    private List<string> _saveErrors = [];
 
     // === AI CALIBRATION ===
     private RadzenDataGrid<AiCalibrationItem> _aiGrid = null!;
@@ -51,6 +56,23 @@ public partial class IoEditorDialog : IAsyncDisposable
     private PidRegulatorItem? _pidItemToUpdate;
     private string? _pidEditingColumn;
 
+    // === ANALOG OUTPUTS ===
+    private RadzenDataGrid<AnalogOutputItem> _aoGrid = null!;
+    private List<AnalogOutputItem> _aoItems = [];
+    private List<AnalogOutputItem> _aoSnapshot = [];
+    private AnalogOutputItem? _aoItemToUpdate;
+    private string? _aoEditingColumn;
+
+    // === OUTSIDE CLICK ===
+    private const string AiContainerId = "ai-grid-container";
+    private const string RtdContainerId = "rtd-grid-container";
+    private const string PidContainerId = "pid-grid-container";
+    private const string AoContainerId = "ao-grid-container";
+    private OutsideClickHelper? _aiClickHelper;
+    private OutsideClickHelper? _rtdClickHelper;
+    private OutsideClickHelper? _pidClickHelper;
+    private OutsideClickHelper? _aoClickHelper;
+
     #region Lifecycle
 
     /// <summary>
@@ -60,6 +82,13 @@ public partial class IoEditorDialog : IAsyncDisposable
     {
         SubscriptionState.OnStateChanged += HandleStateChanged;
         ConnectionState.ConnectionStateChanged += HandleConnectionChanged;
+
+        if (!ConnectionState.IsConnected)
+        {
+            Logger.LogWarning("OPC UA не подключен при открытии IoEditor");
+            _isLoading = false;
+            return;
+        }
 
         try
         {
@@ -71,6 +100,9 @@ public partial class IoEditorDialog : IAsyncDisposable
 
             await LoadPidDataAsync();
             CreatePidSnapshot();
+
+            await LoadAoDataAsync();
+            CreateAoSnapshot();
         }
         catch (Exception ex)
         {
@@ -83,6 +115,31 @@ public partial class IoEditorDialog : IAsyncDisposable
     }
 
     /// <summary>
+    /// Регистрирует JS outside-click обработчики для каждого грида.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        _aiClickHelper = new OutsideClickHelper(CloseAiEdit);
+        _rtdClickHelper = new OutsideClickHelper(CloseRtdEdit);
+        _pidClickHelper = new OutsideClickHelper(ClosePidEdit);
+        _aoClickHelper = new OutsideClickHelper(CloseAoEdit);
+
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("outsideClickHandler.add", AiContainerId, _aiClickHelper.Reference);
+            await JsRuntime.InvokeVoidAsync("outsideClickHandler.add", RtdContainerId, _rtdClickHelper.Reference);
+            await JsRuntime.InvokeVoidAsync("outsideClickHandler.add", PidContainerId, _pidClickHelper.Reference);
+            await JsRuntime.InvokeVoidAsync("outsideClickHandler.add", AoContainerId, _aoClickHelper.Reference);
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning("Не удалось зарегистрировать outsideClickHandler: {Error}", ex.Message);
+        }
+    }
+
+    /// <summary>
     /// Освобождает ресурсы компонента.
     /// </summary>
     public async ValueTask DisposeAsync()
@@ -90,7 +147,20 @@ public partial class IoEditorDialog : IAsyncDisposable
         _disposed = true;
         SubscriptionState.OnStateChanged -= HandleStateChanged;
         ConnectionState.ConnectionStateChanged -= HandleConnectionChanged;
-        await Task.CompletedTask;
+
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("outsideClickHandler.remove", AiContainerId);
+            await JsRuntime.InvokeVoidAsync("outsideClickHandler.remove", RtdContainerId);
+            await JsRuntime.InvokeVoidAsync("outsideClickHandler.remove", PidContainerId);
+            await JsRuntime.InvokeVoidAsync("outsideClickHandler.remove", AoContainerId);
+        }
+        catch { /* Circuit may be gone */ }
+
+        _aiClickHelper?.Dispose();
+        _rtdClickHelper?.Dispose();
+        _pidClickHelper?.Dispose();
+        _aoClickHelper?.Dispose();
     }
 
     private void HandleStateChanged()
@@ -133,6 +203,15 @@ public partial class IoEditorDialog : IAsyncDisposable
             var offset = await TagService.ReadAsync<float>(
                 AiCallCheckTags.BuildNodeId(sensor.Name, AiCallCheckTags.Fields.Offset));
 
+            if (!min.Success || !max.Success || !mult.Success || !offset.Success)
+            {
+                var errors = string.Join(", ", new[] { min, max, mult, offset }
+                    .Where(r => !r.Success)
+                    .Select(r => r.Error));
+                Logger.LogWarning("Не удалось прочитать AI сенсор {Sensor}: {Errors}", sensor.Name, errors);
+                continue;
+            }
+
             _aiItems.Add(new AiCalibrationItem
             {
                 SensorName = sensor.Name,
@@ -168,7 +247,7 @@ public partial class IoEditorDialog : IAsyncDisposable
         {
             return false;
         }
-        return Math.Abs(item.Min - _aiSnapshot[index].Min) > 0.0001;
+        return item.Min != _aiSnapshot[index].Min;
     }
 
     private bool IsAiMaxChanged(AiCalibrationItem item)
@@ -178,7 +257,7 @@ public partial class IoEditorDialog : IAsyncDisposable
         {
             return false;
         }
-        return Math.Abs(item.Max - _aiSnapshot[index].Max) > 0.0001;
+        return item.Max != _aiSnapshot[index].Max;
     }
 
     private bool IsAiMultiplierChanged(AiCalibrationItem item)
@@ -188,7 +267,7 @@ public partial class IoEditorDialog : IAsyncDisposable
         {
             return false;
         }
-        return Math.Abs(item.Multiplier - _aiSnapshot[index].Multiplier) > 0.0001;
+        return item.Multiplier != _aiSnapshot[index].Multiplier;
     }
 
     private bool IsAiOffsetChanged(AiCalibrationItem item)
@@ -198,7 +277,7 @@ public partial class IoEditorDialog : IAsyncDisposable
         {
             return false;
         }
-        return Math.Abs(item.Offset - _aiSnapshot[index].Offset) > 0.0001;
+        return item.Offset != _aiSnapshot[index].Offset;
     }
 
     private bool HasAiUnsavedChanges
@@ -214,10 +293,10 @@ public partial class IoEditorDialog : IAsyncDisposable
             {
                 var item = _aiItems[i];
                 var snapshot = _aiSnapshot[i];
-                if (Math.Abs(item.Min - snapshot.Min) > 0.0001 ||
-                    Math.Abs(item.Max - snapshot.Max) > 0.0001 ||
-                    Math.Abs(item.Multiplier - snapshot.Multiplier) > 0.0001 ||
-                    Math.Abs(item.Offset - snapshot.Offset) > 0.0001)
+                if (item.Min != snapshot.Min ||
+                    item.Max != snapshot.Max ||
+                    item.Multiplier != snapshot.Multiplier ||
+                    item.Offset != snapshot.Offset)
                 {
                     return true;
                 }
@@ -231,6 +310,8 @@ public partial class IoEditorDialog : IAsyncDisposable
     /// </summary>
     private async Task SaveAiAsync()
     {
+        _saveErrors.Clear();
+
         try
         {
             for (var i = 0; i < _aiItems.Count; i++)
@@ -238,33 +319,57 @@ public partial class IoEditorDialog : IAsyncDisposable
                 var item = _aiItems[i];
                 var snapshot = _aiSnapshot[i];
 
-                if (Math.Abs(item.Min - snapshot.Min) > 0.0001)
+                if (item.Min != snapshot.Min)
                 {
-                    await TagService.WriteAsync(
+                    var result = await TagService.WriteAsync(
                         AiCallCheckTags.BuildNodeId(item.SensorName, AiCallCheckTags.Fields.LimMin), (float)item.Min);
+                    if (!result.Success)
+                    {
+                        _saveErrors.Add($"{item.SensorName}.Min: {result.Error}");
+                    }
                 }
 
-                if (Math.Abs(item.Max - snapshot.Max) > 0.0001)
+                if (item.Max != snapshot.Max)
                 {
-                    await TagService.WriteAsync(
+                    var result = await TagService.WriteAsync(
                         AiCallCheckTags.BuildNodeId(item.SensorName, AiCallCheckTags.Fields.LimMax), (float)item.Max);
+                    if (!result.Success)
+                    {
+                        _saveErrors.Add($"{item.SensorName}.Max: {result.Error}");
+                    }
                 }
 
-                if (Math.Abs(item.Multiplier - snapshot.Multiplier) > 0.0001)
+                if (item.Multiplier != snapshot.Multiplier)
                 {
-                    await TagService.WriteAsync(
+                    var result = await TagService.WriteAsync(
                         AiCallCheckTags.BuildNodeId(item.SensorName, AiCallCheckTags.Fields.Gain), (float)item.Multiplier);
+                    if (!result.Success)
+                    {
+                        _saveErrors.Add($"{item.SensorName}.Multiplier: {result.Error}");
+                    }
                 }
 
-                if (Math.Abs(item.Offset - snapshot.Offset) > 0.0001)
+                if (item.Offset != snapshot.Offset)
                 {
-                    await TagService.WriteAsync(
+                    var result = await TagService.WriteAsync(
                         AiCallCheckTags.BuildNodeId(item.SensorName, AiCallCheckTags.Fields.Offset), (float)item.Offset);
+                    if (!result.Success)
+                    {
+                        _saveErrors.Add($"{item.SensorName}.Offset: {result.Error}");
+                    }
                 }
             }
 
-            CreateAiSnapshot();
-            Logger.LogInformation("AI Calibration сохранено");
+            if (_saveErrors.Count == 0)
+            {
+                CreateAiSnapshot();
+                Logger.LogInformation("AI Calibration сохранено");
+            }
+            else
+            {
+                Logger.LogWarning("Частичная ошибка сохранения AI Calibration: {Errors}",
+                    string.Join("; ", _saveErrors));
+            }
         }
         catch (Exception ex)
         {
@@ -312,6 +417,18 @@ public partial class IoEditorDialog : IAsyncDisposable
 
     private bool IsAiEditing(string propertyName) => _aiEditingColumn == propertyName;
 
+    /// <summary>
+    /// Завершает редактирование AI при клике вне грида.
+    /// </summary>
+    private async Task CloseAiEdit()
+    {
+        if (_aiItemToUpdate == null) return;
+        await _aiGrid.UpdateRow(_aiItemToUpdate);
+        _aiItemToUpdate = null;
+        _aiEditingColumn = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
     private void OnAiUpdateRow(AiCalibrationItem item)
     {
         // Изменения уже применены через binding
@@ -338,6 +455,15 @@ public partial class IoEditorDialog : IAsyncDisposable
                 RtdCalCheckTags.BuildNodeId(sensor.Name, RtdCalCheckTags.Fields.Offset));
             var calculated = await TagService.ReadAsync<float>(
                 RtdCalCheckTags.BuildNodeId(sensor.Name, RtdCalCheckTags.Fields.ValueAct));
+
+            if (!raw.Success || !multiplier.Success || !offset.Success || !calculated.Success)
+            {
+                var errors = string.Join(", ", new[] { raw, multiplier, offset, calculated }
+                    .Where(r => !r.Success)
+                    .Select(r => r.Error));
+                Logger.LogWarning("Не удалось прочитать RTD сенсор {Sensor}: {Errors}", sensor.Name, errors);
+                continue;
+            }
 
             _rtdItems.Add(new RtdCalibrationItem
             {
@@ -374,7 +500,7 @@ public partial class IoEditorDialog : IAsyncDisposable
         {
             return false;
         }
-        return Math.Abs(item.Multiplier - _rtdSnapshot[index].Multiplier) > 0.0001;
+        return item.Multiplier != _rtdSnapshot[index].Multiplier;
     }
 
     private bool IsRtdOffsetChanged(RtdCalibrationItem item)
@@ -384,7 +510,7 @@ public partial class IoEditorDialog : IAsyncDisposable
         {
             return false;
         }
-        return Math.Abs(item.Offset - _rtdSnapshot[index].Offset) > 0.0001;
+        return item.Offset != _rtdSnapshot[index].Offset;
     }
 
     private bool HasRtdUnsavedChanges
@@ -400,8 +526,8 @@ public partial class IoEditorDialog : IAsyncDisposable
             {
                 var item = _rtdItems[i];
                 var snapshot = _rtdSnapshot[i];
-                if (Math.Abs(item.Multiplier - snapshot.Multiplier) > 0.0001 ||
-                    Math.Abs(item.Offset - snapshot.Offset) > 0.0001)
+                if (item.Multiplier != snapshot.Multiplier ||
+                    item.Offset != snapshot.Offset)
                 {
                     return true;
                 }
@@ -415,6 +541,8 @@ public partial class IoEditorDialog : IAsyncDisposable
     /// </summary>
     private async Task SaveRtdAsync()
     {
+        _saveErrors.Clear();
+
         try
         {
             for (var i = 0; i < _rtdItems.Count; i++)
@@ -422,21 +550,37 @@ public partial class IoEditorDialog : IAsyncDisposable
                 var item = _rtdItems[i];
                 var snapshot = _rtdSnapshot[i];
 
-                if (Math.Abs(item.Multiplier - snapshot.Multiplier) > 0.0001)
+                if (item.Multiplier != snapshot.Multiplier)
                 {
-                    await TagService.WriteAsync(
+                    var result = await TagService.WriteAsync(
                         RtdCalCheckTags.BuildNodeId(item.PlcTag, RtdCalCheckTags.Fields.Gain), (float)item.Multiplier);
+                    if (!result.Success)
+                    {
+                        _saveErrors.Add($"{item.PlcTag}.Multiplier: {result.Error}");
+                    }
                 }
 
-                if (Math.Abs(item.Offset - snapshot.Offset) > 0.0001)
+                if (item.Offset != snapshot.Offset)
                 {
-                    await TagService.WriteAsync(
+                    var result = await TagService.WriteAsync(
                         RtdCalCheckTags.BuildNodeId(item.PlcTag, RtdCalCheckTags.Fields.Offset), (float)item.Offset);
+                    if (!result.Success)
+                    {
+                        _saveErrors.Add($"{item.PlcTag}.Offset: {result.Error}");
+                    }
                 }
             }
 
-            CreateRtdSnapshot();
-            Logger.LogInformation("RTD Calibration сохранено");
+            if (_saveErrors.Count == 0)
+            {
+                CreateRtdSnapshot();
+                Logger.LogInformation("RTD Calibration сохранено");
+            }
+            else
+            {
+                Logger.LogWarning("Частичная ошибка сохранения RTD Calibration: {Errors}",
+                    string.Join("; ", _saveErrors));
+            }
         }
         catch (Exception ex)
         {
@@ -482,6 +626,18 @@ public partial class IoEditorDialog : IAsyncDisposable
 
     private bool IsRtdEditing(string propertyName) => _rtdEditingColumn == propertyName;
 
+    /// <summary>
+    /// Завершает редактирование RTD при клике вне грида.
+    /// </summary>
+    private async Task CloseRtdEdit()
+    {
+        if (_rtdItemToUpdate == null) return;
+        await _rtdGrid.UpdateRow(_rtdItemToUpdate);
+        _rtdItemToUpdate = null;
+        _rtdEditingColumn = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
     private void OnRtdUpdateRow(RtdCalibrationItem item)
     {
         // Изменения уже применены через binding
@@ -520,6 +676,16 @@ public partial class IoEditorDialog : IAsyncDisposable
                 PidRegulatorTags.BuildNodeId(regulator.Name, PidRegulatorTags.Fields.Ti2));
             var td2 = await TagService.ReadAsync<float>(
                 PidRegulatorTags.BuildNodeId(regulator.Name, PidRegulatorTags.Fields.Td2));
+
+            var allResults = new[] { setPoint, actuelValue, manualValue, actuelloutValue, gain1, ti1, td1, gain2, ti2, td2 };
+            if (allResults.Any(r => !r.Success))
+            {
+                var errors = string.Join(", ", allResults
+                    .Where(r => !r.Success)
+                    .Select(r => r.Error));
+                Logger.LogWarning("Не удалось прочитать PID регулятор {Regulator}: {Errors}", regulator.Name, errors);
+                continue;
+            }
 
             _pidItems.Add(new PidRegulatorItem
             {
@@ -568,7 +734,7 @@ public partial class IoEditorDialog : IAsyncDisposable
         {
             return false;
         }
-        return Math.Abs(item.Gain1 - _pidSnapshot[index].Gain1) > 0.0001;
+        return item.Gain1 != _pidSnapshot[index].Gain1;
     }
 
     private bool IsPidTi1Changed(PidRegulatorItem item)
@@ -578,7 +744,7 @@ public partial class IoEditorDialog : IAsyncDisposable
         {
             return false;
         }
-        return Math.Abs(item.Ti1 - _pidSnapshot[index].Ti1) > 0.0001;
+        return item.Ti1 != _pidSnapshot[index].Ti1;
     }
 
     private bool IsPidTd1Changed(PidRegulatorItem item)
@@ -588,7 +754,7 @@ public partial class IoEditorDialog : IAsyncDisposable
         {
             return false;
         }
-        return Math.Abs(item.Td1 - _pidSnapshot[index].Td1) > 0.0001;
+        return item.Td1 != _pidSnapshot[index].Td1;
     }
 
     private bool IsPidGain2Changed(PidRegulatorItem item)
@@ -598,7 +764,7 @@ public partial class IoEditorDialog : IAsyncDisposable
         {
             return false;
         }
-        return Math.Abs(item.Gain2 - _pidSnapshot[index].Gain2) > 0.0001;
+        return item.Gain2 != _pidSnapshot[index].Gain2;
     }
 
     private bool IsPidTi2Changed(PidRegulatorItem item)
@@ -608,7 +774,7 @@ public partial class IoEditorDialog : IAsyncDisposable
         {
             return false;
         }
-        return Math.Abs(item.Ti2 - _pidSnapshot[index].Ti2) > 0.0001;
+        return item.Ti2 != _pidSnapshot[index].Ti2;
     }
 
     private bool IsPidTd2Changed(PidRegulatorItem item)
@@ -618,7 +784,7 @@ public partial class IoEditorDialog : IAsyncDisposable
         {
             return false;
         }
-        return Math.Abs(item.Td2 - _pidSnapshot[index].Td2) > 0.0001;
+        return item.Td2 != _pidSnapshot[index].Td2;
     }
 
     private bool HasPidUnsavedChanges
@@ -634,12 +800,12 @@ public partial class IoEditorDialog : IAsyncDisposable
             {
                 var item = _pidItems[i];
                 var snapshot = _pidSnapshot[i];
-                if (Math.Abs(item.Gain1 - snapshot.Gain1) > 0.0001 ||
-                    Math.Abs(item.Ti1 - snapshot.Ti1) > 0.0001 ||
-                    Math.Abs(item.Td1 - snapshot.Td1) > 0.0001 ||
-                    Math.Abs(item.Gain2 - snapshot.Gain2) > 0.0001 ||
-                    Math.Abs(item.Ti2 - snapshot.Ti2) > 0.0001 ||
-                    Math.Abs(item.Td2 - snapshot.Td2) > 0.0001)
+                if (item.Gain1 != snapshot.Gain1 ||
+                    item.Ti1 != snapshot.Ti1 ||
+                    item.Td1 != snapshot.Td1 ||
+                    item.Gain2 != snapshot.Gain2 ||
+                    item.Ti2 != snapshot.Ti2 ||
+                    item.Td2 != snapshot.Td2)
                 {
                     return true;
                 }
@@ -653,6 +819,8 @@ public partial class IoEditorDialog : IAsyncDisposable
     /// </summary>
     private async Task SavePidAsync()
     {
+        _saveErrors.Clear();
+
         try
         {
             for (var i = 0; i < _pidItems.Count; i++)
@@ -660,45 +828,77 @@ public partial class IoEditorDialog : IAsyncDisposable
                 var item = _pidItems[i];
                 var snapshot = _pidSnapshot[i];
 
-                if (Math.Abs(item.Gain1 - snapshot.Gain1) > 0.0001)
+                if (item.Gain1 != snapshot.Gain1)
                 {
-                    await TagService.WriteAsync(
+                    var result = await TagService.WriteAsync(
                         PidRegulatorTags.BuildNodeId(item.PlcTag, PidRegulatorTags.Fields.Gain1), (float)item.Gain1);
+                    if (!result.Success)
+                    {
+                        _saveErrors.Add($"{item.PlcTag}.Gain1: {result.Error}");
+                    }
                 }
 
-                if (Math.Abs(item.Ti1 - snapshot.Ti1) > 0.0001)
+                if (item.Ti1 != snapshot.Ti1)
                 {
-                    await TagService.WriteAsync(
+                    var result = await TagService.WriteAsync(
                         PidRegulatorTags.BuildNodeId(item.PlcTag, PidRegulatorTags.Fields.Ti1), (float)item.Ti1);
+                    if (!result.Success)
+                    {
+                        _saveErrors.Add($"{item.PlcTag}.Ti1: {result.Error}");
+                    }
                 }
 
-                if (Math.Abs(item.Td1 - snapshot.Td1) > 0.0001)
+                if (item.Td1 != snapshot.Td1)
                 {
-                    await TagService.WriteAsync(
+                    var result = await TagService.WriteAsync(
                         PidRegulatorTags.BuildNodeId(item.PlcTag, PidRegulatorTags.Fields.Td1), (float)item.Td1);
+                    if (!result.Success)
+                    {
+                        _saveErrors.Add($"{item.PlcTag}.Td1: {result.Error}");
+                    }
                 }
 
-                if (Math.Abs(item.Gain2 - snapshot.Gain2) > 0.0001)
+                if (item.Gain2 != snapshot.Gain2)
                 {
-                    await TagService.WriteAsync(
+                    var result = await TagService.WriteAsync(
                         PidRegulatorTags.BuildNodeId(item.PlcTag, PidRegulatorTags.Fields.Gain2), (float)item.Gain2);
+                    if (!result.Success)
+                    {
+                        _saveErrors.Add($"{item.PlcTag}.Gain2: {result.Error}");
+                    }
                 }
 
-                if (Math.Abs(item.Ti2 - snapshot.Ti2) > 0.0001)
+                if (item.Ti2 != snapshot.Ti2)
                 {
-                    await TagService.WriteAsync(
+                    var result = await TagService.WriteAsync(
                         PidRegulatorTags.BuildNodeId(item.PlcTag, PidRegulatorTags.Fields.Ti2), (float)item.Ti2);
+                    if (!result.Success)
+                    {
+                        _saveErrors.Add($"{item.PlcTag}.Ti2: {result.Error}");
+                    }
                 }
 
-                if (Math.Abs(item.Td2 - snapshot.Td2) > 0.0001)
+                if (item.Td2 != snapshot.Td2)
                 {
-                    await TagService.WriteAsync(
+                    var result = await TagService.WriteAsync(
                         PidRegulatorTags.BuildNodeId(item.PlcTag, PidRegulatorTags.Fields.Td2), (float)item.Td2);
+                    if (!result.Success)
+                    {
+                        _saveErrors.Add($"{item.PlcTag}.Td2: {result.Error}");
+                    }
                 }
             }
 
-            CreatePidSnapshot();
-            Logger.LogInformation("PID Regulator сохранено");
+            if (_saveErrors.Count == 0)
+            {
+                CreatePidSnapshot();
+                Logger.LogInformation("PID Regulator сохранено");
+            }
+            else
+            {
+                Logger.LogWarning("Частичная ошибка сохранения PID Regulator: {Errors}",
+                    string.Join("; ", _saveErrors));
+            }
         }
         catch (Exception ex)
         {
@@ -748,6 +948,18 @@ public partial class IoEditorDialog : IAsyncDisposable
 
     private bool IsPidEditing(string propertyName) => _pidEditingColumn == propertyName;
 
+    /// <summary>
+    /// Завершает редактирование PID при клике вне грида.
+    /// </summary>
+    private async Task ClosePidEdit()
+    {
+        if (_pidItemToUpdate == null) return;
+        await _pidGrid.UpdateRow(_pidItemToUpdate);
+        _pidItemToUpdate = null;
+        _pidEditingColumn = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
     private void OnPidUpdateRow(PidRegulatorItem item)
     {
         // Изменения уже применены через binding
@@ -755,7 +967,259 @@ public partial class IoEditorDialog : IAsyncDisposable
 
     #endregion
 
+    #region Analog Outputs
+
+    /// <summary>
+    /// Загружает данные Analog Outputs (PID-параметры) из OPC.
+    /// </summary>
+    private async Task LoadAoDataAsync()
+    {
+        _aoItems = [];
+
+        var outputs = new[] { ("VRP2_1", "DHW Flow"), ("VPP3_1", "Blr Gas Pressure") };
+
+        foreach (var (tag, desc) in outputs)
+        {
+            var gain1 = await TagService.ReadAsync<float>(
+                PidRegulatorTags.BuildNodeId(tag, PidRegulatorTags.Fields.Gain1));
+            var ti1 = await TagService.ReadAsync<float>(
+                PidRegulatorTags.BuildNodeId(tag, PidRegulatorTags.Fields.Ti1));
+            var td1 = await TagService.ReadAsync<float>(
+                PidRegulatorTags.BuildNodeId(tag, PidRegulatorTags.Fields.Td1));
+
+            var allResults = new[] { gain1, ti1, td1 };
+            if (allResults.Any(r => !r.Success))
+            {
+                var errors = string.Join(", ", allResults
+                    .Where(r => !r.Success)
+                    .Select(r => r.Error));
+                Logger.LogWarning("Не удалось прочитать AO {Tag}: {Errors}", tag, errors);
+                continue;
+            }
+
+            _aoItems.Add(new AnalogOutputItem
+            {
+                TagName = tag,
+                Description = desc,
+                Gain1 = gain1.Value,
+                Ti1 = ti1.Value,
+                Td1 = td1.Value
+            });
+        }
+    }
+
+    /// <summary>
+    /// Создаёт снимок текущих значений AO для отслеживания изменений.
+    /// </summary>
+    private void CreateAoSnapshot()
+    {
+        _aoSnapshot = _aoItems.Select(item => new AnalogOutputItem
+        {
+            TagName = item.TagName,
+            Description = item.Description,
+            Gain1 = item.Gain1,
+            Ti1 = item.Ti1,
+            Td1 = item.Td1
+        }).ToList();
+    }
+
+    private bool IsAoGain1Changed(AnalogOutputItem item)
+    {
+        var index = _aoItems.IndexOf(item);
+        if (index < 0 || index >= _aoSnapshot.Count)
+        {
+            return false;
+        }
+        return item.Gain1 != _aoSnapshot[index].Gain1;
+    }
+
+    private bool IsAoTi1Changed(AnalogOutputItem item)
+    {
+        var index = _aoItems.IndexOf(item);
+        if (index < 0 || index >= _aoSnapshot.Count)
+        {
+            return false;
+        }
+        return item.Ti1 != _aoSnapshot[index].Ti1;
+    }
+
+    private bool IsAoTd1Changed(AnalogOutputItem item)
+    {
+        var index = _aoItems.IndexOf(item);
+        if (index < 0 || index >= _aoSnapshot.Count)
+        {
+            return false;
+        }
+        return item.Td1 != _aoSnapshot[index].Td1;
+    }
+
+    private bool HasAoUnsavedChanges
+    {
+        get
+        {
+            if (_aoItems.Count != _aoSnapshot.Count)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < _aoItems.Count; i++)
+            {
+                var item = _aoItems[i];
+                var snapshot = _aoSnapshot[i];
+                if (item.Gain1 != snapshot.Gain1 ||
+                    item.Ti1 != snapshot.Ti1 ||
+                    item.Td1 != snapshot.Td1)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Сохраняет изменения Analog Outputs в OPC.
+    /// </summary>
+    private async Task SaveAoAsync()
+    {
+        _saveErrors.Clear();
+
+        try
+        {
+            for (var i = 0; i < _aoItems.Count; i++)
+            {
+                var item = _aoItems[i];
+                var snapshot = _aoSnapshot[i];
+
+                if (item.Gain1 != snapshot.Gain1)
+                {
+                    var result = await TagService.WriteAsync(
+                        PidRegulatorTags.BuildNodeId(item.TagName, PidRegulatorTags.Fields.Gain1), (float)item.Gain1);
+                    if (!result.Success)
+                    {
+                        _saveErrors.Add($"{item.TagName}.Gain1: {result.Error}");
+                    }
+                }
+
+                if (item.Ti1 != snapshot.Ti1)
+                {
+                    var result = await TagService.WriteAsync(
+                        PidRegulatorTags.BuildNodeId(item.TagName, PidRegulatorTags.Fields.Ti1), (float)item.Ti1);
+                    if (!result.Success)
+                    {
+                        _saveErrors.Add($"{item.TagName}.Ti1: {result.Error}");
+                    }
+                }
+
+                if (item.Td1 != snapshot.Td1)
+                {
+                    var result = await TagService.WriteAsync(
+                        PidRegulatorTags.BuildNodeId(item.TagName, PidRegulatorTags.Fields.Td1), (float)item.Td1);
+                    if (!result.Success)
+                    {
+                        _saveErrors.Add($"{item.TagName}.Td1: {result.Error}");
+                    }
+                }
+            }
+
+            if (_saveErrors.Count == 0)
+            {
+                CreateAoSnapshot();
+                Logger.LogInformation("Analog Outputs сохранено");
+            }
+            else
+            {
+                Logger.LogWarning("Частичная ошибка сохранения Analog Outputs: {Errors}",
+                    string.Join("; ", _saveErrors));
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Ошибка сохранения Analog Outputs");
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Сбрасывает изменения AO к исходным значениям.
+    /// </summary>
+    private void ResetAoChanges()
+    {
+        for (var i = 0; i < _aoItems.Count; i++)
+        {
+            _aoItems[i].Gain1 = _aoSnapshot[i].Gain1;
+            _aoItems[i].Ti1 = _aoSnapshot[i].Ti1;
+            _aoItems[i].Td1 = _aoSnapshot[i].Td1;
+        }
+        StateHasChanged();
+    }
+
+    private async Task OnAoCellClick(DataGridCellMouseEventArgs<AnalogOutputItem> args)
+    {
+        if (_aoItemToUpdate == args.Data && _aoEditingColumn == args.Column.Property)
+        {
+            return;
+        }
+
+        if (_aoItemToUpdate != null)
+        {
+            await _aoGrid.UpdateRow(_aoItemToUpdate);
+        }
+
+        _aoItemToUpdate = args.Data;
+        _aoEditingColumn = args.Column.Property;
+
+        await _aoGrid.EditRow(args.Data);
+        StateHasChanged();
+    }
+
+    private bool IsAoEditing(string propertyName) => _aoEditingColumn == propertyName;
+
+    /// <summary>
+    /// Завершает редактирование AO при клике вне грида.
+    /// </summary>
+    private async Task CloseAoEdit()
+    {
+        if (_aoItemToUpdate == null) return;
+        await _aoGrid.UpdateRow(_aoItemToUpdate);
+        _aoItemToUpdate = null;
+        _aoEditingColumn = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnAoUpdateRow(AnalogOutputItem item)
+    {
+        // Изменения уже применены через binding
+    }
+
+    #endregion
+
     #region Data Classes
+
+    /// <summary>
+    /// Хелпер для вызова CloseEdit из JS через DotNetObjectReference.
+    /// </summary>
+    private sealed class OutsideClickHelper : IDisposable
+    {
+        private readonly Func<Task> _closeAction;
+        private DotNetObjectReference<OutsideClickHelper>? _ref;
+
+        public OutsideClickHelper(Func<Task> closeAction)
+        {
+            _closeAction = closeAction;
+            _ref = DotNetObjectReference.Create(this);
+        }
+
+        public DotNetObjectReference<OutsideClickHelper> Reference => _ref!;
+
+        [JSInvokable]
+        public Task CloseEdit() => _closeAction();
+
+        public void Dispose() => _ref?.Dispose();
+    }
 
     /// <summary>
     /// Модель данных для AI Calibration.
@@ -800,6 +1264,18 @@ public partial class IoEditorDialog : IAsyncDisposable
         public double Gain2 { get; set; }
         public double Ti2 { get; set; }
         public double Td2 { get; set; }
+    }
+
+    /// <summary>
+    /// Модель данных для Analog Output (PID-параметры).
+    /// </summary>
+    public class AnalogOutputItem
+    {
+        public string TagName { get; set; } = "";
+        public string Description { get; set; } = "";
+        public double Gain1 { get; set; }
+        public double Ti1 { get; set; }
+        public double Td1 { get; set; }
     }
 
     #endregion

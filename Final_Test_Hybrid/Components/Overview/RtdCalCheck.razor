@@ -7,7 +7,7 @@
                     RowUpdate="@OnUpdateRow"
                     ColumnWidth="120px">
         <Columns>
-            <RadzenDataGridColumn TItem="RtdCalCheckItem" Property="PlcTag" Title="Тэг ПЛК" Width="150px">
+            <RadzenDataGridColumn TItem="RtdCalCheckItem" Property="PlcTag" Title="Параметр" Width="150px">
                 <Template Context="item">
                     @item.PlcTag
                 </Template>
@@ -19,7 +19,7 @@
                 </Template>
             </RadzenDataGridColumn>
 
-            <RadzenDataGridColumn TItem="RtdCalCheckItem" Property="Raw" Title="Сырое">
+            <RadzenDataGridColumn TItem="RtdCalCheckItem" Property="Raw" Title="Сырое знач.">
                 <Template Context="item">
                     @item.Raw.ToString("F3")
                 </Template>

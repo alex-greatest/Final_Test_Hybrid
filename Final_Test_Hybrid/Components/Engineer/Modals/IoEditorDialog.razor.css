@@ -32,6 +32,28 @@
     border-radius: 3px;
 }
 
+/* Нередактируемые ячейки - серый фон */
+.cell-readonly {
+    background-color: #e9ecef;
+    color: #6c757d;
+    padding: 4px 8px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+/* Редактируемые ячейки - белый фон + hover эффект */
+.cell-editable {
+    background-color: #fff;
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    display: inline-block;
+}
+
+.cell-editable:hover {
+    background-color: #e3f2fd;
+}
+
 .loading-container {
     display: flex;
     flex-direction: column;

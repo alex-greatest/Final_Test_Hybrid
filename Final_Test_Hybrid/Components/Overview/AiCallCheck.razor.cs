@@ -90,11 +90,25 @@ public partial class AiCallCheck : GridInplaceEditorBase<AiCallCheck.AiCallCheck
             }
 
             setter(value);
-            return InvokeAsync(StateHasChanged);
+            try
+            {
+                return InvokeAsync(StateHasChanged);
+            }
+            catch (ObjectDisposedException)
+            {
+                return Task.CompletedTask;
+            }
         }
 
         _callbacks[nodeId] = Callback;
-        await Subscription.SubscribeAsync(nodeId, Callback);
+        try
+        {
+            await Subscription.SubscribeAsync(nodeId, Callback);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Не удалось подписаться на {NodeId}", nodeId);
+        }
     }
 
     /// <summary>

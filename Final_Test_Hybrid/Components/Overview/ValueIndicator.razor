@@ -1,5 +1,7 @@
 @using Final_Test_Hybrid.Services.OpcUa.Subscription
+@using Microsoft.Extensions.Logging
 @inject OpcUaSubscription Subscription
+@inject ILogger<ValueIndicator> Logger
 @implements IAsyncDisposable
 
 <div class="row-item">
@@ -45,8 +47,15 @@
 
             if (!string.IsNullOrEmpty(Tag))
             {
-                await Subscription.SubscribeAsync(Tag, OnValueChanged);
-                _subscribedTag = Tag;
+                try
+                {
+                    await Subscription.SubscribeAsync(Tag, OnValueChanged);
+                    _subscribedTag = Tag;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Не удалось подписаться на {Tag}", Tag);
+                }
             }
             else
             {

@@ -4,7 +4,7 @@
 @using Final_Test_Hybrid.Services.OpcUa.Connection
 @inject PlcSubscriptionState SubscriptionState
 @inject OpcUaConnectionState ConnectionState
-@implements IDisposable
+@implements IAsyncDisposable
 
 <div class="hand-program-container">
     <div class="tabs-shell">
@@ -33,9 +33,6 @@
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Пн. выходы">
                     <PneumaticOutputsPanel IsInteractive="true" />
-                </RadzenTabsItem>
-                <RadzenTabsItem Text="Выходы 2">
-                    <OutputsPanel2 />
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Тест связи">
                     <ConnectionTestPanel />
@@ -72,10 +69,11 @@
         _ = InvokeAsync(StateHasChanged);
     }
 
-    public void Dispose()
+    public ValueTask DisposeAsync()
     {
         _disposed = true;
         SubscriptionState.OnStateChanged -= HandleStateChanged;
         ConnectionState.ConnectionStateChanged -= HandleConnectionChanged;
+        return ValueTask.CompletedTask;
     }
 }
