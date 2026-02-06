@@ -11,6 +11,18 @@
 | **Мягкий (SoftStop)** | `wasInScanPhase = true` | `ForceStop()` |
 | **Жёсткий (HardReset)** | `wasInScanPhase = false` | `Reset()` |
 
+## Важно: PLC reset и HardReset — разные потоки
+
+- **PLC reset flow (по тегу `Req_Reset`)**: стартует в `PlcResetCoordinator`, даёт `OnForceStop`, затем выполняет PLC-логику с ожиданием `AskEnd` (или timeout/cancel fallback).
+- **HardReset flow (по `ErrorCoordinator.OnReset`)**: приходит как причина остановки (`ExecutionStopReason.PlcHardReset`) и должен обрабатываться сразу, без ожидания `AskEnd`.
+- Следствие для `PreExecution`: нельзя трактовать любой `HardReset` как часть `AskEnd`-цепочки `PlcResetCoordinator`; это отдельный путь выхода.
+
+### Маркер источника HardReset (`PlcHardResetPending`)
+
+- В `PlcResetCoordinator` перед `Reset()` выставляется `PlcHardResetPending = 1`.
+- Сброс маркера выполняется в `finally`, даже если `_errorCoordinator.Reset()` выбросит исключение.
+- Это обязательная гарантия: маркер не должен оставаться в значении `1` после аварийного выхода из reset-flow.
+
 ### wasInScanPhase — определение
 
 ```csharp
@@ -81,7 +93,19 @@ private void ClearStateOnReset()
 PreExecutionCoordinator:
 - ждёт AskEnd перед стартом нового цикла;
 - отменяет ожидание штрихкода при reset;
-- продолжает цикл только после AskEnd (или после hard reset при таймауте AskEnd).
+- для PLC-reset пути продолжает цикл только после AskEnd.
+- для HardReset пути выходит немедленно, без ожидания AskEnd.
+
+### Таймауты reset-flow (конфигурируемые)
+
+- Таймауты задаются в `OpcUa:ResetFlowTimeouts`:
+  - `AskEndTimeoutSec` — ожидание `Ask_End`;
+  - `ReconnectWaitTimeoutSec` — максимум одного окна ожидания reconnect;
+  - `ResetHardTimeoutSec` — общий дедлайн reset-flow.
+- Эффективное окно reconnect вычисляется как `min(ReconnectWaitTimeoutSec, остаток ResetHardTimeoutSec)`, поэтому `WaitForConnectionAsync` не может ждать бесконечно.
+- `ResetHardTimeoutSec` должен быть `>= AskEndTimeoutSec` и `>= ReconnectWaitTimeoutSec` (валидация в `ResetFlowTimeoutsSettings`).
+- Значения по умолчанию в `appsettings.json`: `AskEnd=60`, `ReconnectWait=15`, `Hard=60` секунд.
+- При истечении любого из лимитов применяется timeout-path: `HandleInterruptAsync(TagTimeout)` + `OnResetCompleted`.
 
 ## Три состояния MainLoop
 
@@ -140,6 +164,12 @@ RunSingleCycleAsync:
 
 ### OnResetCompleted
 - `ScanModeController.TransitionToReadyInternal()`
+- Событие считается маркером завершения reset-процесса для scan-mode и вызывается в сценариях:
+  - успешный reset;
+  - таймаут `Ask_End`;
+  - runtime-отмена reset до `Ask_End` (без disposal);
+  - неожиданные ошибки с fallback в hard reset.
+- Исключение: при отмене из `DisposeAsync` (`_disposed = true`) `OnResetCompleted` не вызывается.
 
 ## ScanModeController — поведение при reset
 
@@ -199,6 +229,7 @@ private void TransitionToReadyInternal()
 | Reset + AutoReady выключен после | Таймеры на паузе, сессия не захватывается |
 | Reset + AutoReady включён во время | Активация заблокирована, catch-up после завершения |
 | Жёсткий reset (wasInScanPhase=false) | Таймеры паузятся, catch-up активация если нужна |
+| Runtime-отмена reset (без disposal) | Через `OnResetCompleted` снимается `_isResetting` и выполняется catch-up |
 
 ## Диагностика (Modbus) при PLC Reset
 

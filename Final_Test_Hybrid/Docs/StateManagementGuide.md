@@ -611,7 +611,7 @@ private bool ShouldUseSoftDeactivation()
 | `OnForceStop` | `Action` | Сигнал остановки (до AskEnd) |
 | `OnResetStarting` | `Func<bool>` | Возвращает wasInScanPhase |
 | `OnAskEndReceived` | `Action` | AskEnd получен — очистка Grid |
-| `OnResetCompleted` | `Action` | Весь reset завершён |
+| `OnResetCompleted` | `Action` | Reset завершён или отменён в runtime (кроме disposal) |
 | `CancelCurrentReset()` | `void` | Отмена текущего reset |
 
 ### Типы сброса
@@ -646,7 +646,7 @@ OnForceStop() ──┬─► PreExecutionCoordinator.HandleSoftStop()
 SendDataToMesAsync() ──► Отправка данных в MES
        │
        ▼
-WaitForAskEnd(60 сек) ──► Ожидание Ask_End от PLC
+WaitForAskEnd(AskEndTimeoutSec) ──► Ожидание Ask_End от PLC
        │
        ├── TimeoutException:
        │       │
@@ -677,6 +677,15 @@ OnResetCompleted() ──► ScanModeController.HandleResetCompleted()
                        → TransitionToReadyInternal()
 ```
 
+### Таймауты reset-flow
+
+- `PlcResetCoordinator` использует `OpcUa:ResetFlowTimeouts`:
+  - `AskEndTimeoutSec` — лимит ожидания `AskEnd`;
+  - `ReconnectWaitTimeoutSec` — лимит одного ожидания reconnect;
+  - `ResetHardTimeoutSec` — общий дедлайн reset-flow.
+- Ожидание reconnect (`connectionState.WaitForConnectionAsync`) ограничивается `min(ReconnectWaitTimeoutSec, remaining HardTimeout)`.
+- При истечении любого из лимитов выполняется timeout-path: `HandleInterruptAsync(TagTimeout)` и `OnResetCompleted`.
+
 ### Обработка исключений
 
 ```csharp
@@ -685,21 +694,23 @@ private async Task HandleResetExceptionAsync(Exception ex)
     switch (ex)
     {
         case OperationCanceledException when _disposed:
-            // Disposal — ничего не делаем
+            // Disposal — без OnResetCompleted
             break;
         case OperationCanceledException:
-            // Отмена — вызываем OnResetCompleted
+            // Runtime-отмена — возвращаем scan-mode через OnResetCompleted
+            InvokeEventSafe(OnResetCompleted);
             break;
         case TimeoutException:
-            // Таймаут AskEnd → HandleInterruptAsync(TagTimeout)
+            // Таймаут AskEnd или reconnect-window → HandleInterruptAsync(TagTimeout)
             await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout);
+            InvokeEventSafe(OnResetCompleted);
             break;
         default:
             // Неожиданная ошибка → полный Reset()
             _errorCoordinator.Reset();
+            InvokeEventSafe(OnResetCompleted);
             break;
     }
-    InvokeEventSafe(OnResetCompleted);
 }
 ```
 
@@ -766,6 +777,9 @@ private void HandleHardReset()
     infra.StatusReporter.ClearAllExceptScan();  // ← Очистка Grid
 }
 ```
+
+**Примечание по pre-execution error-resolution:**  
+`ErrorResolution.ConnectionLost` для pre-execution нормализуется в `PreExecutionResolution.HardReset`, а не в `Timeout`.
 
 ---
 

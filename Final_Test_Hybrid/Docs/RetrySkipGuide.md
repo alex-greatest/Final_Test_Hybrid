@@ -84,7 +84,7 @@ Gate контролирует выполнение шагов в колонке:
 | Ошибка шага | `Reset()` | Шаги ждут |
 | Skip | `Set()` | Следующий шаг запускается |
 | Retry успешен | `OpenGate()` | Следующий шаг запускается |
-| Retry упал | — | Gate закрыт, новая ошибка в очереди |
+| Retry упал (exception) | Fail-safe `OpenGate()` + `HardReset` | Избегаем дедлока колонки, выполнение переводится в reset-flow |
 
 ```csharp
 // ExecuteMapAsync ждёт gate перед каждым шагом
@@ -101,6 +101,7 @@ _continueGate.Reset();
 _continueGate.Set();
 
 // OpenGate() вызывается из координатора после успешного retry
+// и как fail-safe при аварийном exception в фоне retry
 public void OpenGate() => _continueGate.Set();
 ```
 
@@ -173,8 +174,8 @@ private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, C
     }
     catch (Exception ex)
     {
-        _logger.LogError(ex, "Ошибка SendAskRepeatAsync");
-        return;  // Диалог покажется снова
+        await HandleAskRepeatFailureAsync(error, ex, ct);
+        return;
     }
 
     InvokeRetryStartedSafely();
@@ -221,7 +222,8 @@ private async Task ExecuteRetryInBackgroundAsync(StepError error, ColumnExecutor
     }
     catch (Exception ex)
     {
-        _logger.LogError(ex, "Ошибка Retry в фоне");
+        await HandleRetryFailureWithHardResetAsync(error, ex);
+        executor.OpenGate(); // fail-safe: не оставлять колонку в вечном wait
     }
 }
 ```
@@ -239,11 +241,17 @@ private async Task ExecuteRetryInBackgroundAsync(StepError error, ColumnExecutor
 
 ### Ошибка SendAskRepeatAsync
 
-При ошибке связи с PLC → return → диалог показывается снова.
+При ошибке `SendAskRepeatAsync` выполняется fail-fast через `HandleAskRepeatFailureAsync`:
+- `RequestStopAsFailure(...)`
+- `HandleInterruptAsync(PlcConnectionLost|TagTimeout)`
+- `CancelAsync()`
 
 ### Retry снова упал
 
-SetErrorState() → gate.Reset() → новая ошибка в очередь → новый диалог.
+Для не-`OperationCanceledException` в `ExecuteRetryInBackgroundAsync`:
+- логируется критическая ошибка;
+- вызывается `HardReset` (`_errorCoordinator.Reset()`);
+- дополнительно выполняется fail-safe `executor.OpenGate()`, чтобы не допустить зависания колонки при любых последующих сбоях.
 
 ### Fault для non-PLC шагов
 

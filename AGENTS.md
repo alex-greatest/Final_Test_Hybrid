@@ -66,6 +66,7 @@ public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestS
 - ***чистый простой и понятный код. минимум defense programm***
 - ***никакого оверинжиниринг***
 - **Один** `if`/`for`/`while`/`switch`/`try` на метод (guard clauses OK) ***метод ~50 строк не больше***
+- Если метод начинает разрастаться или требует больше одной основной управляющей конструкции — **сразу** упрощать: выносить ветки в `private` helper-методы (в том же partial), не откладывая на потом.
 - `var` везде, `{}` обязательны, **max 300 строк** сервисы  → partial classes
 - **PascalCase:** типы, методы | **camelCase:** локальные, параметры
 - Предпочитай `switch` и тернарный оператор где разумно
@@ -104,3 +105,58 @@ public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestS
 | TagWaiter | [Docs/TagWaiterGuide.md](Final_Test_Hybrid/Docs/TagWaiterGuide.md) |
 
 **Детальная документация:** [Final_Test_Hybrid/CLAUDE.md](Final_Test_Hybrid/CLAUDE.md)
+
+## Практики устойчивого кода (обязательно)
+
+- Для lifecycle/cleanup критические операции освобождения (Release*, Dispose*, сброс флагов) выполнять в finally.
+- Публичные события (On...) не вызывать напрямую в критических путях: использовать safe-обёртки Notify...Safely()/Invoke...Safe() с логированием исключений.
+- Для reconnect использовать только ограниченный retry (2-3 попытки, 200-500 ms задержка) и только для transient OPC ошибок.
+- Перед повторной записью/ожиданием PLC-тегов после reconnect сначала дождаться connectionState.WaitForConnectionAsync(ct).
+- В reset-flow ожидание reconnect через `WaitForConnectionAsync` не должно быть бесконечным: ограничивать окно reconnect через `OpcUa:ResetFlowTimeouts:ReconnectWaitTimeoutSec` и остаток `ResetHardTimeoutSec`.
+- Ошибки записи критичных PLC-тегов (Reset, AskRepeat, End) не проглатывать: либо throw, либо явный fallback с логом.
+- При rebind/reset подписок обязательно инвалидировать кэш значений и не сохранять Bad quality значения в runtime-кэш.
+- При ошибке добавления runtime monitored item (`AddTagAsync`/`ApplyChangesAsync`) выполнять rollback (`_monitoredItems`, `_values`, callbacks), чтобы не оставлять stale-состояние.
+- Для `TagWaiter.WaitForFalseAsync` первичную проверку cache выполнять через `subscription.GetValue(nodeId)` + `is bool`, а не через `GetValue<bool>()` (чтобы исключить фейковый `default(false)` при пустом cache после reconnect).
+- При не-`OperationCanceledException` в фоновом retry (`ExecuteRetryInBackgroundAsync`) использовать fail-fast путь в `HardReset` и дополнительно делать fail-safe `OpenGate()`, чтобы не оставлять колонку в вечной блокировке.
+- В completion-flow исключения `SaveAsync` не должны останавливать main loop: переводить их в failed-save (`SaveResult.Fail`) и продолжать retry/dialog loop.
+- Для `PlcResetCoordinator.PlcHardResetPending` сброс в `0` обязателен в `finally` вокруг `_errorCoordinator.Reset()`.
+- Если метод разрастается по условиям/веткам, сразу выносить ветви в private helper-методы в том же partial-файле.
+
+## Периодичность проверок
+
+- После каждого значимого изменения в логике (reconnect/reset/error flow) запускать минимум dotnet build.
+- Перед сдачей изменений обязательно выполнять полный чек-лист верификации.
+
+## Обязательный чек-лист верификации
+
+1. dotnet build Final_Test_Hybrid.slnx — успешно.
+2. dotnet format analyzers --verify-no-changes — чисто.
+3. dotnet format style --verify-no-changes — чисто.
+
+## Зафиксированные проектные решения (не переобсуждаем без нового инцидента)
+
+- `PLC reset` и `HardReset` — разные потоки:
+  `PLC reset` (через `Req_Reset`/`PlcResetCoordinator`) работает по цепочке с `AskEnd`,
+  `HardReset` (через `ErrorCoordinator.OnReset` / `ExecutionStopReason.PlcHardReset`) обрабатывается немедленно и не ждёт `AskEnd`.
+- В `PreExecutionCoordinator.ExecuteCycleAsync` при гонке `testCompletion` vs `reset` приоритет у reset (если reset уже активен/сигнал сброса уже выставлен).
+- Для soft-reset очистка `UI/Boiler` не выполняется заранее: очистка должна идти по текущему `AskEnd`-пути.
+- Логика таймера переналадки не меняется при фиксе reset/reconnect; любые правки reset не должны ломать существующий changeover-flow.
+- Для runtime OPC-подписок при reconnect использовать только полный rebuild (`новая Session + RecreateForSessionAsync`), без гибридного ручного rebind.
+- Спиннер `Выполняется подписка` показывать только при фактическом старте реальных подписок (после готовности соединения), а не на фазе retry/reconnect попыток.
+- Для `PlcResetCoordinator` таймауты reset-flow берутся из `OpcUa:ResetFlowTimeouts`:
+  `AskEndTimeoutSec` (ожидание AskEnd), `ReconnectWaitTimeoutSec` (одно ожидание reconnect), `ResetHardTimeoutSec` (общий дедлайн).
+  `ResetHardTimeoutSec` должен быть `>=` двух остальных; по таймауту — `TagTimeout` + `OnResetCompleted`.
+- В pre-execution `ErrorResolution.ConnectionLost` маппится в `PreExecutionResolution.HardReset` (не в `Timeout`).
+- В execution-flow не-`OperationCanceledException` внутри фонового retry трактуется как критическая ошибка и переводит систему в `HardReset`.
+- В completion-flow ошибка `SaveAsync` трактуется как recoverable save-failure (через retry/dialog), а не как причина падения main loop.
+- При чтении/проверке текстовых файлов через CLI явно использовать UTF-8 (`Get-Content -Encoding UTF8`), чтобы не принимать артефакты декодирования за порчу файла.
+- Если в изменяемом файле найден текст вида `РџР.../РѕР...`, это дефект: исправлять в том же изменении и проверять файл повторным чтением в UTF-8.
+
+## Компромиссы (временные)
+
+- **Пункт 2 (кодировка):** временно допускаем наличие локальных «кракозябр» в части исторически изменённых комментариев/логов. Отдельная задача на централизованную нормализацию кодировки в UTF-8 (без смешения ANSI/UTF-8) запланирована отдельно.
+- **Пункт 5 (UI-сообщение по PlcConnectionLost):** отдельное правило `CurrentInterrupt == InterruptReason.PlcConnectionLost` в `MessageService` пока не добавляем. Пользовательский текст остаётся через текущие правила (`OpcUaConnectionState.IsConnected`, `TagTimeout`, `ResetActive`) как согласованный временный компромисс.
+- **Пункт 6 (OPC reconnect):** для runtime-подписок используем только полный rebuild (`новая Session + RecreateForSessionAsync`), без гибридного `SessionReconnectHandler + ручной rebind`. Это временно зафиксированный компромисс для исключения дублей monitored items.
+- **PLC reset vs HardReset (док-фиксация):** различать два независимых потока.  
+  `PlcResetCoordinator` (по `Req_Reset`) работает через `OnForceStop` и сценарий с `AskEnd`.  
+  `HardReset` (через `ErrorCoordinator.OnReset` / `ExecutionStopReason.PlcHardReset`) обрабатывается немедленно и не должен зависеть от ожидания `AskEnd`.

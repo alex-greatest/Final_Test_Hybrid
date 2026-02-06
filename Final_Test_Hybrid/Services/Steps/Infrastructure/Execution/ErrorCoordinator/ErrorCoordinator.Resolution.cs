@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Models.Plc.Tags;
 using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.OpcUa;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 
@@ -32,11 +33,15 @@ public sealed partial class ErrorCoordinator
             _logger.LogWarning("Таймаут ожидания ответа оператора");
             return ErrorResolution.Timeout;
         }
-        catch (OperationCanceledException ex)
+        catch (OperationCanceledException)
         {
             _logger.LogInformation("Ожидание решения отменено");
-            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
-            return default;
+            throw;
+        }
+        catch (Exception ex) when (IsTransientOpcDisconnect(ex))
+        {
+            _logger.LogWarning("Потеря OPC-связи при ожидании решения: {Error}", ex.Message);
+            return ErrorResolution.ConnectionLost;
         }
     }
 
@@ -47,7 +52,7 @@ public sealed partial class ErrorCoordinator
 
         if (options.EnableSkip)
         {
-            if (options.BlockEndTag != null && options.BlockErrorTag != null)
+            if (options is { BlockEndTag: not null, BlockErrorTag: not null })
             {
                 builder.WaitForAllTrue(
                     [options.BlockEndTag, options.BlockErrorTag],
@@ -82,20 +87,30 @@ public sealed partial class ErrorCoordinator
     public async Task SendAskRepeatAsync(string? blockErrorTag, CancellationToken ct)
     {
         _logger.LogInformation("Отправка AskRepeat в PLC");
-        var result = await _resolution.PlcService.WriteAsync(BaseTags.AskRepeat, true, ct);
+        await EnsureAskRepeatWrittenAsync(ct);
+        await WaitBlockErrorResetIfNeededAsync(blockErrorTag, ct);
+    }
 
-        if (result.Error != null)
+    private async Task EnsureAskRepeatWrittenAsync(CancellationToken ct)
+    {
+        var result = await _resolution.PlcService.WriteAsync(BaseTags.AskRepeat, true, ct);
+        if (result.Success)
         {
-            _logger.LogError("Ошибка записи AskRepeat: {Error}", result.Error);
+            return;
+        }
+        throw new InvalidOperationException($"Критичная ошибка записи AskRepeat в PLC: {result.Error}");
+    }
+
+    private async Task WaitBlockErrorResetIfNeededAsync(string? blockErrorTag, CancellationToken ct)
+    {
+        if (blockErrorTag == null)
+        {
             return;
         }
 
-        if (blockErrorTag != null)
-        {
-            _logger.LogDebug("Ожидание сброса Error блока: {Tag}", blockErrorTag);
-            await _resolution.TagWaiter.WaitForFalseAsync(blockErrorTag, timeout: TimeSpan.FromSeconds(60), ct);
-            _logger.LogDebug("Error блока сброшен");
-        }
+        _logger.LogDebug("Ожидание сброса Error блока: {Tag}", blockErrorTag);
+        await _resolution.TagWaiter.WaitForFalseAsync(blockErrorTag, timeout: TimeSpan.FromSeconds(60), ct);
+        _logger.LogDebug("Error блока сброшен");
     }
 
     /// <summary>
@@ -108,6 +123,11 @@ public sealed partial class ErrorCoordinator
         _logger.LogDebug("Ожидание сброса Req_Repeat...");
         await _resolution.TagWaiter.WaitForFalseAsync(BaseTags.ErrorRetry, timeout: TimeSpan.FromSeconds(60), ct);
         _logger.LogDebug("Req_Repeat сброшен");
+    }
+
+    private static bool IsTransientOpcDisconnect(Exception ex)
+    {
+        return OpcUaTransientErrorClassifier.IsTransientDisconnect(ex);
     }
 
     #endregion
@@ -131,8 +151,14 @@ public sealed partial class ErrorCoordinator
 
     private async Task TryResumeFromPauseAsync(CancellationToken ct)
     {
-        if (_disposed) { return; }
-        if (!await TryAcquireLockAsync(ct)) { return; }
+        if (_disposed)
+        {
+            return;
+        }
+        if (!await TryAcquireLockAsync(ct))
+        {
+            return;
+        }
 
         try
         {

@@ -22,7 +22,11 @@ public partial class TestCompletionCoordinator
 
         // 2. AskRepeat = true (PLC сбросит Req_Repeat)
         // ReworkDialog будет показан в ScanBarcodeMesStep если MES потребует
-        await deps.PlcService.WriteAsync(BaseTags.AskRepeat, true, ct);
+        var written = await TryWriteTagAsync(BaseTags.AskRepeat, true, "AskRepeat = true для NOK повтора", ct);
+        if (!written)
+        {
+            return CompletionResult.Cancelled;
+        }
         logger.LogInformation("NOK повтор: AskRepeat = true, переход к подготовке");
 
         return CompletionResult.NokRepeatRequested;

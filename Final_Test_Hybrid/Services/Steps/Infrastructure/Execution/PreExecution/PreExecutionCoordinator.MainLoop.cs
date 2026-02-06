@@ -126,9 +126,9 @@ public partial class PreExecutionCoordinator
         var completedTask = await Task.WhenAny(testCompletionTcs.Task, resetSignal.Task);
 
         // Если сработал сброс - возвращаем причину сброса
-        if (completedTask == resetSignal.Task)
+        if (ShouldExitByReset(completedTask, resetSignal))
         {
-            return await resetSignal.Task;
+            return ResolveResetExitReason(resetSignal);
         }
 
         await testCompletionTcs.Task;
@@ -141,6 +141,28 @@ public partial class PreExecutionCoordinator
 
         // Обрабатываем завершение теста через координатор
         return await HandleTestCompletionAsync(ct);
+    }
+
+    private bool ShouldExitByReset(Task completedTask, TaskCompletionSource<CycleExitReason> resetSignal)
+    {
+        return completedTask == resetSignal.Task || IsResetActiveDuringCompletion(resetSignal);
+    }
+
+    private bool IsResetActiveDuringCompletion(TaskCompletionSource<CycleExitReason> resetSignal)
+    {
+        return resetSignal.Task.IsCompletedSuccessfully || coordinators.PlcResetCoordinator.IsActive;
+    }
+
+    private CycleExitReason ResolveResetExitReason(TaskCompletionSource<CycleExitReason> resetSignal)
+    {
+        if (resetSignal.Task.IsCompletedSuccessfully)
+        {
+            return resetSignal.Task.Result;
+        }
+
+        return TryGetStopExitReason(out var stopExitReason)
+            ? stopExitReason
+            : CycleExitReason.SoftReset;
     }
 
     private void HandleCycleExit(CycleExitReason reason)

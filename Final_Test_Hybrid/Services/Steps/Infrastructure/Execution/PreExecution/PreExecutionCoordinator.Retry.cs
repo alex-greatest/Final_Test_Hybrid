@@ -185,6 +185,7 @@ public partial class PreExecutionCoordinator
         {
             ErrorResolution.Retry => PreExecutionResolution.Retry,
             ErrorResolution.Skip => PreExecutionResolution.Skip,
+            ErrorResolution.ConnectionLost => PreExecutionResolution.HardReset,
             _ => PreExecutionResolution.Timeout
         };
     }

@@ -1,27 +1,39 @@
+using Final_Test_Hybrid.Models.Plc.Tags;
+using Final_Test_Hybrid.Services.OpcUa;
+using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
+using Final_Test_Hybrid.Settings.OpcUa;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Final_Test_Hybrid.Services.Main.PlcReset;
-
-using Models.Plc.Tags;
-using OpcUa;
-using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Координатор сброса теста по сигналу PLC.
 /// Обрабатывает Req_Reset, отправляет данные, ждёт Ask_End.
 /// </summary>
-public sealed class PlcResetCoordinator : IAsyncDisposable
+public sealed partial class PlcResetCoordinator : IAsyncDisposable
 {
+    private static readonly TimeSpan AskEndWaitSlice = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan AskEndSyncTimeout = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan ResetWriteRetryDelay = TimeSpan.FromMilliseconds(300);
+    private const int ResetWriteRetryAttempts = 2;
+
     private readonly ResetSubscription _resetSubscription;
     private readonly IErrorCoordinator _errorCoordinator;
     private readonly TagWaiter _tagWaiter;
     private readonly OpcUaTagService _plcService;
+    private readonly OpcUaConnectionState _connectionState;
+    private readonly TimeSpan _askEndTimeout;
+    private readonly TimeSpan _reconnectWaitTimeout;
+    private readonly TimeSpan _resetHardTimeout;
     private readonly ILogger<PlcResetCoordinator> _logger;
     private readonly CancellationTokenSource _disposeCts = new();
     private CancellationTokenSource? _currentResetCts;
     private int _isHandlingReset;
     private volatile bool _disposed;
-    private static readonly TimeSpan AskEndTimeout = TimeSpan.FromSeconds(60);
+    private bool _currentResetWasInScanPhase;
+    private DateTime _currentResetHardDeadlineUtc;
 
     /// <summary>
     /// Одноразовый маркер: 1 = PLC Reset в процессе (между началом и Reset()/ForceStop()).
@@ -41,12 +53,19 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
         IErrorCoordinator errorCoordinator,
         TagWaiter tagWaiter,
         OpcUaTagService plcService,
+        OpcUaConnectionState connectionState,
+        IOptions<OpcUaSettings> opcUaSettings,
         ILogger<PlcResetCoordinator> logger)
     {
         _resetSubscription = resetSubscription;
         _errorCoordinator = errorCoordinator;
         _tagWaiter = tagWaiter;
         _plcService = plcService;
+        _connectionState = connectionState;
+        var timeoutSettings = opcUaSettings.Value.ResetFlowTimeouts;
+        _askEndTimeout = TimeSpan.FromSeconds(timeoutSettings.AskEndTimeoutSec);
+        _reconnectWaitTimeout = TimeSpan.FromSeconds(timeoutSettings.ReconnectWaitTimeoutSec);
+        _resetHardTimeout = TimeSpan.FromSeconds(timeoutSettings.ResetHardTimeoutSec);
         _logger = logger;
         _resetSubscription.OnStateChanged += HandleResetSignal;
     }
@@ -55,8 +74,10 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
 
     private void HandleResetSignal()
     {
-        if (_disposed) { return; }
-
+        if (_disposed)
+        {
+            return;
+        }
         _ = HandleResetAsync().ContinueWith(
             t => _logger.LogError(t.Exception, "Ошибка обработки PLC reset"),
             TaskContinuationOptions.OnlyOnFaulted);
@@ -70,7 +91,7 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
             return;
         }
         IsActive = true;
-        OnActiveChanged?.Invoke();
+        NotifyActiveChangedSafely();
         _currentResetCts = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token);
         try
         {
@@ -88,35 +109,18 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
 
     private async Task ExecuteResetStepsAsync(CancellationToken ct)
     {
-        _logger.LogWarning("═══ СБРОС ПО СИГНАЛУ PLC ═══");
-
-        var wasInScanPhase = InvokeEventSafeWithResult(OnResetStarting) ?? false;
-        _logger.LogInformation("Состояние до сброса: InScanPhase: {InScanPhase}", wasInScanPhase);
+        _logger.LogWarning("╔═══ СБРОС ПО СИГНАЛУ PLC ═══");
+        StartResetHardTimeoutWindow();
+        LogConfiguredTimeouts();
+        _currentResetWasInScanPhase = InvokeEventSafeWithResult(OnResetStarting) ?? false;
+        _logger.LogInformation("Состояние до сброса: InScanPhase: {InScanPhase}", _currentResetWasInScanPhase);
 
         SignalForceStop();
         await SendDataToMesAsync(ct);
         await SendResetAndWaitAckAsync(ct);
 
-        ExecuteSmartReset(wasInScanPhase);
+        ExecuteSmartReset(_currentResetWasInScanPhase);
         _logger.LogInformation("PLC Reset завершён успешно");
-    }
-
-    private void ExecuteSmartReset(bool wasInScanPhase)
-    {
-        if (wasInScanPhase)
-        {
-            _logger.LogInformation("Мягкий сброс (был в шаге сканирования) — сохраняем Grid и BoilerState");
-            _errorCoordinator.ForceStop();
-        }
-        else
-        {
-            _logger.LogInformation("Полный сброс (тест выполнялся) — очищаем BoilerState");
-            Volatile.Write(ref PlcHardResetPending, 1);
-            _errorCoordinator.Reset();
-            Volatile.Write(ref PlcHardResetPending, 0);
-        }
-
-        InvokeEventSafe(OnResetCompleted);
     }
 
     private async Task HandleResetExceptionAsync(Exception ex)
@@ -127,23 +131,112 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
                 _logger.LogInformation("PLC Reset отменён — disposal");
                 break;
             case OperationCanceledException:
-                _logger.LogInformation("PLC Reset отменён");
+                _logger.LogInformation("PLC Reset отменён до подтверждения Ask_End");
                 InvokeEventSafe(OnResetCompleted);
                 break;
-
             case TimeoutException:
-                _logger.LogWarning("Таймаут Ask_End ({Timeout} сек)", AskEndTimeout.TotalSeconds);
-                await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout);
-                InvokeEventSafe(OnResetCompleted);
+                await HandleAskEndTimeoutAsync();
+                break;
+            case Exception transientEx when IsTransientOpcDisconnect(transientEx):
+                await HandleTransientDisconnectAsync(transientEx);
                 break;
             default:
                 _logger.LogError(ex, "Неожиданная ошибка PLC Reset — полный сброс");
                 Volatile.Write(ref PlcHardResetPending, 1);
-                _errorCoordinator.Reset();
-                Volatile.Write(ref PlcHardResetPending, 0);
+                try
+                {
+                    _errorCoordinator.Reset();
+                }
+                finally
+                {
+                    Volatile.Write(ref PlcHardResetPending, 0);
+                }
                 InvokeEventSafe(OnResetCompleted);
                 break;
         }
+    }
+
+    private async Task HandleTransientDisconnectAsync(Exception ex)
+    {
+        _logger.LogWarning(ex, "Transient OPC disconnect во время PLC Reset — продолжаем ждать Ask_End");
+        try
+        {
+            var ct = _currentResetCts?.Token ?? _disposeCts.Token;
+            await TryResendResetSignalAfterReconnectAsync(ct);
+            await WaitForAskEndWithReconnectAsync(ct);
+            InvokeEventSafe(OnAskEndReceived);
+            ExecuteSmartReset(_currentResetWasInScanPhase);
+            _logger.LogInformation("PLC Reset завершён после восстановления связи");
+        }
+        catch (TimeoutException)
+        {
+            await HandleAskEndTimeoutAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("PLC Reset отменён во время ожидания Ask_End после reconnect");
+            if (!_disposed)
+            {
+                InvokeEventSafe(OnResetCompleted);
+            }
+        }
+    }
+
+    private async Task TryResendResetSignalAfterReconnectAsync(CancellationToken ct)
+    {
+        await WaitForConnectionWithinResetTimeoutAsync(ct);
+        for (var attempt = 1; attempt <= ResetWriteRetryAttempts; attempt++)
+        {
+            var shouldRetry = await TrySendResetAfterReconnectAttemptAsync(attempt, ct);
+            if (!shouldRetry)
+            {
+                return;
+            }
+            await Task.Delay(ResetWriteRetryDelay, ct);
+        }
+        _logger.LogWarning(
+            "Reset=true после reconnect не записан за {Attempts} попыток. Продолжаем ожидание Ask_End",
+            ResetWriteRetryAttempts);
+    }
+
+    private async Task<bool> TrySendResetAfterReconnectAttemptAsync(int attempt, CancellationToken ct)
+    {
+        try
+        {
+            await TrySendResetSignalAsync(ct);
+            _logger.LogInformation("Повторная запись Reset=true после reconnect выполнена");
+            return false;
+        }
+        catch (Exception ex) when (ShouldRetryResetWriteAfterReconnect(ex, attempt))
+        {
+            _logger.LogWarning(
+                ex,
+                "Повторная запись Reset=true после reconnect не удалась. Попытка {Attempt}/{MaxAttempts}",
+                attempt,
+                ResetWriteRetryAttempts);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Повторная запись Reset=true после reconnect не удалась. Продолжаем ожидание Ask_End");
+            return false;
+        }
+    }
+
+    private static bool ShouldRetryResetWriteAfterReconnect(Exception ex, int attempt)
+    {
+        return attempt < ResetWriteRetryAttempts && IsTransientOpcDisconnect(ex);
+    }
+
+    private async Task HandleAskEndTimeoutAsync()
+    {
+        _logger.LogWarning(
+            "Таймаут reset-flow: AskEnd={AskEndSec} сек, ReconnectWait={ReconnectWaitSec} сек, Hard={HardSec} сек",
+            _askEndTimeout.TotalSeconds,
+            _reconnectWaitTimeout.TotalSeconds,
+            _resetHardTimeout.TotalSeconds);
+        await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout);
+        InvokeEventSafe(OnResetCompleted);
     }
 
     #endregion
@@ -158,35 +251,176 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
     private async Task SendDataToMesAsync(CancellationToken ct)
     {
         _logger.LogInformation("MES/DB отправка (заглушка)");
-        await Task.Delay(100, ct);  // TODO: реальная отправка
+        await Task.Delay(100, ct);
     }
 
     private async Task SendResetAndWaitAckAsync(CancellationToken ct)
     {
         await TrySendResetSignalAsync(ct);
-        await WaitForAskEndAsync(ct);
+        await WaitForAskEndWithReconnectAsync(ct);
         InvokeEventSafe(OnAskEndReceived);
     }
 
     private async Task TrySendResetSignalAsync(CancellationToken ct)
     {
-        try
+        var writeResult = await _plcService.WriteAsync(BaseTags.Reset, true, ct);
+        if (!writeResult.Success)
         {
-            await _plcService.WriteAsync(BaseTags.Reset, true, ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка записи Reset в PLC — продолжаем");
+            throw new InvalidOperationException($"Не удалось записать Reset: {writeResult.Error}");
         }
     }
 
-    private async Task WaitForAskEndAsync(CancellationToken ct)
+    private async Task WaitForAskEndWithReconnectAsync(CancellationToken ct)
+    {
+        await SynchronizeStaleAskEndStateAsync(ct);
+        var askEndDeadlineUtc = DateTime.UtcNow + _askEndTimeout;
+        while (true)
+        {
+            var remaining = GetRemainingAskEndWindow(askEndDeadlineUtc);
+            if (remaining <= TimeSpan.Zero)
+            {
+                throw new TimeoutException("Таймаут ожидания Ask_End");
+            }
+            var slice = remaining < AskEndWaitSlice ? remaining : AskEndWaitSlice;
+            try
+            {
+                await WaitAskEndSliceAsync(slice, ct);
+                return;
+            }
+            catch (TimeoutException)
+            {
+            }
+            catch (Exception ex) when (IsTransientOpcDisconnect(ex))
+            {
+                _logger.LogWarning(ex, "Потеря связи при ожидании Ask_End — ждём reconnect и продолжаем");
+                await WaitForConnectionWithinResetTimeoutAsync(ct);
+            }
+        }
+    }
+
+    private void StartResetHardTimeoutWindow()
+    {
+        _currentResetHardDeadlineUtc = DateTime.UtcNow + _resetHardTimeout;
+    }
+
+    private TimeSpan GetRemainingResetHardTimeout()
+    {
+        var remaining = _currentResetHardDeadlineUtc - DateTime.UtcNow;
+        return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+    }
+
+    private async Task WaitForConnectionWithinResetTimeoutAsync(CancellationToken ct)
+    {
+        var reconnectWaitTimeout = GetEffectiveReconnectWaitTimeout();
+        if (reconnectWaitTimeout <= TimeSpan.Zero)
+        {
+            throw new TimeoutException("Истёк hard timeout PLC reset во время ожидания reconnect");
+        }
+
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        linkedCts.CancelAfter(reconnectWaitTimeout);
+
+        try
+        {
+            await _connectionState.WaitForConnectionAsync(linkedCts.Token);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested && linkedCts.IsCancellationRequested)
+        {
+            throw new TimeoutException("Таймаут ожидания reconnect в reset-flow");
+        }
+    }
+
+    private TimeSpan GetRemainingAskEndWindow(DateTime askEndDeadlineUtc)
+    {
+        var askEndRemaining = askEndDeadlineUtc - DateTime.UtcNow;
+        if (askEndRemaining <= TimeSpan.Zero)
+        {
+            return TimeSpan.Zero;
+        }
+
+        var hardRemaining = GetRemainingResetHardTimeout();
+        if (hardRemaining <= TimeSpan.Zero)
+        {
+            return TimeSpan.Zero;
+        }
+
+        return askEndRemaining < hardRemaining ? askEndRemaining : hardRemaining;
+    }
+
+    private TimeSpan GetEffectiveReconnectWaitTimeout()
+    {
+        var hardRemaining = GetRemainingResetHardTimeout();
+        if (hardRemaining <= TimeSpan.Zero)
+        {
+            return TimeSpan.Zero;
+        }
+
+        return hardRemaining < _reconnectWaitTimeout ? hardRemaining : _reconnectWaitTimeout;
+    }
+
+    private void LogConfiguredTimeouts()
+    {
+        _logger.LogInformation(
+            "Таймауты reset-flow: AskEnd={AskEndSec} сек, ReconnectWait={ReconnectWaitSec} сек, Hard={HardSec} сек",
+            _askEndTimeout.TotalSeconds,
+            _reconnectWaitTimeout.TotalSeconds,
+            _resetHardTimeout.TotalSeconds);
+    }
+
+    private async Task WaitAskEndSliceAsync(TimeSpan timeout, CancellationToken ct)
     {
         await _tagWaiter.WaitAnyAsync(
             _tagWaiter.CreateWaitGroup<bool>()
                 .WaitForTrue(BaseTags.AskEnd, () => true, "AskEnd")
-                .WithTimeout(AskEndTimeout),
+                .WithTimeout(timeout),
             ct);
+    }
+
+    private async Task SynchronizeStaleAskEndStateAsync(CancellationToken ct)
+    {
+        var askEndRead = await _plcService.ReadAsync<bool>(BaseTags.AskEnd, ct);
+        if (!askEndRead.Success || askEndRead.Value != true)
+        {
+            return;
+        }
+        _logger.LogDebug("Ask_End уже true до reset. Проверяем сброс stale-состояния");
+        try
+        {
+            await _tagWaiter.WaitForFalseAsync(BaseTags.AskEnd, timeout: AskEndSyncTimeout, ct);
+            _logger.LogDebug("Stale Ask_End сброшен, ждём новое подтверждение");
+        }
+        catch (TimeoutException)
+        {
+            _logger.LogDebug("Stale Ask_End не сброшен быстро, продолжаем обычное ожидание");
+        }
+    }
+
+    private void ExecuteSmartReset(bool wasInScanPhase)
+    {
+        if (wasInScanPhase)
+        {
+            _logger.LogInformation("Мягкий сброс (был в scan phase) — сохраняем Grid и BoilerState");
+            _errorCoordinator.ForceStop();
+        }
+        else
+        {
+            _logger.LogInformation("Полный сброс (тест выполнялся) — очищаем BoilerState");
+            Volatile.Write(ref PlcHardResetPending, 1);
+            try
+            {
+                _errorCoordinator.Reset();
+            }
+            finally
+            {
+                Volatile.Write(ref PlcHardResetPending, 0);
+            }
+        }
+        InvokeEventSafe(OnResetCompleted);
+    }
+
+    private static bool IsTransientOpcDisconnect(Exception ex)
+    {
+        return OpcUaTransientErrorClassifier.IsTransientDisconnect(ex);
     }
 
     private void InvokeEventSafe(Action? handler)
@@ -203,7 +437,10 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
 
     private bool? InvokeEventSafeWithResult(Func<bool>? handler)
     {
-        try { return handler?.Invoke(); }
+        try
+        {
+            return handler?.Invoke();
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка в обработчике события");
@@ -213,85 +450,4 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
 
     #endregion
 
-    #region Synchronization
-
-    private bool TryAcquireResetFlag()
-        => Interlocked.CompareExchange(ref _isHandlingReset, 1, 0) == 0;
-
-    private void ReleaseResetFlag()
-        => Interlocked.Exchange(ref _isHandlingReset, 0);
-
-    private void Cleanup()
-    {
-        IsActive = false;
-        OnActiveChanged?.Invoke();
-        var cts = Interlocked.Exchange(ref _currentResetCts, null);
-        cts?.Dispose();
-        ReleaseResetFlag();
-    }
-
-    #endregion
-
-    #region Public API
-
-    public void CancelCurrentReset()
-    {
-        var cts = _currentResetCts;
-        try
-        {
-            cts?.Cancel();
-        }
-        catch (ObjectDisposedException)
-        {
-            // Expected if disposed during race
-        }
-    }
-
-    #endregion
-
-    #region Disposal
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_disposed) { return; }
-        _disposed = true;
-        CancelDisposeCts();
-        UnsubscribeEvents();
-        await WaitForCurrentOperationAsync();
-        DisposeResources();
-    }
-
-    private void CancelDisposeCts()
-    {
-        try { _disposeCts.Cancel(); }
-        catch (ObjectDisposedException) { }
-    }
-
-    private void UnsubscribeEvents()
-    {
-        _resetSubscription.OnStateChanged -= HandleResetSignal;
-        OnForceStop = null;
-        OnResetStarting = null;
-        OnAskEndReceived = null;
-        OnResetCompleted = null;
-    }
-
-    private async Task WaitForCurrentOperationAsync()
-    {
-        var spinWait = new SpinWait();
-        var timeout = DateTime.UtcNow.AddSeconds(5);
-        while (_isHandlingReset == 1 && DateTime.UtcNow < timeout)
-        {
-            spinWait.SpinOnce();
-            await Task.Yield();
-        }
-    }
-
-    private void DisposeResources()
-    {
-        _currentResetCts?.Dispose();
-        _disposeCts.Dispose();
-    }
-
-    #endregion
 }

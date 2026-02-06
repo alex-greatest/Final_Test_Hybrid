@@ -112,6 +112,11 @@ _errorCoordinator.OnInterruptChanged -= HandleInterruptChanged;
 | `ForceStop()` | Мягкий сброс — только Resume (без OnReset) |
 | `WaitForResolutionAsync(options)` | Ожидание решения оператора (Retry/Skip/Timeout) |
 
+### Дополнительно: аварийный retry-flow
+
+- `Reset()` используется не только из interrupt-behavior, но и как fail-fast путь при критической ошибке фонового retry шага.
+- В этом сценарии система должна переходить в HardReset, а не повторно открывать диалог Retry/Skip.
+
 ## WaitForResolutionAsync API
 
 ### Сигнатура

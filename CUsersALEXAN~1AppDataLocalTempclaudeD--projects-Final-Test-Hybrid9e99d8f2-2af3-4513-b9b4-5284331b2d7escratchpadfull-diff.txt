@@ -1,0 +1,2435 @@
+warning: in the working copy of '.claude/settings.local.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'AGENTS.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Final_Test_Hybrid/Docs/PlcResetGuide.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Final_Test_Hybrid/Docs/StateManagementGuide.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Final_Test_Hybrid/Models/Steps/StepError.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Final_Test_Hybrid/Services/Main/AutoReadySubscription.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Final_Test_Hybrid/Services/Main/PlcReset/PlcResetCoordinator.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Final_Test_Hybrid/Services/Main/PlcReset/ResetSubscription.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Final_Test_Hybrid/Services/OpcUa/Connection/OpcUaConnectionService.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Final_Test_Hybrid/Services/OpcUa/TagWaiter.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Repeat.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.ErrorResolution.cs', LF will be replaced by CRLF the next time Git touches it
+diff --git a/.claude/settings.local.json b/.claude/settings.local.json
+index 67bdde7..0b18ad6 100644
+--- a/.claude/settings.local.json
++++ b/.claude/settings.local.json
+@@ -99,7 +99,9 @@
+       "Bash(Select-String -Pattern \"\\(error|Сборка успешно|Build succeeded\\)\")",
+       "Bash(done)",
+       "Bash(xxd:*)",
+-      "Bash(git restore:*)"
++      "Bash(git restore:*)",
++      "Bash(git -C \"D:\\\\projects\\\\Final_Test_Hybrid\" status)",
++      "Bash(timeout 90 bash:*)"
+     ]
+   }
+ }
+diff --git a/AGENTS.md b/AGENTS.md
+index 010fa94..e0a7744 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -66,6 +66,7 @@ public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestS
+ - ***чистый простой и понятный код. минимум defense programm***
+ - ***никакого оверинжиниринг***
+ - **Один** `if`/`for`/`while`/`switch`/`try` на метод (guard clauses OK) ***метод ~50 строк не больше***
++- Если метод начинает разрастаться или требует больше одной основной управляющей конструкции — **сразу** упрощать: выносить ветки в `private` helper-методы (в том же partial), не откладывая на потом.
+ - `var` везде, `{}` обязательны, **max 300 строк** сервисы  → partial classes
+ - **PascalCase:** типы, методы | **camelCase:** локальные, параметры
+ - Предпочитай `switch` и тернарный оператор где разумно
+@@ -104,3 +105,29 @@ public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestS
+ | TagWaiter | [Docs/TagWaiterGuide.md](Final_Test_Hybrid/Docs/TagWaiterGuide.md) |
+ 
+ **Детальная документация:** [Final_Test_Hybrid/CLAUDE.md](Final_Test_Hybrid/CLAUDE.md)
++
++## Практики устойчивого кода (обязательно)
++
++- Для lifecycle/cleanup критические операции освобождения (Release*, Dispose*, сброс флагов) выполнять в finally.
++- Публичные события (On...) не вызывать напрямую в критических путях: использовать safe-обёртки Notify...Safely()/Invoke...Safe() с логированием исключений.
++- Для reconnect использовать только ограниченный retry (2-3 попытки, 200-500 ms задержка) и только для transient OPC ошибок.
++- Перед повторной записью/ожиданием PLC-тегов после reconnect сначала дождаться connectionState.WaitForConnectionAsync(ct).
++- Ошибки записи критичных PLC-тегов (Reset, AskRepeat, End) не проглатывать: либо throw, либо явный fallback с логом.
++- При rebind/reset подписок обязательно инвалидировать кэш значений и не сохранять Bad quality значения в runtime-кэш.
++- Если метод разрастается по условиям/веткам, сразу выносить ветви в private helper-методы в том же partial-файле.
++
++## Периодичность проверок
++
++- После каждого значимого изменения в логике (reconnect/reset/error flow) запускать минимум dotnet build.
++- Перед сдачей изменений обязательно выполнять полный чек-лист верификации.
++
++## Обязательный чек-лист верификации
++
++1. dotnet build Final_Test_Hybrid.slnx — успешно.
++2. dotnet format analyzers --verify-no-changes — чисто.
++3. dotnet format style --verify-no-changes — чисто.
++
++## Компромиссы (временные)
++
++- **Пункт 2 (кодировка):** временно допускаем наличие локальных «кракозябр» в части исторически изменённых комментариев/логов. Отдельная задача на централизованную нормализацию кодировки в UTF-8 (без смешения ANSI/UTF-8) запланирована отдельно.
++- **Пункт 5 (UI-сообщение по PlcConnectionLost):** отдельное правило `CurrentInterrupt == InterruptReason.PlcConnectionLost` в `MessageService` пока не добавляем. Пользовательский текст остаётся через текущие правила (`OpcUaConnectionState.IsConnected`, `TagTimeout`, `ResetActive`) как согласованный временный компромисс.
+diff --git a/Final_Test_Hybrid/Docs/PlcResetGuide.md b/Final_Test_Hybrid/Docs/PlcResetGuide.md
+index ca9eb97..f4eeef3 100644
+--- a/Final_Test_Hybrid/Docs/PlcResetGuide.md
++++ b/Final_Test_Hybrid/Docs/PlcResetGuide.md
+@@ -140,6 +140,12 @@ RunSingleCycleAsync:
+ 
+ ### OnResetCompleted
+ - `ScanModeController.TransitionToReadyInternal()`
++- Событие считается маркером завершения reset-процесса для scan-mode и вызывается в сценариях:
++  - успешный reset;
++  - таймаут `Ask_End`;
++  - runtime-отмена reset до `Ask_End` (без disposal);
++  - неожиданные ошибки с fallback в hard reset.
++- Исключение: при отмене из `DisposeAsync` (`_disposed = true`) `OnResetCompleted` не вызывается.
+ 
+ ## ScanModeController — поведение при reset
+ 
+@@ -199,6 +205,7 @@ private void TransitionToReadyInternal()
+ | Reset + AutoReady выключен после | Таймеры на паузе, сессия не захватывается |
+ | Reset + AutoReady включён во время | Активация заблокирована, catch-up после завершения |
+ | Жёсткий reset (wasInScanPhase=false) | Таймеры паузятся, catch-up активация если нужна |
++| Runtime-отмена reset (без disposal) | Через `OnResetCompleted` снимается `_isResetting` и выполняется catch-up |
+ 
+ ## Диагностика (Modbus) при PLC Reset
+ 
+diff --git a/Final_Test_Hybrid/Docs/StateManagementGuide.md b/Final_Test_Hybrid/Docs/StateManagementGuide.md
+index 444d350..6351916 100644
+--- a/Final_Test_Hybrid/Docs/StateManagementGuide.md
++++ b/Final_Test_Hybrid/Docs/StateManagementGuide.md
+@@ -611,7 +611,7 @@ private bool ShouldUseSoftDeactivation()
+ | `OnForceStop` | `Action` | Сигнал остановки (до AskEnd) |
+ | `OnResetStarting` | `Func<bool>` | Возвращает wasInScanPhase |
+ | `OnAskEndReceived` | `Action` | AskEnd получен — очистка Grid |
+-| `OnResetCompleted` | `Action` | Весь reset завершён |
++| `OnResetCompleted` | `Action` | Reset завершён или отменён в runtime (кроме disposal) |
+ | `CancelCurrentReset()` | `void` | Отмена текущего reset |
+ 
+ ### Типы сброса
+@@ -685,21 +685,23 @@ private async Task HandleResetExceptionAsync(Exception ex)
+     switch (ex)
+     {
+         case OperationCanceledException when _disposed:
+-            // Disposal — ничего не делаем
++            // Disposal — без OnResetCompleted
+             break;
+         case OperationCanceledException:
+-            // Отмена — вызываем OnResetCompleted
++            // Runtime-отмена — возвращаем scan-mode через OnResetCompleted
++            InvokeEventSafe(OnResetCompleted);
+             break;
+         case TimeoutException:
+             // Таймаут AskEnd → HandleInterruptAsync(TagTimeout)
+             await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout);
++            InvokeEventSafe(OnResetCompleted);
+             break;
+         default:
+             // Неожиданная ошибка → полный Reset()
+             _errorCoordinator.Reset();
++            InvokeEventSafe(OnResetCompleted);
+             break;
+     }
+-    InvokeEventSafe(OnResetCompleted);
+ }
+ ```
+ 
+diff --git a/Final_Test_Hybrid/Models/Steps/StepError.cs b/Final_Test_Hybrid/Models/Steps/StepError.cs
+index 5d55c9f..ab29e73 100644
+--- a/Final_Test_Hybrid/Models/Steps/StepError.cs
++++ b/Final_Test_Hybrid/Models/Steps/StepError.cs
+@@ -36,5 +36,6 @@ public enum ErrorResolution
+     None,
+     Retry,
+     Skip,
+-    Timeout
++    Timeout,
++    ConnectionLost
+ }
+diff --git a/Final_Test_Hybrid/Services/Main/AutoReadySubscription.cs b/Final_Test_Hybrid/Services/Main/AutoReadySubscription.cs
+index 5854690..4208cf1 100644
+--- a/Final_Test_Hybrid/Services/Main/AutoReadySubscription.cs
++++ b/Final_Test_Hybrid/Services/Main/AutoReadySubscription.cs
+@@ -6,8 +6,11 @@ using OpcUa.Subscription;
+ 
+ public class AutoReadySubscription(OpcUaSubscription opcUaSubscription) : INotifyStateChanged
+ {
++    private readonly Lock _subscriptionLock = new();
++    private Func<object?, Task>? _callback;
+     private volatile bool _isReady;
+     private volatile bool _hasEverBeenReady;
++    private bool _isSubscribed;
+ 
+     public bool IsReady => _isReady;
+     public bool HasEverBeenReady => _hasEverBeenReady;
+@@ -17,20 +20,63 @@ public class AutoReadySubscription(OpcUaSubscription opcUaSubscription) : INotif
+ 
+     public async Task SubscribeAsync()
+     {
+-        await opcUaSubscription.SubscribeAsync(BaseTags.TestAskAuto, async value =>
++        var callback = EnsureCallback();
++        if (!TryMarkSubscribed())
+         {
+-            var wasReady = _isReady;
+-            _isReady = value is true;
++            return;
++        }
+ 
+-            if (_isReady && !_hasEverBeenReady)
++        try
++        {
++            await opcUaSubscription.SubscribeAsync(BaseTags.TestAskAuto, callback);
++        }
++        catch
++        {
++            ResetSubscribedFlag();
++            throw;
++        }
++    }
++
++    private Func<object?, Task> EnsureCallback()
++    {
++        _callback ??= OnValueChanged;
++        return _callback;
++    }
++
++    private bool TryMarkSubscribed()
++    {
++        lock (_subscriptionLock)
++        {
++            if (_isSubscribed)
+             {
+-                _hasEverBeenReady = true;
+-                OnFirstAutoReceived?.Invoke();
++                return false;
+             }
++            _isSubscribed = true;
++            return true;
++        }
++    }
++
++    private void ResetSubscribedFlag()
++    {
++        lock (_subscriptionLock)
++        {
++            _isSubscribed = false;
++        }
++    }
++
++    private Task OnValueChanged(object? value)
++    {
++        var isReady = value is true;
++        var shouldFireFirstAuto = isReady && !_hasEverBeenReady;
++        _isReady = isReady;
++        if (shouldFireFirstAuto)
++        {
++            _hasEverBeenReady = true;
++            OnFirstAutoReceived?.Invoke();
++        }
+ 
+-            OnStateChanged?.Invoke();
+-            await Task.CompletedTask;
+-        });
++        OnStateChanged?.Invoke();
++        return Task.CompletedTask;
+     }
+ 
+     /// <summary>
+diff --git a/Final_Test_Hybrid/Services/Main/PlcReset/PlcResetCoordinator.cs b/Final_Test_Hybrid/Services/Main/PlcReset/PlcResetCoordinator.cs
+index c419c14..0d07c32 100644
+--- a/Final_Test_Hybrid/Services/Main/PlcReset/PlcResetCoordinator.cs
++++ b/Final_Test_Hybrid/Services/Main/PlcReset/PlcResetCoordinator.cs
+@@ -1,27 +1,34 @@
++using Final_Test_Hybrid.Models.Plc.Tags;
++using Final_Test_Hybrid.Services.OpcUa;
++using Final_Test_Hybrid.Services.OpcUa.Connection;
+ using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
++using Microsoft.Extensions.Logging;
+ 
+ namespace Final_Test_Hybrid.Services.Main.PlcReset;
+ 
+-using Models.Plc.Tags;
+-using OpcUa;
+-using Microsoft.Extensions.Logging;
+-
+ /// <summary>
+ /// Координатор сброса теста по сигналу PLC.
+ /// Обрабатывает Req_Reset, отправляет данные, ждёт Ask_End.
+ /// </summary>
+-public sealed class PlcResetCoordinator : IAsyncDisposable
++public sealed partial class PlcResetCoordinator : IAsyncDisposable
+ {
++    private static readonly TimeSpan AskEndTimeout = TimeSpan.FromSeconds(60);
++    private static readonly TimeSpan AskEndWaitSlice = TimeSpan.FromSeconds(5);
++    private static readonly TimeSpan AskEndSyncTimeout = TimeSpan.FromSeconds(1);
++    private static readonly TimeSpan ResetWriteRetryDelay = TimeSpan.FromMilliseconds(300);
++    private const int ResetWriteRetryAttempts = 2;
++
+     private readonly ResetSubscription _resetSubscription;
+     private readonly IErrorCoordinator _errorCoordinator;
+     private readonly TagWaiter _tagWaiter;
+     private readonly OpcUaTagService _plcService;
++    private readonly OpcUaConnectionState _connectionState;
+     private readonly ILogger<PlcResetCoordinator> _logger;
+     private readonly CancellationTokenSource _disposeCts = new();
+     private CancellationTokenSource? _currentResetCts;
+     private int _isHandlingReset;
+     private volatile bool _disposed;
+-    private static readonly TimeSpan AskEndTimeout = TimeSpan.FromSeconds(60);
++    private bool _currentResetWasInScanPhase;
+ 
+     /// <summary>
+     /// Одноразовый маркер: 1 = PLC Reset в процессе (между началом и Reset()/ForceStop()).
+@@ -41,12 +48,14 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
+         IErrorCoordinator errorCoordinator,
+         TagWaiter tagWaiter,
+         OpcUaTagService plcService,
++        OpcUaConnectionState connectionState,
+         ILogger<PlcResetCoordinator> logger)
+     {
+         _resetSubscription = resetSubscription;
+         _errorCoordinator = errorCoordinator;
+         _tagWaiter = tagWaiter;
+         _plcService = plcService;
++        _connectionState = connectionState;
+         _logger = logger;
+         _resetSubscription.OnStateChanged += HandleResetSignal;
+     }
+@@ -55,8 +64,10 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
+ 
+     private void HandleResetSignal()
+     {
+-        if (_disposed) { return; }
+-
++        if (_disposed)
++        {
++            return;
++        }
+         _ = HandleResetAsync().ContinueWith(
+             t => _logger.LogError(t.Exception, "Ошибка обработки PLC reset"),
+             TaskContinuationOptions.OnlyOnFaulted);
+@@ -70,7 +81,7 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
+             return;
+         }
+         IsActive = true;
+-        OnActiveChanged?.Invoke();
++        NotifyActiveChangedSafely();
+         _currentResetCts = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token);
+         try
+         {
+@@ -88,37 +99,18 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
+ 
+     private async Task ExecuteResetStepsAsync(CancellationToken ct)
+     {
+-        _logger.LogWarning("═══ СБРОС ПО СИГНАЛУ PLC ═══");
+-
+-        var wasInScanPhase = InvokeEventSafeWithResult(OnResetStarting) ?? false;
+-        _logger.LogInformation("Состояние до сброса: InScanPhase: {InScanPhase}", wasInScanPhase);
++        _logger.LogWarning("╔═══ СБРОС ПО СИГНАЛУ PLC ═══");
++        _currentResetWasInScanPhase = InvokeEventSafeWithResult(OnResetStarting) ?? false;
++        _logger.LogInformation("Состояние до сброса: InScanPhase: {InScanPhase}", _currentResetWasInScanPhase);
+ 
+         SignalForceStop();
+         await SendDataToMesAsync(ct);
+         await SendResetAndWaitAckAsync(ct);
+ 
+-        ExecuteSmartReset(wasInScanPhase);
++        ExecuteSmartReset(_currentResetWasInScanPhase);
+         _logger.LogInformation("PLC Reset завершён успешно");
+     }
+ 
+-    private void ExecuteSmartReset(bool wasInScanPhase)
+-    {
+-        if (wasInScanPhase)
+-        {
+-            _logger.LogInformation("Мягкий сброс (был в шаге сканирования) — сохраняем Grid и BoilerState");
+-            _errorCoordinator.ForceStop();
+-        }
+-        else
+-        {
+-            _logger.LogInformation("Полный сброс (тест выполнялся) — очищаем BoilerState");
+-            Volatile.Write(ref PlcHardResetPending, 1);
+-            _errorCoordinator.Reset();
+-            Volatile.Write(ref PlcHardResetPending, 0);
+-        }
+-
+-        InvokeEventSafe(OnResetCompleted);
+-    }
+-
+     private async Task HandleResetExceptionAsync(Exception ex)
+     {
+         switch (ex)
+@@ -127,14 +119,14 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
+                 _logger.LogInformation("PLC Reset отменён — disposal");
+                 break;
+             case OperationCanceledException:
+-                _logger.LogInformation("PLC Reset отменён");
++                _logger.LogInformation("PLC Reset отменён до подтверждения Ask_End");
+                 InvokeEventSafe(OnResetCompleted);
+                 break;
+-
+             case TimeoutException:
+-                _logger.LogWarning("Таймаут Ask_End ({Timeout} сек)", AskEndTimeout.TotalSeconds);
+-                await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout);
+-                InvokeEventSafe(OnResetCompleted);
++                await HandleAskEndTimeoutAsync();
++                break;
++            case Exception transientEx when IsTransientOpcDisconnect(transientEx):
++                await HandleTransientDisconnectAsync(transientEx);
+                 break;
+             default:
+                 _logger.LogError(ex, "Неожиданная ошибка PLC Reset — полный сброс");
+@@ -146,6 +138,85 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
+         }
+     }
+ 
++    private async Task HandleTransientDisconnectAsync(Exception ex)
++    {
++        _logger.LogWarning(ex, "Transient OPC disconnect во время PLC Reset — продолжаем ждать Ask_End");
++        try
++        {
++            var ct = _currentResetCts?.Token ?? _disposeCts.Token;
++            await TryResendResetSignalAfterReconnectAsync(ct);
++            await WaitForAskEndWithReconnectAsync(ct);
++            InvokeEventSafe(OnAskEndReceived);
++            ExecuteSmartReset(_currentResetWasInScanPhase);
++            _logger.LogInformation("PLC Reset завершён после восстановления связи");
++        }
++        catch (TimeoutException)
++        {
++            await HandleAskEndTimeoutAsync();
++        }
++        catch (OperationCanceledException)
++        {
++            _logger.LogInformation("PLC Reset отменён во время ожидания Ask_End после reconnect");
++            if (!_disposed)
++            {
++                InvokeEventSafe(OnResetCompleted);
++            }
++        }
++    }
++
++    private async Task TryResendResetSignalAfterReconnectAsync(CancellationToken ct)
++    {
++        await _connectionState.WaitForConnectionAsync(ct);
++        for (var attempt = 1; attempt <= ResetWriteRetryAttempts; attempt++)
++        {
++            var shouldRetry = await TrySendResetAfterReconnectAttemptAsync(attempt, ct);
++            if (!shouldRetry)
++            {
++                return;
++            }
++            await Task.Delay(ResetWriteRetryDelay, ct);
++        }
++        _logger.LogWarning(
++            "Reset=true после reconnect не записан за {Attempts} попыток. Продолжаем ожидание Ask_End",
++            ResetWriteRetryAttempts);
++    }
++
++    private async Task<bool> TrySendResetAfterReconnectAttemptAsync(int attempt, CancellationToken ct)
++    {
++        try
++        {
++            await TrySendResetSignalAsync(ct);
++            _logger.LogInformation("Повторная запись Reset=true после reconnect выполнена");
++            return false;
++        }
++        catch (Exception ex) when (ShouldRetryResetWriteAfterReconnect(ex, attempt))
++        {
++            _logger.LogWarning(
++                ex,
++                "Повторная запись Reset=true после reconnect не удалась. Попытка {Attempt}/{MaxAttempts}",
++                attempt,
++                ResetWriteRetryAttempts);
++            return true;
++        }
++        catch (Exception ex)
++        {
++            _logger.LogWarning(ex, "Повторная запись Reset=true после reconnect не удалась. Продолжаем ожидание Ask_End");
++            return false;
++        }
++    }
++
++    private static bool ShouldRetryResetWriteAfterReconnect(Exception ex, int attempt)
++    {
++        return attempt < ResetWriteRetryAttempts && IsTransientOpcDisconnect(ex);
++    }
++
++    private async Task HandleAskEndTimeoutAsync()
++    {
++        _logger.LogWarning("Таймаут Ask_End ({Timeout} сек)", AskEndTimeout.TotalSeconds);
++        await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout);
++        InvokeEventSafe(OnResetCompleted);
++    }
++
+     #endregion
+ 
+     #region Reset Steps
+@@ -158,140 +229,126 @@ public sealed class PlcResetCoordinator : IAsyncDisposable
+     private async Task SendDataToMesAsync(CancellationToken ct)
+     {
+         _logger.LogInformation("MES/DB отправка (заглушка)");
+-        await Task.Delay(100, ct);  // TODO: реальная отправка
++        await Task.Delay(100, ct);
+     }
+ 
+     private async Task SendResetAndWaitAckAsync(CancellationToken ct)
+     {
+         await TrySendResetSignalAsync(ct);
+-        await WaitForAskEndAsync(ct);
++        await WaitForAskEndWithReconnectAsync(ct);
+         InvokeEventSafe(OnAskEndReceived);
+     }
+ 
+     private async Task TrySendResetSignalAsync(CancellationToken ct)
+     {
+-        try
++        var writeResult = await _plcService.WriteAsync(BaseTags.Reset, true, ct);
++        if (!writeResult.Success)
+         {
+-            await _plcService.WriteAsync(BaseTags.Reset, true, ct);
++            throw new InvalidOperationException($"Не удалось записать Reset: {writeResult.Error}");
+         }
+-        catch (Exception ex)
++    }
++
++    private async Task WaitForAskEndWithReconnectAsync(CancellationToken ct)
++    {
++        await SynchronizeStaleAskEndStateAsync(ct);
++        var startedAt = DateTime.UtcNow;
++        while (DateTime.UtcNow - startedAt < AskEndTimeout)
+         {
+-            _logger.LogError(ex, "Ошибка записи Reset в PLC — продолжаем");
++            var elapsed = DateTime.UtcNow - startedAt;
++            var remaining = AskEndTimeout - elapsed;
++            var slice = remaining < AskEndWaitSlice ? remaining : AskEndWaitSlice;
++            try
++            {
++                await WaitAskEndSliceAsync(slice, ct);
++                return;
++            }
++            catch (TimeoutException)
++            {
++            }
++            catch (Exception ex) when (IsTransientOpcDisconnect(ex))
++            {
++                _logger.LogWarning(ex, "Потеря связи при ожидании Ask_End — ждём reconnect и продолжаем");
++                await _connectionState.WaitForConnectionAsync(ct);
++            }
+         }
++        throw new TimeoutException("Таймаут ожидания Ask_End");
+     }
+ 
+-    private async Task WaitForAskEndAsync(CancellationToken ct)
++    private async Task WaitAskEndSliceAsync(TimeSpan timeout, CancellationToken ct)
+     {
+         await _tagWaiter.WaitAnyAsync(
+             _tagWaiter.CreateWaitGroup<bool>()
+                 .WaitForTrue(BaseTags.AskEnd, () => true, "AskEnd")
+-                .WithTimeout(AskEndTimeout),
++                .WithTimeout(timeout),
+             ct);
+     }
+ 
+-    private void InvokeEventSafe(Action? handler)
++    private async Task SynchronizeStaleAskEndStateAsync(CancellationToken ct)
+     {
++        var askEndRead = await _plcService.ReadAsync<bool>(BaseTags.AskEnd, ct);
++        if (!askEndRead.Success || askEndRead.Value != true)
++        {
++            return;
++        }
++        _logger.LogDebug("Ask_End уже true до reset. Проверяем сброс stale-состояния");
+         try
+         {
+-            handler?.Invoke();
++            await _tagWaiter.WaitForFalseAsync(BaseTags.AskEnd, timeout: AskEndSyncTimeout, ct);
++            _logger.LogDebug("Stale Ask_End сброшен, ждём новое подтверждение");
+         }
+-        catch (Exception ex)
++        catch (TimeoutException)
+         {
+-            _logger.LogError(ex, "Ошибка в обработчике события");
++            _logger.LogDebug("Stale Ask_End не сброшен быстро, продолжаем обычное ожидание");
+         }
+     }
+ 
+-    private bool? InvokeEventSafeWithResult(Func<bool>? handler)
++    private void ExecuteSmartReset(bool wasInScanPhase)
+     {
+-        try { return handler?.Invoke(); }
+-        catch (Exception ex)
++        if (wasInScanPhase)
+         {
+-            _logger.LogError(ex, "Ошибка в обработчике события");
+-            return null;
++            _logger.LogInformation("Мягкий сброс (был в scan phase) — сохраняем Grid и BoilerState");
++            _errorCoordinator.ForceStop();
++        }
++        else
++        {
++            _logger.LogInformation("Полный сброс (тест выполнялся) — очищаем BoilerState");
++            Volatile.Write(ref PlcHardResetPending, 1);
++            _errorCoordinator.Reset();
++            Volatile.Write(ref PlcHardResetPending, 0);
+         }
++        InvokeEventSafe(OnResetCompleted);
+     }
+ 
+-    #endregion
+-
+-    #region Synchronization
+-
+-    private bool TryAcquireResetFlag()
+-        => Interlocked.CompareExchange(ref _isHandlingReset, 1, 0) == 0;
+-
+-    private void ReleaseResetFlag()
+-        => Interlocked.Exchange(ref _isHandlingReset, 0);
+-
+-    private void Cleanup()
++    private static bool IsTransientOpcDisconnect(Exception ex)
+     {
+-        IsActive = false;
+-        OnActiveChanged?.Invoke();
+-        var cts = Interlocked.Exchange(ref _currentResetCts, null);
+-        cts?.Dispose();
+-        ReleaseResetFlag();
++        return OpcUaTransientErrorClassifier.IsTransientDisconnect(ex);
+     }
+ 
+-    #endregion
+-
+-    #region Public API
+-
+-    public void CancelCurrentReset()
++    private void InvokeEventSafe(Action? handler)
+     {
+-        var cts = _currentResetCts;
+         try
+         {
+-            cts?.Cancel();
++            handler?.Invoke();
+         }
+-        catch (ObjectDisposedException)
++        catch (Exception ex)
+         {
+-            // Expected if disposed during race
++            _logger.LogError(ex, "Ошибка в обработчике события");
+         }
+     }
+ 
+-    #endregion
+-
+-    #region Disposal
+-
+-    public async ValueTask DisposeAsync()
+-    {
+-        if (_disposed) { return; }
+-        _disposed = true;
+-        CancelDisposeCts();
+-        UnsubscribeEvents();
+-        await WaitForCurrentOperationAsync();
+-        DisposeResources();
+-    }
+-
+-    private void CancelDisposeCts()
+-    {
+-        try { _disposeCts.Cancel(); }
+-        catch (ObjectDisposedException) { }
+-    }
+-
+-    private void UnsubscribeEvents()
+-    {
+-        _resetSubscription.OnStateChanged -= HandleResetSignal;
+-        OnForceStop = null;
+-        OnResetStarting = null;
+-        OnAskEndReceived = null;
+-        OnResetCompleted = null;
+-    }
+-
+-    private async Task WaitForCurrentOperationAsync()
++    private bool? InvokeEventSafeWithResult(Func<bool>? handler)
+     {
+-        var spinWait = new SpinWait();
+-        var timeout = DateTime.UtcNow.AddSeconds(5);
+-        while (_isHandlingReset == 1 && DateTime.UtcNow < timeout)
++        try
+         {
+-            spinWait.SpinOnce();
+-            await Task.Yield();
++            return handler?.Invoke();
++        }
++        catch (Exception ex)
++        {
++            _logger.LogError(ex, "Ошибка в обработчике события");
++            return null;
+         }
+-    }
+-
+-    private void DisposeResources()
+-    {
+-        _currentResetCts?.Dispose();
+-        _disposeCts.Dispose();
+     }
+ 
+     #endregion
++
+ }
+diff --git a/Final_Test_Hybrid/Services/Main/PlcReset/ResetSubscription.cs b/Final_Test_Hybrid/Services/Main/PlcReset/ResetSubscription.cs
+index 0728c08..191ff54 100644
+--- a/Final_Test_Hybrid/Services/Main/PlcReset/ResetSubscription.cs
++++ b/Final_Test_Hybrid/Services/Main/PlcReset/ResetSubscription.cs
+@@ -10,17 +10,62 @@ using OpcUa.Subscription;
+ /// </summary>
+ public sealed class ResetSubscription(OpcUaSubscription opcUaSubscription) : INotifyStateChanged, IAsyncDisposable
+ {
++    private readonly Lock _subscriptionLock = new();
+     private Func<object?, Task>? _callback;
++    private bool _isSubscribed;
+     private volatile bool _disposed;
+     public bool IsResetRequested { get; private set; }
+     public event Action? OnStateChanged;
+ 
+     public async Task SubscribeAsync()
+     {
+-        if (_disposed) { return; }
++        if (_disposed)
++        {
++            return;
++        }
++
++        var callback = EnsureCallback();
++        if (!TryMarkSubscribed())
++        {
++            return;
++        }
++
++        try
++        {
++            await opcUaSubscription.SubscribeAsync(BaseTags.ReqReset, callback);
++        }
++        catch
++        {
++            ResetSubscribedFlag();
++            throw;
++        }
++    }
+ 
+-        _callback = OnValueChanged;
+-        await opcUaSubscription.SubscribeAsync(BaseTags.ReqReset, _callback);
++    private Func<object?, Task> EnsureCallback()
++    {
++        _callback ??= OnValueChanged;
++        return _callback;
++    }
++
++    private bool TryMarkSubscribed()
++    {
++        lock (_subscriptionLock)
++        {
++            if (_isSubscribed)
++            {
++                return false;
++            }
++            _isSubscribed = true;
++            return true;
++        }
++    }
++
++    private void ResetSubscribedFlag()
++    {
++        lock (_subscriptionLock)
++        {
++            _isSubscribed = false;
++        }
+     }
+ 
+     private Task OnValueChanged(object? value)
+@@ -41,22 +86,41 @@ public sealed class ResetSubscription(OpcUaSubscription opcUaSubscription) : INo
+ 
+     public async ValueTask DisposeAsync()
+     {
+-        if (_disposed) { return; }
++        if (_disposed)
++        {
++            return;
++        }
+         _disposed = true;
+ 
+-        if (_callback != null)
++        var callback = DetachCallback();
++        if (callback != null)
+         {
+-            try
+-            {
+-                await opcUaSubscription.UnsubscribeAsync(BaseTags.ReqReset, _callback, removeTag: false);
+-            }
+-            catch (Exception)
+-            {
+-                // Игнорируем ошибки при shutdown
+-            }
+-            _callback = null;
++            await TryUnsubscribeAsync(callback);
+         }
+ 
+         OnStateChanged = null;
+     }
++
++    private Func<object?, Task>? DetachCallback()
++    {
++        lock (_subscriptionLock)
++        {
++            _isSubscribed = false;
++            var callback = _callback;
++            _callback = null;
++            return callback;
++        }
++    }
++
++    private async Task TryUnsubscribeAsync(Func<object?, Task> callback)
++    {
++        try
++        {
++            await opcUaSubscription.UnsubscribeAsync(BaseTags.ReqReset, callback, removeTag: false);
++        }
++        catch (Exception)
++        {
++            // Игнорируем ошибки при shutdown
++        }
++    }
+ }
+diff --git a/Final_Test_Hybrid/Services/OpcUa/Connection/OpcUaConnectionService.cs b/Final_Test_Hybrid/Services/OpcUa/Connection/OpcUaConnectionService.cs
+index e647a81..4f04a76 100644
+--- a/Final_Test_Hybrid/Services/OpcUa/Connection/OpcUaConnectionService.cs
++++ b/Final_Test_Hybrid/Services/OpcUa/Connection/OpcUaConnectionService.cs
+@@ -43,10 +43,19 @@ public class OpcUaConnectionService(
+         {
+             try
+             {
+-                var endpoint = await AppConfigurator.SelectEndpointAsync(_appConfig!, _settings.EndpointUrl, _settings, cancellationToken)
+-                    .ConfigureAwait(false);
+-                Session = await AppConfigurator.CreateSessionAsync(_appConfig!, _settings, endpoint, OnKeepAlive, cancellationToken)
+-                    .ConfigureAwait(false);
++                var endpoint = await AppConfigurator.SelectEndpointAsync(
++                    _appConfig!,
++                    _settings.EndpointUrl,
++                    _settings,
++                    cancellationToken).ConfigureAwait(false);
++
++                Session = await AppConfigurator.CreateSessionAsync(
++                    _appConfig!,
++                    _settings,
++                    endpoint,
++                    OnKeepAlive,
++                    cancellationToken).ConfigureAwait(false);
++
+                 logger.LogInformation("Подключено к OPC UA серверу: {Endpoint}", _settings.EndpointUrl);
+                 return;
+             }
+@@ -56,10 +65,11 @@ public class OpcUaConnectionService(
+             }
+             catch (Exception ex)
+             {
+-                logger.LogError("Не удалось подключиться к OPC UA серверу. Повтор через {Interval} мс. Ошибка: {Error}",
+-                    _settings.ReconnectIntervalMs, ex.Message);
+-                await Task.Delay(_settings.ReconnectIntervalMs, cancellationToken)
+-                    .ConfigureAwait(false);
++                logger.LogError(
++                    "Не удалось подключиться к OPC UA серверу. Повтор через {Interval} мс. Ошибка: {Error}",
++                    _settings.ReconnectIntervalMs,
++                    ex.Message);
++                await Task.Delay(_settings.ReconnectIntervalMs, cancellationToken).ConfigureAwait(false);
+             }
+         }
+         cancellationToken.ThrowIfCancellationRequested();
+@@ -86,6 +96,7 @@ public class OpcUaConnectionService(
+             return;
+         }
+         logger.LogError("OPC UA KeepAlive не удался: {Status}. Запуск переподключения...", e.Status);
++        subscription.InvalidateValuesCache();
+         connectionState.SetConnected(false);
+         StartReconnect(session);
+     }
+@@ -117,23 +128,35 @@ public class OpcUaConnectionService(
+     private async Task OnReconnectCompleteSafe()
+     {
+         await using var _ = await AsyncLock.AcquireAsync(_semaphore);
+-        var newSession = _reconnectHandler?.Session;
++        var reconnectHandler = _reconnectHandler;
++        var newSession = reconnectHandler?.Session;
+         if (newSession == null)
+         {
+             return;
+         }
+         Session = newSession;
+         newSession.KeepAlive += OnKeepAlive;
+-        logger.LogInformation("Переподключение к OPC UA серверу выполнено успешно");
+-        connectionState.SetConnected(true);
+-        _reconnectHandler?.Dispose();
+-        _reconnectHandler = null;
++        try
++        {
++            await subscription.RebindAfterReconnectAsync(newSession, CancellationToken.None).ConfigureAwait(false);
++            logger.LogInformation("Переподключение к OPC UA серверу выполнено успешно");
++            connectionState.SetConnected(true);
++            reconnectHandler?.Dispose();
++            _reconnectHandler = null;
++        }
++        catch (Exception ex)
++        {
++            logger.LogError(ex, "Rebind OPC runtime-подписки после reconnect завершился ошибкой");
++            connectionState.SetConnected(false);
++            reconnectHandler?.Dispose();
++            _reconnectHandler = null;
++            StartReconnect(newSession);
++        }
+     }
+ 
+     public async Task DisconnectAsync()
+     {
+-        await using var _ = await AsyncLock.AcquireAsync(_semaphore)
+-            .ConfigureAwait(false);
++        await using var _ = await AsyncLock.AcquireAsync(_semaphore).ConfigureAwait(false);
+         _reconnectHandler?.Dispose();
+         _reconnectHandler = null;
+         if (Session == null)
+@@ -148,8 +171,7 @@ public class OpcUaConnectionService(
+         try
+         {
+             Session!.KeepAlive -= OnKeepAlive;
+-            await Session.CloseAsync(CancellationToken.None)
+-                .ConfigureAwait(false);
++            await Session.CloseAsync(CancellationToken.None).ConfigureAwait(false);
+             logger.LogInformation("Отключено от OPC UA сервера");
+         }
+         catch (Exception ex)
+@@ -158,6 +180,7 @@ public class OpcUaConnectionService(
+         }
+         finally
+         {
++            subscription.InvalidateValuesCache();
+             Session?.Dispose();
+             Session = null;
+             connectionState.SetConnected(false);
+diff --git a/Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.cs b/Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.cs
+index da00690..bb1f9b9 100644
+--- a/Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.cs
++++ b/Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.cs
+@@ -1,8 +1,8 @@
+-using System.Collections.Concurrent;
+-using AsyncAwaitBestPractices;
++﻿using System.Collections.Concurrent;
+ using Final_Test_Hybrid.Models.Plc.Subcription;
+ using Final_Test_Hybrid.Services.Common;
+ using Final_Test_Hybrid.Services.Common.Logging;
++using Final_Test_Hybrid.Services.OpcUa;
+ using Final_Test_Hybrid.Services.OpcUa.Connection;
+ using Final_Test_Hybrid.Settings.OpcUa;
+ using Microsoft.Extensions.Options;
+@@ -11,11 +11,13 @@ using Opc.Ua.Client;
+ 
+ namespace Final_Test_Hybrid.Services.OpcUa.Subscription;
+ 
+-public class OpcUaSubscription(
++public partial class OpcUaSubscription(
+     OpcUaConnectionState connectionState,
+     IOptions<OpcUaSettings> settingsOptions,
+     DualLogger<OpcUaSubscription> logger)
+ {
++    private const int RebindAttempts = 3;
++    private static readonly TimeSpan RebindRetryDelay = TimeSpan.FromMilliseconds(300);
+     private readonly OpcUaSubscriptionSettings _settings = settingsOptions.Value.Subscription;
+     private readonly ConcurrentDictionary<string, object?> _values = new();
+     private readonly Dictionary<string, List<Func<object?, Task>>> _callbacks = new();
+@@ -24,250 +26,267 @@ public class OpcUaSubscription(
+     private readonly SemaphoreSlim _subscriptionLock = new(1, 1);
+     private Opc.Ua.Client.Subscription? _subscription;
+ 
++    public void InvalidateValuesCache() => _values.Clear();
++
+     public async Task CreateAsync(ISession session, CancellationToken ct = default)
+     {
+-        _subscription = new Opc.Ua.Client.Subscription(session.DefaultSubscription)
+-        {
+-            DisplayName = "OpcUa Subscription",
+-            PublishingEnabled = true,
+-            PublishingInterval = _settings.PublishingIntervalMs,
+-            KeepAliveCount = _settings.KeepAliveCount,
+-            LifetimeCount = _settings.LifetimeCount,
+-            MaxNotificationsPerPublish = _settings.MaxNotificationsPerPublish
+-        };
++        _subscription = CreateSubscription(session);
+         session.AddSubscription(_subscription);
+         await _subscription.CreateAsync(ct).ConfigureAwait(false);
+-        logger.LogInformation("Подписка OPC UA создана");
++        logger.LogInformation("РџРѕРґРїРёСЃРєР° OPC UA СЃРѕР·РґР°РЅР°");
+     }
+ 
+-    public async Task<TagError?> AddTagAsync(string nodeId, CancellationToken ct = default)
++    public async Task RebindAfterReconnectAsync(ISession newSession, CancellationToken ct = default)
+     {
+-        await connectionState.WaitForConnectionAsync(ct).ConfigureAwait(false);
+-        if (_monitoredItems.ContainsKey(nodeId))
++        InvalidateValuesCache();
++        for (var attempt = 1; ; attempt++)
+         {
+-            return null;
++            try
++            {
++                var nodeIds = GetCallbackNodeIdsSnapshot();
++                await RebindCoreAsync(newSession, nodeIds, ct).ConfigureAwait(false);
++                logger.LogInformation("Runtime OPC РїРѕРґРїРёСЃРєР° РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅР°. РўРµРіРѕРІ: {Count}", nodeIds.Count);
++                return;
++            }
++            catch (Exception ex) when (ShouldRetryRebind(ex, attempt))
++            {
++                logger.LogWarning(
++                    "РћС€РёР±РєР° rebind РїРѕРґРїРёСЃРєРё. РџРѕРїС‹С‚РєР° {Attempt}/{MaxAttempts}. РџСЂРёС‡РёРЅР°: {Error}",
++                    attempt,
++                    RebindAttempts,
++                    ex.Message);
++                await Task.Delay(RebindRetryDelay, ct).ConfigureAwait(false);
++            }
+         }
+-        return await RunAddTagAsync(nodeId, ct);
+     }
+ 
+-    private async Task<TagError?> RunAddTagAsync(string nodeId, CancellationToken ct = default)
++    private async Task RebindCoreAsync(ISession newSession, IReadOnlyCollection<string> nodeIds, CancellationToken ct)
+     {
+-        var item = CreateMonitoredItem(nodeId);
+-        if (!_monitoredItems.TryAdd(nodeId, item))
++        if (CanReuseCurrentSubscription(newSession))
+         {
+-            item.Notification -= OnNotification;
+-            return null;
++            await RecreateCurrentSubscriptionItemsAsync(nodeIds, ct).ConfigureAwait(false);
++            return;
+         }
+-        await ApplyItemToSubscriptionAsync(item, ct).ConfigureAwait(false);
+-        return ProcessAddResult(item, nodeId);
++
++        await ResetSessionBindingAsync(newSession, ct).ConfigureAwait(false);
++        await RecreateMonitoredItemsAsync(nodeIds, ct).ConfigureAwait(false);
+     }
+ 
+-    private async Task ApplyItemToSubscriptionAsync(MonitoredItem item, CancellationToken ct)
++    private bool CanReuseCurrentSubscription(ISession newSession)
++    {
++        return _subscription != null && ReferenceEquals(_subscription.Session, newSession);
++    }
++
++    public async Task ResetSessionBindingAsync(ISession newSession, CancellationToken ct = default)
+     {
+         await using (await AsyncLock.AcquireAsync(_subscriptionLock, ct).ConfigureAwait(false))
+         {
+-            _subscription!.AddItem(item);
+-            await _subscription.ApplyChangesAsync(ct).ConfigureAwait(false);
++            var oldSubscription = _subscription;
++            ClearMonitoredItemsCache();
++            await RemoveOldSubscriptionFromSessionAsync(oldSubscription).ConfigureAwait(false);
++
++            var newSubscription = CreateSubscription(newSession);
++            newSession.AddSubscription(newSubscription);
++            await newSubscription.CreateAsync(ct).ConfigureAwait(false);
++            _subscription = newSubscription;
+         }
+     }
+ 
+-    private TagError? ProcessAddResult(MonitoredItem item, string nodeId)
++    private static bool ShouldRetryRebind(Exception ex, int attempt)
+     {
+-        if (!ServiceResult.IsBad(item.Status.Error))
+-        {
+-            logger.LogInformation("Тег {NodeId} добавлен в подписку", nodeId);
+-            return null;
+-        }
+-        _monitoredItems.TryRemove(nodeId, out _);
+-        item.Notification -= OnNotification;
+-        var message = OpcUaErrorMapper.ToHumanReadable(item.Status.Error.StatusCode);
+-        logger.LogError("Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
+-        return new TagError(nodeId, message);
++        return attempt < RebindAttempts
++            && OpcUaTransientErrorClassifier.IsTransientDisconnect(ex);
+     }
+ 
+-    public async Task<IReadOnlyList<TagError>> AddTagsAsync(IEnumerable<string> nodeIds, CancellationToken ct = default)
++    private List<string> GetCallbackNodeIdsSnapshot()
+     {
+-        List<MonitoredItem> newItems;
+-        await using (await AsyncLock.AcquireAsync(_subscriptionLock, ct).ConfigureAwait(false))
++        lock (_callbacksLock)
+         {
+-            newItems = CreateNewMonitoredItems(nodeIds);
+-            if (newItems.Count == 0)
+-            {
+-                return [];
+-            }
+-            await _subscription!.ApplyChangesAsync(ct).ConfigureAwait(false);
++            return [.. _callbacks.Keys];
+         }
+-        return CollectErrors(newItems);
+     }
+ 
+-    private List<MonitoredItem> CreateNewMonitoredItems(IEnumerable<string> nodeIds)
++    private async Task RecreateMonitoredItemsAsync(IReadOnlyCollection<string> nodeIds, CancellationToken ct)
+     {
+-        var newItems = new List<MonitoredItem>();
+-        foreach (var nodeId in nodeIds)
++        if (nodeIds.Count == 0)
+         {
+-            var item = CreateMonitoredItem(nodeId);
+-            if (!_monitoredItems.TryAdd(nodeId, item))
++            return;
++        }
++
++        List<MonitoredItem> createdItems;
++        await using (await AsyncLock.AcquireAsync(_subscriptionLock, ct).ConfigureAwait(false))
++        {
++            createdItems = CreateNewMonitoredItems(nodeIds);
++            if (createdItems.Count == 0)
+             {
+-                item.Notification -= OnNotification;
+-                continue;
++                return;
+             }
+-            _subscription!.AddItem(item);
+-            newItems.Add(item);
++            await _subscription!.ApplyChangesAsync(ct).ConfigureAwait(false);
+         }
+-        return newItems;
++        ThrowIfHasTagErrors(createdItems);
+     }
+ 
+-    private List<TagError> CollectErrors(List<MonitoredItem> items) =>
+-        items
+-            .Select(item => ProcessAddResult(item, item.StartNodeId.ToString()))
+-            .Where(error => error != null)
+-            .ToList()!;
+-
+-    public async Task SubscribeAsync(string nodeId, Func<object?, Task> callback, CancellationToken ct = default)
++    private async Task RecreateCurrentSubscriptionItemsAsync(IReadOnlyCollection<string> nodeIds, CancellationToken ct)
+     {
+-        var error = await EnsureTagExistsAsync(nodeId, ct).ConfigureAwait(false);
+-        if (error != null)
++        List<MonitoredItem> createdItems;
++        await using (await AsyncLock.AcquireAsync(_subscriptionLock, ct).ConfigureAwait(false))
+         {
+-            throw new InvalidOperationException($"Не удалось подписаться на тег {nodeId}: {error.Message}");
++            ClearMonitoredItemsFromSubscription();
++            createdItems = CreateNewMonitoredItems(nodeIds);
++            await _subscription!.ApplyChangesAsync(ct).ConfigureAwait(false);
+         }
+-        AddCallback(nodeId, callback);
++        ThrowIfHasTagErrors(createdItems);
+     }
+ 
+-    private Task<TagError?> EnsureTagExistsAsync(string nodeId, CancellationToken ct) =>
+-        _monitoredItems.ContainsKey(nodeId)
+-            ? Task.FromResult<TagError?>(null)
+-            : AddTagAsync(nodeId, ct);
+-
+-    private void AddCallback(string nodeId, Func<object?, Task> callback)
++    private void ThrowIfHasTagErrors(List<MonitoredItem> createdItems)
+     {
+-        lock (_callbacksLock)
++        var errors = CollectErrors(createdItems);
++        if (errors.Count == 0)
+         {
+-            if (!_callbacks.TryGetValue(nodeId, out var list))
+-            {
+-                _callbacks[nodeId] = list = [];
+-            }
+-            list.Add(callback);
++            return;
+         }
++        var firstError = errors[0];
++        throw new InvalidOperationException(
++            $"РќРµ СѓРґР°Р»РѕСЃСЊ РІРѕСЃСЃС‚Р°РЅРѕРІРёС‚СЊ С‚РµРі {firstError.NodeId}: {firstError.Message}");
+     }
+ 
+-    public async Task UnsubscribeAsync(
+-        string nodeId,
+-        Func<object?, Task> callback,
+-        bool removeTag = false,
+-        CancellationToken ct = default)
++    private void ClearMonitoredItemsCache()
+     {
+-        if (!TryRemoveCallback(nodeId, callback))
++        foreach (var item in _monitoredItems.Values)
+         {
+-            return;
++            item.Notification -= OnNotification;
+         }
+-        await TryRemoveTagIfEmptyAsync(nodeId, removeTag, ct).ConfigureAwait(false);
++        _monitoredItems.Clear();
++        _values.Clear();
+     }
+ 
+-    private bool TryRemoveCallback(string nodeId, Func<object?, Task> callback)
++    private void ClearMonitoredItemsFromSubscription()
+     {
+-        lock (_callbacksLock)
++        foreach (var item in _monitoredItems.Values)
+         {
+-            if (!_callbacks.TryGetValue(nodeId, out var list))
+-            {
+-                return false;
+-            }
+-            list.Remove(callback);
+-            return true;
++            _subscription!.RemoveItem(item);
++            item.Notification -= OnNotification;
+         }
++        _monitoredItems.Clear();
+     }
+ 
+-    private async Task TryRemoveTagIfEmptyAsync(string nodeId, bool removeTag, CancellationToken ct)
++    private async Task RemoveOldSubscriptionFromSessionAsync(Opc.Ua.Client.Subscription? oldSubscription)
+     {
+-        if (!removeTag)
++        if (oldSubscription == null)
+         {
+             return;
+         }
+-        bool shouldRemove;
+-        lock (_callbacksLock)
++
++        try
+         {
+-            shouldRemove = _callbacks.TryGetValue(nodeId, out var list) && list.Count == 0;
+-            if (shouldRemove)
+-            {
+-                _callbacks.Remove(nodeId);
+-            }
++            await oldSubscription.Session.RemoveSubscriptionAsync(oldSubscription, CancellationToken.None)
++                .ConfigureAwait(false);
+         }
+-        if (shouldRemove)
++        catch (Exception ex)
+         {
+-            await RemoveTagAsync(nodeId, ct).ConfigureAwait(false);
++            logger.LogWarning("Не удалось удалить старую OPC подписку из сессии: {Error}", ex.Message);
+         }
+-    }
+ 
+-    private async Task RemoveTagAsync(string nodeId, CancellationToken ct = default)
++        DisposeOldSubscription(oldSubscription);
++    }
++    private void DisposeOldSubscription(Opc.Ua.Client.Subscription oldSubscription)
+     {
+-        if (!_monitoredItems.TryRemove(nodeId, out var item))
++        try
+         {
+-            return;
++            if (oldSubscription is IDisposable disposable)
++            {
++                disposable.Dispose();
++            }
+         }
+-        item.Notification -= OnNotification;
+-        await using (await AsyncLock.AcquireAsync(_subscriptionLock, ct).ConfigureAwait(false))
++        catch (Exception ex)
+         {
+-            _subscription!.RemoveItem(item);
+-            await _subscription.ApplyChangesAsync(ct).ConfigureAwait(false);
++            logger.LogWarning("РќРµ СѓРґР°Р»РѕСЃСЊ РѕСЃРІРѕР±РѕРґРёС‚СЊ СЃС‚Р°СЂСѓСЋ OPC РїРѕРґРїРёСЃРєСѓ: {Error}", ex.Message);
+         }
+-        _values.TryRemove(nodeId, out _);
+-        lock (_callbacksLock)
++    }
++
++    public async Task<TagError?> AddTagAsync(string nodeId, CancellationToken ct = default)
++    {
++        await connectionState.WaitForConnectionAsync(ct).ConfigureAwait(false);
++        if (_monitoredItems.ContainsKey(nodeId))
+         {
+-            _callbacks.Remove(nodeId);
++            return null;
+         }
++        return await RunAddTagAsync(nodeId, ct).ConfigureAwait(false);
+     }
+ 
+-    public object? GetValue(string nodeId) => _values.GetValueOrDefault(nodeId);
+-
+-    public T? GetValue<T>(string nodeId) =>
+-        _values.GetValueOrDefault(nodeId) is T typed ? typed : default;
+-
+-    private MonitoredItem CreateMonitoredItem(string nodeId)
++    private async Task<TagError?> RunAddTagAsync(string nodeId, CancellationToken ct = default)
+     {
+-        var item = new MonitoredItem(_subscription!.DefaultItem)
++        var item = CreateMonitoredItem(nodeId);
++        if (!_monitoredItems.TryAdd(nodeId, item))
+         {
+-            StartNodeId = new NodeId(nodeId),
+-            AttributeId = Attributes.Value,
+-            DisplayName = nodeId,
+-            SamplingInterval = _settings.SamplingIntervalMs,
+-            QueueSize = (uint)_settings.QueueSize,
+-            DiscardOldest = true
+-        };
+-        item.Notification += OnNotification;
+-        return item;
++            item.Notification -= OnNotification;
++            return null;
++        }
++        await ApplyItemToSubscriptionAsync(item, ct).ConfigureAwait(false);
++        return ProcessAddResult(item, nodeId);
+     }
+ 
+-    private void OnNotification(MonitoredItem item, MonitoredItemNotificationEventArgs e)
++    private async Task ApplyItemToSubscriptionAsync(MonitoredItem item, CancellationToken ct)
+     {
+-        if (e.NotificationValue is not MonitoredItemNotification notification)
++        await using (await AsyncLock.AcquireAsync(_subscriptionLock, ct).ConfigureAwait(false))
+         {
+-            return;
++            _subscription!.AddItem(item);
++            await _subscription.ApplyChangesAsync(ct).ConfigureAwait(false);
+         }
+-        var nodeId = item.StartNodeId.ToString();
+-        var value = notification.Value?.Value;
+-        StoreValue(nodeId, value);
+-        InvokeCallbacks(nodeId, value);
+     }
+ 
+-    private void StoreValue(string nodeId, object? value)
++    private TagError? ProcessAddResult(MonitoredItem item, string nodeId)
+     {
+-        _values[nodeId] = value;
++        if (!ServiceResult.IsBad(item.Status.Error))
++        {
++            logger.LogInformation("РўРµРі {NodeId} РґРѕР±Р°РІР»РµРЅ РІ РїРѕРґРїРёСЃРєСѓ", nodeId);
++            return null;
++        }
++        _monitoredItems.TryRemove(nodeId, out _);
++        item.Notification -= OnNotification;
++        var message = OpcUaErrorMapper.ToHumanReadable(item.Status.Error.StatusCode);
++        logger.LogError("РќРµ СѓРґР°Р»РѕСЃСЊ РґРѕР±Р°РІРёС‚СЊ С‚РµРі {NodeId}: {Error}", nodeId, message);
++        return new TagError(nodeId, message);
+     }
+ 
+-    private void InvokeCallbacks(string nodeId, object? value)
++    public async Task<IReadOnlyList<TagError>> AddTagsAsync(IEnumerable<string> nodeIds, CancellationToken ct = default)
+     {
+-        Func<object?, Task>[] callbacks;
+-        lock (_callbacksLock)
++        List<MonitoredItem> newItems;
++        await using (await AsyncLock.AcquireAsync(_subscriptionLock, ct).ConfigureAwait(false))
+         {
+-            if (!_callbacks.TryGetValue(nodeId, out var list))
++            newItems = CreateNewMonitoredItems(nodeIds);
++            if (newItems.Count == 0)
+             {
+-                return;
++                return [];
+             }
+-            callbacks = [.. list];
++            await _subscription!.ApplyChangesAsync(ct).ConfigureAwait(false);
+         }
+-        foreach (var callback in callbacks)
++        return CollectErrors(newItems);
++    }
++
++    private List<MonitoredItem> CreateNewMonitoredItems(IEnumerable<string> nodeIds)
++    {
++        var newItems = new List<MonitoredItem>();
++        foreach (var nodeId in nodeIds)
+         {
+-            callback(value).SafeFireAndForget(ex =>
+-                logger.LogError(ex, "Ошибка в callback для тега {NodeId}", nodeId));
++            var item = CreateMonitoredItem(nodeId);
++            if (!_monitoredItems.TryAdd(nodeId, item))
++            {
++                item.Notification -= OnNotification;
++                continue;
++            }
++            _subscription!.AddItem(item);
++            newItems.Add(item);
+         }
++        return newItems;
++    }
++
++    private List<TagError> CollectErrors(List<MonitoredItem> items)
++    {
++        return items
++            .Select(item => ProcessAddResult(item, item.StartNodeId.ToString()))
++            .Where(error => error != null)
++            .ToList()!;
+     }
+ }
++
+diff --git a/Final_Test_Hybrid/Services/OpcUa/TagWaiter.cs b/Final_Test_Hybrid/Services/OpcUa/TagWaiter.cs
+index 5470a48..5c91c0a 100644
+--- a/Final_Test_Hybrid/Services/OpcUa/TagWaiter.cs
++++ b/Final_Test_Hybrid/Services/OpcUa/TagWaiter.cs
+@@ -1,17 +1,20 @@
+-using System.Diagnostics;
+ using Final_Test_Hybrid.Services.Common;
+ using Final_Test_Hybrid.Services.Common.Logging;
++using Final_Test_Hybrid.Services.OpcUa.Connection;
+ using Final_Test_Hybrid.Services.OpcUa.Subscription;
+-using Final_Test_Hybrid.Services.OpcUa.WaitGroup;
+ using Microsoft.Extensions.Logging;
+ 
+ namespace Final_Test_Hybrid.Services.OpcUa;
+ 
+-public class TagWaiter(
++public partial class TagWaiter(
+     OpcUaSubscription subscription,
++    OpcUaConnectionState connectionState,
+     ILogger<TagWaiter> logger,
+     ITestStepLogger testLogger)
+ {
++    private const int SubscribeRetryAttempts = 3;
++    private static readonly TimeSpan SubscribeRetryDelay = TimeSpan.FromMilliseconds(250);
++
+     #region WaitForValueAsync
+ 
+     /// <summary>
+@@ -60,7 +63,7 @@ public class TagWaiter(
+             return Task.CompletedTask;
+         }
+ 
+-        await subscription.SubscribeAsync(nodeId, OnValueChanged, ct);
++        await SubscribeWithReconnectRetryAsync(nodeId, OnValueChanged, ct);
+ 
+         Action? onResumed = null;
+         try
+@@ -121,7 +124,7 @@ public class TagWaiter(
+             return Task.CompletedTask;
+         }
+ 
+-        await subscription.SubscribeAsync(nodeId, OnValueChanged, ct);
++        await SubscribeWithReconnectRetryAsync(nodeId, OnValueChanged, ct);
+ 
+         try
+         {
+@@ -146,7 +149,11 @@ public class TagWaiter(
+     /// <summary>
+     /// Ожидает пока тег станет true (pause-aware).
+     /// </summary>
+-    public Task WaitForTrueAsync(string nodeId, PauseTokenSource? pauseGate, TimeSpan? timeout = null, CancellationToken ct = default)
++    public Task WaitForTrueAsync(
++        string nodeId,
++        PauseTokenSource? pauseGate,
++        TimeSpan? timeout = null,
++        CancellationToken ct = default)
+         => WaitForValueAsync<bool>(nodeId, v => v, pauseGate, timeout, ct);
+ 
+     /// <summary>
+@@ -158,465 +165,12 @@ public class TagWaiter(
+     /// <summary>
+     /// Ожидает пока тег станет false (pause-aware).
+     /// </summary>
+-    public Task WaitForFalseAsync(string nodeId, PauseTokenSource? pauseGate, TimeSpan? timeout = null, CancellationToken ct = default)
+-        => WaitForValueAsync<bool>(nodeId, v => !v, pauseGate, timeout, ct);
+-
+-    #endregion
+-
+-    #region WaitGroup Factory
+-
+-    /// <summary>
+-    /// Создаёт билдер для ожидания нескольких условий (без результата).
+-    /// </summary>
+-    public WaitGroupBuilder CreateWaitGroup() => new();
+-
+-    /// <summary>
+-    /// Создаёт билдер для ожидания нескольких условий (с результатом).
+-    /// </summary>
+-    public WaitGroupBuilder<TResult> CreateWaitGroup<TResult>() => new();
+-
+-    #endregion
+-
+-    #region WaitAnyAsync (non-generic)
+-
+-    /// <summary>
+-    /// Ожидает первое сработавшее условие из группы.
+-    /// </summary>
+-    public Task<TagWaitResult> WaitAnyAsync(WaitGroupBuilder builder, CancellationToken ct = default)
+-        => WaitAnyAsync(builder, pauseGate: null, ct);
+-
+-    /// <summary>
+-    /// Ожидает первое сработавшее условие из группы (pause-aware).
+-    /// </summary>
+-    public async Task<TagWaitResult> WaitAnyAsync(
+-        WaitGroupBuilder builder,
+-        PauseTokenSource? pauseGate,
+-        CancellationToken ct = default)
+-    {
+-        if (builder.Conditions.Count == 0)
+-        {
+-            throw new ArgumentException("WaitGroup должен содержать хотя бы одно условие", nameof(builder));
+-        }
+-
+-        var genericResult = await WaitAnyAsync(builder.ToGeneric(), pauseGate, ct);
+-
+-        var callback = builder.Callbacks[genericResult.WinnerIndex];
+-        if (callback != null)
+-        {
+-            await callback(genericResult.RawValue);
+-        }
+-
+-        return new TagWaitResult
+-        {
+-            WinnerIndex = genericResult.WinnerIndex,
+-            NodeId = genericResult.NodeId,
+-            Value = genericResult.RawValue,
+-            Name = genericResult.Name
+-        };
+-    }
+-
+-    #endregion
+-
+-    #region WaitAnyAsync (generic)
+-
+-    /// <summary>
+-    /// Ожидает первое сработавшее условие из группы с типизированным результатом.
+-    /// </summary>
+-    public Task<TagWaitResult<TResult>> WaitAnyAsync<TResult>(
+-        WaitGroupBuilder<TResult> builder,
+-        CancellationToken ct = default)
+-        => WaitAnyAsync(builder, pauseGate: null, ct);
+-
+-    /// <summary>
+-    /// Ожидает первое сработавшее условие из группы с типизированным результатом (pause-aware).
+-    /// </summary>
+-    public async Task<TagWaitResult<TResult>> WaitAnyAsync<TResult>(
+-        WaitGroupBuilder<TResult> builder,
+-        PauseTokenSource? pauseGate,
+-        CancellationToken ct = default)
+-    {
+-        if (builder.Conditions.Count == 0)
+-        {
+-            throw new ArgumentException("WaitGroup должен содержать хотя бы одно условие", nameof(builder));
+-        }
+-
+-        var earlyResult = CheckCurrentValues(builder, pauseGate);
+-        if (earlyResult != null)
+-        {
+-            return earlyResult;
+-        }
+-
+-        var tcs = new TaskCompletionSource<TagWaitResult<TResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
+-        var handlers = CreateHandlers(builder, tcs, pauseGate);
+-
+-        Action? onResumed = null;
+-        try
+-        {
+-            await SubscribeAllAsync(builder.Conditions, handlers, ct);
+-
+-            if (pauseGate != null)
+-            {
+-                onResumed = () => RecheckAfterSubscribe(builder, tcs, pauseGate);
+-                pauseGate.OnResumed += onResumed;
+-            }
+-
+-            RecheckAfterSubscribe(builder, tcs, pauseGate);
+-            return await WaitWithTimeoutAsync(tcs.Task, builder.Timeout, pauseGate, ct);
+-        }
+-        finally
+-        {
+-            if (onResumed != null)
+-            {
+-                pauseGate!.OnResumed -= onResumed;
+-            }
+-            await UnsubscribeAllAsync(builder.Conditions, handlers);
+-        }
+-    }
+-
+-    #endregion
+-
+-    #region Private Helpers
+-
+-    private TagWaitResult<TResult>? CheckCurrentValues<TResult>(
+-        WaitGroupBuilder<TResult> builder,
+-        PauseTokenSource? pauseGate)
+-    {
+-        if (pauseGate?.IsPaused == true)
+-        {
+-            return null;
+-        }
+-
+-        for (var i = 0; i < builder.Conditions.Count; i++)
+-        {
+-            var condition = builder.Conditions[i];
+-            var current = subscription.GetValue(condition.NodeId);
+-
+-            // Для WaitForAllTrue: проверяем ВСЕ теги группы
+-            if (condition.AdditionalNodeIds != null)
+-            {
+-                if (!CheckAllConditionTags(condition))
+-                {
+-                    continue;
+-                }
+-            }
+-            else
+-            {
+-                // Для обычных условий: проверяем основной тег
+-                if (current == null || !condition.Condition(current))
+-                {
+-                    continue;
+-                }
+-            }
+-
+-            var result = builder.ResultCallbacks[i](current);
+-            logger.LogInformation("WaitGroup: условие [{Index}] {Name} уже выполнено, тег {NodeId} = {Value}",
+-                i, condition.Name ?? "unnamed", condition.NodeId, current);
+-            testLogger.LogInformation("  Сигнал уже активен: {Name} → {Result}",
+-                condition.Name ?? condition.NodeId, result);
+-            return new TagWaitResult<TResult>
+-            {
+-                WinnerIndex = i,
+-                NodeId = condition.NodeId,
+-                RawValue = current,
+-                Result = result,
+-                Name = condition.Name
+-            };
+-        }
+-        return null;
+-    }
+-
+-    /// <summary>
+-    /// Проверяет только дополнительные теги.
+-    /// Используется для простых условий без AND-логики.
+-    /// </summary>
+-    private bool CheckAdditionalTags(TagWaitCondition condition)
+-    {
+-        if (condition.AdditionalNodeIds == null)
+-        {
+-            return true;
+-        }
+-        foreach (var additionalNodeId in condition.AdditionalNodeIds)
+-        {
+-            var value = subscription.GetValue<bool>(additionalNodeId);
+-            if (value != true)
+-            {
+-                return false;
+-            }
+-        }
+-        return true;
+-    }
+-
+-    /// <summary>
+-    /// Проверяет ВСЕ теги группы: основной NodeId И все AdditionalNodeIds.
+-    /// Используется для WaitForAllTrue где handler срабатывает от любого тега группы.
+-    /// </summary>
+-    private bool CheckAllConditionTags(TagWaitCondition condition)
+-    {
+-        // Проверяем основной NodeId
+-        var mainValue = subscription.GetValue<bool>(condition.NodeId);
+-        if (mainValue != true)
+-        {
+-            return false;
+-        }
+-
+-        // Проверяем дополнительные теги
+-        return CheckAdditionalTags(condition);
+-    }
+-
+-    private void RecheckAfterSubscribe<TResult>(
+-        WaitGroupBuilder<TResult> builder,
+-        TaskCompletionSource<TagWaitResult<TResult>> tcs,
+-        PauseTokenSource? pauseGate)
+-    {
+-        if (pauseGate?.IsPaused == true)
+-        {
+-            return;
+-        }
+-        var lateResult = CheckCurrentValues(builder, pauseGate);
+-        if (lateResult != null)
+-        {
+-            tcs.TrySetResult(lateResult);
+-        }
+-    }
+-
+-    private void RecheckValue<T>(
++    public Task WaitForFalseAsync(
+         string nodeId,
+-        Func<T, bool> condition,
+-        TaskCompletionSource<T> tcs,
+-        PauseTokenSource? pauseGate)
+-    {
+-        if (pauseGate?.IsPaused == true)
+-        {
+-            return;
+-        }
+-        var current = subscription.GetValue<T>(nodeId);
+-        if (current != null && condition(current))
+-        {
+-            tcs.TrySetResult(current);
+-        }
+-    }
+-
+-    private List<Func<object?, Task>> CreateHandlers<TResult>(
+-        WaitGroupBuilder<TResult> builder,
+-        TaskCompletionSource<TagWaitResult<TResult>> tcs,
+-        PauseTokenSource? pauseGate)
+-    {
+-        var handlers = new List<Func<object?, Task>>();
+-        for (var i = 0; i < builder.Conditions.Count; i++)
+-        {
+-            var condition = builder.Conditions[i];
+-            var resultCallback = builder.ResultCallbacks[i];
+-            handlers.Add(CreateHandler(tcs, condition, i, resultCallback, pauseGate));
+-        }
+-        return handlers;
+-    }
+-
+-    private Func<object?, Task> CreateHandler<TResult>(
+-        TaskCompletionSource<TagWaitResult<TResult>> tcs,
+-        TagWaitCondition condition,
+-        int index,
+-        Func<object?, TResult> resultCallback,
+-        PauseTokenSource? pauseGate)
+-    {
+-        return value =>
+-        {
+-            if (pauseGate?.IsPaused == true)
+-            {
+-                return Task.CompletedTask;
+-            }
+-
+-            // Для WaitForAllTrue (есть AdditionalNodeIds): проверяем ВСЕ теги группы
+-            // Это критически важно: handler срабатывает от любого тега, но мы должны
+-            // убедиться что ВСЕ теги true, а не только тот что триггернул handler
+-            if (condition.AdditionalNodeIds != null)
+-            {
+-                if (!CheckAllConditionTags(condition))
+-                {
+-                    return Task.CompletedTask;
+-                }
+-            }
+-            else
+-            {
+-                // Для обычных условий: проверяем входящее значение
+-                if (!condition.Condition(value))
+-                {
+-                    return Task.CompletedTask;
+-                }
+-            }
+-
+-            var result = resultCallback(value);
+-            logger.LogInformation("WaitGroup: условие [{Index}] {Name} сработало, тег {NodeId} = {Value}, результат = {Result}",
+-                index, condition.Name ?? "unnamed", condition.NodeId, value, result);
+-            testLogger.LogInformation("  Получен сигнал: {Name} → {Result}",
+-                condition.Name ?? condition.NodeId, result);
+-            tcs.TrySetResult(new TagWaitResult<TResult>
+-            {
+-                WinnerIndex = index,
+-                NodeId = condition.NodeId,
+-                RawValue = value,
+-                Result = result,
+-                Name = condition.Name
+-            });
+-            return Task.CompletedTask;
+-        };
+-    }
+-
+-    private async Task SubscribeAllAsync(
+-        IReadOnlyList<TagWaitCondition> conditions,
+-        List<Func<object?, Task>> handlers,
+-        CancellationToken ct)
+-    {
+-        for (var i = 0; i < conditions.Count; i++)
+-        {
+-            var condition = conditions[i];
+-            await subscription.SubscribeAsync(condition.NodeId, handlers[i], ct);
+-            if (condition.AdditionalNodeIds is { } additionalNodeIds)
+-            {
+-                foreach (var additionalNodeId in additionalNodeIds)
+-                {
+-                    await subscription.SubscribeAsync(additionalNodeId, handlers[i], ct);
+-                }
+-            }
+-        }
+-    }
+-
+-    private async Task UnsubscribeAllAsync(
+-        IReadOnlyList<TagWaitCondition> conditions,
+-        List<Func<object?, Task>> handlers)
+-    {
+-        for (var i = 0; i < conditions.Count; i++)
+-        {
+-            var condition = conditions[i];
+-            await subscription.UnsubscribeAsync(
+-                condition.NodeId,
+-                handlers[i],
+-                removeTag: false,
+-                ct: CancellationToken.None);
+-            if (condition.AdditionalNodeIds is { } additionalNodeIds)
+-            {
+-                foreach (var additionalNodeId in additionalNodeIds)
+-                {
+-                    await subscription.UnsubscribeAsync(
+-                        additionalNodeId,
+-                        handlers[i],
+-                        removeTag: false,
+-                        ct: CancellationToken.None);
+-                }
+-            }
+-        }
+-    }
+-
+-    #endregion
+-
+-    #region Pause-Aware Timeout
+-
+-    private static async Task<T> WaitWithTimeoutAsync<T>(
+-        Task<T> task,
+-        TimeSpan? timeout,
+         PauseTokenSource? pauseGate,
+-        CancellationToken ct)
+-    {
+-        if (!timeout.HasValue)
+-        {
+-            return await task.WaitAsync(ct);
+-        }
+-        if (pauseGate == null)
+-        {
+-            return await task.WaitAsync(timeout.Value, ct);
+-        }
+-
+-        var remaining = timeout.Value;
+-        var stopwatch = Stopwatch.StartNew();
+-
+-        while (true)
+-        {
+-            if (task.IsCompleted)
+-            {
+-                return await task;
+-            }
+-
+-            if (remaining <= TimeSpan.Zero)
+-            {
+-                throw new TimeoutException();
+-            }
+-
+-            if (pauseGate.IsPaused)
+-            {
+-                await pauseGate.WaitWhilePausedAsync(ct);
+-                stopwatch.Restart();
+-                continue;
+-            }
+-
+-            using var delayCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+-            using var pauseWatcher = new PauseWatcher(pauseGate);
+-
+-            var delayTask = Task.Delay(remaining, delayCts.Token);
+-            var pauseTask = pauseWatcher.Task;
+-
+-            var completed = await Task.WhenAny(task, delayTask, pauseTask);
+-
+-            // Check timeout BEFORE cancelling (delayCts.IsCancellationRequested would be wrong after Cancel)
+-            var timedOut = completed == delayTask && delayTask.IsCompletedSuccessfully;
+-            var cancelled = completed == delayTask && delayTask.IsCanceled;
+-
+-            // Cancel delay to free timer resources
+-            delayCts.Cancel();
+-
+-            if (completed == task)
+-            {
+-                return await task;
+-            }
+-            if (cancelled)
+-            {
+-                ct.ThrowIfCancellationRequested();
+-            }
+-            if (timedOut)
+-            {
+-                throw new TimeoutException();
+-            }
+-
+-            remaining -= stopwatch.Elapsed;
+-            if (remaining < TimeSpan.Zero)
+-            {
+-                remaining = TimeSpan.Zero;
+-            }
+-
+-            await pauseGate.WaitWhilePausedAsync(ct);
+-            stopwatch.Restart();
+-        }
+-    }
+-
+-    /// <summary>
+-    /// Disposable helper that subscribes to OnPaused and unsubscribes on dispose.
+-    /// </summary>
+-    private sealed class PauseWatcher : IDisposable
+-    {
+-        private readonly PauseTokenSource _pauseGate;
+-        private readonly TaskCompletionSource _tcs;
+-        private readonly Action _handler;
+-
+-        public PauseWatcher(PauseTokenSource pauseGate)
+-        {
+-            _pauseGate = pauseGate;
+-            _tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+-            _handler = () => _tcs.TrySetResult();
+-
+-            pauseGate.OnPaused += _handler;
+-
+-            // Double-check after subscribing
+-            if (pauseGate.IsPaused)
+-            {
+-                _tcs.TrySetResult();
+-            }
+-        }
+-
+-        public Task Task => _tcs.Task;
+-
+-        public void Dispose()
+-        {
+-            _pauseGate.OnPaused -= _handler;
+-        }
+-    }
++        TimeSpan? timeout = null,
++        CancellationToken ct = default)
++        => WaitForValueAsync<bool>(nodeId, v => !v, pauseGate, timeout, ct);
+ 
+     #endregion
+ }
+diff --git a/Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs b/Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs
+index 38863f9..1bc0c71 100644
+--- a/Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs
++++ b/Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs
+@@ -11,7 +11,11 @@ public partial class TestCompletionCoordinator
+         try
+         {
+             // 1. Записать End = true
+-            await deps.PlcService.WriteAsync(BaseTags.ErrorSkip, true, ct);
++            var written = await TryWriteTagAsync(BaseTags.ErrorSkip, true, "End = true", ct);
++            if (!written)
++            {
++                return CompletionResult.Cancelled;
++            }
+             logger.LogInformation("End = true записан, ожидание сброса от PLC");
+ 
+             // 2. Ждать пока подписка увидит true (запись дошла до PLC)
+@@ -63,8 +67,8 @@ public partial class TestCompletionCoordinator
+             return await HandleNokRepeatAsync(ct);
+         }
+         // OK - просто сигнал повтора (без сохранения)
+-        await deps.PlcService.WriteAsync(BaseTags.AskRepeat, true, ct);
+-        return CompletionResult.RepeatRequested;
++        var written = await TryWriteTagAsync(BaseTags.AskRepeat, true, "AskRepeat = true", ct);
++        return written ? CompletionResult.RepeatRequested : CompletionResult.Cancelled;
+     }
+ 
+     private async Task<CompletionResult> HandleFinishAsync(int testResult, CancellationToken ct)
+@@ -127,4 +131,16 @@ public partial class TestCompletionCoordinator
+             return false;
+         }
+     }
++
++    private async Task<bool> TryWriteTagAsync(string nodeId, bool value, string operation, CancellationToken ct)
++    {
++        var result = await deps.PlcService.WriteAsync(nodeId, value, ct);
++        if (result.Success)
++        {
++            return true;
++        }
++
++        logger.LogError("Не удалось выполнить {Operation}: {Error}", operation, result.Error);
++        return false;
++    }
+ }
+diff --git a/Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Repeat.cs b/Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Repeat.cs
+index a3dec09..e187b1b 100644
+--- a/Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Repeat.cs
++++ b/Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Repeat.cs
+@@ -22,7 +22,11 @@ public partial class TestCompletionCoordinator
+ 
+         // 2. AskRepeat = true (PLC сбросит Req_Repeat)
+         // ReworkDialog будет показан в ScanBarcodeMesStep если MES потребует
+-        await deps.PlcService.WriteAsync(BaseTags.AskRepeat, true, ct);
++        var written = await TryWriteTagAsync(BaseTags.AskRepeat, true, "AskRepeat = true для NOK повтора", ct);
++        if (!written)
++        {
++            return CompletionResult.Cancelled;
++        }
+         logger.LogInformation("NOK повтор: AskRepeat = true, переход к подготовке");
+ 
+         return CompletionResult.NokRepeatRequested;
+diff --git a/Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.ErrorResolution.cs b/Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.ErrorResolution.cs
+index c171872..3fef922 100644
+--- a/Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.ErrorResolution.cs
++++ b/Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.ErrorResolution.cs
+@@ -1,4 +1,5 @@
+-﻿using Final_Test_Hybrid.Models.Steps;
++using Final_Test_Hybrid.Models.Steps;
++using Final_Test_Hybrid.Services.OpcUa;
+ using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
+ using Microsoft.Extensions.Logging;
+ 
+@@ -7,40 +8,37 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
+ public partial class TestExecutionCoordinator
+ {
+     /// <summary>
+-    /// Обрабатывает все ошибки в очереди.
++    /// РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ РІСЃРµ РѕС€РёР±РєРё РІ РѕС‡РµСЂРµРґРё.
+     /// </summary>
+     private async Task HandleErrorsIfAny()
+     {
+         var cts = _cts;
+         if (cts == null)
+         {
+-            _logger.LogWarning("HandleErrorsIfAny вызван без активного CancellationTokenSource");
++            _logger.LogWarning("HandleErrorsIfAny РІС‹Р·РІР°РЅ Р±РµР· Р°РєС‚РёРІРЅРѕРіРѕ CancellationTokenSource");
+             return;
+         }
+ 
+-        while (StateManager.HasPendingErrors && !cts.IsCancellationRequested)
++        var interruptedByConnectionLoss = false;
++        while (CanHandleNextError(cts))
+         {
+             var error = StateManager.CurrentError;
+             if (error == null)
+             {
+                 break;
+             }
+-            StateManager.TransitionTo(ExecutionState.PausedOnError);
+-            await SetSelectedAsync(error, true);
+-            await SetFaultIfNoBlockAsync(error.FailedStep, cts.Token);
+-            TryPublishEvent(new ExecutionEvent(ExecutionEventKind.ErrorOccurred, StepError: error));
+-            ErrorResolution resolution;
+-            try
++
++            await PrepareErrorProcessingAsync(error, cts.Token);
++            var resolution = await WaitResolutionSafeAsync(error, cts.Token);
++
++            if (resolution == ErrorResolution.None)
+             {
+-                var options = new WaitForResolutionOptions(
+-                    BlockEndTag: GetBlockEndTag(error.FailedStep),
+-                    BlockErrorTag: GetBlockErrorTag(error.FailedStep),
+-                    EnableSkip: error.CanSkip);
+-                resolution = await _errorCoordinator.WaitForResolutionAsync(options, cts.Token);
++                break;
+             }
+-            catch (OperationCanceledException)
++            if (resolution == ErrorResolution.ConnectionLost)
+             {
+-                // await SetSelectedAsync(error, false);  // PLC сам сбросит
++                interruptedByConnectionLoss = true;
++                await HandleTransientConnectionLossAsync(cts.Token);
+                 break;
+             }
+             if (cts.IsCancellationRequested || _flowState.IsStopRequested)
+@@ -49,41 +47,88 @@ public partial class TestExecutionCoordinator
+             }
+             if (resolution == ErrorResolution.Timeout)
+             {
+-                await HandleTagTimeoutAsync("ожидание решения оператора", cts.Token);
++                await HandleTagTimeoutAsync("РѕР¶РёРґР°РЅРёРµ СЂРµС€РµРЅРёСЏ РѕРїРµСЂР°С‚РѕСЂР°", cts.Token);
+                 break;
+             }
+             await ProcessErrorResolution(error, resolution, cts.Token);
+-            // await SetSelectedAsync(error, false);  // PLC сам сбросит
+         }
+-        if (!cts.IsCancellationRequested && !_flowState.IsStopRequested)
++
++        if (CanReturnToRunningState(cts, interruptedByConnectionLoss))
+         {
+             StateManager.TransitionTo(ExecutionState.Running);
+         }
+     }
+ 
++    private bool CanHandleNextError(CancellationTokenSource cts)
++    {
++        return StateManager.HasPendingErrors && !cts.IsCancellationRequested;
++    }
++
++    private bool CanReturnToRunningState(CancellationTokenSource cts, bool interruptedByConnectionLoss)
++    {
++        return !cts.IsCancellationRequested && !_flowState.IsStopRequested && !interruptedByConnectionLoss;
++    }
++
++    private async Task PrepareErrorProcessingAsync(StepError error, CancellationToken ct)
++    {
++        StateManager.TransitionTo(ExecutionState.PausedOnError);
++        await SetSelectedAsync(error, true);
++        await SetFaultIfNoBlockAsync(error.FailedStep, ct);
++        TryPublishEvent(new ExecutionEvent(ExecutionEventKind.ErrorOccurred, StepError: error));
++    }
++
++    private async Task<ErrorResolution> WaitResolutionSafeAsync(StepError error, CancellationToken ct)
++    {
++        try
++        {
++            var options = new WaitForResolutionOptions(
++                BlockEndTag: GetBlockEndTag(error.FailedStep),
++                BlockErrorTag: GetBlockErrorTag(error.FailedStep),
++                EnableSkip: error.CanSkip);
++            return await _errorCoordinator.WaitForResolutionAsync(options, ct);
++        }
++        catch (OperationCanceledException)
++        {
++            return ErrorResolution.None;
++        }
++        catch (Exception ex) when (IsTransientOpcDisconnect(ex))
++        {
++            _logger.LogWarning("Transient OPC disconnect РїСЂРё РѕР¶РёРґР°РЅРёРё СЂРµС€РµРЅРёСЏ РѕРїРµСЂР°С‚РѕСЂР°: {Error}", ex.Message);
++            return ErrorResolution.ConnectionLost;
++        }
++    }
++
++    private async Task HandleTransientConnectionLossAsync(CancellationToken ct)
++    {
++        _logger.LogWarning("РџРѕС‚РµСЂСЏ СЃРІСЏР·Рё СЃ PLC РІ error-resolution. РџРµСЂРµС…РѕРґ РІ РєРѕРЅС‚СЂРѕР»РёСЂСѓРµРјС‹Р№ interrupt РїСѓС‚СЊ");
++        await _errorCoordinator.HandleInterruptAsync(InterruptReason.PlcConnectionLost, ct);
++    }
++
++    private static bool IsTransientOpcDisconnect(Exception ex)
++    {
++        return OpcUaTransientErrorClassifier.IsTransientDisconnect(ex);
++    }
++
+     /// <summary>
+-    /// Устанавливает тег Selected для PLC-блока.
+-    /// </summary>
+-    /// <summary>
+-    /// Обрабатывает таймаут ожидания PLC-тегов как жёсткий стоп теста.
++    /// РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ С‚Р°Р№РјР°СѓС‚ РѕР¶РёРґР°РЅРёСЏ PLC-С‚РµРіРѕРІ РєР°Рє Р¶С‘СЃС‚РєРёР№ СЃС‚РѕРї С‚РµСЃС‚Р°.
+     /// </summary>
+     private async Task HandleTagTimeoutAsync(string context, CancellationToken ct)
+     {
+         var cts = _cts;
+         if (cts == null)
+         {
+-            _logger.LogWarning("TagTimeout во время {Context}, но нет активного CancellationTokenSource", context);
++            _logger.LogWarning("TagTimeout РІРѕ РІСЂРµРјСЏ {Context}, РЅРѕ РЅРµС‚ Р°РєС‚РёРІРЅРѕРіРѕ CancellationTokenSource", context);
+             return;
+         }
+ 
+-        _logger.LogWarning("TagTimeout во время {Context} — жёсткий стоп теста", context);
++        _logger.LogWarning("TagTimeout РІРѕ РІСЂРµРјСЏ {Context} вЂ” Р¶С‘СЃС‚РєРёР№ СЃС‚РѕРї С‚РµСЃС‚Р°", context);
+         RequestStopAsFailure(ExecutionStopReason.Operator);
+         await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout, ct);
+         await cts.CancelAsync();
+     }
+ 
+     /// <summary>
+-    /// Обрабатывает решение пользователя по ошибке.
++    /// РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ СЂРµС€РµРЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕ РѕС€РёР±РєРµ.
+     /// </summary>
+     private async Task ProcessErrorResolution(StepError error, ErrorResolution resolution, CancellationToken ct)
+     {
+@@ -104,7 +149,7 @@ public partial class TestExecutionCoordinator
+     }
+ 
+     /// <summary>
+-    /// Безопасно вызывает событие OnRetryStarted.
++    /// Р‘РµР·РѕРїР°СЃРЅРѕ РІС‹Р·С‹РІР°РµС‚ СЃРѕР±С‹С‚РёРµ OnRetryStarted.
+     /// </summary>
+     private void InvokeRetryStartedSafely()
+     {
+@@ -114,12 +159,12 @@ public partial class TestExecutionCoordinator
+         }
+         catch (Exception ex)
+         {
+-            _logger.LogWarning(ex, "Ошибка в обработчике OnRetryStarted");
++            _logger.LogWarning(ex, "РћС€РёР±РєР° РІ РѕР±СЂР°Р±РѕС‚С‡РёРєРµ OnRetryStarted");
+         }
+     }
+ 
+     /// <summary>
+-    /// Безопасно вызывает событие OnErrorOccurred.
++    /// Р‘РµР·РѕРїР°СЃРЅРѕ РІС‹Р·С‹РІР°РµС‚ СЃРѕР±С‹С‚РёРµ OnErrorOccurred.
+     /// </summary>
+     private void InvokeErrorOccurredSafely(StepError error)
+     {
+@@ -129,13 +174,13 @@ public partial class TestExecutionCoordinator
+         }
+         catch (Exception ex)
+         {
+-            _logger.LogWarning(ex, "Ошибка в обработчике OnErrorOccurred");
++            _logger.LogWarning(ex, "РћС€РёР±РєР° РІ РѕР±СЂР°Р±РѕС‚С‡РёРєРµ OnErrorOccurred");
+         }
+     }
+ 
+     /// <summary>
+-    /// Обрабатывает повтор шага.
+-    /// Retry запускается в фоне через event loop и отслеживается, чтобы диалог следующей ошибки появился сразу.
++    /// РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ РїРѕРІС‚РѕСЂ С€Р°РіР°.
++    /// Retry Р·Р°РїСѓСЃРєР°РµС‚СЃСЏ РІ С„РѕРЅРµ С‡РµСЂРµР· event loop Рё РѕС‚СЃР»РµР¶РёРІР°РµС‚СЃСЏ, С‡С‚РѕР±С‹ РґРёР°Р»РѕРі СЃР»РµРґСѓСЋС‰РµР№ РѕС€РёР±РєРё РїРѕСЏРІРёР»СЃСЏ СЃСЂР°Р·Сѓ.
+     /// </summary>
+     private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
+     {
+@@ -148,13 +193,13 @@ public partial class TestExecutionCoordinator
+         }
+         catch (TimeoutException)
+         {
+-            _logger.LogError("Block.Error не сброшен за 60 сек — жёсткий стоп");
+-            await HandleTagTimeoutAsync("Block.Error не сброшен", ct);
++            _logger.LogError("Block.Error РЅРµ СЃР±СЂРѕС€РµРЅ Р·Р° 60 СЃРµРє вЂ” Р¶С‘СЃС‚РєРёР№ СЃС‚РѕРї");
++            await HandleTagTimeoutAsync("Block.Error РЅРµ СЃР±СЂРѕС€РµРЅ", ct);
+             return;
+         }
+         catch (Exception ex)
+         {
+-            _logger.LogError(ex, "Ошибка SendAskRepeatAsync для колонки {Column}", error.ColumnIndex);
++            await HandleAskRepeatFailureAsync(error, ex, ct);
+             return;
+         }
+ 
+@@ -166,8 +211,8 @@ public partial class TestExecutionCoordinator
+         }
+         catch (TimeoutException)
+         {
+-            _logger.LogError("Req_Repeat не сброшен за 60 сек — жёсткий стоп");
+-            await HandleTagTimeoutAsync("Req_Repeat не сброшен", ct);
++            _logger.LogError("Req_Repeat РЅРµ СЃР±СЂРѕС€РµРЅ Р·Р° 60 СЃРµРє вЂ” Р¶С‘СЃС‚РєРёР№ СЃС‚РѕРї");
++            await HandleTagTimeoutAsync("Req_Repeat РЅРµ СЃР±СЂРѕС€РµРЅ", ct);
+             return;
+         }
+ 
+@@ -180,9 +225,28 @@ public partial class TestExecutionCoordinator
+             ColumnExecutor: executor));
+     }
+ 
++    private async Task HandleAskRepeatFailureAsync(StepError error, Exception ex, CancellationToken ct)
++    {
++        _logger.LogError(
++            ex,
++            "Критичная ошибка SendAskRepeatAsync для колонки {Column}. Выполняем fail-fast",
++            error.ColumnIndex);
++
++        RequestStopAsFailure(ExecutionStopReason.Operator);
++        var interruptReason = IsTransientOpcDisconnect(ex)
++            ? InterruptReason.PlcConnectionLost
++            : InterruptReason.TagTimeout;
++        await _errorCoordinator.HandleInterruptAsync(interruptReason, ct);
++        var cts = _cts;
++        if (cts != null)
++        {
++            await cts.CancelAsync();
++        }
++    }
++
+     /// <summary>
+-    /// Выполняет retry шага в фоне.
+-    /// Открывает gate после успешного завершения.
++    /// Р’С‹РїРѕР»РЅСЏРµС‚ retry С€Р°РіР° РІ С„РѕРЅРµ.
++    /// РћС‚РєСЂС‹РІР°РµС‚ gate РїРѕСЃР»Рµ СѓСЃРїРµС€РЅРѕРіРѕ Р·Р°РІРµСЂС€РµРЅРёСЏ.
+     /// </summary>
+     private async Task ExecuteRetryInBackgroundAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
+     {
+@@ -199,7 +263,6 @@ public partial class TestExecutionCoordinator
+         }
+         catch (OperationCanceledException)
+         {
+-            // Гарантируем что колонка не зависнет при Cancel
+             if (!executor.HasFailed)
+             {
+                 executor.OpenGate();
+@@ -207,7 +270,7 @@ public partial class TestExecutionCoordinator
+         }
+         catch (Exception ex)
+         {
+-            _logger.LogError(ex, "Ошибка Retry в фоне для колонки {Column}", error.ColumnIndex);
++            _logger.LogError(ex, "РћС€РёР±РєР° Retry РІ С„РѕРЅРµ РґР»СЏ РєРѕР»РѕРЅРєРё {Column}", error.ColumnIndex);
+         }
+         finally
+         {
+@@ -220,7 +283,7 @@ public partial class TestExecutionCoordinator
+     }
+ 
+     /// <summary>
+-    /// Обрабатывает пропуск шага.
++    /// РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ РїСЂРѕРїСѓСЃРє С€Р°РіР°.
+     /// </summary>
+     private async Task ProcessSkipAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
+     {
+@@ -229,22 +292,21 @@ public partial class TestExecutionCoordinator
+         await ResetBlockStartAsync(error.FailedStep, ct);
+         await ResetFaultIfNoBlockAsync(error.FailedStep, ct);
+ 
+-        _logger.LogDebug("Ожидание сброса сигналов Skip...");
++        _logger.LogDebug("РћР¶РёРґР°РЅРёРµ СЃР±СЂРѕСЃР° СЃРёРіРЅР°Р»РѕРІ Skip...");
+         try
+         {
+             await WaitForSkipSignalsResetAsync(error.FailedStep, ct);
+         }
+         catch (TimeoutException)
+         {
+-            await HandleTagTimeoutAsync("сброс сигналов Skip", ct);
++            await HandleTagTimeoutAsync("СЃР±СЂРѕСЃ СЃРёРіРЅР°Р»РѕРІ Skip", ct);
+             return;
+         }
+-        _logger.LogDebug("Сброс сигналов Skip завершён");
++        _logger.LogDebug("РЎР±СЂРѕСЃ СЃРёРіРЅР°Р»РѕРІ Skip Р·Р°РІРµСЂС€С‘РЅ");
+ 
+         _statusReporter.ReportSkipped(error.UiStepId);
+         StateManager.MarkErrorSkipped();
+-        StateManager.DequeueError();     // СНАЧАЛА удаляем из очереди (защита от race condition)
+-        executor.ClearFailedState();     // ПОТОМ открываем gate
++        StateManager.DequeueError();
++        executor.ClearFailedState();
+     }
+ }
+-
+diff --git a/Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/ErrorCoordinator/ErrorCoordinator.Resolution.cs b/Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/ErrorCoordinator/ErrorCoordinator.Resolution.cs
+index bd06bfb..1e215ca 100644
+--- a/Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/ErrorCoordinator/ErrorCoordinator.Resolution.cs
++++ b/Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/ErrorCoordinator/ErrorCoordinator.Resolution.cs
+@@ -1,6 +1,7 @@
+ using Final_Test_Hybrid.Models.Errors;
+ using Final_Test_Hybrid.Models.Plc.Tags;
+ using Final_Test_Hybrid.Models.Steps;
++using Final_Test_Hybrid.Services.OpcUa;
+ 
+ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
+ 
+@@ -19,9 +20,9 @@ public sealed partial class ErrorCoordinator
+     private async Task<ErrorResolution> WaitForResolutionCoreAsync(WaitForResolutionOptions options, CancellationToken ct)
+     {
+         var timeoutMsg = options.Timeout.HasValue
+-            ? $"таймаут {options.Timeout.Value.TotalSeconds} сек"
+-            : "без таймаута";
+-        _logger.LogInformation("Ожидание решения оператора ({Timeout})...", timeoutMsg);
++            ? $"С‚Р°Р№РјР°СѓС‚ {options.Timeout.Value.TotalSeconds} СЃРµРє"
++            : "Р±РµР· С‚Р°Р№РјР°СѓС‚Р°";
++        _logger.LogInformation("РћР¶РёРґР°РЅРёРµ СЂРµС€РµРЅРёСЏ РѕРїРµСЂР°С‚РѕСЂР° ({Timeout})...", timeoutMsg);
+ 
+         try
+         {
+@@ -29,14 +30,18 @@ public sealed partial class ErrorCoordinator
+         }
+         catch (TimeoutException)
+         {
+-            _logger.LogWarning("Таймаут ожидания ответа оператора");
++            _logger.LogWarning("РўР°Р№РјР°СѓС‚ РѕР¶РёРґР°РЅРёСЏ РѕС‚РІРµС‚Р° РѕРїРµСЂР°С‚РѕСЂР°");
+             return ErrorResolution.Timeout;
+         }
+-        catch (OperationCanceledException ex)
++        catch (OperationCanceledException)
+         {
+-            _logger.LogInformation("Ожидание решения отменено");
+-            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
+-            return default;
++            _logger.LogInformation("РћР¶РёРґР°РЅРёРµ СЂРµС€РµРЅРёСЏ РѕС‚РјРµРЅРµРЅРѕ");
++            throw;
++        }
++        catch (Exception ex) when (IsTransientOpcDisconnect(ex))
++        {
++            _logger.LogWarning("РџРѕС‚РµСЂСЏ OPC-СЃРІСЏР·Рё РїСЂРё РѕР¶РёРґР°РЅРёРё СЂРµС€РµРЅРёСЏ: {Error}", ex.Message);
++            return ErrorResolution.ConnectionLost;
+         }
+     }
+ 
+@@ -67,47 +72,62 @@ public sealed partial class ErrorCoordinator
+ 
+         var waitResult = await _resolution.TagWaiter.WaitAnyAsync(builder, ct);
+         var resolution = waitResult.Result;
+-        _logger.LogInformation("Получен сигнал: {Resolution}", resolution);
++        _logger.LogInformation("РџРѕР»СѓС‡РµРЅ СЃРёРіРЅР°Р»: {Resolution}", resolution);
+         return resolution;
+     }
+ 
+     public Task SendAskRepeatAsync(CancellationToken ct) => SendAskRepeatAsync(null, ct);
+ 
+     /// <summary>
+-    /// Отправляет сигнал AskRepeat в PLC и ожидает сброса Block.Error.
++    /// РћС‚РїСЂР°РІР»СЏРµС‚ СЃРёРіРЅР°Р» AskRepeat РІ PLC Рё РѕР¶РёРґР°РµС‚ СЃР±СЂРѕСЃР° Block.Error.
+     /// </summary>
+-    /// <param name="blockErrorTag">Тег Block.Error для ожидания сброса (null для шагов без блока).</param>
+-    /// <param name="ct">Токен отмены.</param>
+-    /// <exception cref="TimeoutException">Block.Error не сброшен за 60 секунд.</exception>
++    /// <param name="blockErrorTag">РўРµРі Block.Error РґР»СЏ РѕР¶РёРґР°РЅРёСЏ СЃР±СЂРѕСЃР° (null РґР»СЏ С€Р°РіРѕРІ Р±РµР· Р±Р»РѕРєР°).</param>
++    /// <param name="ct">РўРѕРєРµРЅ РѕС‚РјРµРЅС‹.</param>
++    /// <exception cref="TimeoutException">Block.Error РЅРµ СЃР±СЂРѕС€РµРЅ Р·Р° 60 СЃРµРєСѓРЅРґ.</exception>
+     public async Task SendAskRepeatAsync(string? blockErrorTag, CancellationToken ct)
+     {
+-        _logger.LogInformation("Отправка AskRepeat в PLC");
+-        var result = await _resolution.PlcService.WriteAsync(BaseTags.AskRepeat, true, ct);
++        _logger.LogInformation("РћС‚РїСЂР°РІРєР° AskRepeat РІ PLC");
++        await EnsureAskRepeatWrittenAsync(ct);
++        await WaitBlockErrorResetIfNeededAsync(blockErrorTag, ct);
++    }
+ 
+-        if (result.Error != null)
++    private async Task EnsureAskRepeatWrittenAsync(CancellationToken ct)
++    {
++        var result = await _resolution.PlcService.WriteAsync(BaseTags.AskRepeat, true, ct);
++        if (result.Success)
+         {
+-            _logger.LogError("Ошибка записи AskRepeat: {Error}", result.Error);
+             return;
+         }
++        throw new InvalidOperationException($"Критичная ошибка записи AskRepeat в PLC: {result.Error}");
++    }
+ 
+-        if (blockErrorTag != null)
++    private async Task WaitBlockErrorResetIfNeededAsync(string? blockErrorTag, CancellationToken ct)
++    {
++        if (blockErrorTag == null)
+         {
+-            _logger.LogDebug("Ожидание сброса Error блока: {Tag}", blockErrorTag);
+-            await _resolution.TagWaiter.WaitForFalseAsync(blockErrorTag, timeout: TimeSpan.FromSeconds(60), ct);
+-            _logger.LogDebug("Error блока сброшен");
++            return;
+         }
++
++        _logger.LogDebug("РћР¶РёРґР°РЅРёРµ СЃР±СЂРѕСЃР° Error Р±Р»РѕРєР°: {Tag}", blockErrorTag);
++        await _resolution.TagWaiter.WaitForFalseAsync(blockErrorTag, timeout: TimeSpan.FromSeconds(60), ct);
++        _logger.LogDebug("Error Р±Р»РѕРєР° СЃР±СЂРѕС€РµРЅ");
+     }
+ 
+     /// <summary>
+-    /// Ожидает сброса сигнала Req_Repeat.
++    /// РћР¶РёРґР°РµС‚ СЃР±СЂРѕСЃР° СЃРёРіРЅР°Р»Р° Req_Repeat.
+     /// </summary>
+-    /// <param name="ct">Токен отмены.</param>
+-    /// <exception cref="TimeoutException">Req_Repeat не сброшен за 60 секунд.</exception>
++    /// <param name="ct">РўРѕРєРµРЅ РѕС‚РјРµРЅС‹.</param>
++    /// <exception cref="TimeoutException">Req_Repeat РЅРµ СЃР±СЂРѕС€РµРЅ Р·Р° 60 СЃРµРєСѓРЅРґ.</exception>
+     public async Task WaitForRetrySignalResetAsync(CancellationToken ct)
+     {
+-        _logger.LogDebug("Ожидание сброса Req_Repeat...");
++        _logger.LogDebug("РћР¶РёРґР°РЅРёРµ СЃР±СЂРѕСЃР° Req_Repeat...");
+         await _resolution.TagWaiter.WaitForFalseAsync(BaseTags.ErrorRetry, timeout: TimeSpan.FromSeconds(60), ct);
+-        _logger.LogDebug("Req_Repeat сброшен");
++        _logger.LogDebug("Req_Repeat СЃР±СЂРѕС€РµРЅ");
++    }
++
++    private static bool IsTransientOpcDisconnect(Exception ex)
++    {
++        return OpcUaTransientErrorClassifier.IsTransientDisconnect(ex);
+     }
+ 
+     #endregion
+@@ -116,7 +136,7 @@ public sealed partial class ErrorCoordinator
+ 
+     public void Reset()
+     {
+-        _logger.LogInformation("=== ПОЛНЫЙ СБРОС ===");
++        _logger.LogInformation("=== РџРћР›РќР«Р™ РЎР‘Р РћРЎ ===");
+         _pauseToken.Resume();
+         ClearCurrentInterrupt();
+         InvokeEventSafe(OnReset, "OnReset");
+@@ -124,15 +144,21 @@ public sealed partial class ErrorCoordinator
+ 
+     public void ForceStop()
+     {
+-        _logger.LogInformation("=== МЯГКИЙ СБРОС (снятие прерывания) ===");
++        _logger.LogInformation("=== РњРЇР“РљРР™ РЎР‘Р РћРЎ (СЃРЅСЏС‚РёРµ РїСЂРµСЂС‹РІР°РЅРёСЏ) ===");
+         _pauseToken.Resume();
+         ClearCurrentInterrupt();
+     }
+ 
+     private async Task TryResumeFromPauseAsync(CancellationToken ct)
+     {
+-        if (_disposed) { return; }
+-        if (!await TryAcquireLockAsync(ct)) { return; }
++        if (_disposed)
++        {
++            return;
++        }
++        if (!await TryAcquireLockAsync(ct))
++        {
++            return;
++        }
+ 
+         try
+         {

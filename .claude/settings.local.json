@@ -99,7 +99,9 @@
       "Bash(Select-String -Pattern \"\\(error|Сборка успешно|Build succeeded\\)\")",
       "Bash(done)",
       "Bash(xxd:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(git -C \"D:\\\\projects\\\\Final_Test_Hybrid\" status)",
+      "Bash(timeout 90 bash:*)"
     ]
   }
 }

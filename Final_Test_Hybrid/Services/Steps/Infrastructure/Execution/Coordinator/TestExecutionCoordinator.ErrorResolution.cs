@@ -1,4 +1,5 @@
 ﻿using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Microsoft.Extensions.Logging;
 
@@ -18,29 +19,26 @@ public partial class TestExecutionCoordinator
             return;
         }
 
-        while (StateManager.HasPendingErrors && !cts.IsCancellationRequested)
+        var interruptedByConnectionLoss = false;
+        while (CanHandleNextError(cts))
         {
             var error = StateManager.CurrentError;
             if (error == null)
             {
                 break;
             }
-            StateManager.TransitionTo(ExecutionState.PausedOnError);
-            await SetSelectedAsync(error, true);
-            await SetFaultIfNoBlockAsync(error.FailedStep, cts.Token);
-            TryPublishEvent(new ExecutionEvent(ExecutionEventKind.ErrorOccurred, StepError: error));
-            ErrorResolution resolution;
-            try
+
+            await PrepareErrorProcessingAsync(error, cts.Token);
+            var resolution = await WaitResolutionSafeAsync(error, cts.Token);
+
+            if (resolution == ErrorResolution.None)
             {
-                var options = new WaitForResolutionOptions(
-                    BlockEndTag: GetBlockEndTag(error.FailedStep),
-                    BlockErrorTag: GetBlockErrorTag(error.FailedStep),
-                    EnableSkip: error.CanSkip);
-                resolution = await _errorCoordinator.WaitForResolutionAsync(options, cts.Token);
+                break;
             }
-            catch (OperationCanceledException)
+            if (resolution == ErrorResolution.ConnectionLost)
             {
-                // await SetSelectedAsync(error, false);  // PLC сам сбросит
+                interruptedByConnectionLoss = true;
+                await HandleTransientConnectionLossAsync(cts.Token);
                 break;
             }
             if (cts.IsCancellationRequested || _flowState.IsStopRequested)
@@ -53,17 +51,64 @@ public partial class TestExecutionCoordinator
                 break;
             }
             await ProcessErrorResolution(error, resolution, cts.Token);
-            // await SetSelectedAsync(error, false);  // PLC сам сбросит
         }
-        if (!cts.IsCancellationRequested && !_flowState.IsStopRequested)
+
+        if (CanReturnToRunningState(cts, interruptedByConnectionLoss))
         {
             StateManager.TransitionTo(ExecutionState.Running);
         }
     }
 
-    /// <summary>
-    /// Устанавливает тег Selected для PLC-блока.
-    /// </summary>
+    private bool CanHandleNextError(CancellationTokenSource cts)
+    {
+        return StateManager.HasPendingErrors && !cts.IsCancellationRequested;
+    }
+
+    private bool CanReturnToRunningState(CancellationTokenSource cts, bool interruptedByConnectionLoss)
+    {
+        return !cts.IsCancellationRequested && !_flowState.IsStopRequested && !interruptedByConnectionLoss;
+    }
+
+    private async Task PrepareErrorProcessingAsync(StepError error, CancellationToken ct)
+    {
+        StateManager.TransitionTo(ExecutionState.PausedOnError);
+        await SetSelectedAsync(error, true);
+        await SetFaultIfNoBlockAsync(error.FailedStep, ct);
+        TryPublishEvent(new ExecutionEvent(ExecutionEventKind.ErrorOccurred, StepError: error));
+    }
+
+    private async Task<ErrorResolution> WaitResolutionSafeAsync(StepError error, CancellationToken ct)
+    {
+        try
+        {
+            var options = new WaitForResolutionOptions(
+                BlockEndTag: GetBlockEndTag(error.FailedStep),
+                BlockErrorTag: GetBlockErrorTag(error.FailedStep),
+                EnableSkip: error.CanSkip);
+            return await _errorCoordinator.WaitForResolutionAsync(options, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return ErrorResolution.None;
+        }
+        catch (Exception ex) when (IsTransientOpcDisconnect(ex))
+        {
+            _logger.LogWarning("Transient OPC disconnect при ожидании решения оператора: {Error}", ex.Message);
+            return ErrorResolution.ConnectionLost;
+        }
+    }
+
+    private async Task HandleTransientConnectionLossAsync(CancellationToken ct)
+    {
+        _logger.LogWarning("Потеря связи с PLC в error-resolution. Переход в контролируемый interrupt путь");
+        await _errorCoordinator.HandleInterruptAsync(InterruptReason.PlcConnectionLost, ct);
+    }
+
+    private static bool IsTransientOpcDisconnect(Exception ex)
+    {
+        return OpcUaTransientErrorClassifier.IsTransientDisconnect(ex);
+    }
+
     /// <summary>
     /// Обрабатывает таймаут ожидания PLC-тегов как жёсткий стоп теста.
     /// </summary>
@@ -76,7 +121,7 @@ public partial class TestExecutionCoordinator
             return;
         }
 
-        _logger.LogWarning("TagTimeout во время {Context} — жёсткий стоп теста", context);
+        _logger.LogWarning("TagTimeout во время {Context} - жёсткий стоп теста", context);
         RequestStopAsFailure(ExecutionStopReason.Operator);
         await _errorCoordinator.HandleInterruptAsync(InterruptReason.TagTimeout, ct);
         await cts.CancelAsync();
@@ -135,7 +180,7 @@ public partial class TestExecutionCoordinator
 
     /// <summary>
     /// Обрабатывает повтор шага.
-    /// Retry запускается в фоне через event loop и отслеживается, чтобы диалог следующей ошибки появился сразу.
+    /// Retry запускается в фоне через event loop и отслеживается, чтобы диалог следующей ошибки появлялся сразу.
     /// </summary>
     private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, CancellationToken ct)
     {
@@ -148,13 +193,13 @@ public partial class TestExecutionCoordinator
         }
         catch (TimeoutException)
         {
-            _logger.LogError("Block.Error не сброшен за 60 сек — жёсткий стоп");
+            _logger.LogError("Block.Error не сброшен за 60 сек - жёсткий стоп");
             await HandleTagTimeoutAsync("Block.Error не сброшен", ct);
             return;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка SendAskRepeatAsync для колонки {Column}", error.ColumnIndex);
+            await HandleAskRepeatFailureAsync(error, ex, ct);
             return;
         }
 
@@ -166,7 +211,7 @@ public partial class TestExecutionCoordinator
         }
         catch (TimeoutException)
         {
-            _logger.LogError("Req_Repeat не сброшен за 60 сек — жёсткий стоп");
+            _logger.LogError("Req_Repeat не сброшен за 60 сек - жёсткий стоп");
             await HandleTagTimeoutAsync("Req_Repeat не сброшен", ct);
             return;
         }
@@ -178,6 +223,25 @@ public partial class TestExecutionCoordinator
             ExecutionEventKind.RetryRequested,
             StepError: error,
             ColumnExecutor: executor));
+    }
+
+    private async Task HandleAskRepeatFailureAsync(StepError error, Exception ex, CancellationToken ct)
+    {
+        _logger.LogError(
+            ex,
+            "Критичная ошибка SendAskRepeatAsync для колонки {Column}. Выполняем fail-fast",
+            error.ColumnIndex);
+
+        RequestStopAsFailure(ExecutionStopReason.Operator);
+        var interruptReason = IsTransientOpcDisconnect(ex)
+            ? InterruptReason.PlcConnectionLost
+            : InterruptReason.TagTimeout;
+        await _errorCoordinator.HandleInterruptAsync(interruptReason, ct);
+        var cts = _cts;
+        if (cts != null)
+        {
+            await cts.CancelAsync();
+        }
     }
 
     /// <summary>
@@ -199,7 +263,6 @@ public partial class TestExecutionCoordinator
         }
         catch (OperationCanceledException)
         {
-            // Гарантируем что колонка не зависнет при Cancel
             if (!executor.HasFailed)
             {
                 executor.OpenGate();
@@ -207,7 +270,8 @@ public partial class TestExecutionCoordinator
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Ошибка Retry в фоне для колонки {Column}", error.ColumnIndex);
+            await HandleRetryFailureWithHardResetAsync(error, ex);
+            executor.OpenGate();
         }
         finally
         {
@@ -216,6 +280,41 @@ public partial class TestExecutionCoordinator
                 ExecutionEventKind.RetryCompleted,
                 StepError: error,
                 ColumnExecutor: executor));
+        }
+    }
+
+    private async Task HandleRetryFailureWithHardResetAsync(StepError error, Exception ex)
+    {
+        _logger.LogError(
+            ex,
+            "Ошибка Retry в фоне для колонки {Column}. Запрошен HardReset",
+            error.ColumnIndex);
+
+        var hardResetAccepted = TryRequestHardResetFromRetryFailure();
+        if (hardResetAccepted && (_flowState.IsStopRequested || IsCancellationRequested))
+        {
+            return;
+        }
+
+        RequestStopAsFailure(ExecutionStopReason.PlcHardReset);
+        var cts = _cts;
+        if (cts != null)
+        {
+            await cts.CancelAsync();
+        }
+    }
+
+    private bool TryRequestHardResetFromRetryFailure()
+    {
+        try
+        {
+            _errorCoordinator.Reset();
+            return true;
+        }
+        catch (Exception resetEx)
+        {
+            _logger.LogError(resetEx, "Не удалось выполнить HardReset после ошибки Retry");
+            return false;
         }
     }
 
@@ -243,8 +342,7 @@ public partial class TestExecutionCoordinator
 
         _statusReporter.ReportSkipped(error.UiStepId);
         StateManager.MarkErrorSkipped();
-        StateManager.DequeueError();     // СНАЧАЛА удаляем из очереди (защита от race condition)
-        executor.ClearFailedState();     // ПОТОМ открываем gate
+        StateManager.DequeueError();
+        executor.ClearFailedState();
     }
 }
-

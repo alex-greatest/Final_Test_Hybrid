@@ -1,24 +1,63 @@
-Показания аналоговых датчиков. Адрес – DB_Measure.Sensor
+## Задача: найти теги, из-за которых runtime-счётчик OPC вырос с 225 до 240
 
-POG Gas Flow G20 – GAS_POG 
-FS DHW Wtr Flw – DHW_FS
-FR CH Wtr Flw – CH_FR
-CO UMAT – FA_CO
-CO2 UMAT – FA_CO2
-PAG Blr Gas Press – GAS_PAG
-PES DHW In Press – DHW_PES
-PMR CH Flw Press – CH_PMR
-04B1 Blr Supply – BlrSupply
-20B1 RT 24V frm Blr – Gas_POG1 (текст заменить на POG1 Gas Flow)
-O2 UMAT – FA_O2
-POG2 Gas FlowLPG – нет датчика
-CO2 Cascade – Gas_P (заменить текст на Gas Flow Pressure)
-RRR CH Rtn Press – Gas_Pa (заменить текст на Barometer)
-ACC Current Meter – такого датчика нет
-Датчиков из крайней правой верхней колонки нет.
+  ### Кратко
 
-Окно Gas Flow Calculations
-From Sensor – DB_Measure.Sensor.Gas_POG1
-Correction Factor Applied – не знаю, что такое
-Normalised - DB_Measure.Sensor.Gas_POG1_N
-Остальное – нет информации
+  Нужно получить точный список +15 уникальных nodeId, которые появились после старта приложения, и источник их добавления (какой модуль/шаг/UI их подписал).
+
+  ### Цель и критерий успеха
+
+  1. Зафиксирован стартовый набор тегов (на момент завершения PlcInitializationCoordinator.InitializeAllAsync).
+  2. Зафиксирован текущий runtime-набор тегов в момент, когда в диагностике видно 240.
+  3. Построен delta = runtime - startup с точным списком тегов.
+  4. Для каждого тега из delta указан источник добавления:
+      - TagWaiter,
+      - UI-компонент,
+      - PlcErrorMonitorService/другой сервис.
+  5. Подготовлен отчёт: какой тег, когда добавился, кто добавил, ожидаемо/неожидаемо.
+
+  ### Изменения в публичных API/интерфейсах
+
+  - Без изменений API.
+  - Временная диагностическая телеметрия только во внутренний лог:
+      - лог в OpcUaSubscription.AddTagAsync с nodeId и caller/source;
+      - лог снимка стартового набора и финального runtime-набора.
+
+  ### План выполнения
+
+  1. Снять стартовый snapshot тегов:
+      - после завершения PlcInitializationCoordinator.InitializeAllAsync.
+      - сохранить как startupTags (множество nodeId).
+  2. Снять runtime snapshot в момент роста до 240:
+      - из OpcUaSubscription (_monitoredItems.Keys + при необходимости _callbacks.Keys).
+      - сохранить как runtimeTags.
+  3. Посчитать дельту:
+      - addedTags = runtimeTags - startupTags.
+  4. Атрибутировать источник каждого addedTag:
+      - по логам AddTagAsync (caller/source),
+      - дополнительно по известным точкам подписки:
+          - TagWaiter,
+          - RangeSliderUiState,
+          - UI ValueIndicator/LampIndicator/...,
+          - ResetSubscription/AutoReadySubscription/PlcErrorMonitorService.
+  5. Подготовить итоговый отчёт в таблице:
+      - NodeId | FirstSeenTime | Source | Step/Screen | Expected.
+  6. Проверить повторяемость:
+      - чистый старт, довести до состояния 240, убедиться, что дельта совпадает между 2 прогонами.
+
+  ### Тест-кейсы/сценарии
+
+  1. Холодный старт без запуска тестов:
+      - ожидание: runtime == startup (или минимальная ожидаемая дельта от UI).
+  2. Старт + запуск последовательности до проблемного места:
+      - ожидание: фиксируется +15, список стабилен между прогонами.
+  3. Reconnect (имитация потери связи):
+      - ожидание: временные колебания допустимы, но итоговый уникальный набор после восстановления не должен бесконтрольно расти.
+  4. Открытие/закрытие экранов UI:
+      - ожидание: новые теги появляются только для экранов с подписками и объясняются в отчёте.
+
+  ### Assumptions и выбранные defaults
+
+  1. Базовое сравнение ведём по уникальным nodeId (без учёта числа callbacks на тег).
+  2. Рост 225 -> 240 считаем накоплением новых уникальных тегов, а не только кратковременным эффектом reconnect.
+  3. Диагностическая телеметрия временная и после расследования удаляется.
+

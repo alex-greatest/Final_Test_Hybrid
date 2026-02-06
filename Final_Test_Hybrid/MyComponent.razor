@@ -18,7 +18,7 @@
 @inject RangeSliderUiState RangeSliderUiState
 @implements IDisposable
 
-<SubscriptionLoadingOverlay IsVisible="@(SubscriptionState.IsInitializing && ConnectionState.IsConnected)" />
+<SubscriptionLoadingOverlay IsVisible="@SubscriptionState.IsInitializing" />
 
 <RadzenDialog />
 <RadzenNotification />

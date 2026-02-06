@@ -36,5 +36,6 @@ public enum ErrorResolution
     None,
     Retry,
     Skip,
-    Timeout
+    Timeout,
+    ConnectionLost
 }

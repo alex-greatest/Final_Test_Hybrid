@@ -11,7 +11,11 @@ public partial class TestCompletionCoordinator
         try
         {
             // 1. Записать End = true
-            await deps.PlcService.WriteAsync(BaseTags.ErrorSkip, true, ct);
+            var written = await TryWriteTagAsync(BaseTags.ErrorSkip, true, "End = true", ct);
+            if (!written)
+            {
+                return CompletionResult.Cancelled;
+            }
             logger.LogInformation("End = true записан, ожидание сброса от PLC");
 
             // 2. Ждать пока подписка увидит true (запись дошла до PLC)
@@ -63,8 +67,8 @@ public partial class TestCompletionCoordinator
             return await HandleNokRepeatAsync(ct);
         }
         // OK - просто сигнал повтора (без сохранения)
-        await deps.PlcService.WriteAsync(BaseTags.AskRepeat, true, ct);
-        return CompletionResult.RepeatRequested;
+        var written = await TryWriteTagAsync(BaseTags.AskRepeat, true, "AskRepeat = true", ct);
+        return written ? CompletionResult.RepeatRequested : CompletionResult.Cancelled;
     }
 
     private async Task<CompletionResult> HandleFinishAsync(int testResult, CancellationToken ct)
@@ -85,6 +89,15 @@ public partial class TestCompletionCoordinator
             try
             {
                 result = await deps.Storage.SaveAsync(testResult, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Исключение SaveAsync при сохранении результата теста");
+                result = SaveResult.Fail(ex.Message);
             }
             finally
             {
@@ -126,5 +139,17 @@ public partial class TestCompletionCoordinator
             logger.LogError(ex, "Ошибка показа диалога сохранения");
             return false;
         }
+    }
+
+    private async Task<bool> TryWriteTagAsync(string nodeId, bool value, string operation, CancellationToken ct)
+    {
+        var result = await deps.PlcService.WriteAsync(nodeId, value, ct);
+        if (result.Success)
+        {
+            return true;
+        }
+
+        logger.LogError("Не удалось выполнить {Operation}: {Error}", operation, result.Error);
+        return false;
     }
 }
