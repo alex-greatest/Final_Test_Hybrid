@@ -494,6 +494,14 @@ if (error != null)
 - Предотвращает таймаут соединения
 - Обновляет LastPingData (ModeKey, BoilerStatus)
 
+### Специальный контракт `CheckCommsStep`
+
+- Для шага `Coms/Check_Comms` (`CheckCommsStep`) при `AutoReady = false` применяется fail-fast по результату шага: `TestStepResult.Fail(...NoDiagnosticConnection...)` формируется сразу.
+- В этом шаге используется wall-clock ожидание (`Task.Delay`), а не pause-aware `context.DelayAsync`, чтобы timeout не «замораживался» на паузе автомата.
+- При неуспешном завершении `CheckCommsStep` диспетчер диагностики должен быть остановлен через `StopAsync`, чтобы не оставлять бесконечный reconnect в фоне.
+- Показ Retry/Skip-диалога при `AutoReady OFF` может быть отложен до восстановления автомата (`AutoReady = true`); это штатное поведение.
+- Повтор шага (`Retry`) имеет смысл только после восстановления `AutoReady`.
+
 ### Использование в тестовых шагах
 
 ```csharp

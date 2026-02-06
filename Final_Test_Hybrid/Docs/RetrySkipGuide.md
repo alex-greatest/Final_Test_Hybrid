@@ -263,6 +263,13 @@ private async Task ExecuteRetryInBackgroundAsync(StepError error, ColumnExecutor
 Если PLC не сбросит сигнал за 60 секунд → `HandleTagTimeoutAsync()` → жёсткий стоп теста.
 Это защита от залипших сигналов, которые могут вызвать автоматический Retry/Skip для другой колонки.
 
+### `CheckCommsStep` при `AutoReady OFF`
+
+- Шаг `Coms/Check_Comms` является `INonSkippable`, поэтому Skip для него недоступен.
+- При `AutoReady = false` шаг завершается fail-fast с `NoDiagnosticConnection` и не уходит в бесконечное ожидание связи.
+- После неуспеха шаг останавливает `IModbusDispatcher`, чтобы в фоне не продолжался reconnect-loop.
+- `Retry` для этого шага имеет смысл только после восстановления автомата (`AutoReady = true`).
+
 ### Cancel во время фонового Retry
 
 При отмене теста во время фонового Retry: если `executor.HasFailed=false`, открываем gate.

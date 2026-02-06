@@ -20,8 +20,8 @@ public class CheckWaterFlowStep(
     private const string EndTag = "ns=3;s=\"DB_VI\".\"CH\".\"Check_Water_Flow\".\"End\"";
     private const string ErrorTag = "ns=3;s=\"DB_VI\".\"CH\".\"Check_Water_Flow\".\"Error\"";
     private const string FlowRateTag = "ns=3;s=\"DB_Parameter\".\"CH\".\"Flow_Rate\"";
-    private const string FlowRateMinRecipe = "ns=3;s=\"DB_Recipe\".\"CH\".\"Flow_Rate_Min\"";
-    private const string FlowRateMaxRecipe = "ns=3;s=\"DB_Recipe\".\"CH\".\"Flow_Rate_Max\"";
+    private const string FlowRateMinRecipe = "CH_Flow_Rate_Min";
+    private const string FlowRateMaxRecipe = "CH_Flow_Rate_Max";
     private const string ChPressMax = "ns=3;s=\"DB_Recipe\".\"CH\".\"Press\".\"Max\"";
     private const string ChPressMin = "ns=3;s=\"DB_Recipe\".\"CH\".\"Press\".\"Min\"";
 

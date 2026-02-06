@@ -189,6 +189,10 @@ public string? GetLimits(LimitsContext context)
 }
 ```
 
+**Примечание по `Coms/Check_Comms`:**
+- `CheckCommsStep` реализует `INonSkippable`, поэтому оператор не может обойти шаг.
+- При `AutoReady = false` и отсутствии диагностической связи шаг возвращает `NoDiagnosticConnection`; рабочий путь продолжения — восстановить автомат и выполнить `Retry`.
+
 ---
 
 ## Часть 4: Работа с PLC (OPC-UA)

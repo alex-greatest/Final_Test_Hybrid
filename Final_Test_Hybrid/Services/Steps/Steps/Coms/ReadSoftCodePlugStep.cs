@@ -19,6 +19,7 @@ public partial class ReadSoftCodePlugStep(
     DualLogger<ReadSoftCodePlugStep> logger) : ITestStep, IRequiresRecipes
 {
     // Регистры для чтения (адреса из документации)
+    private const ushort RegisterConnectionType = 1054;
     private const ushort RegisterNomenclatureNumber = 1139;
     private const ushort RegisterBoilerPowerType = 1002;
     private const ushort RegisterPumpType = 1003;
@@ -118,32 +119,17 @@ public partial class ReadSoftCodePlugStep(
     private const string SupplierCodeResultName = "Supplier_Code";
     private const string CounterNumberResultName = "Counter_Number";
 
+    private static readonly IReadOnlyList<SoftCodePlugAction> Actions = BuildActions();
+    private static readonly IReadOnlyList<string> RequiredRecipeAddressesInternal = BuildRequiredRecipeAddresses(Actions);
+    private static readonly IReadOnlyList<string> ResultNamesInternal = BuildResultNames(Actions);
+
     private readonly DiagnosticSettings _settings = settings.Value;
 
     public string Id => "coms-read-soft-code-plug";
     public string Name => "Coms/Read_Soft_Code_Plug";
     public string Description => "Чтение параметров из ЭБУ";
 
-    public IReadOnlyList<string> RequiredRecipeAddresses =>
-    [
-        BoilerTypeRecipe, BoilerTypeMinRecipe, BoilerTypeMaxRecipe,
-        PumpTypeRecipe, PumpTypeMinRecipe, PumpTypeMaxRecipe,
-        PresSenTypeRecipe, PresSensorMinRecipe, PresSensorMaxRecipe,
-        GasValveTypeRecipe, GasValveTypeMinRecipe, GasValveTypeMaxRecipe,
-        MaxChHeatOutRecipe, MaxChHeatOutMinRecipe, MaxChHeatOutMaxRecipe,
-        MaxDhwHeatOutRecipe, MaxDhwHeatOutMinRecipe, MaxDhwHeatOutMaxRecipe,
-        MinChHeatOutRecipe, MinChHeatOutMinRecipe, MinChHeatOutMaxRecipe,
-        PumpModeRecipe, PumpModeMinRecipe, PumpModeMaxRecipe,
-        PumpPowerRecipe, PumpPowerMinRecipe, PumpPowerMaxRecipe,
-        GasTypeRecipe, GasTypeMinRecipe, GasTypeMaxRecipe,
-        CurrentOffsetRecipe, CurrentOffsetMinRecipe, CurrentOffsetMaxRecipe,
-        FlowCoefficientRecipe, FlowCoefficientMinRecipe, FlowCoefficientMaxRecipe,
-        MaxPumpAutoPowerRecipe, MaxPumpAutoPowerMinRecipe, MaxPumpAutoPowerMaxRecipe,
-        MinPumpAutoPowerRecipe, MinPumpAutoPowerMinRecipe, MinPumpAutoPowerMaxRecipe,
-        ComfortHysteresisRecipe, ComfortHysteresisMinRecipe, ComfortHysteresisMaxRecipe,
-        MaxFlowTemperatureRecipe, MaxFlowTemperatureMinRecipe, MaxFlowTemperatureMaxRecipe,
-        NumberOfContoursRecipe
-    ];
+    public IReadOnlyList<string> RequiredRecipeAddresses => RequiredRecipeAddressesInternal;
 
     /// <summary>
     /// Выполняет чтение и верификацию всех параметров SoftCodePlug из ЭБУ котла.
@@ -152,111 +138,24 @@ public partial class ReadSoftCodePlugStep(
     {
         ClearPreviousResults();
 
+        var validationResult = ValidateActions(Actions);
+        if (validationResult != null)
+        {
+            return validationResult;
+        }
+
         // Задержка перед чтением для гарантии обновления данных в ЭБУ
         logger.LogDebug("Ожидание {Delay} мс перед чтением параметров", _settings.WriteVerifyDelayMs);
         await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
 
-        // Подшаг 1: Чтение и проверка артикула
-        var result = await ReadAndVerifyArticleAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 2: Чтение и проверка типа котла
-        result = await ReadAndVerifyBoilerTypeAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 3: Чтение и проверка типа насоса
-        result = await ReadAndVerifyPumpTypeAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 4: Чтение и проверка типа датчика давления
-        result = await ReadAndVerifyPressureDeviceTypeAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 5: Чтение и проверка типа регулятора газа
-        result = await ReadAndVerifyGasRegulatorTypeAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 6: Чтение и проверка макс. теплопроизводительности отопления
-        result = await ReadAndVerifyMaxChHeatOutputAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 7: Чтение и проверка макс. теплопроизводительности ГВС
-        result = await ReadAndVerifyMaxDhwHeatOutputAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 8: Чтение и проверка мин. теплопроизводительности отопления
-        result = await ReadAndVerifyMinChHeatOutputAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 9: Чтение и проверка режима работы насоса
-        result = await ReadAndVerifyPumpModeAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 10: Чтение и проверка установленной мощности насоса
-        result = await ReadAndVerifyPumpPowerAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 11: Чтение и проверка вида газа
-        result = await ReadAndVerifyGasTypeAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 12: Чтение и проверка сдвига тока на модуляционной катушке
-        result = await ReadAndVerifyCurrentOffsetAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 13: Чтение и проверка коэффициента k расхода воды (только для двухконтурных)
-        if (IsDualCircuit(context))
+        foreach (var action in Actions)
         {
-            result = await ReadAndVerifyFlowCoefficientAsync(context, ct);
-            if (!result.Success) return result;
+            var result = await ExecuteActionAsync(action, context, ct);
+            if (!result.Success)
+            {
+                return result;
+            }
         }
-        else
-        {
-            logger.LogInformation("Пропуск чтения коэффициента k — одноконтурный котёл");
-        }
-
-        // Подшаг 14: Чтение и проверка макс. мощности насоса в авто режиме
-        result = await ReadAndVerifyMaxPumpAutoPowerAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 15: Чтение и проверка мин. мощности насоса в авто режиме
-        result = await ReadAndVerifyMinPumpAutoPowerAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 16: Чтение и проверка гистерезиса ГВС в режиме комфорт (только для двухконтурных)
-        if (IsDualCircuit(context))
-        {
-            result = await ReadAndVerifyComfortHysteresisAsync(context, ct);
-            if (!result.Success) return result;
-        }
-        else
-        {
-            logger.LogInformation("Пропуск чтения гистерезиса ГВС — одноконтурный котёл");
-        }
-
-        // Подшаг 17: Чтение и проверка макс. температуры подающей линии
-        result = await ReadAndVerifyMaxFlowTemperatureAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 18: Чтение артикула ИТЭЛМА (без верификации)
-        result = await ReadItelmaArticleAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 19: Чтение даты производства (без верификации)
-        result = await ReadProductionDateAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 20: Чтение кода поставщика (без верификации)
-        result = await ReadSupplierCodeAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 21: Чтение порядкового номера (без верификации)
-        result = await ReadCounterNumberAsync(context, ct);
-        if (!result.Success) return result;
-
-        // Подшаг 22: Проверка перемычки термостата
-        result = await CheckThermostatJumperAsync(context, ct);
-        if (!result.Success) return result;
 
         logger.LogInformation("Все параметры успешно прочитаны и верифицированы");
         return TestStepResult.Pass();
@@ -276,26 +175,24 @@ public partial class ReadSoftCodePlugStep(
     /// </summary>
     private void ClearPreviousResults()
     {
-        testResultsService.Remove(ArticleResultName);
-        testResultsService.Remove(BoilerTypeResultName);
-        testResultsService.Remove(PumpTypeResultName);
-        testResultsService.Remove(PresSensorResultName);
-        testResultsService.Remove(GasValveTypeResultName);
-        testResultsService.Remove(MaxChHeatOutResultName);
-        testResultsService.Remove(MaxDhwHeatOutResultName);
-        testResultsService.Remove(MinChHeatOutResultName);
-        testResultsService.Remove(PumpModeResultName);
-        testResultsService.Remove(PumpPowerResultName);
-        testResultsService.Remove(GasTypeResultName);
-        testResultsService.Remove(CurrentOffsetResultName);
-        testResultsService.Remove(FlowCoefficientResultName);
-        testResultsService.Remove(MaxPumpAutoPowerResultName);
-        testResultsService.Remove(MinPumpAutoPowerResultName);
-        testResultsService.Remove(ComfortHysteresisResultName);
-        testResultsService.Remove(MaxFlowTemperatureResultName);
-        testResultsService.Remove(ItelmaArticleResultName);
-        testResultsService.Remove(ProductionDateResultName);
-        testResultsService.Remove(SupplierCodeResultName);
-        testResultsService.Remove(CounterNumberResultName);
+        foreach (var resultName in ResultNamesInternal)
+        {
+            testResultsService.Remove(resultName);
+        }
+    }
+
+    private static IReadOnlyList<string> BuildRequiredRecipeAddresses(IReadOnlyList<SoftCodePlugAction> actions)
+    {
+        var addresses = new List<string>();
+        foreach (var action in actions)
+        {
+            addresses.AddRange(action.RecipeKeys);
+        }
+        return addresses;
+    }
+
+    private static IReadOnlyList<string> BuildResultNames(IReadOnlyList<SoftCodePlugAction> actions)
+    {
+        return (from action in actions where !string.IsNullOrWhiteSpace(action.ResultParameterName) select action.ResultParameterName).ToList();
     }
 }

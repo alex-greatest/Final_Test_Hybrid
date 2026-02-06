@@ -115,7 +115,7 @@ public class CheckGasAndPBurnerMaxLevelsStep(
         try
         {
             // Показываем слайдеры внутри try для гарантированного cleanup
-            context.RangeSliderUiState.SetTitle("Настройка параметров газа в максимальном режиме");
+            context.RangeSliderUiState.SetTitle("Проверка параметров газа в максимальном режиме");
             await context.RangeSliderUiState.ShowAsync(PressureSliderIndex, pressureConfig, ct);
             await context.RangeSliderUiState.ShowAsync(FlowSliderIndex, flowConfig, ct);
 

@@ -78,7 +78,7 @@ public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestS
 - Если метод начинает разрастаться или требует больше одной основной управляющей конструкции — **сразу** упрощать: выносить ветки в `private` helper-методы (в том же partial), не откладывая на потом.
 - `var` везде, `{}` обязательны, **max 300 строк** сервисы  → partial classes
 - **PascalCase:** типы, методы | **camelCase:** локальные, параметры
-- Предпочитай `switch` и тернарный оператор где разумно
+- Предпочитай `switch`, тернарный оператор и `LINQ`, когда это уместно
 
 ## Язык и кодировка
 
@@ -153,8 +153,10 @@ public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestS
 - Логика таймера переналадки не меняется при фиксе reset/reconnect; любые правки reset не должны ломать существующий changeover-flow.
 - Для runtime OPC-подписок при reconnect использовать только полный rebuild (`новая Session + RecreateForSessionAsync`), без гибридного ручного rebind.
 - Спиннер `Выполняется подписка` показывать только при фактическом старте реальных подписок (после готовности соединения), а не на фазе retry/reconnect попыток.
+- Для `Coms/Check_Comms` (`CheckCommsStep`) при `AutoReady = false` шаг должен завершаться `NoDiagnosticConnection` (fail-fast по результату шага), а при неуспешном завершении шага `IModbusDispatcher` должен останавливаться (`StopAsync`), чтобы не оставлять reconnect в фоне. Показ диалога резолюции при `AutoReady OFF` может быть отложен до восстановления автомата (`AutoReady = true`) — это допустимое поведение. Пропуск этого шага недопустим (`INonSkippable`); `Retry` имеет смысл только после восстановления `AutoReady`.
 - Для стартовой подписки execution-шагов использовать `IRequiresPlcSubscriptions` (интерфейс наследует `IRequiresPlcTags`): шаги только с `IRequiresPlcTags` в runtime-подписку не попадают.
 - `IRequiresPlcTags` оставлять как базовый/валидационный контракт для pre-execution шагов (например `BlockBoilerAdapterStep`), без обязательной подписки monitored items при старте.
+- `BaseTags.AskEnd` считать системным preload-тегом: добавлять в стартовые системные подписки (`ErrorPlcMonitor.ValidateTagsAsync`), а не оставлять только как on-demand подписку первого reset.
 - Для `PlcResetCoordinator` таймауты reset-flow берутся из `OpcUa:ResetFlowTimeouts`:
   `AskEndTimeoutSec` (ожидание AskEnd), `ReconnectWaitTimeoutSec` (одно ожидание reconnect), `ResetHardTimeoutSec` (общий дедлайн).
   `ResetHardTimeoutSec` должен быть `>=` двух остальных; по таймауту — `TagTimeout` + `OnResetCompleted`.

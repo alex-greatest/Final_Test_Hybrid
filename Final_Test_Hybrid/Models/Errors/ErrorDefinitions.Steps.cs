@@ -147,108 +147,133 @@ public static partial class ErrorDefinitions
     public static readonly ErrorDefinition EcuArticleMismatch = new(
         "П-016-05", "Несовпадение артикула в ЭБУ",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
     public static readonly ErrorDefinition EcuBoilerTypeMismatch = new(
         "П-016-06", "Несовпадение типа котла в ЭБУ",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
     public static readonly ErrorDefinition EcuPumpTypeMismatch = new(
         "П-016-07", "Несовпадение типа насоса в ЭБУ",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
     public static readonly ErrorDefinition EcuPressureDeviceTypeMismatch = new(
         "П-016-08", "Несовпадение типа датчика давления в ЭБУ",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
     public static readonly ErrorDefinition EcuGasRegulatorTypeMismatch = new(
         "П-016-09", "Несовпадение типа регулятора газа в ЭБУ",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
     public static readonly ErrorDefinition EcuMaxChHeatOutputMismatch = new(
         "П-016-10", "Несовпадение макс. теплопроизводительности отопления в ЭБУ",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
     public static readonly ErrorDefinition EcuMaxDhwHeatOutputMismatch = new(
         "П-016-11", "Несовпадение макс. теплопроизводительности ГВС в ЭБУ",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
     public static readonly ErrorDefinition EcuMinChHeatOutputMismatch = new(
         "П-016-12", "Несовпадение мин. теплопроизводительности отопления в ЭБУ",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
     public static readonly ErrorDefinition EcuPumpModeMismatch = new(
         "П-016-13", "Несовпадение режима работы насоса в ЭБУ",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
     public static readonly ErrorDefinition EcuPumpPowerMismatch = new(
         "П-016-14", "Несовпадение установленной мощности насоса в ЭБУ",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
     public static readonly ErrorDefinition EcuGasTypeMismatch = new(
         "П-016-15", "Несовпадение вида газа в ЭБУ",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
     public static readonly ErrorDefinition EcuCurrentOffsetMismatch = new(
         "П-016-16", "Несовпадение сдвига тока на модуляционной катушке в ЭБУ",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
     public static readonly ErrorDefinition EcuFlowCoefficientMismatch = new(
         "П-016-17", "Несовпадение коэффициента k расхода воды в ЭБУ",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
     public static readonly ErrorDefinition EcuMaxPumpAutoPowerMismatch = new(
         "П-016-18", "Несовпадение макс. мощности насоса в авто режиме в ЭБУ",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
     public static readonly ErrorDefinition EcuMinPumpAutoPowerMismatch = new(
         "П-016-19", "Несовпадение мин. мощности насоса в авто режиме в ЭБУ",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
     public static readonly ErrorDefinition EcuComfortHysteresisMismatch = new(
         "П-016-20", "Несовпадение гистерезиса ГВС в режиме комфорт в ЭБУ",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
     public static readonly ErrorDefinition EcuMaxFlowTemperatureMismatch = new(
         "П-016-21", "Несовпадение макс. температуры подающей линии в ЭБУ",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
     public static readonly ErrorDefinition ThermostatJumperMissing = new(
         "П-016-22", "Не установлена перемычка термостата",
         Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
+        RelatedStepId: "coms-read-soft-code-plug",
+        RelatedStepName: "Coms/Read_Soft_Code_Plug");
+
+    public static readonly ErrorDefinition EcuConnectionTypeMismatch = new(
+        "П-016-26", "Несовпадение типа подключения к котлу (1054)",
+        Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true,
         RelatedStepId: "coms-read-soft-code-plug",
         RelatedStepName: "Coms/Read_Soft_Code_Plug");
 
@@ -725,6 +750,7 @@ public static partial class ErrorDefinitions
         BoilerNotStandMode,
         EcuWriteError,
         ChPumpStartError,
+        EcuConnectionTypeMismatch,
         EcuArticleMismatch,
         EcuBoilerTypeMismatch,
         EcuPumpTypeMismatch,
