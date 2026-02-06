@@ -9,7 +9,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Gas;
 /// Тестовый шаг ожидания потока газа.
 /// </summary>
 public class WaitForGasFlowStep(
-    DualLogger<WaitForGasFlowStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+    DualLogger<WaitForGasFlowStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.Gas.Wait_for_Gas_Flow";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"Gas\".\"Wait_for_Gas_Flow\".\"Start\"";

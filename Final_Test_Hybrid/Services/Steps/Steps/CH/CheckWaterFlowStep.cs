@@ -13,7 +13,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.CH;
 /// </summary>
 public class CheckWaterFlowStep(
     DualLogger<CheckWaterFlowStep> logger,
-    ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags, IRequiresRecipes, IProvideLimits
+    ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions, IRequiresRecipes, IProvideLimits
 {
     private const string BlockPath = "DB_VI.CH.Check_Water_Flow";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Check_Water_Flow\".\"Start\"";

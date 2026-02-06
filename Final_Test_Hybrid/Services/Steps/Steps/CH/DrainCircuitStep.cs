@@ -8,7 +8,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.CH;
 /// <summary>
 /// Тестовый шаг слива воды из контура отопления.
 /// </summary>
-public class DrainCircuitStep(DualLogger<DrainCircuitStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+public class DrainCircuitStep(DualLogger<DrainCircuitStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.CH.Drain_Circuit";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Drain_Circuit\".\"Start\"";

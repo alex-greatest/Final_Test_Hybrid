@@ -9,7 +9,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.DHW;
 /// Тестовый шаг заполнения контура ГВС в обратном направлении.
 /// </summary>
 public class FillCircuitReverseDirectionStep(
-    DualLogger<FillCircuitReverseDirectionStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+    DualLogger<FillCircuitReverseDirectionStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.DHW.Fill_Circuit_Reverse_Direction";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"DHW\".\"Fill_Circuit_Reverse_Direction\".\"Start\"";

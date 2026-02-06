@@ -9,7 +9,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.CH;
 /// Тестовый шаг закрытия клапанов контура отопления.
 /// </summary>
 public class CloseCircuitValveStep(
-    DualLogger<CloseCircuitValveStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+    DualLogger<CloseCircuitValveStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.CH.Close_Circuit_Valve";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Close_Circuit_Valve\".\"Start\"";

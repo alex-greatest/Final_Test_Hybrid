@@ -9,7 +9,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Gas;
 /// Тестовый шаг настройки установочного давления газа на входе.
 /// </summary>
 public class SetRequiredPressureStep(
-    DualLogger<SetRequiredPressureStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+    DualLogger<SetRequiredPressureStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.Gas.Set_Required_Pressure";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"Gas\".\"Set_Required_Pressure\".\"Start\"";

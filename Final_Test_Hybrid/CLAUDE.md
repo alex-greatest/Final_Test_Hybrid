@@ -1,45 +1,53 @@
-# CLAUDE.md
+# Final_Test_Hybrid
 
-###### КРИТИЧЕСКИ ВАЖНО я пишу сложный проект для промышлинности от котороый может зависить жизни людей, очень важно
-писать код чисто, не допускать ошибку и тщательноо обдумывать и прверять. А потмо с этим кодом ещё нужно будет разбираться
-на месте!!!
-###### КРИТИЧЕСКИ ВАЖНО — ПРОВЕРЯТЬ ПЕРЕД КАЖДЫМ ОТВЕТОМ:
+Подвергай сомнению все предположения, ставь под вопрос логику, выявляй слабые места и слепые зоны
+Указывай на слабую логику, самообман, отговорки, мелкое мышление, недооценку рисков
+Никакого смягчения, лести, пустых похвал или расплывчатых советов
+Давай жёсткие факты, стратегический анализ и точные планы действий
+Ставь рост выше комфорта
+Читай между строк
+Всегда возражай.
+Ничего не скрывай.
 
-## Codex Review Protocol (ОБЯЗАТЕЛЬНО)
+> **SCADA-система промышленных тестов. От кода зависят жизни — думай дважды, проверяй трижды.**
 
-**ПЕРЕД изменениями:** `codex "Критически проанализируй план: [план]"` → правьте до консенсуса. 
-относись критически к его правкам
-**ПОСЛЕ изменений:** `git diff` → `codex "Проверь diff: [diff]"` → исправляйте до одобрения
+## Обязательное правило проверки
 
-## Project Overview
+- Прежде чем спорить с существующим планом/документацией или менять логику — **сначала перечитать** релевантные документы проекта (например, `plan-refactor-executor.md`, `Docs/*Guide.md`) и найти уже зафиксированные инциденты/решения.
+- Прежде чем выдвигать гипотезы и тем более настаивать на них — **проверить в коде** (поиск определений, семантика полей, реальные условия) и держать “здоровое сомнение” как default.
+- Если документ/код противоречит гипотезе — первично перепроверить и скорректировать гипотезу, а не “продавить” мнение.
+- **Запрет:** не использовать `ColumnExecutor.IsVisible` как критерий idle/готовности к следующему Map (см. `plan-refactor-executor.md` — инцидент зависания между Map).
 
-**Final_Test_Hybrid** — WinForms + Blazor (.NET 10) для промышленных тестов.
-- **Stack:** Radzen Blazor, EPPlus, Serilog
-- **Build:** `dotnet build && dotnet run`
+## Stack
 
-## Code Philosophy
+| Компонент | Технология |
+|-----------|------------|
+| Framework | .NET 10, WinForms + Blazor Hybrid |
+| UI | Radzen Blazor 8.3 |
+| OPC-UA | OPCFoundation 1.5 |
+| Modbus | NModbus 3.0 |
+| Database | PostgreSQL + EF Core 10 |
+| Logging | Serilog + DualLogger |
+| Excel | EPPlus 8.3 |
 
-**Clean Code + Прагматизм.** Читаемость > краткость. DRY. Без магических чисел.
+**Build:** `dotnet build && dotnet run`
+**Обязательная проверка:** запускать `dotnet build`.
 
-| НЕ нужно | Когда |
-|----------|-------|
-| `IDisposable`, блокировки | Singleton без конкуренции |
-| `CancellationToken`, retry | Короткие операции (<2 сек) |
-| null-проверки DI | Внутренний код |
+## Архитектура
 
-**Проверки НУЖНЫ:** границы системы, внешний ввод, десериализация, P/Invoke.
+```
+Program.cs → Form1.cs (DI) → BlazorWebView → Radzen UI
 
-## Coding Standards
+[Barcode] → PreExecutionCoordinator → TestExecutionCoordinator → [OK/NOK]
+                    │                           │
+            ScanSteps (pre-exec)         4 × ColumnExecutor
+                    ↓                           ↓
+            StartTestExecution()        OnSequenceCompleted
+```
 
-- **Один** `if`/`for`/`while`/`switch`/`try`/`await` на метод (guard clauses OK)
-- `var` везде, `{}` обязательны, **max 300 строк** → partial classes
-- **PascalCase:** типы, методы | **camelCase:** локальные, параметры
-- **Blazor:** CSS в `.razor.css`, `::deep` для Radzen, `IAsyncDisposable` для cleanup
-- предпочитаей if - switch, когда это разумно и тернарный оператор.
+## Ключевые паттерны
 
-## Key Patterns
-
-### DualLogger (ОБЯЗАТЕЛЬНО)
+### DualLogger (обязательно)
 ```csharp
 public class MyService(DualLogger<MyService> logger)
 {
@@ -47,248 +55,122 @@ public class MyService(DualLogger<MyService> logger)
 }
 ```
 
-### Pausable vs Non-Pausable ([TagWaiterGuide.md](Docs/TagWaiterGuide.md))
-
+### Pausable Decorators
 | Контекст | Сервис |
 |----------|--------|
 | Тестовые шаги (OPC-UA) | `PausableOpcUaTagService`, `PausableTagWaiter` |
-| Тестовые шаги (Modbus) | `PausableRegisterReader`, `PausableRegisterWriter` |
-| Системные операции (OPC-UA) | `OpcUaTagService`, `TagWaiter` |
-| Системные операции (Modbus) | `RegisterReader`, `RegisterWriter` |
-| Ping keep-alive | `ModbusDispatcher` (НЕ паузится) |
-| Polling/Мониторинг | `PollingService` → `RegisterReader` (НЕ паузится) |
+| Тестовые шаги (Modbus) | `PausableRegisterReader/Writer` |
+| Системные операции | `OpcUaTagService`, `RegisterReader/Writer` (НЕ паузятся) |
 
-**В шагах:** `context.DelayAsync()`, `context.PauseToken.WaitWhilePausedAsync()`. НЕ вызывать `Pause()/Resume()`.
-**Modbus в шагах:** `context.DiagReader`, `context.DiagWriter` — паузятся автоматически при Auto OFF.
+**В шагах:** `context.DelayAsync()`, `context.DiagReader/Writer` — паузятся автоматически.
 
-## Coordinators & State Management
-
-**Полная документация:** [StateManagementGuide.md](Docs/StateManagementGuide.md)
-
-### ErrorCoordinator ([ErrorCoordinatorGuide.md](Docs/ErrorCoordinatorGuide.md))
-
-| Метод | Действие |
-|-------|----------|
-| `HandleInterruptAsync(reason)` | Делегирует в `IInterruptBehavior` |
-| `Reset()` | Resume → OnReset |
-| `ForceStop()` | Resume |
-
-**Новый InterruptReason:** `XxxBehavior : IInterruptBehavior` → DI
-
-### PlcReset ([PlcResetGuide.md](Docs/PlcResetGuide.md))
-
-| Тип | Условие | Метод |
-|-----|---------|-------|
-| Мягкий | `wasInScanPhase = true` | `ForceStop()` |
-| Жёсткий | `wasInScanPhase = false` | `Reset()` |
-
-### CycleExitReason ([CycleExitGuide.md](Docs/CycleExitGuide.md))
-
-| Состояние | Очистка |
-|-----------|---------|
-| `TestCompleted` | `ClearForTestCompletion()` — сразу |
-| `SoftReset` | `ClearStateOnReset()` — по AskEnd |
-| `HardReset` | `ClearStateOnReset()` + grid — сразу |
-| `RepeatRequested` | `ClearForRepeat()` |
-| `NokRepeatRequested` | `ClearForNokRepeat()` |
-| `PipelineFailed/Cancelled` | Ничего |
-
-### ErrorService — Очистка данных
-
-| Момент | Действие |
-|--------|----------|
-| Завершение теста | `ClearForTestCompletion()` — grid, timing, recipes, BoilerState; `IsHistoryEnabled=false` |
-| Готовность к сканированию | `ResetScanTiming()` |
-| Начало нового теста | `ClearForNewTestStart()` — history, results; затем `IsHistoryEnabled=true` |
-
-**История:** при включении — копирует активные ошибки; при выключении — закрывает открытые записи.
-
-### StepTiming ([StepTimingGuide.md](Docs/StepTimingGuide.md))
-
-| Метод | Поведение |
-|-------|-----------|
-| `ResetScanTiming()` | Сбрасывает только если `IsRunning=false`. При ошибке scan step таймер продолжает тикать |
-| `StopScanTiming()` | Ставит на паузу (`IsRunning=false`) |
-| `ClearScanTiming()` | Полная очистка |
-
-### Retry/Skip ([RetrySkipGuide.md](Docs/RetrySkipGuide.md))
-
-| Действие | PLC → PC | PC → PLC |
-|----------|----------|----------|
-| Повтор | `Req_Repeat=true` | `AskRepeat=true`, ждёт `Error=false` |
-| Пропуск | `End=true` | — (NOK) |
-
-### ReportProgress (промежуточные результаты шагов)
-
-Шаги могут сообщать о прогрессе через `context.ReportProgress("сообщение")`. См. [StepsGuide.md](Docs/StepsGuide.md).
-
-| Момент | Поведение |
-|--------|-----------|
-| Во время выполнения | Показывает `ProgressMessage` в колонке "Результаты" |
-| После завершения | Показывает `Result`, `ProgressMessage` очищен |
-| Retry | Callback переустанавливается, прогресс работает |
-| Skip | `ProgressMessage` уже очищен в `SetErrorState` |
-
-### Settings Blocking ([SettingsBlockingGuide.md](Docs/SettingsBlockingGuide.md))
-
-| Сервис | Блокирует |
-|--------|-----------|
-| `SettingsAccessStateManager` | Тест не на scan step |
-| `PlcResetCoordinator` | Сброс PLC |
-| `ErrorCoordinator` | Активное прерывание |
-| `PreExecutionCoordinator` | SwitchMes при pre-execution |
-
-## Accepted Patterns (NOT bugs)
-
-> **Подробно о Cancellation:** [CancellationGuide.md](Docs/CancellationGuide.md)
-
-| Категория | Паттерн | Почему OK |
-|-----------|---------|-----------|
-| State | `ExecutionStateManager.State` без Lock | Atomic enum, stale read OK для UI |
-| State | `?.TrySetResult()` без синхронизации | Идемпотентна |
-| State | `_progressCallback` без Volatile | Один writer (ColumnExecutor), редкие гонки приемлемы |
-| State | `_progressCompleted` с Volatile.Read/Write | Атомарный флаг для отсечения поздних вызовов |
-| Async | Fire-and-forget в singleton | `.ContinueWith` или внутренний try-catch |
-| Async | `TryStartInBackground()` | Исключения в `RunWithErrorHandlingAsync` |
-| Async | `Task.WhenAny` race с таймером | `await waitTask` вернёт правильный результат |
-| CT | Gate ждёт только при HasFailed | Проверка ct ДО WaitAsync |
-| CT | Task.WhenAll без linked CTS | Исключения ловятся внутри ExecuteStepCoreAsync |
-| CT | Шаги без timeout защиты | Контракт: шаги ОБЯЗАНЫ уважать CancellationToken |
-| CT | DequeueError до retry | При Stop/Reset вызывается Reset() который очищает всё |
-| CT | Двойной Stop (OnForceStop + OnReset) | First-wins семантика, StopReason только для логов |
-| CT | Диалоги без CancellationToken | Закрываются через события OnReset/OnForceStop |
-| CT | Проверка step ПОСЛЕ семафора | Защита от TOCTOU — step может измениться пока ждём |
-| CT | CTS.Dispose() без синхронизации | Идемпотентен, double dispose безопасен |
-| PLC | Сброс Start только при успехе | Координатор сбрасывает через `ResetBlockStartAsync` |
-
-**CancellationToken в шагах:** проверяй в циклах, передавай в async, никогда не игнорируй.
-
-## Safety Patterns
-
-### Hang Protection
-
-| Сценарий | Защита |
-|----------|--------|
-| Пустые Maps | `StartTestExecution()→false` + `RollbackTestStart()` → `PipelineFailed` |
-| Двойной старт | `TryStartInBackground()→false`, состояние не меняется |
-| Исключение в `OnSequenceCompleted` | `InvokeSequenceCompletedSafely()` — логирует, cleanup выполняется |
-
-### TOCTOU Prevention
-
-**Правило:** захватывай поле в локальную переменную перед `await` или в event handler.
+### Primary Constructors
 ```csharp
-var step = _state.FailedStep;  // Захват
-if (step != null) { await ExecuteStepCoreAsync(step, ct); }
+public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestStep
 ```
 
-### CancellationToken Sync
+## Правила кодирования
 
-| Событие | Отменить |
-|---------|----------|
-| Reset + AutoMode OFF | `_loopCts`, `_currentCts` |
-| ForceStop | `_currentCts`, `_cts` |
-| Logout | `_loopCts` |
+- ***простота, без не нужных усложнений.***
+- ***чистый простой и понятный код. минимум defense programm***
+- ***никакого оверинжиниринг***
+- **Один** `if`/`for`/`while`/`switch`/`try` на метод (guard clauses OK) ***метод ~50 строк не больше***
+- Если метод начинает разрастаться или требует больше одной основной управляющей конструкции — **сразу** упрощать: выносить ветки в `private` helper-методы (в том же partial), не откладывая на потом.
+- `var` везде, `{}` обязательны, **max 300 строк** сервисы  → partial classes
+- **PascalCase:** типы, методы | **camelCase:** локальные, параметры
+- Предпочитай `switch` и тернарный оператор где разумно
 
-## Architecture
+## Язык и кодировка
 
-```
-Program.cs → Form1.cs (DI) → BlazorWebView → Radzen UI
+- Документация и комментарии в новых/переименованных файлах — на русском языке.
+- Файлы сохранять в `UTF-8` (если файл уже с BOM — сохранять с BOM). Не использовать ANSI/1251.
+- После сохранения проверять отсутствие «кракозябр» (типичный признак неверной перекодировки UTF-8/ANSI).
+- Если в тексте появились строки вида `РџР.../РѕР...` — файл почти наверняка открыли/сохранили не в той кодировке: пересохранить в `UTF-8` (для Windows-инструментов надёжнее `UTF-8 with BOM`).
 
-Excel → TestMapBuilder → TestMapResolver → TestMap
-                                            ↓
-                          TestExecutionCoordinator
-                          ├── 4 × ColumnExecutor (parallel)
-                          ├── ExecutionStateManager
-                          └── ErrorCoordinator
-```
+### Что НЕ нужно
+| Паттерн | Когда не нужен |
+|---------|----------------|
+| `IDisposable`, блокировки | Singleton без конкуренции |
+| `CancellationToken`, retry | Короткие операции (<2 сек) |
+| null-проверки DI | Внутренний код |
 
-### ScanModeController ([ScanModeControllerGuide.md](Docs/ScanModeControllerGuide.md))
+**Проверки НУЖНЫ:** границы системы, внешний ввод, десериализация.
 
-| Условие | Состояние |
-|---------|-----------|
-| `IsAuthenticated && IsReady` | Режим сканирования активен |
-| `_isActivated && !_isResetting` | Фаза сканирования (для типа сброса) |
+## XML-документация
 
-## Step Execution Flow
+- Приватные: только `<summary>`
+- Публичные: `<summary>`, `<param>`, `<returns>`, `<exception>`
 
-```
-[Barcode] → PreExecutionCoordinator → TestExecutionCoordinator → [OK/NOK]
-                    │                           │
-            ScanStep (10 steps)         4 × ColumnExecutor
-            BlockBoilerAdapterStep      ExecuteMapOnAllColumns
-                    │                           │
-            StartTestExecution()        OnSequenceCompleted
-            TryStartInBackground()→bool         │
-                    │                   HandleTestCompleted()
-            false → RollbackTestStart()
-                    PipelineFailed
-```
+## Документация
 
-### ExecutionActivityTracker ([ExecutionActivityTrackerGuide.md](Docs/ExecutionActivityTrackerGuide.md))
+| Тема | Файл |
+|------|------|
+| State Management | [Docs/StateManagementGuide.md](Final_Test_Hybrid/Docs/StateManagementGuide.md) |
+| Error Handling | [Docs/ErrorCoordinatorGuide.md](Final_Test_Hybrid/Docs/ErrorCoordinatorGuide.md) |
+| PLC Reset | [Docs/PlcResetGuide.md](Final_Test_Hybrid/Docs/PlcResetGuide.md) |
+| Steps | [Docs/StepsGuide.md](Final_Test_Hybrid/Docs/StepsGuide.md) |
+| Cancellation | [Docs/CancellationGuide.md](Final_Test_Hybrid/Docs/CancellationGuide.md) |
+| Modbus | [Docs/DiagnosticGuide.md](Final_Test_Hybrid/Docs/DiagnosticGuide.md) |
+| TagWaiter | [Docs/TagWaiterGuide.md](Final_Test_Hybrid/Docs/TagWaiterGuide.md) |
+| Scanner | [Docs/ScannerGuide.md](Final_Test_Hybrid/Docs/ScannerGuide.md) |
 
-| Свойство | Описание |
-|----------|----------|
-| `IsPreExecutionActive` | Фаза подготовки |
-| `IsTestExecutionActive` | Фаза выполнения |
-| `IsAnyActive` | Любая активность |
+**Детальная документация:** [Final_Test_Hybrid/CLAUDE.md](Final_Test_Hybrid/CLAUDE.md)
 
-## Interfaces & DI
+## Практики устойчивого кода (обязательно)
 
-### Test Step Interfaces
-```
-ITestStep ← IRequiresPlcSubscriptions, IRequiresRecipes, IHasPlcBlock
-IScanBarcodeStep, IPreExecutionStep (отдельные)
-```
+- Для lifecycle/cleanup критические операции освобождения (Release*, Dispose*, сброс флагов) выполнять в finally.
+- Публичные события (On...) не вызывать напрямую в критических путях: использовать safe-обёртки Notify...Safely()/Invoke...Safe() с логированием исключений.
+- Для reconnect использовать только ограниченный retry (2-3 попытки, 200-500 ms задержка) и только для transient OPC ошибок.
+- Перед повторной записью/ожиданием PLC-тегов после reconnect сначала дождаться connectionState.WaitForConnectionAsync(ct).
+- В reset-flow ожидание reconnect через `WaitForConnectionAsync` не должно быть бесконечным: ограничивать окно reconnect через `OpcUa:ResetFlowTimeouts:ReconnectWaitTimeoutSec` и остаток `ResetHardTimeoutSec`.
+- Ошибки записи критичных PLC-тегов (Reset, AskRepeat, End) не проглатывать: либо throw, либо явный fallback с логом.
+- При rebind/reset подписок обязательно инвалидировать кэш значений и не сохранять Bad quality значения в runtime-кэш.
+- При ошибке добавления runtime monitored item (`AddTagAsync`/`ApplyChangesAsync`) выполнять rollback (`_monitoredItems`, `_values`, callbacks), чтобы не оставлять stale-состояние.
+- Для `TagWaiter.WaitForFalseAsync` первичную проверку cache выполнять через `subscription.GetValue(nodeId)` + `is bool`, а не через `GetValue<bool>()` (чтобы исключить фейковый `default(false)` при пустом cache после reconnect).
+- При не-`OperationCanceledException` в фоновом retry (`ExecuteRetryInBackgroundAsync`) использовать fail-fast путь в `HardReset` и дополнительно делать fail-safe `OpenGate()`, чтобы не оставлять колонку в вечной блокировке.
+- В completion-flow исключения `SaveAsync` не должны останавливать main loop: переводить их в failed-save (`SaveResult.Fail`) и продолжать retry/dialog loop.
+- Для `PlcResetCoordinator.PlcHardResetPending` сброс в `0` обязателен в `finally` вокруг `_errorCoordinator.Reset()`.
+- Если метод разрастается по условиям/веткам, сразу выносить ветви в private helper-методы в том же partial-файле.
 
-### DI Patterns
+## Периодичность проверок
 
-| Паттерн | Пример |
-|---------|--------|
-| Extension chain | `AddFinalTestServices()` → `AddOpcUaServices()` |
-| Singleton state | `ExecutionStateManager`, `BoilerState` |
-| Pausable decorator (OPC-UA) | `PausableOpcUaTagService` wraps `OpcUaTagService` |
-| Pausable decorator (Modbus) | `PausableRegisterReader/Writer` wraps `RegisterReader/Writer` (в `StepsServiceExtensions`) |
-| DbContextFactory | `AddDbContextFactory<AppDbContext>()` |
+- После каждого значимого изменения в логике (reconnect/reset/error flow) запускать минимум dotnet build.
+- Перед сдачей изменений обязательно выполнять полный чек-лист верификации.
 
-## OPC-UA Layer
+## Обязательный чек-лист верификации
 
-| Сервис | Назначение |
-|--------|------------|
-| `OpcUaConnectionService` | Session, auto-reconnect |
-| `OpcUaSubscription` | Pub/sub, callbacks |
-| `OpcUaTagService` | Read/write (`ReadResult<T>`, `WriteResult`) |
-| `TagWaiter` | Multi-tag conditions |
+1. dotnet build Final_Test_Hybrid.slnx — успешно.
+2. dotnet format analyzers --verify-no-changes — чисто.
+3. dotnet format style --verify-no-changes — чисто.
 
-## Diagnostic Layer (Modbus) ([DiagnosticGuide.md](Docs/DiagnosticGuide.md))
+## Зафиксированные проектные решения (не переобсуждаем без нового инцидента)
 
-| Сервис | Назначение |
-|--------|------------|
-| `IModbusDispatcher` | Command Queue, ping keep-alive, рестарт |
-| `IModbusClient` | Read/write регистров через очередь |
-| `RegisterReader/Writer` | Типизированные операции (системные, НЕ паузятся) |
-| `PausableRegisterReader/Writer` | Типизированные операции (тестовые шаги, паузятся) |
-| `PollingService` | Периодический опрос (Low priority) |
-| `PingCommand` | Keep-alive, читает ModeKey + BoilerStatus |
+- `PLC reset` и `HardReset` — разные потоки:
+  `PLC reset` (через `Req_Reset`/`PlcResetCoordinator`) работает по цепочке с `AskEnd`,
+  `HardReset` (через `ErrorCoordinator.OnReset` / `ExecutionStopReason.PlcHardReset`) обрабатывается немедленно и не ждёт `AskEnd`.
+- В `PreExecutionCoordinator.ExecuteCycleAsync` при гонке `testCompletion` vs `reset` приоритет у reset (если reset уже активен/сигнал сброса уже выставлен).
+- Для soft-reset очистка `UI/Boiler` не выполняется заранее: очистка должна идти по текущему `AskEnd`-пути.
+- Логика таймера переналадки не меняется при фиксе reset/reconnect; любые правки reset не должны ломать существующий changeover-flow.
+- Для runtime OPC-подписок при reconnect использовать только полный rebuild (`новая Session + RecreateForSessionAsync`), без гибридного ручного rebind.
+- Спиннер `Выполняется подписка` показывать только при фактическом старте реальных подписок (после готовности соединения), а не на фазе retry/reconnect попыток.
+- Для стартовой подписки execution-шагов использовать `IRequiresPlcSubscriptions` (интерфейс наследует `IRequiresPlcTags`): шаги только с `IRequiresPlcTags` в runtime-подписку не попадают.
+- `IRequiresPlcTags` оставлять как базовый/валидационный контракт для pre-execution шагов (например `BlockBoilerAdapterStep`), без обязательной подписки monitored items при старте.
+- Для `PlcResetCoordinator` таймауты reset-flow берутся из `OpcUa:ResetFlowTimeouts`:
+  `AskEndTimeoutSec` (ожидание AskEnd), `ReconnectWaitTimeoutSec` (одно ожидание reconnect), `ResetHardTimeoutSec` (общий дедлайн).
+  `ResetHardTimeoutSec` должен быть `>=` двух остальных; по таймауту — `TagTimeout` + `OnResetCompleted`.
+- В pre-execution `ErrorResolution.ConnectionLost` маппится в `PreExecutionResolution.HardReset` (не в `Timeout`).
+- В execution-flow не-`OperationCanceledException` внутри фонового retry трактуется как критическая ошибка и переводит систему в `HardReset`.
+- В completion-flow ошибка `SaveAsync` трактуется как recoverable save-failure (через retry/dialog), а не как причина падения main loop.
+- В pre-execution при `OpcUaConnectionState.IsConnected = false` блокировать **оба канала** barcode:
+  `BoilerInfo` (ручной ввод read-only) и `BarcodeDebounceHandler` (игнор скана). Фикс только в UI без гейтинга в pipeline недопустим.
+- При чтении/проверке текстовых файлов через CLI явно использовать UTF-8 (`Get-Content -Encoding UTF8`), чтобы не принимать артефакты декодирования за порчу файла.
+- Если в изменяемом файле найден текст вида `РџР.../РѕР...`, это дефект: исправлять в том же изменении и проверять файл повторным чтением в UTF-8.
 
-**Обязательно:** `await dispatcher.StartAsync()` перед операциями.
-**Pausable сервисы** регистрируются в `StepsServiceExtensions` (зависят от `PauseTokenSource`).
+## Компромиссы (временные)
 
-```csharp
-// Индикация связи (IsConnected = true только после первой успешной команды)
-dispatcher.IsStarted / IsConnected / IsReconnecting / LastPingData
-dispatcher.Connected += () => { };  // Безопасно обёрнуто в try/catch
-dispatcher.Disconnecting += () => pollingService.StopAllTasksAsync();
-
-// PLC Reset интеграция (Form1.cs)
-plcResetCoordinator.OnForceStop += () => StopDispatcherSafely(dispatcher);
-errorCoordinator.OnReset += () => StopDispatcherSafely(dispatcher);
-```
-
-## File Locations
-
-| Category | Path |
-|----------|------|
-| Entry | `Program.cs`, `Form1.cs` |
-| Components | `Components/{Engineer,Main,Overview}/` |
-| Services | `Services/{OpcUa,Steps,Database}/` |
-| Models | `Models/{Steps,Errors,Database}/` |
+- **Пункт 2 (кодировка):** временно допускаем наличие локальных «кракозябр» в части исторически изменённых комментариев/логов. Отдельная задача на централизованную нормализацию кодировки в UTF-8 (без смешения ANSI/UTF-8) запланирована отдельно.
+- **Пункт 5 (UI-сообщение по PlcConnectionLost):** отдельное правило `CurrentInterrupt == InterruptReason.PlcConnectionLost` в `MessageService` пока не добавляем. Пользовательский текст остаётся через текущие правила (`OpcUaConnectionState.IsConnected`, `TagTimeout`, `ResetActive`) как согласованный временный компромисс.
+- **Пункт 6 (OPC reconnect):** для runtime-подписок используем только полный rebuild (`новая Session + RecreateForSessionAsync`), без гибридного `SessionReconnectHandler + ручной rebind`. Это временно зафиксированный компромисс для исключения дублей monitored items.
+- **PLC reset vs HardReset (док-фиксация):** различать два независимых потока.  
+  `PlcResetCoordinator` (по `Req_Reset`) работает через `OnForceStop` и сценарий с `AskEnd`.  
+  `HardReset` (через `ErrorCoordinator.OnReset` / `ExecutionStopReason.PlcHardReset`) обрабатывается немедленно и не должен зависеть от ожидания `AskEnd`.

@@ -20,6 +20,7 @@ public partial class OpcUaSubscription(
     DualLogger<OpcUaSubscription> logger)
 {
     private readonly OpcUaSubscriptionSettings _settings = settingsOptions.Value.Subscription;
+    private readonly OpcUaSubscriptionDiagnosticsSettings _diagnosticsSettings = settingsOptions.Value.SubscriptionDiagnostics;
     private readonly ConcurrentDictionary<string, object?> _values = new();
     private readonly Dictionary<string, List<Func<object?, Task>>> _callbacks = new();
     private readonly Lock _callbacksLock = new();
@@ -81,6 +82,7 @@ public partial class OpcUaSubscription(
         if (!ServiceResult.IsBad(item.Status.Error))
         {
             logger.LogInformation("Тег {NodeId} добавлен в подписку", nodeId);
+            LogDiagnosticsForMonitoredChange("add", nodeId);
             return null;
         }
         _monitoredItems.TryRemove(nodeId, out _);

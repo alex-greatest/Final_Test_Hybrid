@@ -6,6 +6,7 @@
 @using Final_Test_Hybrid.Services.Main.PlcReset
 @using Final_Test_Hybrid.Services.SpringBoot.Operation
 @using Final_Test_Hybrid.Services.SpringBoot.Operation.Interrupt
+@using Final_Test_Hybrid.Services.OpcUa.Connection
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator
@@ -28,6 +29,7 @@
 @inject TestExecutionCoordinator TestCoordinator
 @inject TestCompletionCoordinator CompletionCoordinator
 @inject NotificationService NotificationService
+@inject OpcUaConnectionState OpcUaConnectionState
 @inject ILogger<BoilerInfo> Logger
 @implements IDisposable
 
@@ -80,6 +82,7 @@
 
     private bool IsOnActiveScanStep => TestSequenseService.IsOnActiveScanStep;
     private bool IsFieldReadOnly => !PreExecution.IsAcceptingInput
+        || !OpcUaConnectionState.IsConnected
         || !ScanModeController.IsScanModeEnabled
         || !IsOnActiveScanStep
         || PlcResetCoordinator.IsActive
@@ -105,6 +108,7 @@
         PlcResetCoordinator.OnForceStop += CloseDialogs;
         PlcResetCoordinator.OnActiveChanged += OnBlockingStateChanged;
         ErrorCoordinator.OnInterruptChanged += OnBlockingStateChanged;
+        OpcUaConnectionState.ConnectionStateChanged += OnOpcUaConnectionStateChanged;
         TestCoordinator.OnErrorOccurred += HandleTestErrorOccurred;
         TestCoordinator.OnRetryStarted += CloseErrorPanel;
         CompletionCoordinator.OnSaveErrorDialogRequested += HandleSaveErrorDialogAsync;
@@ -131,6 +135,8 @@
     private void OnScanStateChanged() => InvokeIfNotDisposed(StateHasChanged);
 
     private void OnBlockingStateChanged() => InvokeIfNotDisposed(StateHasChanged);
+
+    private void OnOpcUaConnectionStateChanged(bool _) => InvokeIfNotDisposed(StateHasChanged);
 
     private void OnUseMesChanged(bool _)
     {
@@ -516,6 +522,7 @@
         PlcResetCoordinator.OnForceStop -= CloseDialogs;
         PlcResetCoordinator.OnActiveChanged -= OnBlockingStateChanged;
         ErrorCoordinator.OnInterruptChanged -= OnBlockingStateChanged;
+        OpcUaConnectionState.ConnectionStateChanged -= OnOpcUaConnectionStateChanged;
         TestCoordinator.OnErrorOccurred -= HandleTestErrorOccurred;
         TestCoordinator.OnRetryStarted -= CloseErrorPanel;
         CompletionCoordinator.OnSaveErrorDialogRequested -= HandleSaveErrorDialogAsync;

@@ -1,5 +1,14 @@
 # Final_Test_Hybrid
 
+Подвергай сомнению все предположения, ставь под вопрос логику, выявляй слабые места и слепые зоны
+Указывай на слабую логику, самообман, отговорки, мелкое мышление, недооценку рисков
+Никакого смягчения, лести, пустых похвал или расплывчатых советов
+Давай жёсткие факты, стратегический анализ и точные планы действий
+Ставь рост выше комфорта
+Читай между строк
+Всегда возражай.
+Ничего не скрывай.
+
 > **SCADA-система промышленных тестов. От кода зависят жизни — думай дважды, проверяй трижды.**
 
 ## Обязательное правило проверки
@@ -103,6 +112,7 @@ public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestS
 | Cancellation | [Docs/CancellationGuide.md](Final_Test_Hybrid/Docs/CancellationGuide.md) |
 | Modbus | [Docs/DiagnosticGuide.md](Final_Test_Hybrid/Docs/DiagnosticGuide.md) |
 | TagWaiter | [Docs/TagWaiterGuide.md](Final_Test_Hybrid/Docs/TagWaiterGuide.md) |
+| Scanner | [Docs/ScannerGuide.md](Final_Test_Hybrid/Docs/ScannerGuide.md) |
 
 **Детальная документация:** [Final_Test_Hybrid/CLAUDE.md](Final_Test_Hybrid/CLAUDE.md)
 
@@ -143,12 +153,18 @@ public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestS
 - Логика таймера переналадки не меняется при фиксе reset/reconnect; любые правки reset не должны ломать существующий changeover-flow.
 - Для runtime OPC-подписок при reconnect использовать только полный rebuild (`новая Session + RecreateForSessionAsync`), без гибридного ручного rebind.
 - Спиннер `Выполняется подписка` показывать только при фактическом старте реальных подписок (после готовности соединения), а не на фазе retry/reconnect попыток.
+- Для стартовой подписки execution-шагов использовать `IRequiresPlcSubscriptions` (интерфейс наследует `IRequiresPlcTags`): шаги только с `IRequiresPlcTags` в runtime-подписку не попадают.
+- `IRequiresPlcTags` оставлять как базовый/валидационный контракт для pre-execution шагов (например `BlockBoilerAdapterStep`), без обязательной подписки monitored items при старте.
 - Для `PlcResetCoordinator` таймауты reset-flow берутся из `OpcUa:ResetFlowTimeouts`:
   `AskEndTimeoutSec` (ожидание AskEnd), `ReconnectWaitTimeoutSec` (одно ожидание reconnect), `ResetHardTimeoutSec` (общий дедлайн).
   `ResetHardTimeoutSec` должен быть `>=` двух остальных; по таймауту — `TagTimeout` + `OnResetCompleted`.
 - В pre-execution `ErrorResolution.ConnectionLost` маппится в `PreExecutionResolution.HardReset` (не в `Timeout`).
 - В execution-flow не-`OperationCanceledException` внутри фонового retry трактуется как критическая ошибка и переводит систему в `HardReset`.
 - В completion-flow ошибка `SaveAsync` трактуется как recoverable save-failure (через retry/dialog), а не как причина падения main loop.
+- В pre-execution при `OpcUaConnectionState.IsConnected = false` блокировать **оба канала** barcode:
+  `BoilerInfo` (ручной ввод read-only) и `BarcodeDebounceHandler` (игнор скана). Фикс только в UI без гейтинга в pipeline недопустим.
+- В pre-execution при `PreExecutionCoordinator.IsAcceptingInput = true` и `OpcUaConnectionState.IsConnected = false`
+  Scan-таймер должен быть на паузе; возобновление допустимо только после восстановления связи и только при активном scan-mode (без reset-фазы).
 - При чтении/проверке текстовых файлов через CLI явно использовать UTF-8 (`Get-Content -Encoding UTF8`), чтобы не принимать артефакты декодирования за порчу файла.
 - Если в изменяемом файле найден текст вида `РџР.../РѕР...`, это дефект: исправлять в том же изменении и проверять файл повторным чтением в UTF-8.
 

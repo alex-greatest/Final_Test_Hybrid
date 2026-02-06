@@ -12,7 +12,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Gas;
 /// </summary>
 public class GetGasTemperatureStep(
     DualLogger<GetGasTemperatureStep> logger,
-    ITestResultsService testResultsService) : ITestStep, IRequiresPlcTags
+    ITestResultsService testResultsService) : ITestStep, IRequiresPlcSubscriptions
 {
     private const string GasTempTag = "ns=3;s=\"DB_Measure\".\"Temper\".\"GAS_TAG\"";
 

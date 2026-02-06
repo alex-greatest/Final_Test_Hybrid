@@ -9,7 +9,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.CH;
 /// Тестовый шаг открытия контура отопления.
 /// </summary>
 public class OpenCircuitNormalStep(
-    DualLogger<OpenCircuitNormalStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+    DualLogger<OpenCircuitNormalStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.CH.Open_Circuit_Normal";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Open_Circuit_Normal\".\"Start\"";

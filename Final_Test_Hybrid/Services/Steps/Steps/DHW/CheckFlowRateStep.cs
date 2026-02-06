@@ -13,7 +13,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.DHW;
 /// </summary>
 public class CheckFlowRateStep(
     DualLogger<CheckFlowRateStep> logger,
-    ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags, IRequiresRecipes, IProvideLimits
+    ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions, IRequiresRecipes, IProvideLimits
 {
     private const string BlockPath = "DB_VI.DHW.Check_Flow_Rate";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"DHW\".\"Check_Flow_Rate\".\"Start\"";

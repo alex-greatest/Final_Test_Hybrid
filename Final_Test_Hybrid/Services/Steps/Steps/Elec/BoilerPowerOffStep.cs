@@ -9,7 +9,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Elec;
 /// Тестовый шаг выключения котла и отключения питания.
 /// </summary>
 public class BoilerPowerOffStep(
-    DualLogger<BoilerPowerOffStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+    DualLogger<BoilerPowerOffStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.Elec.Boiler_Power_OFF";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"Elec\".\"Boiler_Power_OFF\".\"Start\"";

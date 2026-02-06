@@ -11,7 +11,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.DHW;
 /// </summary>
 public class GetFlowNtcColdStep(
     DualLogger<GetFlowNtcColdStep> logger,
-    ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+    ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.DHW.Get_Flow_NTC_Cold";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"DHW\".\"Get_Flow_NTC_Cold\".\"Start\"";

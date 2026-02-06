@@ -9,7 +9,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.CH;
 /// Тестовый шаг продувки контура отопления.
 /// </summary>
 public class FlushCircuitStep(
-    DualLogger<FlushCircuitStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+    DualLogger<FlushCircuitStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.CH.Flush_Circuit";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Flush_Circuit\".\"Start\"";

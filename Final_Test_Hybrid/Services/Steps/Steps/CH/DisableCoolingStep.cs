@@ -9,7 +9,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.CH;
 /// Тестовый шаг отключения охлаждения контура отопления.
 /// </summary>
 public class DisableCoolingStep(
-    DualLogger<DisableCoolingStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+    DualLogger<DisableCoolingStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.CH.Disable_Cooling";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Disable_Cooling\".\"Start\"";

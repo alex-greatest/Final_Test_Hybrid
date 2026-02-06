@@ -9,7 +9,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.DHW;
 /// Тестовый шаг уменьшения давления в контуре ГВС.
 /// </summary>
 public class ReduceCircuitPressureStep(
-    DualLogger<ReduceCircuitPressureStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+    DualLogger<ReduceCircuitPressureStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.DHW.Reduce_Circuit_Pressure";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"DHW\".\"Reduce_Circuit_Pressure\".\"Start\"";

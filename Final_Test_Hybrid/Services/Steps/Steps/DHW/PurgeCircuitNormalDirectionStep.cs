@@ -9,7 +9,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.DHW;
 /// Тестовый шаг продувки контура ГВС в прямом направлении.
 /// </summary>
 public class PurgeCircuitNormalDirectionStep(
-    DualLogger<PurgeCircuitNormalDirectionStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+    DualLogger<PurgeCircuitNormalDirectionStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.DHW.Purge_Circuit_Normal_Direction";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"DHW\".\"Purge_Circuit_Normal_Direction\".\"Start\"";

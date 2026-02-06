@@ -16,7 +16,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Gas;
 public class SetGasAndPBurnerMaxLevelsStep(
     DualLogger<SetGasAndPBurnerMaxLevelsStep> logger,
     ITestResultsService testResultsService)
-    : ITestStep, IHasPlcBlockPath, IRequiresPlcTags, IRequiresRecipes, IProvideLimits
+    : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions, IRequiresRecipes, IProvideLimits
 {
     private const string BlockPath = "DB_VI.Gas.Set_Gas_and_P_Burner_Max_Levels";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"Gas\".\"Set_Gas_and_P_Burner_Max_Levels\".\"Start\"";

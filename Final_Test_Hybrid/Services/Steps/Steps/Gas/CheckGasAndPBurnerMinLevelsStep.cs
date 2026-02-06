@@ -14,7 +14,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Gas;
 /// </summary>
 public class CheckGasAndPBurnerMinLevelsStep(
     DualLogger<CheckGasAndPBurnerMinLevelsStep> logger)
-    : ITestStep, IHasPlcBlockPath, IRequiresPlcTags, IRequiresRecipes, IProvideLimits
+    : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions, IRequiresRecipes, IProvideLimits
 {
     private const string BlockPath = "DB_VI.Gas.Check_Gas_and_P_Burner_Min_Levels";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"Gas\".\"Check_Gas_and_P_Burner_Min_Levels\".\"Start\"";

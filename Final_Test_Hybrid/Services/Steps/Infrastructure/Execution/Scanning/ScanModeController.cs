@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.PlcReset;
+using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
@@ -17,6 +18,7 @@ public class ScanModeController : IDisposable
     private readonly ScanSessionManager _sessionManager;
     private readonly OperatorState _operatorState;
     private readonly AutoReadySubscription _autoReady;
+    private readonly OpcUaConnectionState _connectionState;
     private readonly StepStatusReporter _statusReporter;
     private readonly BarcodeDebounceHandler _barcodeDebounceHandler;
     private readonly PreExecutionCoordinator _preExecutionCoordinator;
@@ -35,6 +37,7 @@ public class ScanModeController : IDisposable
     /// </summary>
     private bool _isResetting;
     private bool _disposed;
+    private bool _scanPausedByConnectionLoss;
     /// <summary>
     /// Кэшированное состояние AutoReady. Обновляется только под _stateLock.
     /// Используется для внутренних решений чтобы избежать race condition.
@@ -79,6 +82,7 @@ public class ScanModeController : IDisposable
         ScanSessionManager sessionManager,
         OperatorState operatorState,
         AutoReadySubscription autoReady,
+        OpcUaConnectionState connectionState,
         StepStatusReporter statusReporter,
         BarcodeDebounceHandler barcodeDebounceHandler,
         PreExecutionCoordinator preExecutionCoordinator,
@@ -90,6 +94,7 @@ public class ScanModeController : IDisposable
         _sessionManager = sessionManager;
         _operatorState = operatorState;
         _autoReady = autoReady;
+        _connectionState = connectionState;
         _statusReporter = statusReporter;
         _barcodeDebounceHandler = barcodeDebounceHandler;
         _preExecutionCoordinator = preExecutionCoordinator;
@@ -107,6 +112,8 @@ public class ScanModeController : IDisposable
     {
         _operatorState.OnStateChanged += UpdateScanModeState;
         _autoReady.OnStateChanged += UpdateScanModeState;
+        _connectionState.ConnectionStateChanged += HandleConnectionStateChanged;
+        _preExecutionCoordinator.OnStateChanged += HandlePreExecutionStateChanged;
         SubscribeToResetEvents();
         UpdateScanModeState();
     }
@@ -132,6 +139,7 @@ public class ScanModeController : IDisposable
         {
             var wasInScanPhase = IsInScanningPhaseUnsafe;
             _isResetting = true;
+            _scanPausedByConnectionLoss = false;
             _stepTimingService.PauseAllColumnsTiming();
             _sessionManager.ReleaseSession();
             return wasInScanPhase;
@@ -172,6 +180,8 @@ public class ScanModeController : IDisposable
             {
                 TryDeactivateScanMode();
             }
+
+            SyncScanTimingForConnectionUnsafe();
         }
         OnStateChanged?.Invoke();
     }
@@ -199,7 +209,7 @@ public class ScanModeController : IDisposable
     private void RefreshSessionAndTimingForActiveMode()
     {
         _sessionManager.AcquireSession(HandleBarcodeScanned);
-        _stepTimingService.ResumeAllColumnsTiming();
+        ResumeTimingWhenAllowedUnsafe();
     }
 
     /// <summary>
@@ -319,16 +329,96 @@ public class ScanModeController : IDisposable
         {
             _loopCts?.Cancel();
             _isActivated = false;
+            _scanPausedByConnectionLoss = false;
             _stepTimingService.PauseAllColumnsTiming();
             return;
         }
         if (!_isActivated)
         {
+            _scanPausedByConnectionLoss = false;
             PerformInitialActivation();
+            SyncScanTimingForConnectionUnsafe();
             return;
         }
         _stepTimingService.ResetScanTiming();
         _sessionManager.AcquireSession(HandleBarcodeScanned);
+        SyncScanTimingForConnectionUnsafe();
+    }
+
+    private void HandleConnectionStateChanged(bool _)
+    {
+        lock (_stateLock)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            SyncScanTimingForConnectionUnsafe();
+        }
+    }
+
+    private void HandlePreExecutionStateChanged()
+    {
+        lock (_stateLock)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            SyncScanTimingForConnectionUnsafe();
+        }
+    }
+
+    private void ResumeTimingWhenAllowedUnsafe()
+    {
+        if (ShouldKeepScanPausedForConnectionUnsafe())
+        {
+            return;
+        }
+        _stepTimingService.ResumeAllColumnsTiming();
+        _scanPausedByConnectionLoss = false;
+    }
+
+    private bool ShouldKeepScanPausedForConnectionUnsafe()
+    {
+        return _preExecutionCoordinator.IsAcceptingInput && !_connectionState.IsConnected;
+    }
+
+    private void SyncScanTimingForConnectionUnsafe()
+    {
+        if (!_preExecutionCoordinator.IsAcceptingInput)
+        {
+            _scanPausedByConnectionLoss = false;
+            return;
+        }
+
+        if (_connectionState.IsConnected)
+        {
+            TryResumeScanTimingAfterReconnectUnsafe();
+            return;
+        }
+
+        TryPauseScanTimingOnConnectionLossUnsafe();
+    }
+
+    private void TryPauseScanTimingOnConnectionLossUnsafe()
+    {
+        if (_scanPausedByConnectionLoss)
+        {
+            return;
+        }
+        _stepTimingService.PauseAllColumnsTiming();
+        _scanPausedByConnectionLoss = true;
+    }
+
+    private void TryResumeScanTimingAfterReconnectUnsafe()
+    {
+        if (!_scanPausedByConnectionLoss || !IsScanModeEnabledCached || _isResetting || !_isActivated)
+        {
+            return;
+        }
+        _stepTimingService.ResumeAllColumnsTiming();
+        _scanPausedByConnectionLoss = false;
     }
 
     /// <summary>
@@ -345,6 +435,8 @@ public class ScanModeController : IDisposable
         _loopCts?.Dispose();
         _operatorState.OnStateChanged -= UpdateScanModeState;
         _autoReady.OnStateChanged -= UpdateScanModeState;
+        _connectionState.ConnectionStateChanged -= HandleConnectionStateChanged;
+        _preExecutionCoordinator.OnStateChanged -= HandlePreExecutionStateChanged;
         _plcResetCoordinator.OnResetStarting -= HandleResetStarting;
         _plcResetCoordinator.OnResetCompleted -= HandleResetCompleted;
     }

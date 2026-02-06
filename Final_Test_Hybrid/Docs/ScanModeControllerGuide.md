@@ -2,7 +2,7 @@
 
 ## Назначение
 
-`ScanModeController` управляет режимом сканирования: активация/деактивация на основе состояния оператора и автомата. Координирует управление сессией сканера и уведомляет подписчиков об изменении состояния.
+`ScanModeController` управляет режимом сканирования: активация/деактивация на основе состояния оператора и автомата. Координирует управление сессией сканера, синхронизирует Scan-таймер с PLC-связью в фазе ожидания barcode и уведомляет подписчиков об изменении состояния.
 
 ## Условия активации
 
@@ -20,6 +20,7 @@ IsScanModeEnabled = IsAuthenticated && IsReady
 |------|----------|
 | `_isActivated` | Режим сканирования активирован |
 | `_isResetting` | Выполняется сброс PLC |
+| `_scanPausedByConnectionLoss` | Scan-таймер поставлен на паузу из-за потери PLC-связи во время ожидания barcode |
 
 ### IsInScanningPhase
 
@@ -107,7 +108,15 @@ private void HandleResetCompleted()
 1. `_isResetting = false`
 2. Если `!IsScanModeEnabled` → полная остановка
 3. Если `!_isActivated` → первичная активация
-4. Иначе → `ResetScanTiming()` + `AcquireSession()`
+4. Иначе → `ResetScanTiming()` + `AcquireSession()` + синхронизация Scan-таймера с текущим состоянием PLC-связи
+
+## Синхронизация Scan-таймера по PLC-связи
+
+`ScanModeController` синхронизирует тик Scan-таймера только для сценария ожидания barcode:
+
+- При `IsAcceptingInput = true` и `IsConnected = false` — Scan-таймер ставится на паузу.
+- При восстановлении связи — таймер возобновляется только если scan-mode активен (`IsScanModeEnabled = true`), reset не активен и контроллер уже активирован.
+- Если система не находится в фазе ожидания barcode (`IsAcceptingInput = false`), флаг паузы по connection-loss сбрасывается.
 
 ## Диаграмма состояний
 
@@ -147,6 +156,7 @@ private void HandleResetCompleted()
 | `ScanSessionManager` | Управление сессией сканера |
 | `OperatorState` | Состояние авторизации оператора |
 | `AutoReadySubscription` | Состояние готовности автомата |
+| `OpcUaConnectionState` | Состояние PLC-связи для синхронизации Scan-таймера |
 | `StepStatusReporter` | Отображение статуса в UI |
 | `PreExecutionCoordinator` | Координация pre-execution фазы |
 | `PlcResetCoordinator` | Координация сброса PLC |
@@ -158,6 +168,8 @@ private void HandleResetCompleted()
 | Событие | Когда |
 |---------|-------|
 | `OnStateChanged` | Изменение состояния режима сканирования |
+| `OpcUaConnectionState.ConnectionStateChanged` | Потеря/восстановление PLC-связи — пересинхронизация Scan-таймера |
+| `PreExecutionCoordinator.OnStateChanged` | Вход/выход из ожидания barcode — пересинхронизация Scan-таймера |
 
 ## Связанные Guide
 

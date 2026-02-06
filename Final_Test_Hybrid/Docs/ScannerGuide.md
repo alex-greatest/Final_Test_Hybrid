@@ -12,7 +12,7 @@
 | `RawInputMessageFilter` | IMessageFilter для перехвата WM_INPUT в message loop |
 | `ScannerDeviceDetector` | Определение целевого сканера по VID/PID |
 | `BarcodeBuffer` | Накопление символов штрих-кода |
-| `BarcodeDebounceHandler` | Дебаунс и валидация штрих-кода перед PreExecution |
+| `BarcodeDebounceHandler` | Дебаунс и валидация штрих-кода перед PreExecution + гейтинг по `IsAcceptingInput` и `OpcUaConnectionState.IsConnected` |
 | `KeyboardInputProcessor` | Обработка клавиатурных событий |
 | `KeyboardInputMapper` | Маппинг vKey → символ с учётом Shift |
 | `ScannerConnectionState` | Мониторинг подключения/отключения через WMI |
@@ -29,6 +29,24 @@
 8. При Enter — barcode готов
 9. ScanModeController + BarcodeDebounceHandler дебаунсит и валидирует
 10. Валидный штрих-код передаётся в PreExecutionCoordinator
+
+## Гейтинг ввода barcode
+
+Для pre-execution barcode принимается только если выполняются оба условия:
+
+- `PreExecutionCoordinator.IsAcceptingInput == true`
+- `OpcUaConnectionState.IsConnected == true`
+
+Это правило применяется для обоих каналов:
+
+| Канал | Поведение при `IsConnected = false` |
+|-------|-------------------------------------|
+| Ручной ввод (`BoilerInfo`) | Поле read-only, Enter не отправляет barcode |
+| Аппаратный сканер (`RawInput` → `BarcodeDebounceHandler`) | Штрих-код игнорируется до восстановления связи |
+
+Дополнительно для UI-тайминга:
+- Если система находится в ожидании barcode (`IsAcceptingInput = true`) и PLC-связь пропала, Scan-таймер ставится на паузу.
+- После восстановления PLC-связи Scan-таймер продолжает тикать только если scan-mode остаётся активным и нет reset-фазы.
 
 ## Конфигурация
 

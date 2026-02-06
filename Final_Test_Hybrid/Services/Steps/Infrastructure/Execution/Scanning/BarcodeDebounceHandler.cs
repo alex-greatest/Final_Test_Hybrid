@@ -1,6 +1,6 @@
 using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.Scanner;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
@@ -8,7 +8,8 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 public sealed class BarcodeDebounceHandler(
     BarcodeScanService barcodeScanService,
     StepStatusReporter statusReporter,
-    PreExecutionCoordinator preExecutionCoordinator)
+    PreExecutionCoordinator preExecutionCoordinator,
+    OpcUaConnectionState connectionState)
 {
     private static readonly TimeSpan DebounceWindow = TimeSpan.FromMilliseconds(250);
     private readonly Lock _lock = new();
@@ -74,21 +75,13 @@ public sealed class BarcodeDebounceHandler(
     {
         lock (_lock)
         {
-            if (sequence != _sequence)
-            {
-                return null;
-            }
-            return _latestBarcode;
+            return sequence != _sequence ? null : _latestBarcode;
         }
     }
 
     private Task DispatchBarcodeAsync(string barcode)
     {
-        if (!IsAcceptingInput())
-        {
-            return Task.CompletedTask;
-        }
-        return HandleBarcodeAsync(barcode);
+        return !CanAcceptBarcode() ? Task.CompletedTask : HandleBarcodeAsync(barcode);
     }
 
     private Task HandleBarcodeAsync(string barcode)
@@ -103,9 +96,9 @@ public sealed class BarcodeDebounceHandler(
         return Task.CompletedTask;
     }
 
-    private bool IsAcceptingInput()
+    private bool CanAcceptBarcode()
     {
-        return preExecutionCoordinator.IsAcceptingInput;
+        return preExecutionCoordinator.IsAcceptingInput && connectionState.IsConnected;
     }
 
     private readonly record struct DebounceState(int Sequence, CancellationToken Token);

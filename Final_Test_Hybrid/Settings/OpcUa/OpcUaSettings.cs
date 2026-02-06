@@ -7,6 +7,7 @@ public class OpcUaSettings
     public int ReconnectIntervalMs { get; set; }
     public int SessionTimeoutMs { get; set; }
     public OpcUaSubscriptionSettings Subscription { get; set; } = new();
+    public OpcUaSubscriptionDiagnosticsSettings SubscriptionDiagnostics { get; set; } = new();
     public ResetFlowTimeoutsSettings ResetFlowTimeouts { get; set; } = new();
 
     public void Validate()
@@ -16,6 +17,7 @@ public class OpcUaSettings
         ValidateReconnectInterval();
         ValidateSessionTimeout();
         Subscription.Validate();
+        SubscriptionDiagnostics.Validate();
         ResetFlowTimeouts.Validate();
     }
 

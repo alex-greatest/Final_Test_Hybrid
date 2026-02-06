@@ -17,6 +17,7 @@ public static class OpcUaServiceExtensions
         services.Configure<OpcUaSettings>(config.GetSection("OpcUa"));
         services.AddSingleton<OpcUaConnectionState>();
         services.AddSingleton<OpcUaSubscription>();
+        services.AddSingleton<OpcUaSubscriptionDiagnosticsService>();
         services.AddSingleton<OpcUaConnectionService>();
         services.AddSingleton<OpcUaTagService>();
         services.AddSingleton<OpcUaBrowseService>();

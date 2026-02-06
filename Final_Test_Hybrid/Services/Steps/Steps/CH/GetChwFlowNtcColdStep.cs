@@ -12,7 +12,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.CH;
 /// </summary>
 public class GetChwFlowNtcColdStep(
     DualLogger<GetChwFlowNtcColdStep> logger,
-    ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags, IProvideLimits
+    ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions, IProvideLimits
 {
     private const string BlockPath = "DB_VI.CH.Get_CHW_Flow_NTC_Cold";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Get_CHW_Flow_NTC_Cold\".\"Start\"";

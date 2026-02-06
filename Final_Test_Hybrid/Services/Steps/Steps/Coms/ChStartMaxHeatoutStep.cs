@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Access;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
@@ -21,7 +21,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
 public class ChStartMaxHeatoutStep(
     AccessLevelManager accessLevelManager,
     IOptions<DiagnosticSettings> settings,
-    DualLogger<ChStartMaxHeatoutStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags, IProvideLimits, INonSkippable
+    DualLogger<ChStartMaxHeatoutStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions, IProvideLimits, INonSkippable
 {
     private const string BlockPath = "DB_VI.Coms.CH_Start_Max_Heatout";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"Coms\".\"CH_Start_Max_Heatout\".\"Start\"";
@@ -29,8 +29,8 @@ public class ChStartMaxHeatoutStep(
     private const string ErrorTag = "ns=3;s=\"DB_VI\".\"Coms\".\"CH_Start_Max_Heatout\".\"Error\"";
     private const string Ready1Tag = "ns=3;s=\"DB_VI\".\"Coms\".\"CH_Start_Max_Heatout\".\"Ready_1\"";
     private const string Ready2Tag = "ns=3;s=\"DB_VI\".\"Coms\".\"CH_Start_Max_Heatout\".\"Ready_2\"";
-    private const string Continua1Tag = "ns=3;s=\"DB_VI\".\"Coms\".\"CH_Start_Max_Heatout\".\"Continua_1\"";
-    private const string Continua2Tag = "ns=3;s=\"DB_VI\".\"Coms\".\"CH_Start_Max_Heatout\".\"Continua_2\"";
+    private const string Continua1Tag = "ns=3;s=\"DB_VI\".\"Coms\".\"CH_Start_Max_Heatout\".\"Сontinua_1\"";
+    private const string Continua2Tag = "ns=3;s=\"DB_VI\".\"Coms\".\"CH_Start_Max_Heatout\".\"Сontinua_2\"";
     private const string FaultTag = "ns=3;s=\"DB_VI\".\"Coms\".\"CH_Start_Max_Heatout\".\"Fault\"";
 
     private const string HadErrorKey = "coms-ch-start-max-heatout-had-error";

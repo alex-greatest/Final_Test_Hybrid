@@ -69,6 +69,16 @@ public void ResetScanTiming()
 | Успех scan step | false | Reset | Таймер сбрасывается |
 | После Clear | false | Start | Новый таймер |
 
+## Пауза Scan при потере PLC в ожидании ввода
+
+Если в pre-execution одновременно:
+- `PreExecutionCoordinator.IsAcceptingInput = true`
+- `OpcUaConnectionState.IsConnected = false`
+
+то Scan-таймер должен быть на паузе до восстановления связи.
+
+После reconnect таймер возобновляется только при сохранении условий активного scan-mode (оператор авторизован, AutoReady включён, reset не активен).
+
 ## Глобальная пауза
 
 При глобальной паузе (`PauseAllColumnsTiming`):

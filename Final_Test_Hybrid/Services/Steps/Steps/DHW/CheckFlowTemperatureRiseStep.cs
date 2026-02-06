@@ -13,7 +13,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.DHW;
 /// </summary>
 public class CheckFlowTemperatureRiseStep(
     DualLogger<CheckFlowTemperatureRiseStep> logger,
-    ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags, IRequiresRecipes, IProvideLimits
+    ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions, IRequiresRecipes, IProvideLimits
 {
     private const string BlockPath = "DB_VI.DHW.Check_Flow_Temperature_Rise";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"DHW\".\"Check_Flow_Temperature_Rise\".\"Start\"";

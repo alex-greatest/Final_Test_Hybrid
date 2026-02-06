@@ -100,12 +100,13 @@ PreExecutionCoordinator:
 
 - Таймауты задаются в `OpcUa:ResetFlowTimeouts`:
   - `AskEndTimeoutSec` — ожидание `Ask_End`;
-  - `ReconnectWaitTimeoutSec` — максимум одного окна ожидания reconnect;
+  - `ReconnectWaitTimeoutSec` — параметр конфигурации reset-flow (сохранён для совместимости);
   - `ResetHardTimeoutSec` — общий дедлайн reset-flow.
-- Эффективное окно reconnect вычисляется как `min(ReconnectWaitTimeoutSec, остаток ResetHardTimeoutSec)`, поэтому `WaitForConnectionAsync` не может ждать бесконечно.
 - `ResetHardTimeoutSec` должен быть `>= AskEndTimeoutSec` и `>= ReconnectWaitTimeoutSec` (валидация в `ResetFlowTimeoutsSettings`).
 - Значения по умолчанию в `appsettings.json`: `AskEnd=60`, `ReconnectWait=15`, `Hard=60` секунд.
-- При истечении любого из лимитов применяется timeout-path: `HandleInterruptAsync(TagTimeout)` + `OnResetCompleted`.
+- Если во время ожидания `Ask_End` пропадает связь с PLC, reset-flow срабатывает по fail-fast пути:
+  `HandleInterruptAsync(PlcConnectionLost)` + `OnResetCompleted` (без ожидания reconnect до timeout).
+- `HandleInterruptAsync(TagTimeout)` + `OnResetCompleted` используется для сценария, когда связь есть, но `Ask_End` не пришёл до дедлайна.
 
 ## Три состояния MainLoop
 
@@ -166,6 +167,7 @@ RunSingleCycleAsync:
 - `ScanModeController.TransitionToReadyInternal()`
 - Событие считается маркером завершения reset-процесса для scan-mode и вызывается в сценариях:
   - успешный reset;
+  - fail-fast по `PlcConnectionLost` во время ожидания `Ask_End`;
   - таймаут `Ask_End`;
   - runtime-отмена reset до `Ask_End` (без disposal);
   - неожиданные ошибки с fallback в hard reset.

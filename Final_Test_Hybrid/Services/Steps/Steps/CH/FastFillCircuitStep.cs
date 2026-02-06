@@ -9,7 +9,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.CH;
 /// Тестовый шаг быстрого заполнения контура отопления.
 /// </summary>
 public class FastFillCircuitStep(
-    DualLogger<FastFillCircuitStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+    DualLogger<FastFillCircuitStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.CH.Fast_Fill_Circuit";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Fast_Fill_Circuit\".\"Start\"";

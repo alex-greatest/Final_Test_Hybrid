@@ -13,7 +13,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.DHW;
 /// </summary>
 public class HighPressureTestStep(
     DualLogger<HighPressureTestStep> logger,
-    ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags, IRequiresRecipes, IProvideLimits
+    ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions, IRequiresRecipes, IProvideLimits
 {
     private const string BlockPath = "DB_VI.DHW.High_Pressure_Test";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"DHW\".\"High_Pressure_Test\".\"Start\"";

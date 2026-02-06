@@ -9,6 +9,7 @@ using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.OpcUa.Heartbeat;
+using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Final_Test_Hybrid.Services.SpringBoot.Health;
 using Final_Test_Hybrid.Services.SpringBoot.Shift;
@@ -287,6 +288,10 @@ public partial class Form1 : Form
         // Координатор выполняет всю инициализацию PLC — если ошибка, приложение упадёт
         var coordinator = serviceProvider.GetRequiredService<PlcInitializationCoordinator>();
         await coordinator.InitializeAllAsync();
+
+        // Диагностика подписок — только логирование, без влияния на runtime-логику
+        var subscriptionDiagnostics = serviceProvider.GetRequiredService<OpcUaSubscriptionDiagnosticsService>();
+        await subscriptionDiagnostics.StartAsync();
     }
 
     protected override async void OnFormClosing(FormClosingEventArgs e)
@@ -311,6 +316,12 @@ public partial class Form1 : Form
             if (resetSubscription != null)
             {
                 await resetSubscription.DisposeAsync();
+            }
+
+            var subscriptionDiagnostics = _serviceProvider?.GetService<OpcUaSubscriptionDiagnosticsService>();
+            if (subscriptionDiagnostics != null)
+            {
+                await subscriptionDiagnostics.StopAsync();
             }
 
             if (_opcUaService != null)

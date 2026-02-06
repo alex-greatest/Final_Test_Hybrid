@@ -9,7 +9,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Gas;
 /// Тестовый шаг закрытия клапанов контура газа.
 /// </summary>
 public class CloseCircuitStep(
-    DualLogger<CloseCircuitStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+    DualLogger<CloseCircuitStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.Gas.Close_Circuit";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"Gas\".\"Close_Circuit\".\"Start\"";

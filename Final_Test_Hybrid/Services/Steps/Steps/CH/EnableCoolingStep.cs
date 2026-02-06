@@ -9,7 +9,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.CH;
 /// Тестовый шаг включения охлаждения контура отопления.
 /// </summary>
 public class EnableCoolingStep(
-    DualLogger<EnableCoolingStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+    DualLogger<EnableCoolingStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.CH.Enable_Cooling";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Enable_Cooling\".\"Start\"";

@@ -197,6 +197,23 @@ public bool IsScanModeEnabled => _operatorState.IsAuthenticated && _autoReady.Is
 - Оператор авторизован (`IsAuthenticated`)
 - Автомат готов (`AutoReady`)
 
+### Гейтинг barcode в ожидании скана
+
+`IsScanModeEnabled` не является достаточным условием для приёма barcode.
+
+Фактический контракт приёма barcode в pre-execution:
+
+```csharp
+canAcceptBarcode = PreExecutionCoordinator.IsAcceptingInput
+                   && OpcUaConnectionState.IsConnected;
+```
+
+Следствия:
+- При `IsConnected = false` ручной ввод в `BoilerInfo` блокируется (read-only).
+- При `IsConnected = false` аппаратный скан игнорируется в `BarcodeDebounceHandler`.
+- При `IsConnected = false` во время ожидания barcode (`IsAcceptingInput = true`) Scan-таймер ставится на паузу; после reconnect возобновляется только при активном scan-mode и вне reset-фазы.
+- Изменение только `ScanModeController` без этого гейтинга считается неполным фиксом.
+
 ### IsInScanningPhase
 
 ```csharp
@@ -863,6 +880,7 @@ State machine для фаз жизненного цикла системы:
 |---------------|-------|--------------|------------------|
 | `_isActivated` | ScanModeController | `IsInScanningPhase`, `TryActivate/Deactivate` | `PerformInitialActivation`, `PerformFullDeactivation`, `TransitionToReadyInternal` |
 | `_isResetting` | ScanModeController | `IsInScanningPhase`, `TryActivate/Deactivate` | `HandleResetStarting`, `TransitionToReadyInternal` |
+| `_scanPausedByConnectionLoss` | ScanModeController | `SyncScanTimingForConnectionUnsafe` | `TryPauseScanTimingOnConnectionLossUnsafe`, `TryResumeScanTimingAfterReconnectUnsafe`, reset/deactivate ветки |
 | `StopReason` | ExecutionFlowState | TestExecutionCoordinator (GetSnapshot), PreExecutionCoordinator (TryGetStopExitReason) | `RequestStop`, `ClearStop` |
 | `StopAsFailure` | ExecutionFlowState | TestExecutionCoordinator (GetSnapshot) | `RequestStop` (OnForceStop/OnReset handlers), `ClearStop` |
 | `State` | ExecutionStateManager | UI (OnStateChanged), координаторы | `TransitionTo` |

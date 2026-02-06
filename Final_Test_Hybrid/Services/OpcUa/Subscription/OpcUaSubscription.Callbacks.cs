@@ -46,11 +46,13 @@ public partial class OpcUaSubscription
         bool removeTag = false,
         CancellationToken ct = default)
     {
-        if (!TryRemoveCallback(nodeId, callback))
+        var callbackRemoved = TryRemoveCallback(nodeId, callback);
+        if (!callbackRemoved)
         {
             return;
         }
         await TryRemoveTagIfEmptyAsync(nodeId, removeTag, ct).ConfigureAwait(false);
+        LogDiagnosticsForUnsubscribe(nodeId, removeTag, callbackRemoved);
     }
 
     private bool TryRemoveCallback(string nodeId, Func<object?, Task> callback)
@@ -108,6 +110,7 @@ public partial class OpcUaSubscription
         {
             _callbacks.Remove(nodeId);
         }
+        LogDiagnosticsForMonitoredChange("remove", nodeId);
     }
 
     public object? GetValue(string nodeId) => _values.GetValueOrDefault(nodeId);

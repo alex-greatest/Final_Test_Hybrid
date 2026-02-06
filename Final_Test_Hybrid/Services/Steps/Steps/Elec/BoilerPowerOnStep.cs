@@ -9,7 +9,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Elec;
 /// Тестовый шаг включения котла и подачи питания.
 /// </summary>
 public class BoilerPowerOnStep(
-    DualLogger<BoilerPowerOnStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcTags
+    DualLogger<BoilerPowerOnStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.Elec.Boiler_Power_ON";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"Elec\".\"Boiler_Power_ON\".\"Start\"";
