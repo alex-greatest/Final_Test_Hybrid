@@ -85,6 +85,12 @@ ErrorPlcMonitor.InitializeAsync()
 └─────────────────────────────────────────────────────────────────────────────┘
           │
           ▼
+PlcSubscriptionState.SetInitializing()
+          │
+          ▼
+UI: SubscriptionLoadingOverlay показан только на реальной фазе подписок
+          │
+          ▼
 PlcSubscriptionState.SetCompleted()
           │
           ▼
@@ -118,10 +124,11 @@ public interface IRequiresPlcSubscriptions : ITestStep
 ```csharp
 public class PlcSubscriptionState
 {
-    public bool IsCompleted { get; private set; }
-    public bool IsInitializing => !IsCompleted;
+    public bool IsCompleted { get; private set; } = true;
+    public bool IsInitializing { get; private set; }
     public event Action? OnStateChanged;
 
+    public void SetInitializing();
     public void SetCompleted();
 }
 ```

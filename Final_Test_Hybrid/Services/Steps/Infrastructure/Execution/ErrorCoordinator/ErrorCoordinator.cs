@@ -161,5 +161,6 @@ public enum InterruptReason
 {
     PlcConnectionLost,
     AutoModeDisabled,
+    BoilerLock,
     TagTimeout
 }

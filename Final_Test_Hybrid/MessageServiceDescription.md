@@ -67,6 +67,7 @@ public class MessageService
 | 150 | `ResetActive` | "Сброс теста..." |
 | 140 | `!IsAuthenticated` | "Войдите в систему" |
 | 130 | `IsAuthenticated && !AutoReady` | "Ожидание автомата" |
+| 125 | `CurrentInterrupt == BoilerLock` | "Блокировка котла. Ожидание восстановления" |
 | **120** | `ScanModeEnabled && !IsTestRunning && Phase == null` | "Отсканируйте серийный номер котла" |
 | 110 | `Phase != null` | Сообщение фазы (GetPhaseMessage) |
 
@@ -80,6 +81,26 @@ public class MessageService
 | `LoadingRecipes` | "Загрузка рецептов..." |
 | `CreatingDbRecords` | "Создание записей в БД..." |
 | `WaitingForAdapter` | "Подсоедините адаптер к котлу и нажмите \"Блок\"" |
+
+---
+
+## Правило 125 (BoilerLock)
+
+Правило показывает сообщение:
+
+- Условие: `CurrentInterrupt == InterruptReason.BoilerLock`
+- Сообщение: `"Блокировка котла. Ожидание восстановления"`
+- Приоритет: `125` (ниже reset/connection/auto-ready критичных правил)
+
+Когда сообщение очищается:
+
+1. `BoilerLockRuntimeService` определяет, что условие блокировки больше не выполняется.
+2. Вызывает `ErrorCoordinator.ForceStop()`.
+3. Внутри `ForceStop()` выполняется `ClearCurrentInterrupt()`.
+4. Поднимается `OnInterruptChanged`.
+5. `MessageService` пересчитывает правила, и правило 125 перестаёт срабатывать.
+
+Подробная логика с условиями `1005==1/2` и `1153=0`: `Docs/BoilerLockGuide.md`.
 
 ---
 
@@ -190,3 +211,4 @@ private void SubscribeToChanges()
 - [CLAUDE.md](CLAUDE.md) — общие правила и паттерны проекта
 - [ErrorCoordinatorGuide.md](ErrorCoordinatorGuide.md) — обработка прерываний
 - [PlcResetGuide.md](PlcResetGuide.md) — логика сброса PLC
+- [Docs/BoilerLockGuide.md](Docs/BoilerLockGuide.md) — runtime-логика блокировок котла

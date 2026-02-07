@@ -399,6 +399,19 @@ if (pingData != null)
 }
 ```
 
+## BoilerLock runtime (1005 + ошибки из 111.txt)
+
+Дополнительно к базовому ECU error flow в проекте используется runtime-логика `BoilerLock`, которая тоже питается от `PingDataUpdated`.
+
+- Логика включается только флагами `Diagnostic:BoilerLock:*` в `appsettings.json`.
+- Реакция идёт только на whitelist ошибок из `111.txt`.
+- Ветка `1005 == 1`: pause через `InterruptReason.BoilerLock`, авто-переход в `Stand` (если включён `ResetFlow.RequireStandForReset`), затем запись `1153=0` с bounded retry/cooldown/suppress и повторная проверка `1005`.
+- Ветка `1005 == 2`: только PLC-signal stub, без pause.
+- При исчезновении условий выполняется снятие `BoilerLock` через `ForceStop()` (защита от вечной паузы).
+- Ping keep-alive и системные сервисы не останавливаются этой логикой.
+
+Подробности: `BoilerLockGuide.md`.
+
 ## Ошибки ЭБУ
 
 ### EcuErrorSyncService

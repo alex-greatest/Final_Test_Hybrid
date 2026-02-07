@@ -77,6 +77,9 @@ public class MessageService
         (130, () => _operator.IsAuthenticated && !_autoReady.IsReady,
               () => "Ожидание автомата"),
 
+        (125, () => _errorCoord.CurrentInterrupt == InterruptReason.BoilerLock,
+              () => "Блокировка котла. Ожидание восстановления"),
+
         // Сканирование (только если тест не запущен и нет активной фазы)
         (120, () => _scanMode.IsScanModeEnabled && !_boilerState.IsTestRunning && _phaseState.Phase == null,
               () => "Отсканируйте серийный номер котла"),

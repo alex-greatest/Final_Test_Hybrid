@@ -65,4 +65,71 @@ public class DiagnosticSettings
     /// Задержка после записи перед чтением для верификации (мс).
     /// </summary>
     public int WriteVerifyDelayMs { get; set; } = 100;
+
+    /// <summary>
+    /// Настройки runtime-обработки блокировок котла по статусу 1005.
+    /// </summary>
+    public DiagnosticBoilerLockSettings BoilerLock { get; set; } = new();
+}
+
+/// <summary>
+/// Флаги управления runtime-логикой блокировок котла.
+/// </summary>
+public class DiagnosticBoilerLockSettings
+{
+    /// <summary>
+    /// Общий флаг включения логики блокировок.
+    /// </summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>
+    /// Включить ветку pause для статуса 1005 == 1.
+    /// </summary>
+    public bool PauseOnStatus1Enabled { get; set; }
+
+    /// <summary>
+    /// Включить ветку PLC-сигнала для статуса 1005 == 2.
+    /// </summary>
+    public bool PlcSignalOnStatus2Enabled { get; set; }
+
+    /// <summary>
+    /// Тонкие настройки reset-flow для ветки BoilerLock status=1.
+    /// </summary>
+    public DiagnosticBoilerLockResetFlowSettings ResetFlow { get; set; } = new();
+}
+
+/// <summary>
+/// Настройки ограниченных retry/cooldown для BoilerLock reset-flow.
+/// </summary>
+public class DiagnosticBoilerLockResetFlowSettings
+{
+    /// <summary>
+    /// Требовать подтверждённый режим Stand перед записью 1153=0.
+    /// </summary>
+    public bool RequireStandForReset { get; set; } = true;
+
+    /// <summary>
+    /// Максимум попыток перевода в Stand в одном ping-цикле.
+    /// </summary>
+    public int ModeSwitchRetryMax { get; set; } = 2;
+
+    /// <summary>
+    /// Максимум попыток записи 1153=0 в одном ping-цикле.
+    /// </summary>
+    public int ResetRetryMax { get; set; } = 3;
+
+    /// <summary>
+    /// Задержка между retry-попытками (мс).
+    /// </summary>
+    public int RetryDelayMs { get; set; } = 250;
+
+    /// <summary>
+    /// Минимальный интервал между циклами попыток (мс).
+    /// </summary>
+    public int AttemptCooldownMs { get; set; } = 1000;
+
+    /// <summary>
+    /// Окно подавления новых попыток после серии ошибок (мс).
+    /// </summary>
+    public int ErrorSuppressMs { get; set; } = 5000;
 }

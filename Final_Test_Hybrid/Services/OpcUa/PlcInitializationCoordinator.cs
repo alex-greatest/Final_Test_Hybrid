@@ -23,26 +23,38 @@ public class PlcInitializationCoordinator(
     public async Task InitializeAllAsync(CancellationToken ct = default)
     {
         await connectionState.WaitForConnectionAsync(ct);
-
         logger.LogInformation("Начало инициализации PLC");
 
-        // 1. Валидация тегов обработки ошибок (ErrorRetry, ErrorSkip)
-        await errorRecoveryMonitor.ValidateTagsAsync(ct);
+        // 1. Реальные runtime-подписки (только тут показываем спиннер)
+        await RunRuntimeSubscriptionsInitializationAsync(ct);
 
-        // 2. Подписка на теги шагов (IRequiresPlcSubscriptions)
-        await subscriptionInitializer.InitializeAsync(ct);
-
-        // 3. Валидация тегов PreExecution шагов (IRequiresPlcTags)
+        // 2. Валидация тегов PreExecution шагов (IRequiresPlcTags)
         await ValidatePreExecutionTagsAsync(ct);
 
-        // 4. Подписка на теги ПЛК-ошибок
-        await plcErrorMonitor.StartMonitoringAsync(ct);
-
-        // 5. Валидация связей RelatedStepId
+        // 3. Валидация связей RelatedStepId
         ValidateErrorStepBindings();
 
         logger.LogInformation("PLC инициализация завершена");
-        subscriptionState.SetCompleted();
+    }
+
+    private async Task RunRuntimeSubscriptionsInitializationAsync(CancellationToken ct)
+    {
+        subscriptionState.SetInitializing();
+        try
+        {
+            // 1. Валидация тегов обработки ошибок (ErrorRetry, ErrorSkip)
+            await errorRecoveryMonitor.ValidateTagsAsync(ct);
+
+            // 2. Подписка на теги шагов (IRequiresPlcSubscriptions)
+            await subscriptionInitializer.InitializeAsync(ct);
+
+            // 3. Подписка на теги ПЛК-ошибок
+            await plcErrorMonitor.StartMonitoringAsync(ct);
+        }
+        finally
+        {
+            subscriptionState.SetCompleted();
+        }
     }
 
     private async Task ValidatePreExecutionTagsAsync(CancellationToken ct)

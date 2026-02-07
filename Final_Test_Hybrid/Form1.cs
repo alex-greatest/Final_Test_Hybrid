@@ -228,6 +228,7 @@ public partial class Form1 : Form
 
         // ECU error sync — получаем чтобы создался и начал слушать события
         _ = serviceProvider.GetRequiredService<EcuErrorSyncService>();
+        _ = serviceProvider.GetRequiredService<BoilerLockRuntimeService>();
 
         // StartAsync() НЕ вызываем здесь — диагностика запускается из тестовых шагов
     }

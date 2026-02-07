@@ -17,6 +17,7 @@ Services/Steps/Infrastructure/Execution/ErrorCoordinator/
     ├── InterruptBehaviorRegistry.cs  # DI-based реестр поведений
     ├── PlcConnectionLostBehavior.cs  # 5 сек задержка → Reset
     ├── AutoModeDisabledBehavior.cs   # Пауза и ожидание
+    ├── BoilerLockBehavior.cs         # Пауза при блокировке котла
     └── TagTimeoutBehavior.cs         # 5 сек задержка → Reset
 ```
 
@@ -29,6 +30,7 @@ public enum InterruptReason
 {
     PlcConnectionLost,
     AutoModeDisabled,
+    BoilerLock,
     TagTimeout,
     NewReason  // ← добавить здесь
 }
@@ -200,6 +202,12 @@ public interface IInterruptContext
 - **Задержка:** 5 секунд
 - **Действие:** Reset
 - **Ошибка:** TagTimeout
+
+### BoilerLockBehavior
+- **Задержка:** нет
+- **Действие:** Pause
+- **Ошибка:** не поднимается через `AssociatedError` (null)
+- **Источник:** runtime-ветка по `1005` и `LastErrorId` (см. `BoilerLockGuide.md`)
 
 ## Best Practices
 

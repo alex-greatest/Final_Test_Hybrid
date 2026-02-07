@@ -128,6 +128,7 @@ public static class StepsServiceExtensions
         // ErrorCoordinator behaviors
         services.AddSingleton<IInterruptBehavior, PlcConnectionLostBehavior>();
         services.AddSingleton<IInterruptBehavior, AutoModeDisabledBehavior>();
+        services.AddSingleton<IInterruptBehavior, BoilerLockBehavior>();
         services.AddSingleton<IInterruptBehavior, TagTimeoutBehavior>();
         services.AddSingleton<InterruptBehaviorRegistry>();
 
