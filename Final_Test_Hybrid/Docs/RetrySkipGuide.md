@@ -257,6 +257,8 @@ private async Task ExecuteRetryInBackgroundAsync(StepError error, ColumnExecutor
 
 `ResetFaultIfNoBlockAsync` сбрасывает `Fault=false` только для шагов без PLC-блока.
 При нескольких non-PLC ошибках возможен кратковременный сброс Fault — самовосстанавливается при обработке следующей ошибки.
+Запись `Fault=true/false` выполняется с ограниченным retry (до 3 попыток, пауза 250 мс).
+Если все попытки записи Fault неуспешны, выполняется fail-fast в `HardReset` (`_errorCoordinator.Reset()` + отмена текущего прогона).
 
 ### Таймаут Block.Error/Req_Repeat (60 сек)
 
@@ -268,6 +270,7 @@ private async Task ExecuteRetryInBackgroundAsync(StepError error, ColumnExecutor
 - Шаг `Coms/Check_Comms` является `INonSkippable`, поэтому Skip для него недоступен.
 - При `AutoReady = false` шаг завершается fail-fast с `NoDiagnosticConnection` и не уходит в бесконечное ожидание связи.
 - После неуспеха шаг останавливает `IModbusDispatcher`, чтобы в фоне не продолжался reconnect-loop.
+- Ошибка шага фиксируется в `ColumnExecutor` до `pauseToken.WaitWhilePausedAsync`, поэтому error-flow и попытка записи `Fault=true` стартуют сразу; диалог может появиться позже (после восстановления автомата).
 - `Retry` для этого шага имеет смысл только после восстановления автомата (`AutoReady = true`).
 
 ### Cancel во время фонового Retry

@@ -28,7 +28,10 @@ public partial class TestExecutionCoordinator
                 break;
             }
 
-            await PrepareErrorProcessingAsync(error, cts.Token);
+            if (!await PrepareErrorProcessingAsync(error, cts.Token))
+            {
+                break;
+            }
             var resolution = await WaitResolutionSafeAsync(error, cts.Token);
 
             if (resolution == ErrorResolution.None)
@@ -69,12 +72,18 @@ public partial class TestExecutionCoordinator
         return !cts.IsCancellationRequested && !_flowState.IsStopRequested && !interruptedByConnectionLoss;
     }
 
-    private async Task PrepareErrorProcessingAsync(StepError error, CancellationToken ct)
+    private async Task<bool> PrepareErrorProcessingAsync(StepError error, CancellationToken ct)
     {
         StateManager.TransitionTo(ExecutionState.PausedOnError);
         await SetSelectedAsync(error, true);
-        await SetFaultIfNoBlockAsync(error.FailedStep, ct);
+        var faultWriteError = await SetFaultIfNoBlockAsync(error.FailedStep, ct);
+        if (faultWriteError != null)
+        {
+            await HandleFaultWriteFailureWithHardResetAsync(error, "установка Fault=true", faultWriteError);
+            return false;
+        }
         TryPublishEvent(new ExecutionEvent(ExecutionEventKind.ErrorOccurred, StepError: error));
+        return true;
     }
 
     private async Task<ErrorResolution> WaitResolutionSafeAsync(StepError error, CancellationToken ct)
@@ -253,8 +262,11 @@ public partial class TestExecutionCoordinator
         try
         {
             await executor.RetryLastFailedStepAsync(ct);
-
-            await ResetFaultIfNoBlockAsync(error.FailedStep, ct);
+            var resetFaultError = await ResetFaultIfNoBlockAsync(error.FailedStep, ct);
+            if (resetFaultError != null)
+            {
+                throw new InvalidOperationException($"Не удалось выполнить сброс Fault=false: {resetFaultError}");
+            }
 
             if (!executor.HasFailed)
             {
@@ -290,7 +302,7 @@ public partial class TestExecutionCoordinator
             "Ошибка Retry в фоне для колонки {Column}. Запрошен HardReset",
             error.ColumnIndex);
 
-        var hardResetAccepted = TryRequestHardResetFromRetryFailure();
+        var hardResetAccepted = TryRequestHardResetFromCriticalFailure();
         if (hardResetAccepted && (_flowState.IsStopRequested || IsCancellationRequested))
         {
             return;
@@ -304,7 +316,29 @@ public partial class TestExecutionCoordinator
         }
     }
 
-    private bool TryRequestHardResetFromRetryFailure()
+    private async Task HandleFaultWriteFailureWithHardResetAsync(StepError error, string operation, string faultWriteError)
+    {
+        _logger.LogError(
+            "Критичная ошибка {Operation} для колонки {Column}: {Error}. Запрошен HardReset",
+            operation,
+            error.ColumnIndex,
+            faultWriteError);
+
+        var hardResetAccepted = TryRequestHardResetFromCriticalFailure();
+        if (hardResetAccepted && (_flowState.IsStopRequested || IsCancellationRequested))
+        {
+            return;
+        }
+
+        RequestStopAsFailure(ExecutionStopReason.PlcHardReset);
+        var cts = _cts;
+        if (cts != null)
+        {
+            await cts.CancelAsync();
+        }
+    }
+
+    private bool TryRequestHardResetFromCriticalFailure()
     {
         try
         {
@@ -313,7 +347,7 @@ public partial class TestExecutionCoordinator
         }
         catch (Exception resetEx)
         {
-            _logger.LogError(resetEx, "Не удалось выполнить HardReset после ошибки Retry");
+            _logger.LogError(resetEx, "Не удалось выполнить HardReset после критической ошибки");
             return false;
         }
     }
@@ -326,7 +360,12 @@ public partial class TestExecutionCoordinator
         await _pauseToken.WaitWhilePausedAsync(ct);
 
         await ResetBlockStartAsync(error.FailedStep, ct);
-        await ResetFaultIfNoBlockAsync(error.FailedStep, ct);
+        var resetFaultError = await ResetFaultIfNoBlockAsync(error.FailedStep, ct);
+        if (resetFaultError != null)
+        {
+            await HandleFaultWriteFailureWithHardResetAsync(error, "сброс Fault=false", resetFaultError);
+            return;
+        }
 
         _logger.LogDebug("Ожидание сброса сигналов Skip...");
         try

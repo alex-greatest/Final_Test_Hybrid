@@ -19,7 +19,7 @@ public record DiagnosticPingData
     /// ID последней ошибки ЭБУ.
     /// - null = не удалось прочитать регистр ошибки (soft-fail)
     /// - 0 = ошибок нет
-    /// - 1-25 = код ошибки
+    /// - 1-26 = код ошибки
     /// </summary>
     public ushort? LastErrorId { get; init; }
 

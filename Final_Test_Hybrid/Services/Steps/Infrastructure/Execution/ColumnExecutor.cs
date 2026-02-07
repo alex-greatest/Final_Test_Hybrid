@@ -178,8 +178,8 @@ public class ColumnExecutor(
             stepTimingService.StartColumnStepTiming(ColumnIndex, step.Name, step.Description);
             var result = await ExecuteWithEndGuardAsync(step, ct);
             stepTimingService.StopColumnStepTiming(ColumnIndex);
-            await pauseToken.WaitWhilePausedAsync(ct);
             ProcessStepResult(step, result);
+            await pauseToken.WaitWhilePausedAsync(ct);
         }
         catch (OperationCanceledException)
         {

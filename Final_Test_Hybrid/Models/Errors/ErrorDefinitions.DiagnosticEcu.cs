@@ -2,7 +2,7 @@ namespace Final_Test_Hybrid.Models.Errors;
 
 public static partial class ErrorDefinitions
 {
-    // Ошибки ЭБУ котла (ID 1-25)
+    // Ошибки ЭБУ котла (ID 1-26)
     public static readonly ErrorDefinition EcuE9 = new("ЭБУ-E9", "Блокировка при перегреве",
         Severity: ErrorSeverity.Critical, ActivatesResetButton: true);
 
@@ -60,18 +60,20 @@ public static partial class ErrorDefinitions
         Severity: ErrorSeverity.Critical, ActivatesResetButton: true);
     public static readonly ErrorDefinition EcuIE = new("ЭБУ-IE", "Внутренняя ошибка ЭБУ",
         Severity: ErrorSeverity.Critical, ActivatesResetButton: true);
+    public static readonly ErrorDefinition EcuEL = new("ЭБУ-EL", "Потеря пламени: котёл не восстановил пламя за 7 секунд. Проверить электрод розжига или газовый клапан",
+        Severity: ErrorSeverity.Critical, ActivatesResetButton: true);
 
     internal static IEnumerable<ErrorDefinition> DiagnosticEcuErrors =>
     [
         EcuE9, EcuEA, EcuE2, EcuA7, EcuAd, EcuA8, EcuC7, EcuC6, EcuC4, EcuC1,
         EcuFA, EcuD7, EcuFL, EcuCE, EcuCA, EcuP, Ecu11, EcuFD, EcuLA, EcuPE,
-        EcuPd, EcuPA, EcuF7, EcuA9, EcuIE
+        EcuPd, EcuPA, EcuF7, EcuA9, EcuIE, EcuEL
     ];
 
     /// <summary>
-    /// Получить ErrorDefinition по ID ошибки ЭБУ (1-25).
+    /// Получить ErrorDefinition по ID ошибки ЭБУ (1-26).
     /// </summary>
-    /// <param name="errorId">ID ошибки (1-25).</param>
+    /// <param name="errorId">ID ошибки (1-26).</param>
     /// <returns>ErrorDefinition или null для неизвестных ID.</returns>
     public static ErrorDefinition? GetEcuErrorById(ushort errorId) => errorId switch
     {
@@ -79,7 +81,7 @@ public static partial class ErrorDefinitions
         6 => EcuA8, 7 => EcuC7, 8 => EcuC6, 9 => EcuC4, 10 => EcuC1,
         11 => EcuFA, 12 => EcuD7, 13 => EcuFL, 14 => EcuCE, 15 => EcuCA,
         16 => EcuP, 17 => Ecu11, 18 => EcuFD, 19 => EcuLA, 20 => EcuPE,
-        21 => EcuPd, 22 => EcuPA, 23 => EcuF7, 24 => EcuA9, 25 => EcuIE,
+        21 => EcuPd, 22 => EcuPA, 23 => EcuF7, 24 => EcuA9, 25 => EcuIE, 26 => EcuEL,
         _ => null
     };
 }

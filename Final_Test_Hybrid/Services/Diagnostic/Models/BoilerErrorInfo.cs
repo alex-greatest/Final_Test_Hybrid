@@ -3,7 +3,7 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Models;
 /// <summary>
 /// Информация об ошибке котла.
 /// </summary>
-/// <param name="Id">ID ошибки (1-25).</param>
+/// <param name="Id">ID ошибки (1-26).</param>
 /// <param name="DisplayCode">Код на дисплее котла (E1, E7, A4, CE и т.д.).</param>
 /// <param name="Description">Описание ошибки на русском языке.</param>
 public record BoilerErrorInfo(ushort Id, string DisplayCode, string Description);
@@ -40,13 +40,14 @@ public static class BoilerErrors
         [22] = new BoilerErrorInfo(22, "PA", "Ошибка работы насоса, связанная с блокировкой ротора"),
         [23] = new BoilerErrorInfo(23, "F7", "Неисправность катушек клапанов регулятора давления газа"),
         [24] = new BoilerErrorInfo(24, "A9", "Невозможность нагрева бойлера косвенного нагрева из режима защиты от замерзания"),
-        [25] = new BoilerErrorInfo(25, "IE", "Внутренняя ошибка ЭБУ")
+        [25] = new BoilerErrorInfo(25, "IE", "Внутренняя ошибка ЭБУ"),
+        [26] = new BoilerErrorInfo(26, "EL", "Потеря пламени: котёл не восстановил пламя за 7 секунд")
     };
 
     /// <summary>
     /// Получает информацию об ошибке по её ID.
     /// </summary>
-    /// <param name="id">ID ошибки (0-25).</param>
+    /// <param name="id">ID ошибки (0-26).</param>
     /// <returns>Информация об ошибке. Для неизвестных ID возвращает запись с описанием "Неизвестная ошибка".</returns>
     public static BoilerErrorInfo Get(ushort id) =>
         Errors.TryGetValue(id, out var info)

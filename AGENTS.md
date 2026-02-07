@@ -1,5 +1,11 @@
 # Final_Test_Hybrid
 
+## Важность самообучения
+Надо записывать инфу после внесениях правок сюда в AGENTS.md, что сделал,
+чтобы отслеживать процесс и поддерживать контекст постоянно, важные замечания и компромиссы в проект,
+где ошибки допустил и т.п. чтобы обучаться
+
+## Важность критики
 Подвергай сомнению все предположения, ставь под вопрос логику, выявляй слабые места и слепые зоны
 Указывай на слабую логику, самообман, отговорки, мелкое мышление, недооценку рисков
 Никакого смягчения, лести, пустых похвал или расплывчатых советов
@@ -154,6 +160,8 @@ public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestS
 - Для runtime OPC-подписок при reconnect использовать только полный rebuild (`новая Session + RecreateForSessionAsync`), без гибридного ручного rebind.
 - Спиннер `Выполняется подписка` показывать только при фактическом старте реальных подписок (после готовности соединения), а не на фазе retry/reconnect попыток.
 - Для `Coms/Check_Comms` (`CheckCommsStep`) при `AutoReady = false` шаг должен завершаться `NoDiagnosticConnection` (fail-fast по результату шага), а при неуспешном завершении шага `IModbusDispatcher` должен останавливаться (`StopAsync`), чтобы не оставлять reconnect в фоне. Показ диалога резолюции при `AutoReady OFF` может быть отложен до восстановления автомата (`AutoReady = true`) — это допустимое поведение. Пропуск этого шага недопустим (`INonSkippable`); `Retry` имеет смысл только после восстановления `AutoReady`.
+- Fail-результат шага в execution-flow должен фиксироваться в `ColumnExecutor` **до** `pauseToken.WaitWhilePausedAsync`; иначе ошибка может «застрять» до Resume и не попасть вовремя в error-queue.
+- Для non-PLC шагов запись `BaseTags.Fault` (`true/false`) обязательна с bounded retry (до 3 попыток, 250 мс). Если запись Fault не удалась после retry — fail-fast в `HardReset` (`_errorCoordinator.Reset()` + остановка текущего прогона).
 - Для стартовой подписки execution-шагов использовать `IRequiresPlcSubscriptions` (интерфейс наследует `IRequiresPlcTags`): шаги только с `IRequiresPlcTags` в runtime-подписку не попадают.
 - `IRequiresPlcTags` оставлять как базовый/валидационный контракт для pre-execution шагов (например `BlockBoilerAdapterStep`), без обязательной подписки monitored items при старте.
 - `BaseTags.AskEnd` считать системным preload-тегом: добавлять в стартовые системные подписки (`ErrorPlcMonitor.ValidateTagsAsync`), а не оставлять только как on-demand подписку первого reset.

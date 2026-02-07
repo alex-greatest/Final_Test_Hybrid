@@ -9,6 +9,9 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 
 public partial class TestExecutionCoordinator
 {
+    private const int FaultWriteMaxAttempts = 3;
+    private const int FaultWriteRetryDelayMs = 250;
+
     /// <summary>
     /// Устанавливает тег Selected для PLC-блока.
     /// </summary>
@@ -34,29 +37,61 @@ public partial class TestExecutionCoordinator
     /// <summary>
     /// Устанавливает Fault для шагов без PLC-блока.
     /// </summary>
-    private async Task SetFaultIfNoBlockAsync(ITestStep? step, CancellationToken ct)
+    private async Task<string?> SetFaultIfNoBlockAsync(ITestStep? step, CancellationToken ct)
     {
         if (step is IHasPlcBlockPath)
         {
-            return;
+            return null;
         }
 
         _logger.LogDebug("Установка Fault=true для шага без блока");
-        await _plcService.WriteAsync(BaseTags.Fault, true, ct);
+        return await WriteFaultWithRetryAsync(true, ct);
     }
 
     /// <summary>
     /// Сбрасывает Fault для шагов без PLC-блока.
     /// </summary>
-    private async Task ResetFaultIfNoBlockAsync(ITestStep? step, CancellationToken ct)
+    private async Task<string?> ResetFaultIfNoBlockAsync(ITestStep? step, CancellationToken ct)
     {
         if (step is IHasPlcBlockPath)
         {
-            return;
+            return null;
         }
 
         _logger.LogDebug("Сброс Fault=false для шага без блока");
-        await _plcService.WriteAsync(BaseTags.Fault, false, ct);
+        return await WriteFaultWithRetryAsync(false, ct);
+    }
+
+    private async Task<string?> WriteFaultWithRetryAsync(bool value, CancellationToken ct)
+    {
+        var action = value ? "установки" : "сброса";
+        var lastError = "неизвестная ошибка";
+
+        for (var attempt = 1; attempt <= FaultWriteMaxAttempts; attempt++)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var result = await _plcService.WriteAsync(BaseTags.Fault, value, ct);
+            if (result.Success)
+            {
+                return null;
+            }
+
+            lastError = result.Error ?? "неизвестная ошибка";
+            _logger.LogWarning(
+                "Ошибка {Action} Fault (попытка {Attempt}/{MaxAttempts}): {Error}",
+                action,
+                attempt,
+                FaultWriteMaxAttempts,
+                lastError);
+
+            if (attempt < FaultWriteMaxAttempts)
+            {
+                await Task.Delay(FaultWriteRetryDelayMs, ct);
+            }
+        }
+
+        return lastError;
     }
 
     /// <summary>
