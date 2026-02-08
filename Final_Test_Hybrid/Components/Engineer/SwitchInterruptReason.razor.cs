@@ -1,11 +1,9 @@
-using Final_Test_Hybrid.Components.Engineer.Modals;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 using Microsoft.AspNetCore.Components;
-using Radzen;
 
 namespace Final_Test_Hybrid.Components.Engineer;
 
@@ -13,8 +11,6 @@ public partial class SwitchInterruptReason
 {
     [Inject]
     public required AppSettingsService AppSettingsService { get; set; }
-    [Inject]
-    public required DialogService DialogService { get; set; }
     [Inject]
     public required PreExecutionCoordinator PreExecution { get; set; }
     [Inject]
@@ -45,27 +41,15 @@ public partial class SwitchInterruptReason
         InvokeAsync(StateHasChanged);
     }
 
-    private async Task OnSwitchClick()
+    private Task OnSwitchClick()
     {
         if (IsDisabled)
         {
-            return;
-        }
-        var result = await ShowPasswordDialog();
-        if (!result)
-        {
-            return;
+            return Task.CompletedTask;
         }
         _useInterruptReason = !_useInterruptReason;
         AppSettingsService.SaveUseInterruptReason(_useInterruptReason);
-    }
-
-    private async Task<bool> ShowPasswordDialog()
-    {
-        var result = await DialogService.OpenAsync<PasswordDialog>("Введите пароль",
-            new Dictionary<string, object>(),
-            new DialogOptions { Width = "350px", CloseDialogOnOverlayClick = false });
-        return result is true;
+        return Task.CompletedTask;
     }
 
     public void Dispose()

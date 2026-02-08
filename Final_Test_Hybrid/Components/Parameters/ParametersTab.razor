@@ -1,0 +1,51 @@
+@using Final_Test_Hybrid.Services.SpringBoot.Recipe
+
+<div style="display: flex; flex-direction: row; gap: 20px; height: 100%; padding: 20px;">
+    <div style="flex: 2; min-width: 0;">
+        <RadzenDataGrid Data="@_recipes" TItem="RecipeResponseDto"
+                        AllowSorting="true"
+                        AllowFiltering="true"
+                        ColumnWidth="120px"
+                        FilterText="@DataGridRu.Filter"
+                        ApplyFilterText="@DataGridRu.ApplyFilter"
+                        ClearFilterText="@DataGridRu.ClearFilter"
+                        EqualsText="@DataGridRu.Equals"
+                        NotEqualsText="@DataGridRu.NotEquals"
+                        ContainsText="@DataGridRu.Contains"
+                        DoesNotContainText="@DataGridRu.DoesNotContain"
+                        StartsWithText="@DataGridRu.StartsWith"
+                        EndsWithText="@DataGridRu.EndsWith"
+                        GreaterThanText="@DataGridRu.GreaterThan"
+                        GreaterThanOrEqualsText="@DataGridRu.GreaterThanOrEquals"
+                        LessThanText="@DataGridRu.LessThan"
+                        LessThanOrEqualsText="@DataGridRu.LessThanOrEquals"
+                        IsNullText="@DataGridRu.IsNull"
+                        IsNotNullText="@DataGridRu.IsNotNull"
+                        IsEmptyText="@DataGridRu.IsEmpty"
+                        IsNotEmptyText="@DataGridRu.IsNotEmpty"
+                        AndOperatorText="@DataGridRu.And"
+                        OrOperatorText="@DataGridRu.Or"
+                        EmptyText="@DataGridRu.Empty"
+                        Style="height: 100%;">
+            <Columns>
+                <RadzenDataGridColumn TItem="RecipeResponseDto" Property="TagName"
+                                      Title="Название параметра" />
+                <RadzenDataGridColumn TItem="RecipeResponseDto" Property="Value"
+                                      Title="Значение" />
+            </Columns>
+        </RadzenDataGrid>
+    </div>
+    <div style="flex: 1; min-width: 0;">
+        <RadzenDataGrid Data="@_boilerParams" TItem="BoilerParam"
+                        ColumnWidth="120px"
+                        EmptyText="@DataGridRu.Empty"
+                        Style="height: 100%;">
+            <Columns>
+                <RadzenDataGridColumn TItem="BoilerParam" Property="Name"
+                                      Title="Параметр" />
+                <RadzenDataGridColumn TItem="BoilerParam" Property="Value"
+                                      Title="Значение" />
+            </Columns>
+        </RadzenDataGrid>
+    </div>
+</div>

@@ -1,10 +1,16 @@
 <div class="engineering-container">
     <div class="button-stack">
+        <RadzenButton Text="Основные настройки" Icon="settings" Class="eng-btn"
+                      Click="@(() => OnButtonClick(OpenMainSettingsDialog))"
+                      Disabled="@IsMainSettingsDisabled" />
+
         <RadzenButton Text="Hand Program" Icon="build" Class="eng-btn btn-icon-red"
-                      Click="@(() => OnButtonClick(OnHandProgram))" />
+                      Click="@(() => OnButtonClick(OnHandProgram))"
+                      Disabled="@IsMainSettingsDisabled" />
 
         <RadzenButton Text="IO Editor" Icon="memory" Class="eng-btn btn-icon-green"
-                      Click="@(() => OnButtonClick(OnIoEditor))" />
+                      Click="@(() => OnButtonClick(OnIoEditor))"
+                      Disabled="@IsMainSettingsDisabled" />
 
         @* <RadzenButton Text="AI & RTD Correction" Icon="speed" Class="eng-btn"
                       Click="@(() => OnButtonClick(OnAiRtdCorrection))" /> *@
@@ -23,12 +29,5 @@
 
         <RadzenButton Text="База данных стенда" Icon="storage" Class="eng-btn"
                       Click="@(() => OnButtonClick(OpenStandDatabase))" />
-    </div>
-    <div class="settings-panel">
-        <SwitchMes />
-        <SwitchExcelExport />
-        <SwitchInterruptReason />
-        <OperatorAuthorizationQr />
-        <AdminAuthorizationQr />
     </div>
 </div>

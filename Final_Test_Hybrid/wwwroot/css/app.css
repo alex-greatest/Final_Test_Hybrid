@@ -306,6 +306,55 @@ svg {
     padding: 0 !important;
 }
 
+/* ===== MAIN SETTINGS DIALOG ===== */
+.main-settings-dialog .rz-dialog-titlebar {
+    padding: 0 !important;
+    min-height: auto !important;
+    height: 46px !important;
+    background-color: #f0f0f0 !important;
+    border-bottom: 1px solid #ccc !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+.main-settings-dialog .rz-dialog-title {
+    font-size: 26px !important;
+    font-weight: bold !important;
+    margin-left: 15px !important;
+    line-height: 46px !important;
+    color: #333;
+}
+
+.main-settings-dialog .rz-dialog-titlebar-close {
+    width: 66px !important;
+    height: 46px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background-color: transparent !important;
+    opacity: 1 !important;
+}
+
+.main-settings-dialog .rz-dialog-titlebar-close:hover {
+    background-color: #e81123 !important;
+    color: white !important;
+}
+
+.main-settings-dialog .rz-dialog-titlebar-close .rzi {
+    font-size: 20px !important;
+    transform: scale(1.4) !important;
+    font-weight: 900 !important;
+    display: block !important;
+}
+
+.main-settings-dialog .rz-dialog-content {
+    height: calc(100% - 46px) !important;
+    padding: 0 !important;
+}
+
 /* ===== HAND PROGRAM DIALOG ===== */
 .hand-program-dialog .rz-dialog-titlebar {
     padding: 0 !important;

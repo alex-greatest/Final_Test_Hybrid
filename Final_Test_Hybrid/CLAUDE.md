@@ -1,5 +1,6 @@
 # Final_Test_Hybrid
 
+## Важность критики
 Подвергай сомнению все предположения, ставь под вопрос логику, выявляй слабые места и слепые зоны
 Указывай на слабую логику, самообман, отговорки, мелкое мышление, недооценку рисков
 Никакого смягчения, лести, пустых похвал или расплывчатых советов
@@ -78,7 +79,7 @@ public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestS
 - Если метод начинает разрастаться или требует больше одной основной управляющей конструкции — **сразу** упрощать: выносить ветки в `private` helper-методы (в том же partial), не откладывая на потом.
 - `var` везде, `{}` обязательны, **max 300 строк** сервисы  → partial classes
 - **PascalCase:** типы, методы | **camelCase:** локальные, параметры
-- Предпочитай `switch` и тернарный оператор где разумно
+- Предпочитай `switch`, тернарный оператор и `LINQ`, когда это уместно
 
 ## Язык и кодировка
 
@@ -135,7 +136,22 @@ public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestS
 ## Периодичность проверок
 
 - После каждого значимого изменения в логике (reconnect/reset/error flow) запускать минимум dotnet build.
+- После каждого значимого изменения запускать `jb inspectcode` по **изменённым** `*.cs` (новый код), а не по всей solution.
+- Не запускать `jb inspectcode` после каждого микрошагa/косметики; запускать по завершении логического блока, иначе теряется время и ухудшается signal/noise.
 - Перед сдачей изменений обязательно выполнять полный чек-лист верификации.
+- Полный `jb inspectcode` по всей solution выполнять отдельно (перед крупным merge/в CI по расписанию), чтобы не блокировать локальный цикл разработки шумом legacy-замечаний.
+
+Пример (PowerShell, только новый код):
+```powershell
+$changedCs = git diff --name-only --diff-filter=ACMR HEAD -- '*.cs'
+if ($changedCs.Count -gt 0)
+{
+    $include = ($changedCs | ForEach-Object { $_.Replace('\', '/') }) -join ';'
+    $reportPath = Join-Path $env:TEMP 'jb-inspectcode.txt'
+    jb inspectcode Final_Test_Hybrid.slnx "--include=$include" --no-build --format=Text "--output=$reportPath" -e=WARNING
+    Write-Host "InspectCode report: $reportPath"
+}
+```
 
 ## Обязательный чек-лист верификации
 
@@ -153,8 +169,12 @@ public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestS
 - Логика таймера переналадки не меняется при фиксе reset/reconnect; любые правки reset не должны ломать существующий changeover-flow.
 - Для runtime OPC-подписок при reconnect использовать только полный rebuild (`новая Session + RecreateForSessionAsync`), без гибридного ручного rebind.
 - Спиннер `Выполняется подписка` показывать только при фактическом старте реальных подписок (после готовности соединения), а не на фазе retry/reconnect попыток.
+- Для `Coms/Check_Comms` (`CheckCommsStep`) при `AutoReady = false` шаг должен завершаться `NoDiagnosticConnection` (fail-fast по результату шага), а при неуспешном завершении шага `IModbusDispatcher` должен останавливаться (`StopAsync`), чтобы не оставлять reconnect в фоне. Показ диалога резолюции при `AutoReady OFF` может быть отложен до восстановления автомата (`AutoReady = true`) — это допустимое поведение. Пропуск этого шага недопустим (`INonSkippable`); `Retry` имеет смысл только после восстановления `AutoReady`.
+- Fail-результат шага в execution-flow должен фиксироваться в `ColumnExecutor` **до** `pauseToken.WaitWhilePausedAsync`; иначе ошибка может «застрять» до Resume и не попасть вовремя в error-queue.
+- Для non-PLC шагов запись `BaseTags.Fault` (`true/false`) обязательна с bounded retry (до 3 попыток, 250 мс). Если запись Fault не удалась после retry — fail-fast в `HardReset` (`_errorCoordinator.Reset()` + остановка текущего прогона).
 - Для стартовой подписки execution-шагов использовать `IRequiresPlcSubscriptions` (интерфейс наследует `IRequiresPlcTags`): шаги только с `IRequiresPlcTags` в runtime-подписку не попадают.
 - `IRequiresPlcTags` оставлять как базовый/валидационный контракт для pre-execution шагов (например `BlockBoilerAdapterStep`), без обязательной подписки monitored items при старте.
+- `BaseTags.AskEnd` считать системным preload-тегом: добавлять в стартовые системные подписки (`ErrorPlcMonitor.ValidateTagsAsync`), а не оставлять только как on-demand подписку первого reset.
 - Для `PlcResetCoordinator` таймауты reset-flow берутся из `OpcUa:ResetFlowTimeouts`:
   `AskEndTimeoutSec` (ожидание AskEnd), `ReconnectWaitTimeoutSec` (одно ожидание reconnect), `ResetHardTimeoutSec` (общий дедлайн).
   `ResetHardTimeoutSec` должен быть `>=` двух остальных; по таймауту — `TagTimeout` + `OnResetCompleted`.
@@ -163,8 +183,11 @@ public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestS
 - В completion-flow ошибка `SaveAsync` трактуется как recoverable save-failure (через retry/dialog), а не как причина падения main loop.
 - В pre-execution при `OpcUaConnectionState.IsConnected = false` блокировать **оба канала** barcode:
   `BoilerInfo` (ручной ввод read-only) и `BarcodeDebounceHandler` (игнор скана). Фикс только в UI без гейтинга в pipeline недопустим.
+- В pre-execution при `PreExecutionCoordinator.IsAcceptingInput = true` и `OpcUaConnectionState.IsConnected = false`
+  Scan-таймер должен быть на паузе; возобновление допустимо только после восстановления связи и только при активном scan-mode (без reset-фазы).
 - При чтении/проверке текстовых файлов через CLI явно использовать UTF-8 (`Get-Content -Encoding UTF8`), чтобы не принимать артефакты декодирования за порчу файла.
 - Если в изменяемом файле найден текст вида `РџР.../РѕР...`, это дефект: исправлять в том же изменении и проверять файл повторным чтением в UTF-8.
+- Для ECU error flow по ping: `1047` считать «последней сохранённой», а не «всегда активной» ошибкой; поднимать ошибку в `ErrorService` только в lock-контексте (`1005 in {1,2}` + whitelist `111.txt`), вне lock — очищать.
 
 ## Компромиссы (временные)
 

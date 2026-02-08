@@ -6,6 +6,7 @@
 @using Final_Test_Hybrid.Components.Main
 @using Final_Test_Hybrid.Components.Overview
 @using Final_Test_Hybrid.Components.Loading
+@using Final_Test_Hybrid.Components.Parameters
 @using Final_Test_Hybrid.Components.Schemes
 @using Final_Test_Hybrid.Components.Main.Parameter
 @using Final_Test_Hybrid.Services.OpcUa
@@ -140,6 +141,11 @@
                                 </RadzenTabsItem>
                             </Tabs>
                         </RadzenTabs>
+                    </div>
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Параметры">
+                    <div style="height: 100%;">
+                        <ParametersTab />
                     </div>
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Ошибки">

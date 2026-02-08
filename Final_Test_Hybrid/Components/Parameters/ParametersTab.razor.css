@@ -1,0 +1,40 @@
+/* Заголовки колонок */
+::deep .rz-data-grid .rz-column-title {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+/* Данные в ячейках */
+::deep .rz-data-grid .rz-cell-data {
+    font-size: 19px;
+    color: black !important;
+    white-space: nowrap;
+}
+
+/* Таблица на всю ширину */
+::deep .rz-grid-table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: collapse;
+}
+
+/* Рамки ячеек */
+::deep .rz-data-grid th,
+::deep .rz-data-grid td {
+    border: 1px solid #ccc !important;
+}
+
+/* Заголовки — видимый overflow */
+::deep .rz-data-grid th {
+    padding: 10px 8px !important;
+    overflow: visible !important;
+    line-height: 1.2 !important;
+    height: auto !important;
+}
+
+::deep .rz-data-grid th .rz-column-title {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
+    height: auto;
+}

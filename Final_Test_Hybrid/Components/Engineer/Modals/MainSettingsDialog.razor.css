@@ -1,0 +1,56 @@
+.main-settings-dialog-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 12px 20px;
+}
+
+.main-settings-dialog-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: 100%;
+    max-width: 640px;
+}
+
+.main-settings-dialog-content ::deep .switch-mes,
+.main-settings-dialog-content ::deep .switch-excel-export,
+.main-settings-dialog-content ::deep .switch-interrupt-reason,
+.main-settings-dialog-content ::deep .checkbox-setting {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    column-gap: 18px;
+    width: 100%;
+    margin-top: 0;
+}
+
+.main-settings-dialog-content ::deep .switch-wrapper,
+.main-settings-dialog-content ::deep .checkbox-wrapper {
+    margin-bottom: 0;
+}
+
+@media (max-width: 900px) {
+    .main-settings-dialog-content {
+        padding: 10px 12px;
+    }
+
+    .main-settings-dialog-stack {
+        gap: 12px;
+    }
+
+    .main-settings-dialog-content ::deep .switch-mes,
+    .main-settings-dialog-content ::deep .switch-excel-export,
+    .main-settings-dialog-content ::deep .switch-interrupt-reason,
+    .main-settings-dialog-content ::deep .checkbox-setting {
+        column-gap: 10px;
+    }
+
+    .main-settings-dialog-content ::deep .switch-mes-label,
+    .main-settings-dialog-content ::deep .switch-excel-export-label,
+    .main-settings-dialog-content ::deep .switch-interrupt-reason-label,
+    .main-settings-dialog-content ::deep .checkbox-setting-label {
+        font-size: 20px;
+    }
+}

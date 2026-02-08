@@ -18,6 +18,24 @@
 
 ## Активные записи
 
+### 2026-02-08 (MainSettingsDialog: центрирование и chrome как StandDatabase)
+- Что изменили: для `main-settings-dialog` добавили глобальные стили titlebar/close в `app.css` по шаблону `stand-database-dialog`; в `MainSettingsDialog` ввели внутренний stack и локальную нормализацию отступов (`margin-top/margin-bottom`) для `Switch*`/`*AuthorizationQr`; размер окна уменьшили до `760x520`.
+- Почему: без глобальных правил у диалога ломались заголовок/крестик, а без локального контейнера строки галочек не центрировались и визуально «плыли».
+- Риск/урок: стили Radzen-диалога нужно задавать только глобально (`wwwroot/css/app.css`), а выравнивание дочерних компонентов — локально в `.razor.css` контейнера, иначе появляется конфликт scoped/global правил.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/Components/Engineer/MainEngineering.razor.cs`, `Final_Test_Hybrid/Components/Engineer/Modals/MainSettingsDialog.razor`, `Final_Test_Hybrid/Components/Engineer/Modals/MainSettingsDialog.razor.css`
+
+### 2026-02-08 (Engineer settings: убран пароль с клика галочек)
+- Что изменили: удалили шаг `PasswordDialog` из обработчиков клика в `SwitchMes`, `SwitchExcelExport`, `SwitchInterruptReason`, `OperatorAuthorizationQr`, `AdminAuthorizationQr`; переключение теперь выполняется сразу после проверки `IsDisabled`.
+- Почему: требование UX — пароль нужен только на входе в `основные настройки`, а не на каждом переключателе.
+- Риск/урок: важно отделять security-gate экрана от бизнес-логики компонентов; при этом блокировки и ветвления (`IsDisabled`, logout в MES) должны оставаться неизменными.
+- Ссылки: `Final_Test_Hybrid/Components/Engineer/SwitchMes.razor.cs`, `Final_Test_Hybrid/Components/Engineer/SwitchExcelExport.razor.cs`, `Final_Test_Hybrid/Components/Engineer/SwitchInterruptReason.razor.cs`, `Final_Test_Hybrid/Components/Engineer/OperatorAuthorizationQr.razor.cs`, `Final_Test_Hybrid/Components/Engineer/AdminAuthorizationQr.razor.cs`
+
+### 2026-02-08 (Engineer: основные настройки вынесены в модальный диалог)
+- Что изменили: в `MainEngineering` добавили первую кнопку `Основные настройки` (под паролем), перенесли `SwitchMes/SwitchExcelExport/SwitchInterruptReason/OperatorAuthorizationQr/AdminAuthorizationQr` в новый `MainSettingsDialog` и убрали их с основной страницы.
+- Почему: панель с галочками перегружала экран Engineer; отдельный крупный диалог делает настройки компактными и управляемыми.
+- Риск/урок: блокировка кнопки должна совпадать с `SwitchMes` (4 условия), при этом блокировка самих галочек внутри компонентов не должна ослабляться.
+- Ссылки: `Final_Test_Hybrid/Components/Engineer/MainEngineering.razor`, `Final_Test_Hybrid/Components/Engineer/MainEngineering.razor.cs`, `Final_Test_Hybrid/Components/Engineer/Modals/MainSettingsDialog.razor`
+
 ### 2026-02-08 (IoEditorDialog: автоперезагрузка после reconnect)
 - Что изменили: в `IoEditorDialog` объединили загрузку в `ReloadAllDataAsync`; при `ConnectionStateChanged(true)` теперь выполняется полная перезагрузка секций `AI/RTD/PID/AO` с пересозданием snapshot и сбросом inline-edit состояния.
 - Почему: `IoEditorDialog` не использует runtime-подписки как схема, поэтому без явного reload после reconnect показывал устаревшие значения.
@@ -77,6 +95,12 @@
 - Почему: снизили стоимость чтения контекста и риск дублирования фактов в активном логе.
 - Риск/урок: активный лог должен оставаться оперативным индексом, а не подробным narrative.
 - Ссылки: `Final_Test_Hybrid/LEARNING_LOG.md`, `Final_Test_Hybrid/LEARNING_LOG_ARCHIVE.md`
+
+### 2026-02-08 (Engineer: одинаковая блокировка Hand Program и IO Editor)
+- Что изменили: в `MainEngineering` добавили `Disabled="@IsMainSettingsDisabled"` для кнопок `Hand Program` и `IO Editor`; в `OnHandProgram/OnIoEditor` добавили fail-safe early-return при активной блокировке.
+- Почему: кнопки инженерных модалок должны блокироваться теми же 4 условиями, что и `Основные настройки`, чтобы исключить запуск диалогов в недопустимых фазах.
+- Риск/урок: UI-блокировки недостаточно без runtime guard; обработчики открытия тоже обязаны валидировать текущее состояние.
+- Ссылки: `Final_Test_Hybrid/Components/Engineer/MainEngineering.razor`, `Final_Test_Hybrid/Components/Engineer/MainEngineering.razor.cs`
 
 ### 2026-02-07 (диагностика: Ping/BoilerLock/ECU)
 - Что изменили: зафиксировали `PingCommand` как read-only слой; добавили runtime `BoilerLock` и fail-safe/recovery в ping-flow; для ECU ошибок перевели активацию в lock-контекст (`1005 in {1,2}` + whitelist `111.txt`).
