@@ -23,12 +23,6 @@ public sealed class BoilerLockRuntimeService : IDisposable
     private const ushort ResetBlockageValue = 0;
     private const uint StandModeKey = 0xD7F8_DB56;
 
-    // Коды из 111.txt
-    private static readonly HashSet<ushort> TargetErrorIds =
-    [
-        1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 18, 23, 26
-    ];
-
     private readonly IModbusDispatcher _dispatcher;
     private readonly AccessLevelManager _accessLevelManager;
     private readonly RegisterReader _reader;
@@ -164,7 +158,8 @@ public sealed class BoilerLockRuntimeService : IDisposable
         return config is { Enabled: true, PauseOnStatus1Enabled: true }
                && _activityTracker.IsTestExecutionActive
                && data.BoilerStatus == StatusPauseBranch
-               && IsTargetError(data.LastErrorId);
+               && data.LastErrorId is { } errorId
+               && BoilerLockCriteria.IsTargetErrorId(errorId);
     }
 
     private bool ShouldSignalOnStatus2(DiagnosticPingData data)
@@ -173,12 +168,8 @@ public sealed class BoilerLockRuntimeService : IDisposable
         return config is { Enabled: true, PlcSignalOnStatus2Enabled: true }
                && _activityTracker.IsTestExecutionActive
                && data.BoilerStatus == StatusPlcSignalBranch
-               && IsTargetError(data.LastErrorId);
-    }
-
-    private static bool IsTargetError(ushort? errorId)
-    {
-        return errorId.HasValue && TargetErrorIds.Contains(errorId.Value);
+               && data.LastErrorId is { } errorId
+               && BoilerLockCriteria.IsTargetErrorId(errorId);
     }
 
     private void HandleStatus2Branch(DiagnosticPingData data)

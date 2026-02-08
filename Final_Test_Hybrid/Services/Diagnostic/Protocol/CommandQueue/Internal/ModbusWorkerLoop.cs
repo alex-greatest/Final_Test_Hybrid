@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Services.Common.Logging;
+using System.Threading.Channels;
 
 namespace Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue.Internal;
 
@@ -9,10 +10,12 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue.Internal;
 /// </summary>
 internal sealed class ModbusWorkerLoop
 {
+    private const int DefaultHighBurstBeforeLow = 8;
     private readonly ModbusConnectionManager _connectionManager;
     private readonly ModbusCommandQueue _commandQueue;
     private readonly ModbusDispatcherOptions _options;
     private readonly IDualLogger _logger;
+    private int _highBurstCounter;
 
     /// <summary>
     /// Вызывается при первой успешной команде.
@@ -107,24 +110,10 @@ internal sealed class ModbusWorkerLoop
             return null;
         }
 
-        // Сначала обрабатываем все высокоприоритетные команды
-        while (highQueue.Reader.TryRead(out var highCmd))
+        var nextCommand = TryDequeueNextCommand(highQueue, lowQueue);
+        if (nextCommand != null)
         {
-            if (!highCmd.CancellationToken.IsCancellationRequested)
-            {
-                return highCmd;
-            }
-            highCmd.SetCanceled();
-        }
-
-        // Затем одну низкоприоритетную
-        if (lowQueue.Reader.TryRead(out var lowCmd))
-        {
-            if (!lowCmd.CancellationToken.IsCancellationRequested)
-            {
-                return lowCmd;
-            }
-            lowCmd.SetCanceled();
+            return nextCommand;
         }
 
         // Ждём новую команду с таймаутом
@@ -144,6 +133,57 @@ internal sealed class ModbusWorkerLoop
         {
             return null; // Таймаут - проверим снова
         }
+    }
+
+    private IModbusCommand? TryDequeueNextCommand(
+        Channel<IModbusCommand> highQueue,
+        Channel<IModbusCommand> lowQueue)
+    {
+        var highBurstLimit = GetHighBurstLimit();
+        if (ShouldTryLowQueue(highBurstLimit) && TryReadActiveCommand(lowQueue, out var lowFirst))
+        {
+            _highBurstCounter = 0;
+            return lowFirst;
+        }
+        if (TryReadActiveCommand(highQueue, out var highCommand))
+        {
+            _highBurstCounter++;
+            return highCommand;
+        }
+        if (TryReadActiveCommand(lowQueue, out var lowCommand))
+        {
+            _highBurstCounter = 0;
+            return lowCommand;
+        }
+
+        return null;
+    }
+
+    private bool ShouldTryLowQueue(int highBurstLimit)
+    {
+        return _highBurstCounter >= highBurstLimit;
+    }
+
+    private static bool TryReadActiveCommand(Channel<IModbusCommand> queue, out IModbusCommand command)
+    {
+        while (queue.Reader.TryRead(out var queuedCommand))
+        {
+            if (!queuedCommand.CancellationToken.IsCancellationRequested)
+            {
+                command = queuedCommand;
+                return true;
+            }
+
+            queuedCommand.SetCanceled();
+        }
+
+        command = null!;
+        return false;
+    }
+
+    private int GetHighBurstLimit()
+    {
+        return _options.HighBurstBeforeLow > 0 ? _options.HighBurstBeforeLow : DefaultHighBurstBeforeLow;
     }
 
     /// <summary>

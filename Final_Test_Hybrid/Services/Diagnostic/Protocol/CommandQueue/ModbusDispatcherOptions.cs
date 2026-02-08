@@ -32,6 +32,12 @@ public class ModbusDispatcherOptions
     public int PingIntervalMs { get; set; } = 5000;
 
     /// <summary>
+    /// Максимум High-команд подряд перед обязательной попыткой взять одну Low-команду.
+    /// Защищает low-очередь от starvation при постоянной high-нагрузке.
+    /// </summary>
+    public int HighBurstBeforeLow { get; set; } = 8;
+
+    /// <summary>
     /// Пауза после открытия COM-порта перед началом работы (мс).
     /// Даёт устройству время на инициализацию после Close → Open.
     /// 0 = без паузы.

@@ -18,44 +18,38 @@
 
 ## Активные записи
 
-### 2026-02-07 (диагностика Modbus: 111.txt)
-- Что изменили: подтвердили, что `PingCommand` читает данные и не выполняет причинно-следственную валидацию; маппинг идёт по `LastErrorId`.
-- Почему: источник истины для прод-ошибок — ЭБУ, а локальные эвристики дают риск ложных трактовок.
-- Риск/урок: не подменять слой чтения (`PingCommand`) логикой классификации.
-- Ссылки: `Final_Test_Hybrid/Services/Diagnostic/Services/EcuErrorSyncService.cs`
+### 2026-02-08 (CH_Start_Max/Min_Heatout: упрощение через статус 1005)
+- Что изменили: в `ChStartMaxHeatoutStep` и `ChStartMinHeatoutStep` убрали проверку токов/лимитов (`IProvideLimits`, чтение 1014) и заменили ветку `Ready_2` на чтение регистра `1005` с проверкой значения `6`; при несовпадении/ошибке чтения записывается `Fault=true`, флаг retry сохраняется в `context.Variables`, ожидание идёт по `Error`; на retry сначала выполняется `SetStandModeAsync`, затем шаг запускается с начала.
+- Почему: для этих шагов требуется контроль статуса котла, а не ионизационного тока; упрощение убирает лишнюю логику и делает fail/retry поведение предсказуемым.
+- Риск/урок: если fault-flow завязан на `Error`, нельзя ждать `End` после `Fault=true`; иначе получаем зависание ожидания.
+- Ссылки: `Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMaxHeatoutStep.cs`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMinHeatoutStep.cs`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMaxHeatoutStepOld.cs`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMinHeatoutStepOld.cs`
 
-### 2026-02-07 (BoilerLock runtime)
-- Что изменили: добавили управляемую через `appsettings` runtime-логику BoilerLock, новый interrupt и recovery-check от вечной паузы.
-- Почему: нужна безопасная реакция на блокировки котла без остановки ping-потока.
-- Риск/урок: условия постановки/снятия паузы должны быть симметричны, иначе неизбежно зависание.
-- Ссылки: `Final_Test_Hybrid/Docs/BoilerLockGuide.md`, `Final_Test_Hybrid/MessageServiceDescription.md`
+### 2026-02-08 (Modbus queue: fairness для ping без повышения приоритета)
+- Что изменили: в `ModbusWorkerLoop` добавили правило `HighBurstBeforeLow` — после `8` подряд выполненных `High` делается попытка взять одну `Low` команду.
+- Почему: при длинной серии High-команд ping (`Low`) мог голодать и обновляться с большой задержкой.
+- Риск/урок: даже когда все бизнес-операции важнее ping, нужна bounded fairness, иначе low-канал может застрять навсегда под постоянной high-нагрузкой.
+- Ссылки: `Final_Test_Hybrid/Services/Diagnostic/Protocol/CommandQueue/Internal/ModbusWorkerLoop.cs`, `Final_Test_Hybrid/Services/Diagnostic/Protocol/CommandQueue/ModbusDispatcherOptions.cs`, `Final_Test_Hybrid/appsettings.json`
 
-### 2026-02-07 (документация BoilerLock)
-- Что изменили: выделили единый источник истины и оставили короткие ссылки в соседних документах.
-- Почему: снизили риск рассинхрона между несколькими описаниями одной логики.
-- Риск/урок: один подробный guide + короткие ссылки лучше, чем дублирование.
-- Ссылки: `Final_Test_Hybrid/Docs/BoilerLockGuide.md`
+### 2026-02-08 (SoftCodePlug: корректная трактовка NumberOfContours)
+- Что изменили: в `WriteSoftCodePlugStep` и `ReadSoftCodePlugStep` перевели `IsDualCircuit` с условия `== 2` на enum-проверку `ConnectionType.DualCircuit` (`== 1` по 1054); после правки прошли `dotnet build Final_Test_Hybrid.slnx`, `dotnet format analyzers --verify-no-changes` и `dotnet format style --verify-no-changes`.
+- Почему: устранён конфликт между рецептом `NumberOfContours` и картой регистра 1054 (`0/1/2/3`), из-за которого двухконтурный (`1`) ошибочно считался одноконтурным.
+- Риск/урок: нельзя смешивать «тип подключения» и «количество контуров» как свободные числа; в критичных ветвлениях использовать именованные enum-значения.
+- Ссылки: `Final_Test_Hybrid/Services/Steps/Steps/Coms/WriteSoftCodePlugStep.cs`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.cs`, `Final_Test_Hybrid/Services/Diagnostic/Models/Enums/ConnectionType.cs`
 
-### 2026-02-07 (спиннер PLC-подписок)
-- Что изменили: спиннер теперь показывается только в фазе реальной подписки после готовности соединения.
-- Почему: убрали ложный UX-сигнал на старте без PLC в фазе reconnect/retry.
-- Риск/урок: индикатор операции должен быть привязан к реальной фазе выполнения, а не к инверсному флагу «не завершено».
-- Ссылки: `Final_Test_Hybrid/Services/OpcUa/PlcSubscriptionState.cs`, `Final_Test_Hybrid/Services/OpcUa/PlcInitializationCoordinator.cs`
-
-### 2026-02-07 (оптимизация LEARNING_LOG)
-- Что изменили: ввели ротацию и компактный формат активного лога; развернутую историю вынесли в архив.
-- Почему: ограничили рост файла и снизили стоимость чтения контекста.
-- Риск/урок: без лимитов и шаблона журнал быстро превращается в несопровождаемый narrative.
+### 2026-02-08 (оптимизация LEARNING_LOG)
+- Что изменили: сжали активный журнал через консолидацию однотипных записей за 2026-02-07; детали перенесены в архивный файл.
+- Почему: снизили стоимость чтения контекста и риск дублирования фактов в активном логе.
+- Риск/урок: активный лог должен оставаться оперативным индексом, а не подробным narrative.
 - Ссылки: `Final_Test_Hybrid/LEARNING_LOG.md`, `Final_Test_Hybrid/LEARNING_LOG_ARCHIVE.md`
 
-### 2026-02-07 (фикс правил в AGENTS)
-- Что изменили: добавили в `AGENTS.md` краткую фиксацию про оптимизацию лога и обязательный контроль размера `LEARNING_LOG.md`.
-- Почему: закрепили правило рядом с базовыми рабочими принципами, чтобы не терялось между задачами.
-- Риск/урок: если правило не зафиксировано в core-инструкции, команда быстро возвращается к бесконтрольному росту файла.
-- Ссылки: `AGENTS.md`, `Final_Test_Hybrid/LEARNING_LOG.md`
+### 2026-02-07 (диагностика: Ping/BoilerLock/ECU)
+- Что изменили: зафиксировали `PingCommand` как read-only слой; добавили runtime `BoilerLock` и fail-safe/recovery в ping-flow; для ECU ошибок перевели активацию в lock-контекст (`1005 in {1,2}` + whitelist `111.txt`).
+- Почему: нужен предсказуемый error-flow без ложных аварий и без бесконечных retry-петель.
+- Риск/урок: в диагностике критично разделять источник факта (данные ЭБУ) и производные правила (когда поднимать/снимать ошибку).
+- Ссылки: `Final_Test_Hybrid/Services/Diagnostic/Services/BoilerLockRuntimeService.cs`, `Final_Test_Hybrid/Services/Diagnostic/Services/EcuErrorSyncService.cs`, `Final_Test_Hybrid/Docs/DiagnosticGuide.md`
 
-### 2026-02-07 (BoilerLock ping-flow: auto-stand + bounded retry)
-- Что изменили: в `BoilerLockRuntimeService` добавили ping-flow с обязательной проверкой режима, авто-переходом в `Stand`, retry/cooldown/suppress для `1153=0` и расширенным логом `Doc/Modbus` адресов.
-- Почему: убрать ложные/бесконечные попытки сброса в неподходящем режиме и остановить лог-шторм на `IllegalDataAddress`.
-- Риск/урок: reset по ping должен быть stateful; без cooldown/suppress сервис в 500ms ping-интервале быстро превращается в генератор повторных ошибок.
-- Ссылки: `Final_Test_Hybrid/Services/Diagnostic/Services/BoilerLockRuntimeService.cs`, `Final_Test_Hybrid/Services/Diagnostic/Connection/DiagnosticSettings.cs`, `Final_Test_Hybrid/appsettings.json`
+### 2026-02-07 (документация и процесс)
+- Что изменили: выделили единый `BoilerLockGuide`, привязали показ спиннера PLC-подписок к реальной фазе подписки, закрепили ротацию `LEARNING_LOG` и контроль его размера в `AGENTS.md`.
+- Почему: уменьшили рассинхрон документации, убрали ложные UX-сигналы и стабилизировали сопровождение контекста.
+- Риск/урок: без единого source-of-truth и лимитов журнал/доки быстро деградируют в противоречивый шум.
+- Ссылки: `Final_Test_Hybrid/Docs/BoilerLockGuide.md`, `Final_Test_Hybrid/Services/OpcUa/PlcInitializationCoordinator.cs`, `Final_Test_Hybrid/LEARNING_LOG_ARCHIVE.md`, `AGENTS.md`

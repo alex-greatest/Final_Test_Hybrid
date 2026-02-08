@@ -13,7 +13,7 @@
   - `BoilerStatus` (`1005`, `int16`).
   - `LastErrorId` (`1047`, `uint16`).
 - Логика активна только при `ExecutionActivityTracker.IsTestExecutionActive == true`.
-- Логика не добавляет новые записи в `ErrorService`.
+- Подъём ECU-ошибки в `ErrorService` выполняется отдельным сервисом `EcuErrorSyncService` в lock-контексте.
 
 ## Конфигурация
 
@@ -102,7 +102,7 @@
 
 - Отправляется локальный `stub` (лог + TODO) для PLC-сигнала.
 - Пауза не ставится.
-- Новые ошибки в `ErrorService` не поднимаются.
+- Ветка `status=2` сама не поднимает ошибку, но `EcuErrorSyncService` может активировать ECU-ошибку по `1047` при lock-контексте.
 
 ## Очистка состояния и защита от вечной паузы
 
@@ -136,7 +136,7 @@
 
 - Ping keep-alive продолжает работать (не паузится).
 - Остальные системные сервисы продолжают работать.
-- Существующий ECU error flow в `ActiveErrorsGrid` и `BoilerStatusDisplay` не меняется.
+- `ActiveErrorsGrid` продолжает отображать данные из `ErrorService` без изменений UI-компонента.
 - PLC reset flow и HardReset flow не объединяются и не переопределяются этой логикой.
 
 ## Ключевые точки кода

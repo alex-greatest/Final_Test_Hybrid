@@ -111,3 +111,31 @@
 - Для UI-индикаторов нельзя использовать инверсный флаг «ещё не завершено» как прокси «операция выполняется сейчас».
 - В критичных сценариях SCADA индикатор должен быть привязан к конкретной фазе исполнения, а не к косвенному состоянию.
 
+
+## 2026-02-08 (перенос кратких записей из активного LEARNING_LOG)
+
+Источник: свёртка активного `LEARNING_LOG.md` для уменьшения объёма оперативного контекста без потери фактов.
+
+### 2026-02-07 (оптимизация LEARNING_LOG)
+- Что изменили: ввели ротацию и компактный формат активного лога; развернутую историю вынесли в архив.
+- Почему: ограничили рост файла и снизили стоимость чтения контекста.
+- Риск/урок: без лимитов и шаблона журнал быстро превращается в несопровождаемый narrative.
+- Ссылки: `Final_Test_Hybrid/LEARNING_LOG.md`, `Final_Test_Hybrid/LEARNING_LOG_ARCHIVE.md`
+
+### 2026-02-07 (фикс правил в AGENTS)
+- Что изменили: добавили в `AGENTS.md` фиксацию про оптимизацию лога и обязательный контроль размера `LEARNING_LOG.md`.
+- Почему: закрепили правило рядом с базовыми рабочими принципами, чтобы не терялось между задачами.
+- Риск/урок: если правило не зафиксировано в core-инструкции, команда быстро возвращается к бесконтрольному росту файла.
+- Ссылки: `AGENTS.md`, `Final_Test_Hybrid/LEARNING_LOG.md`
+
+### 2026-02-07 (BoilerLock ping-flow: auto-stand + bounded retry)
+- Что изменили: в `BoilerLockRuntimeService` добавили ping-flow с обязательной проверкой режима, авто-переходом в `Stand`, retry/cooldown/suppress для `1153=0` и расширенным логом `Doc/Modbus` адресов.
+- Почему: убрать ложные/бесконечные попытки сброса в неподходящем режиме и остановить лог-шторм на `IllegalDataAddress`.
+- Риск/урок: reset по ping должен быть stateful; без cooldown/suppress сервис в 500ms ping-интервале быстро превращается в генератор повторных ошибок.
+- Ссылки: `Final_Test_Hybrid/Services/Diagnostic/Services/BoilerLockRuntimeService.cs`, `Final_Test_Hybrid/Services/Diagnostic/Connection/DiagnosticSettings.cs`, `Final_Test_Hybrid/appsettings.json`
+
+### 2026-02-07 (ECU error flow: lock-only активация по ping)
+- Что изменили: `EcuErrorSyncService` больше не трактует `1047` как всегда активную ошибку; взводит ECU-ошибку только при lock-контексте (`1005 in {1,2}` + whitelist `111.txt`) и очищает её вне lock.
+- Почему: `1047` — последняя сохранённая ошибка, а не гарантированно активная; прежняя логика давала ложные активные ошибки в UI.
+- Риск/урок: слой синхронизации ошибок обязан учитывать физический контекст статуса, иначе `ActiveErrorsGrid` показывает историю как текущую аварийность.
+- Ссылки: `Final_Test_Hybrid/Services/Diagnostic/Services/EcuErrorSyncService.cs`, `Final_Test_Hybrid/Services/Diagnostic/Services/BoilerLockCriteria.cs`, `Final_Test_Hybrid/Docs/DiagnosticGuide.md`

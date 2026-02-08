@@ -2,6 +2,7 @@ using Final_Test_Hybrid.Models;
 using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
+using Final_Test_Hybrid.Services.Diagnostic.Models.Enums;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
@@ -152,12 +153,13 @@ public partial class WriteSoftCodePlugStep(
     }
 
     /// <summary>
-    /// Проверяет, является ли котёл двухконтурным.
+    /// Проверяет, является ли котёл двухконтурным по типу подключения (регистр 1054 = 1).
     /// </summary>
     private static bool IsDualCircuit(TestStepContext context)
     {
         var contours = context.RecipeProvider.GetValue<ushort>(NumberOfContoursRecipe)!.Value;
-        return contours == 2;
+        var connectionType = (ConnectionType)contours;
+        return connectionType == ConnectionType.DualCircuit;
     }
 
     /// <summary>

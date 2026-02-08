@@ -8,6 +8,7 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Services;
 
 /// <summary>
 /// Синхронизирует ошибки ЭБУ с ErrorService на основе данных ping.
+/// Взводит ошибку только в lock-контексте (status 1/2 + whitelist 111.txt).
 /// </summary>
 public sealed class EcuErrorSyncService : IDisposable
 {
@@ -45,13 +46,6 @@ public sealed class EcuErrorSyncService : IDisposable
     /// </summary>
     private void OnPingDataUpdated(DiagnosticPingData data)
     {
-        if (data.LastErrorId is null)
-        {
-            return;
-        }
-
-        var newErrorId = data.LastErrorId.Value;
-
         lock (_lock)
         {
             if (_disposed)
@@ -59,44 +53,83 @@ public sealed class EcuErrorSyncService : IDisposable
                 return;
             }
 
-            // Дедупликация по ID для неизвестных ошибок
-            if (newErrorId == _currentErrorId && newErrorId > 0)
+            if (!BoilerLockCriteria.IsLockStatus(data.BoilerStatus))
             {
-                // Для E9 проверяем не изменилась ли классификация
-                if (newErrorId != ErrorIdE9)
-                {
-                    return; // Не E9 — точно дубликат
-                }
-                // E9 — проверяем классификацию ниже
-            }
-            else if (newErrorId == _currentErrorId)
-            {
-                return; // Оба 0 или оба неизвестные — дубликат
+                ClearErrorWhenLockContextGone(data.BoilerStatus);
+                return;
             }
 
-            var newError = newErrorId > 0 ? ResolveEcuError(newErrorId, data.ChTemperature) : null;
-
-            // Для E9 проверяем изменилась ли классификация
-            if (newErrorId == ErrorIdE9 && _currentErrorId == ErrorIdE9 && AreErrorsEqual(_currentError, newError))
+            if (data.LastErrorId is null)
             {
-                return; // E9 та же классификация — дубликат
+                return;
             }
 
-            ClearCurrentErrorInternal();
-
-            if (newError != null)
-            {
-                _logger.LogWarning("Ошибка ЭБУ: {Code} - {Description}", newError.Code, newError.Description);
-                _errorService.Raise(newError);
-            }
-            else if (newErrorId > 0)
-            {
-                _logger.LogWarning("Неизвестная ошибка ЭБУ: ID={ErrorId}", newErrorId);
-            }
-
-            _currentErrorId = newErrorId;
-            _currentError = newError;
+            SyncErrorInLockContext(data.LastErrorId.Value, data.ChTemperature);
         }
+    }
+
+    /// <summary>
+    /// Синхронизирует ошибку в lock-контексте.
+    /// </summary>
+    private void SyncErrorInLockContext(ushort errorId, short? chTemperature)
+    {
+        if (!BoilerLockCriteria.IsTargetErrorId(errorId))
+        {
+            ClearErrorWhenNotInWhitelist(errorId);
+            return;
+        }
+
+        var newError = ResolveEcuError(errorId, chTemperature);
+        if (errorId == _currentErrorId && AreErrorsEqual(_currentError, newError))
+        {
+            return;
+        }
+
+        ClearCurrentErrorInternal();
+
+        if (newError != null)
+        {
+            _logger.LogWarning("Ошибка ЭБУ (lock): {Code} - {Description}", newError.Code, newError.Description);
+            _errorService.Raise(newError);
+        }
+        else
+        {
+            _logger.LogWarning("Неизвестная lock-ошибка ЭБУ: ID={ErrorId}", errorId);
+        }
+
+        _currentErrorId = errorId;
+        _currentError = newError;
+    }
+
+    /// <summary>
+    /// Очищает текущую ECU-ошибку при выходе из lock-контекста.
+    /// </summary>
+    private void ClearErrorWhenLockContextGone(short boilerStatus)
+    {
+        if (_currentError is null && _currentErrorId == 0)
+        {
+            return;
+        }
+
+        _logger.LogInformation("ECU lock-контекст завершён (BoilerStatus={Status}). Снимаем активную ECU-ошибку.", boilerStatus);
+        ClearCurrentErrorInternal();
+        _currentErrorId = 0;
+        _currentError = null;
+    }
+
+    /// <summary>
+    /// Очищает текущую ECU-ошибку если код из 1047 не относится к lock-whitelist.
+    /// </summary>
+    private void ClearErrorWhenNotInWhitelist(ushort errorId)
+    {
+        if (_currentError != null)
+        {
+            _logger.LogInformation("Сброс ECU-ошибки: код 1047={ErrorId} не входит в lock-whitelist.", errorId);
+            ClearCurrentErrorInternal();
+        }
+
+        _currentErrorId = errorId;
+        _currentError = null;
     }
 
     /// <summary>
@@ -153,8 +186,7 @@ public sealed class EcuErrorSyncService : IDisposable
             }
 
             ClearCurrentErrorInternal();
-            _currentErrorId = 0;
-            _currentError = null;
+            ResetStateInternal();
         }
         return Task.CompletedTask;
     }
@@ -171,6 +203,15 @@ public sealed class EcuErrorSyncService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Сбрасывает внутреннее состояние синхронизации. Вызывать только под lock.
+    /// </summary>
+    private void ResetStateInternal()
+    {
+        _currentErrorId = 0;
+        _currentError = null;
+    }
+
     /// <inheritdoc />
     public void Dispose()
     {
@@ -182,8 +223,7 @@ public sealed class EcuErrorSyncService : IDisposable
             }
             _disposed = true;
             ClearCurrentErrorInternal();
-            _currentErrorId = 0;
-            _currentError = null;
+            ResetStateInternal();
         }
 
         // Отписка вне lock — безопасно и избегает потенциального deadlock
