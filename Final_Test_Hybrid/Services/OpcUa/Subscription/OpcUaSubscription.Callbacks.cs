@@ -8,7 +8,11 @@ namespace Final_Test_Hybrid.Services.OpcUa.Subscription;
 
 public partial class OpcUaSubscription
 {
-    public async Task SubscribeAsync(string nodeId, Func<object?, Task> callback, CancellationToken ct = default)
+    public async Task SubscribeAsync(
+        string nodeId,
+        Func<object?, Task> callback,
+        CancellationToken ct = default,
+        bool emitCachedValueImmediately = false)
     {
         var error = await EnsureTagExistsAsync(nodeId, ct).ConfigureAwait(false);
         if (error != null)
@@ -16,6 +20,18 @@ public partial class OpcUaSubscription
             throw new InvalidOperationException($"Не удалось подписаться на тег {nodeId}: {error.Message}");
         }
         AddCallback(nodeId, callback);
+        EmitCachedValueIfNeeded(nodeId, callback, emitCachedValueImmediately);
+    }
+
+    private void EmitCachedValueIfNeeded(string nodeId, Func<object?, Task> callback, bool emitCachedValueImmediately)
+    {
+        if (!emitCachedValueImmediately || !_values.TryGetValue(nodeId, out var cachedValue))
+        {
+            return;
+        }
+
+        callback(cachedValue).SafeFireAndForget(ex =>
+            logger.LogError(ex, "Ошибка в callback для тега {NodeId}", nodeId));
     }
 
     private Task<TagError?> EnsureTagExistsAsync(string nodeId, CancellationToken ct)
