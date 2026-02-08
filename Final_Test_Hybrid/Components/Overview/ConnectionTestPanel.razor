@@ -1,3 +1,5 @@
+@using System.Globalization
+@using Final_Test_Hybrid.Services.Diagnostic.Access
 @using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue
 @using Final_Test_Hybrid.Services.Diagnostic.Protocol
 @using Final_Test_Hybrid.Services.Diagnostic.Models
@@ -7,6 +9,8 @@
 @inject RegisterReader Reader
 @inject RegisterWriter Writer
 @inject IOptions<DiagnosticSettings> Settings
+@inject IOptions<ModbusDispatcherOptions> DispatcherOptions
+@inject AccessLevelManager AccessLevelManager
 @implements IAsyncDisposable
 
 <div class="connection-test-container">
@@ -31,6 +35,43 @@
             <span>ModeKey: @FormatModeKey(_pingData?.ModeKey)</span>
             <span>BoilerStatus: @(_pingData?.BoilerStatus.ToString() ?? "—")</span>
         </div>
+    </div>
+
+    <div class="operation-panel mode-panel">
+        <div class="panel-title">РЕЖИМ КОТЛА</div>
+
+        <div class="row-item">
+            <span class="field-label">Режим:</span>
+            <RadzenDropDown TValue="BoilerModePreset"
+                            Data="@BoilerModePresets"
+                            TextProperty="Name"
+                            @bind-Value="_selectedModePreset"
+                            Change="@OnModePresetChanged"
+                            class="scada-dropdown" />
+        </div>
+
+        <div class="row-item">
+            <RadzenButton Text="УСТАНОВИТЬ РЕЖИМ"
+                          Click="@SetBoilerModeAsync"
+                          Disabled="@(_isSettingMode || !_isConnected)"
+                          class="scada-button" />
+        </div>
+
+        <div class="result-area">
+            @if (!string.IsNullOrEmpty(_modeWriteError))
+            {
+                <span class="error-text">Ошибка: @_modeWriteError</span>
+            }
+            else if (!string.IsNullOrEmpty(_modeWriteResult))
+            {
+                <span class="result-text">@_modeWriteResult</span>
+            }
+        </div>
+
+        @if (_selectedModePreset != null && !string.IsNullOrEmpty(_selectedModePreset.Description))
+        {
+            <div class="description-text">@_selectedModePreset.Description</div>
+        }
     </div>
 
     <div class="panels-row">
@@ -154,6 +195,14 @@
 </div>
 
 @code {
+    private const ushort DisplayBrightnessAddress = 1048;
+    private const ushort DisplayBrightnessMin = 10;
+    private const ushort DisplayBrightnessMax = 100;
+    private const uint StandModeKey = 0xD7F8_DB56;
+    private const uint EngineeringModeKey = 0xFA87_CD5E;
+    private const int ModeVerificationCycles = 2;
+    private const int ModeVerificationPollDelayMs = 200;
+
     private static readonly RegisterPreset[] ReadPresets =
     [
         new("Ключ режима", 1000, "UInt32", "Ключ режима (стенд/инженер)"),
@@ -174,10 +223,15 @@
 
     private static readonly RegisterPreset[] WritePresets =
     [
-        new("Выбег насоса", 1060, "UInt16", "Время выбега насоса ОС (0-600 сек)"),
-        new("Уставка ГВС", 1013, "UInt16", "Температура уставки ГВС (°C)"),
-        new("Макс. темп. ГВС", 1043, "UInt16", "Максимальная температура ГВС (°C)"),
+        new("Подсветка дисплея", 1048, "UInt16", "Подсветка дисплея (%), диапазон 10..100"),
         new("Вручную...", 0, "UInt16", "Ввести адрес вручную"),
+    ];
+
+    private static readonly BoilerModePreset[] BoilerModePresets =
+    [
+        new("Стенд", BoilerMode.Stand, "ModeKey 0xD7F8DB56 (1000/1001)"),
+        new("Инженерный", BoilerMode.Engineering, "ModeKey 0xFA87CD5E (1000/1001)"),
+        new("Обычный", BoilerMode.Normal, "Сброс в обычный режим (ключ != стенд/инженер)"),
     ];
 
     private static readonly string[] DataTypes = ["UInt16", "Int16", "UInt32", "Float"];
@@ -199,12 +253,18 @@
 
     // Write state
     private RegisterPreset? _selectedWritePreset = WritePresets[0];
-    private ushort _writeAddress = 1060;
+    private ushort _writeAddress = DisplayBrightnessAddress;
     private string _selectedWriteType = "UInt16";
     private string _writeValue = "";
     private string? _writeError;
     private bool _writeSuccess;
     private bool _isWriting;
+
+    // Mode state
+    private BoilerModePreset? _selectedModePreset = BoilerModePresets[0];
+    private string? _modeWriteError;
+    private string _modeWriteResult = "";
+    private bool _isSettingMode;
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -336,6 +396,15 @@
     }
 
     /// <summary>
+    /// Обработчик изменения режима котла.
+    /// </summary>
+    private void OnModePresetChanged()
+    {
+        _modeWriteError = null;
+        _modeWriteResult = "";
+    }
+
+    /// <summary>
     /// Читает регистр по выбранному типу.
     /// </summary>
     private async Task ReadRegisterAsync()
@@ -423,6 +492,11 @@
         {
             var docAddress = _selectedWritePreset?.Address > 0 ? _selectedWritePreset.Address : _writeAddress;
             var address = (ushort)(docAddress - Settings.Value.BaseAddressOffset);
+            if (!TryValidateWriteValue(docAddress, _selectedWriteType, _writeValue, out var validationError))
+            {
+                _writeError = validationError;
+                return;
+            }
 
             switch (_selectedWriteType)
             {
@@ -449,9 +523,9 @@
                     break;
 
                 case "UInt32":
-                    if (!uint.TryParse(_writeValue, out var u32Value))
+                    if (!TryParseUInt32Value(_writeValue, out var u32Value))
                     {
-                        _writeError = "Неверный формат UInt32";
+                        _writeError = "Неверный формат UInt32 (dec или 0xHEX)";
                         return;
                     }
                     var resultU32 = await Writer.WriteUInt32Async(address, u32Value);
@@ -479,6 +553,188 @@
         {
             _isWriting = false;
         }
+    }
+
+    /// <summary>
+    /// Записывает выбранный режим котла и проверяет ModeKey.
+    /// </summary>
+    private async Task SetBoilerModeAsync()
+    {
+        if (_selectedModePreset == null)
+        {
+            return;
+        }
+
+        _isSettingMode = true;
+        _modeWriteError = null;
+        _modeWriteResult = "";
+
+        try
+        {
+            var writeSuccess = await WriteSelectedModeAsync(_selectedModePreset.Mode);
+            if (!writeSuccess)
+            {
+                _modeWriteError = $"Не удалось записать режим \"{_selectedModePreset.Name}\".";
+                return;
+            }
+
+            var verification = await VerifyModeAsync(_selectedModePreset.Mode);
+            if (!verification.Success)
+            {
+                _modeWriteError = verification.Message;
+                return;
+            }
+
+            _modeWriteResult = verification.Message;
+        }
+        catch (Exception ex)
+        {
+            _modeWriteError = ex.Message;
+        }
+        finally
+        {
+            _isSettingMode = false;
+        }
+    }
+
+    /// <summary>
+    /// Выполняет запись ключа режима через AccessLevelManager.
+    /// </summary>
+    private async Task<bool> WriteSelectedModeAsync(BoilerMode mode)
+    {
+        return mode switch
+        {
+            BoilerMode.Stand => await AccessLevelManager.SetStandModeAsync(),
+            BoilerMode.Engineering => await AccessLevelManager.SetEngineeringModeAsync(),
+            _ => await ResetToNormalModeAsync(),
+        };
+    }
+
+    /// <summary>
+    /// Сбрасывает котел в обычный режим.
+    /// </summary>
+    private async Task<bool> ResetToNormalModeAsync()
+    {
+        await AccessLevelManager.ResetToNormalModeAsync();
+        return true;
+    }
+
+    /// <summary>
+    /// Проверяет, что фактический ModeKey соответствует ожидаемому режиму.
+    /// </summary>
+    private async Task<ModeVerificationResult> VerifyModeAsync(BoilerMode mode)
+    {
+        if (!Dispatcher.IsConnected)
+        {
+            return ModeVerificationResult.Fail("Нет подключения к котлу для верификации режима.");
+        }
+
+        var timeoutMs = GetModeVerificationTimeoutMs();
+        var elapsedMs = 0;
+
+        while (elapsedMs <= timeoutMs)
+        {
+            var modeKey = Dispatcher.LastPingData?.ModeKey;
+            if (modeKey != null && IsExpectedModeKey(mode, modeKey.Value))
+            {
+                var message = $"Режим подтвержден: {GetModeDisplayName(mode)} ({FormatModeKey(modeKey)})";
+                return ModeVerificationResult.Ok(message);
+            }
+
+            await Task.Delay(ModeVerificationPollDelayMs);
+            elapsedMs += ModeVerificationPollDelayMs;
+        }
+
+        var actualModeKey = Dispatcher.LastPingData?.ModeKey;
+        var error = $"Режим не подтвержден: ожидался {GetModeDisplayName(mode)}. Фактический ModeKey: {FormatModeKey(actualModeKey)}";
+        return ModeVerificationResult.Fail(error);
+    }
+
+    /// <summary>
+    /// Вычисляет timeout верификации на основе интервала ping.
+    /// </summary>
+    private int GetModeVerificationTimeoutMs()
+    {
+        var pingInterval = Math.Clamp(DispatcherOptions.Value.PingIntervalMs, 500, 15000);
+        var verifyDelay = Math.Clamp(Settings.Value.WriteVerifyDelayMs, 100, 1000);
+        return pingInterval * ModeVerificationCycles + verifyDelay;
+    }
+
+    /// <summary>
+    /// Проверяет соответствие ModeKey ожидаемому режиму.
+    /// </summary>
+    private static bool IsExpectedModeKey(BoilerMode mode, uint modeKey)
+    {
+        return mode switch
+        {
+            BoilerMode.Stand => modeKey == StandModeKey,
+            BoilerMode.Engineering => modeKey == EngineeringModeKey,
+            _ => modeKey != StandModeKey && modeKey != EngineeringModeKey,
+        };
+    }
+
+    /// <summary>
+    /// Возвращает отображаемое имя режима.
+    /// </summary>
+    private static string GetModeDisplayName(BoilerMode mode)
+    {
+        return mode switch
+        {
+            BoilerMode.Stand => "Стенд",
+            BoilerMode.Engineering => "Инженерный",
+            _ => "Обычный",
+        };
+    }
+
+    /// <summary>
+    /// Валидирует специальные ограничения записи по документированным регистрам.
+    /// </summary>
+    private static bool TryValidateWriteValue(ushort docAddress, string selectedWriteType, string writeValue, out string? error)
+    {
+        if (docAddress != DisplayBrightnessAddress)
+        {
+            error = null;
+            return true;
+        }
+
+        if (selectedWriteType != "UInt16")
+        {
+            error = "Подсветка дисплея (1048): используйте тип UInt16";
+            return false;
+        }
+
+        if (!ushort.TryParse(writeValue, out var brightness))
+        {
+            error = "Подсветка дисплея (1048): нужен UInt16 в диапазоне 10..100";
+            return false;
+        }
+
+        if (brightness < DisplayBrightnessMin || brightness > DisplayBrightnessMax)
+        {
+            error = $"Подсветка дисплея (1048): допустимо {DisplayBrightnessMin}..{DisplayBrightnessMax}";
+            return false;
+        }
+
+        error = null;
+        return true;
+    }
+
+    /// <summary>
+    /// Поддерживает парсинг UInt32 в dec и hex (0x...).
+    /// </summary>
+    private static bool TryParseUInt32Value(string rawValue, out uint value)
+    {
+        var normalized = rawValue.Trim();
+        if (normalized.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            return uint.TryParse(
+                normalized[2..],
+                NumberStyles.AllowHexSpecifier,
+                CultureInfo.InvariantCulture,
+                out value);
+        }
+
+        return uint.TryParse(normalized, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
     }
 
     /// <summary>
@@ -518,4 +774,28 @@
     /// Предустановка регистра для выбора.
     /// </summary>
     private record RegisterPreset(string Name, ushort Address, string Type, string Description);
+
+    /// <summary>
+    /// Предустановка режима котла.
+    /// </summary>
+    private record BoilerModePreset(string Name, BoilerMode Mode, string Description);
+
+    /// <summary>
+    /// Режимы котла для ключа 1000/1001.
+    /// </summary>
+    private enum BoilerMode
+    {
+        Stand,
+        Engineering,
+        Normal
+    }
+
+    /// <summary>
+    /// Результат верификации режима.
+    /// </summary>
+    private record ModeVerificationResult(bool Success, string Message)
+    {
+        public static ModeVerificationResult Ok(string message) => new(true, message);
+        public static ModeVerificationResult Fail(string message) => new(false, message);
+    }
 }

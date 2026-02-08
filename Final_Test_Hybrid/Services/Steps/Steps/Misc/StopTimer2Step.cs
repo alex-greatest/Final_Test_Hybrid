@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Results;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
@@ -7,6 +8,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Misc;
 
 public class StopTimer2Step(
     ITimerService timerService,
+    ITestResultsService testResultsService,
     DualLogger<StopTimer2Step> logger) : ITestStep
 {
     private const string TimerKey = "Timer2";
@@ -26,6 +28,9 @@ public class StopTimer2Step(
 
         var seconds = elapsed.Value.TotalSeconds;
         logger.LogInformation("Таймер 2 остановлен: {Seconds:F2} сек", seconds);
+
+        testResultsService.Add("Timer_2", $"{seconds:F2}", "", "", 1, false, "сек");
+
         return Task.FromResult(TestStepResult.Pass($"{seconds:F2} сек"));
     }
 }
