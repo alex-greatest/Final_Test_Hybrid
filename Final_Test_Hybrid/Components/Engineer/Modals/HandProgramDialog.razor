@@ -1,0 +1,79 @@
+@using Final_Test_Hybrid.Components.Schemes
+@using Final_Test_Hybrid.Components.Overview
+@using Final_Test_Hybrid.Services.OpcUa
+@using Final_Test_Hybrid.Services.OpcUa.Connection
+@inject PlcSubscriptionState SubscriptionState
+@inject OpcUaConnectionState ConnectionState
+@implements IAsyncDisposable
+
+<div class="hand-program-container">
+    <div class="tabs-shell">
+        <RadzenTabs RenderMode="TabRenderMode.Client" class="hand-program-tabs">
+            <Tabs>
+                <RadzenTabsItem Text="Газ">
+                    <GasScheme />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Отопление">
+                    <HeatingScheme />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Горячая вода">
+                    <HotWaterScheme />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Входы 1">
+                    <InputsPanel1 />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="RTD входы">
+                    <RtdInputsPanel />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Входы 2">
+                    <InputsPanel2 />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Выходы 1">
+                    <OutputsPanel1 IsInteractive="true" />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Пн. выходы">
+                    <PneumaticOutputsPanel IsInteractive="true" />
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Тест связи">
+                    <ConnectionTestPanel />
+                </RadzenTabsItem>
+            </Tabs>
+        </RadzenTabs>
+    </div>
+</div>
+
+@code {
+    private bool _disposed;
+
+    protected override void OnInitialized()
+    {
+        SubscriptionState.OnStateChanged += HandleStateChanged;
+        ConnectionState.ConnectionStateChanged += HandleConnectionChanged;
+    }
+
+    private void HandleStateChanged()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleConnectionChanged(bool isConnected)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        SubscriptionState.OnStateChanged -= HandleStateChanged;
+        ConnectionState.ConnectionStateChanged -= HandleConnectionChanged;
+        return ValueTask.CompletedTask;
+    }
+}

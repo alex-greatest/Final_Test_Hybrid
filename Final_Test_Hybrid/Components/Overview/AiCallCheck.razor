@@ -1,4 +1,4 @@
-﻿@inherits Final_Test_Hybrid.Components.Base.GridInplaceEditorBase<AiCallCheck.AiCallCheckItem>
+@inherits Final_Test_Hybrid.Components.Base.GridInplaceEditorBase<AiCallCheck.AiCallCheckItem>
 
 <div id="@ContainerId">
     <RadzenDataGrid @ref="Grid" Data="@Items" TItem="AiCallCheckItem"
@@ -7,47 +7,23 @@
                     RowUpdate="@OnUpdateRow"
                     ColumnWidth="120px">
         <Columns>
-            <RadzenDataGridColumn TItem="AiCallCheckItem" Property="PlcTag" Title="Тэг ПЛК" Width="150px">
-                <EditTemplate Context="item">
-                    @if (IsEditing(nameof(item.PlcTag)))
-                    {
-                        <RadzenTextBox class="w-full" @bind-Value="item.PlcTag" />
-                    }
-                    else
-                    {
-                        @item.PlcTag
-                    }
-                </EditTemplate>
+            <RadzenDataGridColumn TItem="AiCallCheckItem" Property="PlcTag" Title="Параметр" Width="150px">
+                <Template Context="item">
+                    @item.PlcTag
+                </Template>
             </RadzenDataGridColumn>
-            
+
             <RadzenDataGridColumn TItem="AiCallCheckItem" Property="Type" Title="Тип" Width="180px">
-                <EditTemplate Context="item">
-                    @if (IsEditing(nameof(item.Type)))
-                    {
-                        <RadzenTextBox class="w-full" @bind-Value="item.Type" />
-                    }
-                    else
-                    {
-                        @item.Type
-                    }
-                </EditTemplate>
+                <Template Context="item">
+                    @item.Type
+                </Template>
             </RadzenDataGridColumn>
 
             @* Numeric Columns *@
-            <RadzenDataGridColumn TItem="AiCallCheckItem" Property="Raw" Title="Сырое">
+            <RadzenDataGridColumn TItem="AiCallCheckItem" Property="Raw" Title="Сырое знач.">
                 <Template Context="item">
                     @item.Raw.ToString("F3")
                 </Template>
-                <EditTemplate Context="item">
-                    @if (IsEditing(nameof(item.Raw)))
-                    {
-                        <RadzenNumeric TValue="double" class="w-full" @bind-Value="item.Raw" />
-                    }
-                    else
-                    {
-                        @item.Raw.ToString("F3")
-                    }
-                </EditTemplate>
             </RadzenDataGridColumn>
 
             <RadzenDataGridColumn TItem="AiCallCheckItem" Property="Min" Title="Мин">
@@ -118,16 +94,6 @@
                 <Template Context="item">
                     @item.Calculated.ToString("F3")
                 </Template>
-                <EditTemplate Context="item">
-                    @if (IsEditing(nameof(item.Calculated)))
-                    {
-                        <RadzenNumeric TValue="double" class="w-full" @bind-Value="item.Calculated" />
-                    }
-                    else
-                    {
-                        @item.Calculated.ToString("F3")
-                    }
-                </EditTemplate>
             </RadzenDataGridColumn>
         </Columns>
     </RadzenDataGrid>

@@ -1,5 +1,7 @@
 @using Final_Test_Hybrid.Services.OpcUa.Subscription
+@using Microsoft.Extensions.Logging
 @inject OpcUaSubscription Subscription
+@inject ILogger<ValueIndicator> Logger
 @implements IAsyncDisposable
 
 <div class="row-item">
@@ -35,6 +37,7 @@
 
     private string _displayValue = "---";
     private string _subscribedTag = "";
+    private bool _disposed;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -44,8 +47,15 @@
 
             if (!string.IsNullOrEmpty(Tag))
             {
-                await Subscription.SubscribeAsync(Tag, OnValueChanged);
-                _subscribedTag = Tag;
+                try
+                {
+                    await Subscription.SubscribeAsync(Tag, OnValueChanged);
+                    _subscribedTag = Tag;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Не удалось подписаться на {Tag}", Tag);
+                }
             }
             else
             {
@@ -63,6 +73,11 @@
     /// </summary>
     private async Task OnValueChanged(object? value)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _displayValue = value switch
         {
             float f => f.ToString(Format),
@@ -87,6 +102,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         await UnsubscribeCurrentTagAsync();
     }
 }

@@ -1,7 +1,9 @@
 @using Final_Test_Hybrid.Models.Plc.Tags
 @using Final_Test_Hybrid.Services.OpcUa.Subscription
 @using Final_Test_Hybrid.Services.Common
+@using Microsoft.Extensions.Logging
 @inject OpcUaSubscription Subscription
+@inject ILogger<LampIndicator> Logger
 @implements IAsyncDisposable
 
 <div class="row-item">
@@ -22,10 +24,18 @@
 
     private string _lampImage = "images/RedLamp.png";
     private string NodeId => Tag ?? InputsTags.BuildNodeId(Label);
+    private bool _disposed;
 
     protected override async Task OnInitializedAsync()
     {
-        await Subscription.SubscribeAsync(NodeId, OnValueChanged);
+        try
+        {
+            await Subscription.SubscribeAsync(NodeId, OnValueChanged);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Не удалось подписаться на {NodeId}", NodeId);
+        }
     }
 
     /// <summary>
@@ -33,6 +43,11 @@
     /// </summary>
     private async Task OnValueChanged(object? value)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         var isOn = value is true;
         _lampImage = IndicatorHelper.GetLampImagePath(isOn);
         await InvokeAsync(StateHasChanged);
@@ -40,6 +55,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         await Subscription.UnsubscribeAsync(NodeId, OnValueChanged, removeTag: false, ct: CancellationToken.None);
     }
 }

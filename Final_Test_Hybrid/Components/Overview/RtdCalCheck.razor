@@ -7,47 +7,22 @@
                     RowUpdate="@OnUpdateRow"
                     ColumnWidth="120px">
         <Columns>
-            <RadzenDataGridColumn TItem="RtdCalCheckItem" Property="PlcTag" Title="Тэг ПЛК" Width="150px">
-                <EditTemplate Context="item">
-                    @if (IsEditing(nameof(item.PlcTag)))
-                    {
-                        <RadzenTextBox class="w-full" @bind-Value="item.PlcTag" />
-                    }
-                    else
-                    {
-                        @item.PlcTag
-                    }
-                </EditTemplate>
-            </RadzenDataGridColumn>
-            
-            <RadzenDataGridColumn TItem="RtdCalCheckItem" Property="Type" Title="Тип" Width="180px">
-                <EditTemplate Context="item">
-                    @if (IsEditing(nameof(item.Type)))
-                    {
-                        <RadzenTextBox class="w-full" @bind-Value="item.Type" />
-                    }
-                    else
-                    {
-                        @item.Type
-                    }
-                </EditTemplate>
+            <RadzenDataGridColumn TItem="RtdCalCheckItem" Property="PlcTag" Title="Параметр" Width="150px">
+                <Template Context="item">
+                    @item.PlcTag
+                </Template>
             </RadzenDataGridColumn>
 
-            @* Numeric Columns *@
-            <RadzenDataGridColumn TItem="RtdCalCheckItem" Property="Raw" Title="Сырое">
+            <RadzenDataGridColumn TItem="RtdCalCheckItem" Property="Type" Title="Тип" Width="180px">
+                <Template Context="item">
+                    @item.Type
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="RtdCalCheckItem" Property="Raw" Title="Сырое знач.">
                 <Template Context="item">
                     @item.Raw.ToString("F3")
                 </Template>
-                <EditTemplate Context="item">
-                    @if (IsEditing(nameof(item.Raw)))
-                    {
-                        <RadzenNumeric TValue="double" class="w-full" @bind-Value="item.Raw" />
-                    }
-                    else
-                    {
-                        @item.Raw.ToString("F3")
-                    }
-                </EditTemplate>
             </RadzenDataGridColumn>
 
             <RadzenDataGridColumn TItem="RtdCalCheckItem" Property="Multiplier" Title="Множитель">
@@ -86,16 +61,6 @@
                 <Template Context="item">
                     @item.Calculated.ToString("F3")
                 </Template>
-                <EditTemplate Context="item">
-                    @if (IsEditing(nameof(item.Calculated)))
-                    {
-                        <RadzenNumeric TValue="double" class="w-full" @bind-Value="item.Calculated" />
-                    }
-                    else
-                    {
-                        @item.Calculated.ToString("F3")
-                    }
-                </EditTemplate>
             </RadzenDataGridColumn>
         </Columns>
     </RadzenDataGrid>

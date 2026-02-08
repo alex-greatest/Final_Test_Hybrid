@@ -11,6 +11,7 @@
 
 @code {
     private string _lampImage = "images/RedLamp.png";
+    private bool _disposed;
 
     protected override async Task OnInitializedAsync()
     {
@@ -19,6 +20,11 @@
 
     private async Task OnValueChanged(object? value)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         var isOn = value is true;
         _lampImage = IndicatorHelper.GetLampImagePath(isOn);
         await InvokeAsync(StateHasChanged);
@@ -26,6 +32,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         await Subscription.UnsubscribeAsync(BaseTags.PneuValveEv31AirOn, OnValueChanged, removeTag: false, ct: CancellationToken.None);
     }
 }

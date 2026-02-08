@@ -10,6 +10,7 @@
 
 @code {
     private string _displayTime = "00:00:00";
+    private bool _disposed;
 
     protected override void OnInitialized()
     {
@@ -19,18 +20,21 @@
 
     private void OnTimerTick()
     {
+        if (_disposed) return;
         _displayTime = BoilerState.GetTestDurationFormatted();
-        InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private void OnCleared()
     {
+        if (_disposed) return;
         _displayTime = "00:00:00";
-        InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
     {
+        _disposed = true;
         BoilerState.OnTestTimerTick -= OnTimerTick;
         BoilerState.OnCleared -= OnCleared;
     }

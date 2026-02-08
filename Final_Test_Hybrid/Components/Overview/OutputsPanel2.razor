@@ -1,0 +1,14 @@
+@using Final_Test_Hybrid.Models.Plc.Tags
+
+<div style="height: 100%; padding: 0 20px;">
+    <div class="calc-grid">
+        <div>
+            <PanelBox Style="width: 375px; height: 115px">
+                <ValueIndicator Label="DHW Flow"
+                                Tag="@OutputsPanel2Tags.Vrp2_1"/>
+                <ValueIndicator Label="Blr Gas Pressure"
+                                Tag="@OutputsPanel2Tags.Vpp3_1"/>
+            </PanelBox>
+        </div>
+    </div>
+</div>

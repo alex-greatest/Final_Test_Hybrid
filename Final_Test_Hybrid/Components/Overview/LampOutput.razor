@@ -1,12 +1,77 @@
-﻿<div class="row-item">
+@using Final_Test_Hybrid.Services.OpcUa.Subscription
+@using Microsoft.Extensions.Logging
+@inject OpcUaSubscription Subscription
+@inject ILogger<LampOutput> Logger
+@implements IAsyncDisposable
+
+<div class="row-item">
     <span>@Label</span>
     <svg class="scada-lamp-square" viewBox="0 0 20 20">
         <path d="M0,20 L0,0 L20,0 L18,2 L2,2 L2,18 Z" fill="#404040"/>
         <path d="M20,0 L20,20 L0,20 L2,18 L18,18 L18,2 Z" fill="#ffffff"/>
-        <rect class="lamp-rect" x="2" y="2" width="16" height="16" stroke-width="1"/>
+        <rect class="lamp-rect" x="2" y="2" width="16" height="16" stroke-width="1"
+              fill="@(_isOn ? "#00ff00" : "#606060")"
+              stroke="@(_isOn ? "#004d00" : "#333333")"/>
     </svg>
 </div>
 
 @code {
+    /// <summary>
+    /// Отображаемая метка.
+    /// </summary>
     [Parameter] public string Label { get; set; } = "";
+
+    /// <summary>
+    /// OPC-UA Node ID для подписки.
+    /// </summary>
+    [Parameter] public string? Tag { get; set; }
+
+    private bool _isOn;
+    private string? _subscribedTag;
+    private bool _disposed;
+
+    /// <inheritdoc />
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation("LampOutput init: Label={Label}, Tag={Tag}", Label, Tag);
+
+        if (string.IsNullOrEmpty(Tag))
+        {
+            Logger.LogWarning("LampOutput: Tag is empty for Label={Label}, skipping subscription", Label);
+            return;
+        }
+
+        _subscribedTag = Tag;
+        Logger.LogInformation("LampOutput: Subscribing to {Tag}", _subscribedTag);
+        await Subscription.SubscribeAsync(_subscribedTag, OnValueChanged);
+    }
+
+    /// <summary>
+    /// Обработчик изменения значения тега.
+    /// </summary>
+    private async Task OnValueChanged(object? value)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        Logger.LogInformation("LampOutput callback: Tag={Tag}, Value={Value}, Type={Type}",
+            _subscribedTag, value, value?.GetType().Name ?? "null");
+        _isOn = value is true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+
+        if (string.IsNullOrEmpty(_subscribedTag))
+        {
+            return;
+        }
+
+        await Subscription.UnsubscribeAsync(_subscribedTag, OnValueChanged, removeTag: false, ct: CancellationToken.None);
+    }
 }
