@@ -18,6 +18,30 @@
 
 ## Активные записи
 
+### 2026-02-08 (IoEditorDialog: автоперезагрузка после reconnect)
+- Что изменили: в `IoEditorDialog` объединили загрузку в `ReloadAllDataAsync`; при `ConnectionStateChanged(true)` теперь выполняется полная перезагрузка секций `AI/RTD/PID/AO` с пересозданием snapshot и сбросом inline-edit состояния.
+- Почему: `IoEditorDialog` не использует runtime-подписки как схема, поэтому без явного reload после reconnect показывал устаревшие значения.
+- Риск/урок: по выбранному правилу «всегда перезагружать» несохранённые локальные правки теряются; это теперь явно логируется warning-ом при reconnect.
+- Ссылки: `Final_Test_Hybrid/Components/Engineer/Modals/IoEditorDialog.razor.cs`, `Final_Test_Hybrid/LEARNING_LOG.md`
+
+### 2026-02-08 (AGENTS: inspectcode как checkpoint, не как микрошаг)
+- Что изменили: уточнили правило запуска `jb inspectcode` — не после каждой косметической правки, а по завершении логического блока; в примере добавили `--no-build --format=Text --output=$env:TEMP\jb-inspectcode.txt`.
+- Почему: дефолтный SARIF даёт тяжёлые отчёты и лишний шум, а повторная сборка внутри inspectcode замедляет цикл без пользы при уже выполненном `dotnet build`.
+- Риск/урок: «часто» не равно «качественно»; полезен только сигнал по новому коду и в понятном, компактном формате.
+- Ссылки: `AGENTS.md`, `Final_Test_Hybrid/LEARNING_LOG.md`
+
+### 2026-02-08 (AGENTS: `jb inspectcode` по новому коду)
+- Что изменили: в корневой `AGENTS.md` добавили обязательное правило запускать `jb inspectcode` после значимых правок только по изменённым `*.cs`, с явным PowerShell-примером формирования `--include`.
+- Почему: нужно повысить качество нового кода без постоянной нагрузки/шума от legacy-замечаний по всей solution.
+- Риск/урок: без жёсткой привязки к diff локальный цикл разработки быстро деградирует из-за большого фонового долга; полный прогон лучше оставлять для CI/крупных merge.
+- Ссылки: `AGENTS.md`, `Final_Test_Hybrid/LEARNING_LOG.md`
+
+### 2026-02-08 (HandProgram: late-subscriber UI получает cache сразу)
+- Что изменили: добавили параметр `EmitCachedValueImmediately` в схемы (`Gas/Heating/HotWater`), индикаторы (`LampIndicator`, `ValueIndicator`, `InteractiveLampOutput`) и промежуточные панели; в `HandProgramDialog` включили его (`true`) для всех OPC-подписываемых вкладок.
+- Почему: `HandProgramDialog` открывается позже основного экрана, и без immediate emit UI оставался в старом/пустом состоянии до первого нового события.
+- Риск/урок: instant emit должен быть только opt-in на точках late-subscribe, иначе можно непреднамеренно поменять порядок событий в существующих экранах.
+- Ссылки: `Final_Test_Hybrid/Components/Engineer/Modals/HandProgramDialog.razor`, `Final_Test_Hybrid/Components/Schemes/GasScheme.razor`, `Final_Test_Hybrid/Components/Overview/LampIndicator.razor`
+
 ### 2026-02-08 (merge `history -> master`: безопасное разрешение конфликтов)
 - Что изменили: выполнили merge `history` в `master`, конфликтные файлы (`OpcUaSubscription`, `TagWaiter`, `CH/DHW` параметры, служебные txt и docs) разрешили в пользу `master` для сохранения текущего стабильного поведения; остальные не конфликтующие изменения из `history` оставили.
 - Почему: цель была интегрировать ветку без регресса критичных reset/reconnect/error-path и без изменения рабочих инвариантов runtime-логики.

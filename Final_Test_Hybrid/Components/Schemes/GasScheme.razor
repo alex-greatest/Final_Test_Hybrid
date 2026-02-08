@@ -2885,6 +2885,11 @@
 </div>
 
 @code {
+    /// <summary>
+    /// Включает немедленную выдачу cached значения при подписке.
+    /// </summary>
+    [Parameter] public bool EmitCachedValueImmediately { get; set; }
+    
     private const string ClosedColor = "#dc3545";
     private const string ClosedColorDark = "#b02a37";
     private const string OpenColor = "#28a745";
@@ -2927,19 +2932,19 @@
     protected override async Task OnInitializedAsync()
     {
         // Клапаны (подписка на xOut_Open для индикации)
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_1_GasG20, OnVp01Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_2_GasG25, OnVp02Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_3_LpgG30, OnVp03Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Ev0_3_Gas, OnEv03Changed);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_1_GasG20, OnVp01Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_2_GasG25, OnVp02Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp0_3_LpgG30, OnVp03Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Ev0_3_Gas, OnEv03Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
 
         // Датчики
-        await Subscription.SubscribeAsync("ns=3;s=\"DB_ControlValve\".\"VPP3_1\".\"ActuelValue\"", OnVpp31Changed);
-        await Subscription.SubscribeAsync(SensorScreenTags.GasPa, OnGasPaChanged);
-        await Subscription.SubscribeAsync(MainScreenTags.GasTag, OnGasTagChanged);
-        await Subscription.SubscribeAsync(SensorScreenTags.GasPog, OnGasPogChanged);
-        await Subscription.SubscribeAsync(SensorScreenTags.GasP, OnGasPChanged);
-        await Subscription.SubscribeAsync(SensorScreenTags.GasPag, OnGasPagChanged);
-        await Subscription.SubscribeAsync(MainScreenTags.GasPgb, OnGasPgbChanged);
+        await Subscription.SubscribeAsync("ns=3;s=\"DB_ControlValve\".\"VPP3_1\".\"ActuelValue\"", OnVpp31Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(SensorScreenTags.GasPa, OnGasPaChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(MainScreenTags.GasTag, OnGasTagChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(SensorScreenTags.GasPog, OnGasPogChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(SensorScreenTags.GasP, OnGasPChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(SensorScreenTags.GasPag, OnGasPagChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(MainScreenTags.GasPgb, OnGasPgbChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
     }
 
     // Callbacks для клапанов (методы вместо лямбд для корректной отписки)

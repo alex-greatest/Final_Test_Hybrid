@@ -44,6 +44,11 @@
     /// Использовать toggle-режим для ControlTag (инверсия вместо set).
     /// </summary>
     [Parameter] public bool UseToggleMode { get; set; }
+    
+    /// <summary>
+    /// Включает немедленную выдачу cached значения при подписке.
+    /// </summary>
+    [Parameter] public bool EmitCachedValueImmediately { get; set; }
 
     private bool _isOn;
     private string? _subscribedTag;
@@ -61,7 +66,10 @@
         _subscribedTag = StatusTag;
         try
         {
-            await Subscription.SubscribeAsync(_subscribedTag, OnValueChanged);
+            await Subscription.SubscribeAsync(
+                _subscribedTag,
+                OnValueChanged,
+                emitCachedValueImmediately: EmitCachedValueImmediately);
         }
         catch (Exception ex)
         {

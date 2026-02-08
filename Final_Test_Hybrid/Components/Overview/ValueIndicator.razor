@@ -34,6 +34,11 @@
     /// Формат отображения числа (по умолчанию 1 знак после запятой).
     /// </summary>
     [Parameter] public string Format { get; set; } = "F1";
+    
+    /// <summary>
+    /// Включает немедленную выдачу cached значения при подписке.
+    /// </summary>
+    [Parameter] public bool EmitCachedValueImmediately { get; set; }
 
     private string _displayValue = "---";
     private string _subscribedTag = "";
@@ -49,7 +54,10 @@
             {
                 try
                 {
-                    await Subscription.SubscribeAsync(Tag, OnValueChanged);
+                    await Subscription.SubscribeAsync(
+                        Tag,
+                        OnValueChanged,
+                        emitCachedValueImmediately: EmitCachedValueImmediately);
                     _subscribedTag = Tag;
                 }
                 catch (Exception ex)

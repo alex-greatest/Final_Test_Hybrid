@@ -4073,6 +4073,11 @@
 </div>
 
 @code {
+    /// <summary>
+    /// Включает немедленную выдачу cached значения при подписке.
+    /// </summary>
+    [Parameter] public bool EmitCachedValueImmediately { get; set; }
+    
     private const string ClosedColor = "#dc3545";
     private const string ClosedColorDark = "#b02a37";
     private const string OpenColor = "#28a745";
@@ -4206,24 +4211,24 @@
     {
         Logger.LogInformation("HeatingScheme.OnInitializedAsync called");
         // Подписка на xOut_Open для индикации
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_1_Purge, OnVp1_1Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_2_Purge, OnVp1_2Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_3_Fill, OnVp1_3Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_4_FastFill, OnVp1_4Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_5_WaterToCh, OnVp1_5Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_6_WaterToCh, OnVp1_6Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_7_HotWaterNoPump, OnVp1_7Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_8_Drain, OnVp1_8Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_9_Reserve, OnVp1_9Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_10_HotWaterWithPump, OnVp1_10Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_11_Drain, OnVp1_11Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_12_SlowFill, OnVp1_12Changed);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_1_Purge, OnVp1_1Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_2_Purge, OnVp1_2Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_3_Fill, OnVp1_3Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_4_FastFill, OnVp1_4Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_5_WaterToCh, OnVp1_5Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_6_WaterToCh, OnVp1_6Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_7_HotWaterNoPump, OnVp1_7Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_8_Drain, OnVp1_8Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_9_Reserve, OnVp1_9Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_10_HotWaterWithPump, OnVp1_10Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_11_Drain, OnVp1_11Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp1_12_SlowFill, OnVp1_12Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
 
         // Подписка на датчики
-        await Subscription.SubscribeAsync(MainScreenTags.ChPmr, OnChPmrChanged);
-        await Subscription.SubscribeAsync(MainScreenTags.ChTmr, OnChTmrChanged);
-        await Subscription.SubscribeAsync(MainScreenTags.ChTrr, OnChTrrChanged);
-        await Subscription.SubscribeAsync(MainScreenTags.ChFr, OnChFrChanged);
+        await Subscription.SubscribeAsync(MainScreenTags.ChPmr, OnChPmrChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(MainScreenTags.ChTmr, OnChTmrChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(MainScreenTags.ChTrr, OnChTrrChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(MainScreenTags.ChFr, OnChFrChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
     }
 
     private Task OnVp1_1Changed(object? v) => OnValveChangedAsync("VP1_1", v);

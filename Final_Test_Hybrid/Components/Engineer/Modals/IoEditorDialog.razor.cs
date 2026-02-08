@@ -34,6 +34,7 @@ public partial class IoEditorDialog : IAsyncDisposable
     private bool _isLoading = true;
     private bool _disposed;
     private List<string> _saveErrors = [];
+    private readonly SemaphoreSlim _reloadGate = new(1, 1);
 
     // === AI CALIBRATION ===
     private RadzenDataGrid<AiCalibrationItem> _aiGrid = null!;
@@ -90,28 +91,7 @@ public partial class IoEditorDialog : IAsyncDisposable
             return;
         }
 
-        try
-        {
-            await LoadAiDataAsync();
-            CreateAiSnapshot();
-
-            await LoadRtdDataAsync();
-            CreateRtdSnapshot();
-
-            await LoadPidDataAsync();
-            CreatePidSnapshot();
-
-            await LoadAoDataAsync();
-            CreateAoSnapshot();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Ошибка загрузки данных IO Editor");
-        }
-        finally
-        {
-            _isLoading = false;
-        }
+        await ReloadAllDataAsync(isReconnect: false);
     }
 
     /// <summary>
@@ -178,7 +158,141 @@ public partial class IoEditorDialog : IAsyncDisposable
         {
             return;
         }
-        _ = InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(() => HandleConnectionChangedAsync(isConnected));
+    }
+
+    /// <summary>
+    /// Обрабатывает изменение состояния подключения OPC UA.
+    /// </summary>
+    private async Task HandleConnectionChangedAsync(bool isConnected)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (!isConnected)
+        {
+            StateHasChanged();
+            return;
+        }
+
+        await ReloadAllDataAsync(isReconnect: true);
+    }
+
+    /// <summary>
+    /// Перезагружает все данные редактора с защитой от параллельного запуска.
+    /// </summary>
+    private async Task ReloadAllDataAsync(bool isReconnect)
+    {
+        await _reloadGate.WaitAsync();
+        try
+        {
+            await ReloadAllDataCoreAsync(isReconnect);
+        }
+        finally
+        {
+            _reloadGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Выполняет фактическую перезагрузку данных редактора.
+    /// </summary>
+    private async Task ReloadAllDataCoreAsync(bool isReconnect)
+    {
+        if (_disposed || !ConnectionState.IsConnected)
+        {
+            _isLoading = false;
+            return;
+        }
+
+        PrepareReload(isReconnect);
+
+        try
+        {
+            await ReloadSectionsAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Ошибка загрузки данных IO Editor");
+        }
+        finally
+        {
+            CompleteReload();
+        }
+    }
+
+    /// <summary>
+    /// Подготавливает UI и состояние к перезагрузке данных.
+    /// </summary>
+    private void PrepareReload(bool isReconnect)
+    {
+        if (isReconnect && HasUnsavedChanges())
+        {
+            Logger.LogWarning("OPC UA восстановлен в IoEditor: несохраненные изменения будут отброшены.");
+        }
+
+        ClearEditState();
+        _saveErrors.Clear();
+        _isLoading = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Загружает все секции IO и формирует их snapshot.
+    /// </summary>
+    private async Task ReloadSectionsAsync()
+    {
+        await LoadAiDataAsync();
+        CreateAiSnapshot();
+
+        await LoadRtdDataAsync();
+        CreateRtdSnapshot();
+
+        await LoadPidDataAsync();
+        CreatePidSnapshot();
+
+        await LoadAoDataAsync();
+        CreateAoSnapshot();
+    }
+
+    /// <summary>
+    /// Завершает перезагрузку данных и обновляет UI.
+    /// </summary>
+    private void CompleteReload()
+    {
+        _isLoading = false;
+
+        if (_disposed)
+        {
+            return;
+        }
+
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Проверяет наличие несохраненных изменений в любой вкладке редактора.
+    /// </summary>
+    private bool HasUnsavedChanges() => HasAiUnsavedChanges || HasRtdUnsavedChanges || HasPidUnsavedChanges || HasAoUnsavedChanges;
+
+    /// <summary>
+    /// Сбрасывает состояние активного inline-редактирования во всех вкладках.
+    /// </summary>
+    private void ClearEditState()
+    {
+        _aiItemToUpdate = null;
+        _aiEditingColumn = null;
+
+        _rtdItemToUpdate = null;
+        _rtdEditingColumn = null;
+
+        _pidItemToUpdate = null;
+        _pidEditingColumn = null;
+
+        _aoItemToUpdate = null;
+        _aoEditingColumn = null;
     }
 
     #endregion

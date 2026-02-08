@@ -143,7 +143,22 @@ public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestS
 ## Периодичность проверок
 
 - После каждого значимого изменения в логике (reconnect/reset/error flow) запускать минимум dotnet build.
+- После каждого значимого изменения запускать `jb inspectcode` по **изменённым** `*.cs` (новый код), а не по всей solution.
+- Не запускать `jb inspectcode` после каждого микрошагa/косметики; запускать по завершении логического блока, иначе теряется время и ухудшается signal/noise.
 - Перед сдачей изменений обязательно выполнять полный чек-лист верификации.
+- Полный `jb inspectcode` по всей solution выполнять отдельно (перед крупным merge/в CI по расписанию), чтобы не блокировать локальный цикл разработки шумом legacy-замечаний.
+
+Пример (PowerShell, только новый код):
+```powershell
+$changedCs = git diff --name-only --diff-filter=ACMR HEAD -- '*.cs'
+if ($changedCs.Count -gt 0)
+{
+    $include = ($changedCs | ForEach-Object { $_.Replace('\', '/') }) -join ';'
+    $reportPath = Join-Path $env:TEMP 'jb-inspectcode.txt'
+    jb inspectcode Final_Test_Hybrid.slnx "--include=$include" --no-build --format=Text "--output=$reportPath" -e=WARNING
+    Write-Host "InspectCode report: $reportPath"
+}
+```
 
 ## Обязательный чек-лист верификации
 

@@ -21,6 +21,11 @@
     /// Явный OPC-UA Node ID. Если не указан, строится из Label.
     /// </summary>
     [Parameter] public string? Tag { get; set; }
+    
+    /// <summary>
+    /// Включает немедленную выдачу cached значения при подписке.
+    /// </summary>
+    [Parameter] public bool EmitCachedValueImmediately { get; set; }
 
     private string _lampImage = "images/RedLamp.png";
     private string NodeId => Tag ?? InputsTags.BuildNodeId(Label);
@@ -30,7 +35,10 @@
     {
         try
         {
-            await Subscription.SubscribeAsync(NodeId, OnValueChanged);
+            await Subscription.SubscribeAsync(
+                NodeId,
+                OnValueChanged,
+                emitCachedValueImmediately: EmitCachedValueImmediately);
         }
         catch (Exception ex)
         {

@@ -5,6 +5,11 @@
     /// Разрешает клики по элементам (по умолчанию false — только просмотр).
     /// </summary>
     [Parameter] public bool IsInteractive { get; set; }
+    
+    /// <summary>
+    /// Включает немедленную выдачу cached значения для дочерних индикаторов.
+    /// </summary>
+    [Parameter] public bool EmitCachedValueImmediately { get; set; }
 }
 
 <div style="height: 100%; padding: 0 20px;">
@@ -13,16 +18,16 @@
 
         <PanelBox Style="width: 385px; height: 325px">
             @* Лампы индикации (toggle) *@
-            <InteractiveLampOutput Label="Управление вкл." StatusTag="@OutputsTags.H51_1" IsInteractive="@IsInteractive"/>
-            <InteractiveLampOutput Label="Автомат включен" StatusTag="@OutputsTags.H30_6" IsInteractive="@IsInteractive"/>
-            <InteractiveLampOutput Label="Тест выполняется" StatusTag="@OutputsTags.H51_2" IsInteractive="@IsInteractive"/>
-            <InteractiveLampOutput Label="Один шаг" StatusTag="@OutputsTags.H32_7" IsInteractive="@IsInteractive"/>
+            <InteractiveLampOutput EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="Управление вкл." StatusTag="@OutputsTags.H51_1" IsInteractive="@IsInteractive"/>
+            <InteractiveLampOutput EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="Автомат включен" StatusTag="@OutputsTags.H30_6" IsInteractive="@IsInteractive"/>
+            <InteractiveLampOutput EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="Тест выполняется" StatusTag="@OutputsTags.H51_2" IsInteractive="@IsInteractive"/>
+            <InteractiveLampOutput EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="Один шаг" StatusTag="@OutputsTags.H32_7" IsInteractive="@IsInteractive"/>
             @* 7K кнопки (set) *@
-            <InteractiveLampOutput Label="7К2 Компаратор вкл."
+            <InteractiveLampOutput EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="7К2 Компаратор вкл."
                 StatusTag="@OutputsTags.K7_2_CompOn_Stat"
                 ControlTag="@OutputsTags.K7_2_CompOn_Sb"
                 IsInteractive="@IsInteractive"/>
-            <InteractiveLampOutput Label="7К1 Питание котла вкл."
+            <InteractiveLampOutput EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="7К1 Питание котла вкл."
                 StatusTag="@OutputsTags.K7_1_BoilerOn_Stat"
                 ControlTag="@OutputsTags.K7_1_BoilerOn_Sb"
                 IsInteractive="@IsInteractive"/>
@@ -30,7 +35,7 @@
 
         <PanelBox Style="width: 385px; height: 325px">
             @* Пневматика (set) *@
-            <InteractiveLampOutput Label="Pump 1.1 насос подачи воды"
+            <InteractiveLampOutput EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="Pump 1.1 насос подачи воды"
                 StatusTag="@OutputsTags.Pump1_1_WaterSupply"
                 ControlTag="@OutputsTags.Pump1_1_WaterSupply_Sb"
                 IsInteractive="@IsInteractive"/>
@@ -38,27 +43,27 @@
 
         <PanelBox Style="width: 385px; height: 325px">
             @* 7K кнопки (set) *@
-            <InteractiveLampOutput Label="Заземление котла вкл."
+            <InteractiveLampOutput EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="Заземление котла вкл."
                 StatusTag="@OutputsTags.K7_4_NeitralOn_Stat"
                 ControlTag="@OutputsTags.K7_4_NeitralOn_Sb"
                 IsInteractive="@IsInteractive"/>
-            <InteractiveLampOutput Label="Токовые клещи вкл."
+            <InteractiveLampOutput EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="Токовые клещи вкл."
                 StatusTag="@OutputsTags.K7_3_CurTongsOn_Stat"
                 ControlTag="@OutputsTags.K7_3_CurTongsOn_Sb"
                 IsInteractive="@IsInteractive"/>
-            <InteractiveLampOutput Label="Переключатель вилка/адаптер"
+            <InteractiveLampOutput EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="Переключатель вилка/адаптер"
                 StatusTag="@OutputsTags.K7_5_SelShukoAdapter_Stat"
                 ControlTag="@OutputsTags.K7_5_SelShukoAdapter_Sb"
                 IsInteractive="@IsInteractive"/>
             @* Пневматика (set) *@
-            <InteractiveLampOutput Label="EV0.3 подача газа в котел"
+            <InteractiveLampOutput EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="EV0.3 подача газа в котел"
                 StatusTag="@OutputsTags.Ev0_3_BoilerGasOn"
                 ControlTag="@OutputsTags.Ev0_3_BoilerGasOn_Sb"
                 IsInteractive="@IsInteractive"/>
             @* EV3.1 (toggle - простой бит) *@
-            <InteractiveLampOutput Label="EV3.1 подача воздуха" StatusTag="@OutputsTags.Ev3_1_AirOn" IsInteractive="@IsInteractive"/>
+            <InteractiveLampOutput EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="EV3.1 подача воздуха" StatusTag="@OutputsTags.Ev3_1_AirOn" IsInteractive="@IsInteractive"/>
             @* Пневматика (set) *@
-            <InteractiveLampOutput Label="EV3.2 Блокировка котла"
+            <InteractiveLampOutput EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="EV3.2 Блокировка котла"
                 StatusTag="@OutputsTags.Ev3_2_BlockBoiler"
                 ControlTag="@OutputsTags.Ev3_2_BlockBoiler_Sb"
                 IsInteractive="@IsInteractive"/>
@@ -66,3 +71,4 @@
 
     </div>
 </div>
+

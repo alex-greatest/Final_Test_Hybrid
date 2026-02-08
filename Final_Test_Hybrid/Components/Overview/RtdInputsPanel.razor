@@ -5,18 +5,26 @@
         <div class="panel-grid" style="grid-template-columns: max-content;">
 
             <PanelBox Style="width: 550px; height: 250px">
-                <ValueIndicator Label="TAG Температура входящего газа"
+                <ValueIndicator EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="TAG Температура входящего газа"
                                 Tag="@RtdScreenTags.GasTag"/>
-                <ValueIndicator Label="TES Температура воды на входе ГВ"
+                <ValueIndicator EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="TES Температура воды на входе ГВ"
                                 Tag="@RtdScreenTags.DhwTes"/>
-                <ValueIndicator Label="TUS Температура воды на выходе ГВ"
+                <ValueIndicator EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="TUS Температура воды на выходе ГВ"
                                 Tag="@RtdScreenTags.DhwTus"/>
-                <ValueIndicator Label="TMR Температура подачи отопления"
+                <ValueIndicator EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="TMR Температура подачи отопления"
                                 Tag="@RtdScreenTags.ChTmr"/>
-                <ValueIndicator Label="TRR Температура возврата отопления"
+                <ValueIndicator EmitCachedValueImmediately="@EmitCachedValueImmediately" Label="TRR Температура возврата отопления"
                                 Tag="@RtdScreenTags.ChTrr"/>
             </PanelBox>
 
         </div>
     </div>
 </div>
+
+@code {
+    /// <summary>
+    /// Включает немедленную выдачу cached значения для дочерних индикаторов.
+    /// </summary>
+    [Parameter] public bool EmitCachedValueImmediately { get; set; }
+}
+

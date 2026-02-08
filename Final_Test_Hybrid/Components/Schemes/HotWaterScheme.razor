@@ -2720,6 +2720,11 @@
 @implements IAsyncDisposable
 
 @code {
+    /// <summary>
+    /// Включает немедленную выдачу cached значения при подписке.
+    /// </summary>
+    [Parameter] public bool EmitCachedValueImmediately { get; set; }
+    
     private bool _disposed;
 
     // Значения датчиков
@@ -3088,21 +3093,21 @@
     protected override async Task OnInitializedAsync()
     {
         // Подписка на xOut_Open для индикации
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_1_Purge, OnVp2_1Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_2_Purge, OnVp2_2Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_3_HighPressure, OnVp2_3Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_4_Fill, OnVp2_4Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_5_BoilerOut, OnVp2_5Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_6_Drain, OnVp2_6Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_7_BoilerIn, OnVp2_7Changed);
-        await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_8_Drain, OnVp2_8Changed);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_1_Purge, OnVp2_1Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_2_Purge, OnVp2_2Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_3_HighPressure, OnVp2_3Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_4_Fill, OnVp2_4Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_5_BoilerOut, OnVp2_5Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_6_Drain, OnVp2_6Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_7_BoilerIn, OnVp2_7Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(PneumaticValveTags.Vp2_8_Drain, OnVp2_8Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
 
         // Датчики
-        await Subscription.SubscribeAsync("ns=3;s=\"DB_Measure\".\"Temper\".\"DHW_TUS\"", OnDhwTusChanged);
-        await Subscription.SubscribeAsync("ns=3;s=\"DB_Measure\".\"Sensor\".\"DHW_PES\"", OnDhwPesChanged);
-        await Subscription.SubscribeAsync("ns=3;s=\"DB_Measure\".\"Temper\".\"DHW_TES\"", OnDhwTesChanged);
-        await Subscription.SubscribeAsync("ns=3;s=\"DB_Measure\".\"Sensor\".\"DHW_FS\"", OnDhwFsChanged);
-        await Subscription.SubscribeAsync("ns=3;s=\"DB_ControlValve\".\"VPP3_1\".\"ActuelValue\"", OnVpp3_1Changed);
+        await Subscription.SubscribeAsync("ns=3;s=\"DB_Measure\".\"Temper\".\"DHW_TUS\"", OnDhwTusChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync("ns=3;s=\"DB_Measure\".\"Sensor\".\"DHW_PES\"", OnDhwPesChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync("ns=3;s=\"DB_Measure\".\"Temper\".\"DHW_TES\"", OnDhwTesChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync("ns=3;s=\"DB_Measure\".\"Sensor\".\"DHW_FS\"", OnDhwFsChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync("ns=3;s=\"DB_ControlValve\".\"VPP3_1\".\"ActuelValue\"", OnVpp3_1Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
     }
 
     private Task OnVp2_1Changed(object? v) => OnValveChangedAsync("VP2_1", v);
