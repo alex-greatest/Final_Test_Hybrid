@@ -82,7 +82,7 @@ public partial class ReadSoftCodePlugStep
             min: "",
             max: "",
             status: isMatch ? 1 : 0,
-            isRanged: true,
+            isRanged: false,
             unit: action.Unit);
 
         var statusMessage = CreateFormattedMessage(action.StatusLogTemplate, actualValue, expectedValue, ToStatusText(isMatch));
@@ -207,7 +207,7 @@ public partial class ReadSoftCodePlugStep
             min: "",
             max: "",
             status: 1,
-            isRanged: true,
+            isRanged: false,
             unit: action.Unit);
 
         var valueMessage = CreateFormattedMessage(action.ValueLogTemplate, read.Value);

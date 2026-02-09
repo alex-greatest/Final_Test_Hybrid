@@ -22,16 +22,19 @@ public class CheckFlowTemperatureRiseStep(
 
     private const string FlwTempHotTag = "ns=3;s=\"DB_Parameter\".\"DHW\".\"Flw_Temp_Hot\"";
     private const string FlowNtcTempRiseTag = "ns=3;s=\"DB_Parameter\".\"DHW\".\"Flow_NTC_Temp_Rise\"";
+    private const string DhwFlowHotRateTag = "ns=3;s=\"DB_Measure\".\"Sensor\".\"DHW_FS\"";
 
     private const string FlwTempRiseMinRecipe = "ns=3;s=\"DB_Recipe\".\"DHW\".\"FlwTempRise\".\"Min\"";
     private const string FlwTempRiseMaxRecipe = "ns=3;s=\"DB_Recipe\".\"DHW\".\"FlwTempRise\".\"Max\"";
+    private const string FlowHotRateMinRecipe = "ns=3;s=\"DB_Recipe\".\"DHW\".\"Flow_Hot_Rate\".\"Min\"";
+    private const string FlowHotRateMaxRecipe = "ns=3;s=\"DB_Recipe\".\"DHW\".\"Flow_Hot_Rate\".\"Max\"";
 
     public string Id => "dhw-check-flow-temperature-rise";
     public string Name => "DHW/Check_Flow_Temperature_Rise";
     public string Description => "Контур ГВС. Проверка роста температуры";
     public string PlcBlockPath => BlockPath;
-    public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, FlwTempHotTag, FlowNtcTempRiseTag];
-    public IReadOnlyList<string> RequiredRecipeAddresses => [FlwTempRiseMinRecipe, FlwTempRiseMaxRecipe];
+    public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, FlwTempHotTag, FlowNtcTempRiseTag, DhwFlowHotRateTag];
+    public IReadOnlyList<string> RequiredRecipeAddresses => [FlwTempRiseMinRecipe, FlwTempRiseMaxRecipe, FlowHotRateMinRecipe, FlowHotRateMaxRecipe];
 
     /// <summary>
     /// Возвращает пределы для отображения в гриде.
@@ -60,6 +63,7 @@ public class CheckFlowTemperatureRiseStep(
         logger.LogInformation("Запуск проверки роста температуры контура ГВС");
         testResultsService.Remove("DHW_Flw_Temp_Hot");
         testResultsService.Remove("DHW_Flow_NTC_Temp_Rise");
+        testResultsService.Remove("DHW_Flow_Hot_Rate");
 
         var writeResult = await context.OpcUa.WriteAsync(StartTag, true, ct);
         if (writeResult.Error != null)
@@ -106,15 +110,30 @@ public class CheckFlowTemperatureRiseStep(
             return TestStepResult.Fail($"Ошибка чтения Flow_NTC_Temp_Rise: {error2}");
         }
 
-        var minValue = context.RecipeProvider.GetValue<float>(FlwTempRiseMinRecipe);
-        var maxValue = context.RecipeProvider.GetValue<float>(FlwTempRiseMaxRecipe);
-        if (minValue == null || maxValue == null)
+        var (_, dhwFlowHotRate, error3) = await context.OpcUa.ReadAsync<float>(DhwFlowHotRateTag, ct);
+        if (error3 != null)
+        {
+            return TestStepResult.Fail($"Ошибка чтения DHW_FS: {error3}");
+        }
+
+        var tempRiseMinValue = context.RecipeProvider.GetValue<float>(FlwTempRiseMinRecipe);
+        var tempRiseMaxValue = context.RecipeProvider.GetValue<float>(FlwTempRiseMaxRecipe);
+        if (tempRiseMinValue == null || tempRiseMaxValue == null)
         {
             return TestStepResult.Fail("Рецепты FlwTempRise.Min/Max не загружены");
         }
 
-        var min = minValue.Value;
-        var max = maxValue.Value;
+        var flowHotRateMinValue = context.RecipeProvider.GetValue<float>(FlowHotRateMinRecipe);
+        var flowHotRateMaxValue = context.RecipeProvider.GetValue<float>(FlowHotRateMaxRecipe);
+        if (flowHotRateMinValue == null || flowHotRateMaxValue == null)
+        {
+            return TestStepResult.Fail("Рецепты Flow_Hot_Rate.Min/Max не загружены");
+        }
+
+        var tempRiseMin = tempRiseMinValue.Value;
+        var tempRiseMax = tempRiseMaxValue.Value;
+        var flowHotRateMin = flowHotRateMinValue.Value;
+        var flowHotRateMax = flowHotRateMaxValue.Value;
         var status = isSuccess ? 1 : 2;
 
         testResultsService.Add(
@@ -129,17 +148,30 @@ public class CheckFlowTemperatureRiseStep(
         testResultsService.Add(
             parameterName: "DHW_Flow_NTC_Temp_Rise",
             value: $"{flowNtcTempRise:F3}",
-            min: $"{min:F3}",
-            max: $"{max:F3}",
+            min: $"{tempRiseMin:F3}",
+            max: $"{tempRiseMax:F3}",
             status: status,
             isRanged: true,
             unit: "");
 
-        var msg = $"Температура: Разница: {flwTempHot:F3} {flowNtcTempRise:F3}";
+        testResultsService.Add(
+            parameterName: "DHW_Flow_Hot_Rate",
+            value: $"{dhwFlowHotRate:F3}",
+            min: $"{flowHotRateMin:F3}",
+            max: $"{flowHotRateMax:F3}",
+            status: status,
+            isRanged: true,
+            unit: "л/мин");
+
+        var msg = $"Температура: Разница: {flwTempHot:F3} {flowNtcTempRise:F3}, Расход: {dhwFlowHotRate:F3}";
 
         logger.LogInformation(
             "Flw_Temp_Hot: {FlwTempHot:F3}, Flow_NTC_Temp_Rise: {FlowNtcTempRise:F3}, пределы: [{Min:F3} .. {Max:F3}], статус: {Status}",
-            flwTempHot, flowNtcTempRise, min, max, status == 1 ? "OK" : "NOK");
+            flwTempHot, flowNtcTempRise, tempRiseMin, tempRiseMax, status == 1 ? "OK" : "NOK");
+
+        logger.LogInformation(
+            "DHW_Flow_Hot_Rate: {FlowHotRate:F3}, пределы: [{Min:F3} .. {Max:F3}], статус: {Status}",
+            dhwFlowHotRate, flowHotRateMin, flowHotRateMax, status == 1 ? "OK" : "NOK");
 
         if (isSuccess)
         {

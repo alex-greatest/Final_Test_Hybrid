@@ -185,3 +185,15 @@
 - Почему: по итогам сверки `NewFile2.txt` и текущего контура сохранения нужна единая договорённость по обязательным тегам и именованию, чтобы исключить дальнейшие расхождения в аудите.
 - Риск/урок: несогласованные имена (`Safety time`/`Safety_time`/`Safety_Time`) ломают сопоставление в отчётах и создают ложные «пропажи» параметров; имя параметра должно быть единым source of truth.
 - Ссылки: `Final_Test_Hybrid/NewFile2.txt`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/SafetyTimeStep.cs`, `Final_Test_Hybrid/LEARNING_LOG.md`
+
+### 2026-02-09 (аудит пределов: выровнены `isRanged/min/max`)
+- Что изменили: исправили 3 расхождения в сохранении результатов. `CH_Flw_Temp_Cold` оставили `isRanged=false` и убрали ложный `max`. В `ReadSoftCodePlugStep` для строковых параметров (`VerifyStringAction`, `ReadOnlyStringAction`) сменили `isRanged` на `false` при пустых `min/max`.
+- Почему: были внутренние противоречия контракта результата (`non-ranged` с заполненным пределом и `ranged` без пределов), из-за чего ломалась корректная классификация параметров в хранилище/выгрузке.
+- Риск/урок: `IsRanged` нельзя выставлять «по умолчанию для шага»; его нужно задавать строго по типу конкретного параметра (строка без пределов, число с пределами).
+- Ссылки: `Final_Test_Hybrid/Services/Steps/Steps/CH/GetChwFlowNtcColdStep.cs`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Execution.cs`, `Final_Test_Hybrid/NewFile2.txt`
+
+### 2026-02-09 (DHW: сохранение `DHW_Flow_Hot_Rate` в Check_Flow_Temperature_Rise)
+- Что изменили: в `CheckFlowTemperatureRiseStep` добавили чтение `DB_Measure.Sensor.DHW_FS` на завершении шага и сохранение результата `DHW_Flow_Hot_Rate` с пределами из рецептов `DB_Recipe.DHW.Flow_Hot_Rate.Min/Max`; расширили `RequiredPlcTags`/`RequiredRecipeAddresses` и добавили `Remove("DHW_Flow_Hot_Rate")` для Retry.
+- Почему: закрыли фактический разрыв между `NewFile2.txt` и контуром сохранения результатов — параметр `DHW_Flow_Hot_Rate` был ожидаем, но не сохранялся.
+- Риск/урок: при добавлении параметров в существующий шаг нужно обновлять не только `Add(...)`, но и pre-validation (`RequiredPlcTags`/`RequiredRecipeAddresses`), иначе легко получить runtime-провалы на старте карты.
+- Ссылки: `Final_Test_Hybrid/Services/Steps/Steps/DHW/CheckFlowTemperatureRiseStep.cs`, `Final_Test_Hybrid/NewFile2.txt`

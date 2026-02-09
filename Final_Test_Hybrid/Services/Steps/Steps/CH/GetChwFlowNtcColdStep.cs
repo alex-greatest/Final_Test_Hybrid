@@ -91,7 +91,7 @@ public class GetChwFlowNtcColdStep(
             parameterName: "CH_Flw_Temp_Cold",
             value: $"{flwTempCold:F3}",
             min: "",
-            max: "3.000",
+            max: "",
             status: status,
             isRanged: false,
             unit: "");
