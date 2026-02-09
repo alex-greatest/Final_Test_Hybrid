@@ -86,3 +86,29 @@
 - Почему: закрыли разрыв между фактическими глобальными PLC-сигналами и программным каталогом ошибок перед дальнейшей синхронизацией в БД.
 - Риск/урок: при добавлении глобальных ошибок нельзя смешивать их со step-привязками; источник истины — PLC-тег + уникальный код.
 - Ссылки: `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.GlobalPlc.cs`
+
+### 2026-02-09 (Рефакторинг step-ошибок по контурам/шагам)
+- Что изменили: разнесли объявления из `ErrorDefinitions.Steps.cs` по новым partial-файлам `ErrorDefinitions.Steps.Coms.cs`, `ErrorDefinitions.Steps.Dhw.cs`, `ErrorDefinitions.Steps.Ch.cs`, `ErrorDefinitions.Steps.Gas.cs`, `ErrorDefinitions.Steps.Other.cs`; внутри файлов добавили `#region` по шагам.
+- Почему: упростили навигацию и сопровождение каталога ошибок без изменения runtime-поведения.
+- Риск/урок: при авто-генерации групп в PowerShell одиночные элементы могут теряться из-за scalar/array-ловушки; после генерации обязателен контроль `StepErrors` list vs declarations 1:1.
+- Компромисс: добавили отдельный файл `Other` для `Block Boiler Adapter` и `Elec/*`, чтобы не смешивать их искусственно с `Coms/DHW/CH/Gas`.
+- Ссылки: `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Coms.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Dhw.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Ch.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Gas.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Other.cs`
+
+### 2026-02-09 (Перенумерация step-кодов по схеме контур->шаг->индекс)
+- Что изменили: перенумеровали все `П-*` в `ErrorDefinitions.Steps*.cs` и `ErrorDefinitions.Steps1.cs` в новую схему: `Coms=П-100..`, `DHW=П-200..`, `CH=П-300..`, `Gas=П-400..`, `Other=П-500..`; внутри каждого шага суффиксы `-00..`.
+- Почему: старая нумерация была исторической и слабо читаемой; после пересоздания БД программа должна стать логичным source of truth по кодам.
+- Риск/урок: нельзя менять `PlcTag`/`RelatedStepId` вместе с кодами; безопасная миграция — только `Code`, затем обязательная проверка уникальности и компиляции.
+- Ссылки: `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Coms.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Dhw.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Ch.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Gas.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Other.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps1.cs`
+
+### 2026-02-09 (SQL-скрипт очистки шаблонов ошибок для prod)
+- Что изменили: добавили скрипт `Final_Test_Hybrid/tools/db-maintenance/clear_error_templates_and_deactivate_history.sql` для транзакционного обновления `tb_error_settings_history.is_active=false` и удаления всех записей из `tb_error_settings_template`.
+- Почему: нужен воспроизводимый и безопасный артефакт для ручного запуска в production без изменения `tb_error`.
+- Риск/урок: удалять `tb_error_settings_history` нельзя, иначе по FK-каскаду потеряются данные в `tb_error`; корректный сценарий — только deactivate history + delete template.
+- Ссылки: `Final_Test_Hybrid/tools/db-maintenance/clear_error_templates_and_deactivate_history.sql`
+
+### 2026-02-09 (Завершение рефакторинга step-ошибок: удалён `Steps1`)
+- Что изменили: перенесли 38 step-ошибок из `ErrorDefinitions.Steps1.cs` в контурные файлы `ErrorDefinitions.Steps.Coms.cs`, `ErrorDefinitions.Steps.Ch.cs`, `ErrorDefinitions.Steps.Dhw.cs`, `ErrorDefinitions.Steps.Gas.cs`; удалили `ErrorDefinitions.Steps1.cs` и исключили `Steps1Errors` из `ErrorDefinitions.All`.
+- Почему: устранили второй источник step-ошибок и закрепили единую структуру по контурам/шагам.
+- Риск/урок: при переносе критично сохранять `Code/PlcTag/RelatedStepId/RelatedStepName` 1:1; проверка по счётчикам обязательна (`STEP_TOTAL=140`, `STEP_DUP_CODES=0`).
+- Верификация: `dotnet build`, `dotnet format analyzers --verify-no-changes`, `dotnet format style --verify-no-changes`, `jb inspectcode` по изменённым `*.cs` (report без WARNING/ERROR).
+- Ссылки: `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Coms.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Ch.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Dhw.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Gas.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.cs`

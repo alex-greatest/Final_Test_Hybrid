@@ -4,7 +4,7 @@ public static partial class ErrorDefinitions
 {
     // Агрегация всех ошибок
     public static IReadOnlyList<ErrorDefinition> All =>
-        [..GlobalPlcErrors, ..GlobalAppErrors, ..StepErrors, ..Steps1Errors, ..DiagnosticEcuErrors];
+        [..GlobalPlcErrors, ..GlobalAppErrors, ..StepErrors, ..DiagnosticEcuErrors];
 
     // Хелперы
     public static IEnumerable<ErrorDefinition> PlcErrors => All.Where(e => e.IsPlcBound);
