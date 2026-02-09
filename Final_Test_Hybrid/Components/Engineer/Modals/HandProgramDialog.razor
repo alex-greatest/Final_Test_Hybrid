@@ -8,7 +8,9 @@
 
 <div class="hand-program-container">
     <div class="tabs-shell">
-        <RadzenTabs RenderMode="TabRenderMode.Client" class="hand-program-tabs">
+        <RadzenTabs RenderMode="TabRenderMode.Client"
+                    @bind-SelectedIndex="_selectedTabIndex"
+                    class="hand-program-tabs">
             <Tabs>
                 <RadzenTabsItem Text="Газ">
                     <GasScheme EmitCachedValueImmediately="true" />
@@ -35,7 +37,10 @@
                     <PneumaticOutputsPanel IsInteractive="true" EmitCachedValueImmediately="true" />
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Тест связи">
-                    <ConnectionTestPanel />
+                    @if (_selectedTabIndex == TestConnectionTabIndex)
+                    {
+                        <ConnectionTestPanel />
+                    }
                 </RadzenTabsItem>
             </Tabs>
         </RadzenTabs>
@@ -43,7 +48,10 @@
 </div>
 
 @code {
+    private const int TestConnectionTabIndex = 8;
+
     private bool _disposed;
+    private int _selectedTabIndex;
 
     protected override void OnInitialized()
     {
