@@ -238,8 +238,8 @@ public partial class ReadSoftCodePlugStep
         testResultsService.Add(
             parameterName: action.ResultName,
             value: read.Value.ToString(),
-            min: "",
-            max: "",
+            min: action.Min,
+            max: action.Max,
             status: 1,
             isRanged: true,
             unit: action.Unit);

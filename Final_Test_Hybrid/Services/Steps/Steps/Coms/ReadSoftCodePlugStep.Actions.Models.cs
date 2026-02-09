@@ -118,6 +118,8 @@ public partial class ReadSoftCodePlugStep
         int RegisterCount,
         string ResultName,
         string Unit,
+        string Min,
+        string Max,
         string ReadLogMessage,
         string ReadErrorPrefix,
         string ValueLogTemplate) : SoftCodePlugAction(StepNo, Title)

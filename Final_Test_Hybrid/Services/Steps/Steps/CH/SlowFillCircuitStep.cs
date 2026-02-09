@@ -21,6 +21,7 @@ public class SlowFillCircuitStep(
     private const string ErrorTag = "ns=3;s=\"DB_VI\".\"CH\".\"Slow_Fill_Circuit\".\"Error\"";
     private const string FlowPressTag = "ns=3;s=\"DB_Parameter\".\"CH\".\"Flow_Press\"";
     private const string PressTestValueRecipe = "ns=3;s=\"DB_Recipe\".\"CH\".\"PresTestValue\"";
+    private const float FlowPressMaxLimit = 2.70f;
 
     public string Id => "ch-slow-fill-circuit";
     public string Name => "CH/Slow_Fill_Circuit";
@@ -96,9 +97,9 @@ public class SlowFillCircuitStep(
             parameterName: "CH_Flow_Press",
             value: $"{flowPress:F3}",
             min: $"{pressTestValue:F3}",
-            max: "",
+            max: $"{FlowPressMaxLimit:F3}",
             status: status,
-            isRanged: false,
+            isRanged: true,
             unit: "");
 
         logger.LogInformation("Давление потока: {FlowPress:F3}, порог: {Threshold:F3}, статус: {Status}",
@@ -111,12 +112,7 @@ public class SlowFillCircuitStep(
             logger.LogInformation("Медленное заполнение контура завершено успешно");
 
             var resetResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
-            if (resetResult.Error != null)
-            {
-                return TestStepResult.Fail($"Ошибка сброса Start: {resetResult.Error}");
-            }
-
-            return TestStepResult.Pass(msg);
+            return resetResult.Error != null ? TestStepResult.Fail($"Ошибка сброса Start: {resetResult.Error}") : TestStepResult.Pass(msg);
         }
 
         return TestStepResult.Fail(msg);

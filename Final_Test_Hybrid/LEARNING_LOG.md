@@ -173,3 +173,15 @@
 - Почему: при `Client` в связке с условным рендером по индексу вкладки наблюдалась пустая вкладка `Тест связи`.
 - Риск/урок: если содержимое вкладки зависит от серверного состояния (`@if` по `SelectedIndex`), `Client`-режим может давать расхождение между визуальным активным табом и фактическим серверным рендером.
 - Ссылки: `Final_Test_Hybrid/Components/Engineer/Modals/HandProgramDialog.razor`
+
+### 2026-02-09 (lost tags: диапазоны 4 параметров)
+- Что изменили: закрыли неполные диапазоны для `CH_Flow_Press` (`max=2.700`, `isRanged=true`), `Tank_DHW_Mode` (`max=60.000`, `isRanged=true`), `Supplier_Code` (`0..99999999`) и `Counter_Number` (`0..999999` через `ReadOnlyUInt32Action`).
+- Почему: устранили расхождение с `report_lost_tags.md` по ranged-контракту.
+- Риск/урок: `IsRanged/min/max` фиксировать для каждого параметра явно; не полагаться на общий путь сохранения без per-parameter лимитов.
+- Ссылки: `Final_Test_Hybrid/Services/Steps/Steps/CH/SlowFillCircuitStep.cs`, `Final_Test_Hybrid/Services/Steps/Steps/DHW/SetTankModeStep.cs`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Execution.cs`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Table.Part2.cs`
+
+### 2026-02-09 (результаты: Error_ID не обязателен, канон имени Safety_Time)
+- Что изменили: зафиксировали проектное правило для результатов — `Error_ID` не сохраняем в `TestResultsService`; корректное каноническое имя параметра времени безопасности: `Safety_Time`.
+- Почему: по итогам сверки `NewFile2.txt` и текущего контура сохранения нужна единая договорённость по обязательным тегам и именованию, чтобы исключить дальнейшие расхождения в аудите.
+- Риск/урок: несогласованные имена (`Safety time`/`Safety_time`/`Safety_Time`) ломают сопоставление в отчётах и создают ложные «пропажи» параметров; имя параметра должно быть единым source of truth.
+- Ссылки: `Final_Test_Hybrid/NewFile2.txt`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/SafetyTimeStep.cs`, `Final_Test_Hybrid/LEARNING_LOG.md`

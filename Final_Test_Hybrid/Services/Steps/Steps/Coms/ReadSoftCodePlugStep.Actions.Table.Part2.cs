@@ -154,6 +154,8 @@ public partial class ReadSoftCodePlugStep
             startRegister: RegisterSupplierCodeHi,
             registerCount: 2,
             resultName: SupplierCodeResultName,
+            min: "0",
+            max: "99999999",
             readLogMessage: $"Чтение кода поставщика из регистров {RegisterSupplierCodeHi}-{RegisterSupplierCodeHi + 1}",
             readErrorPrefix: $"Ошибка при чтении кода поставщика из регистров {RegisterSupplierCodeHi}-{RegisterSupplierCodeHi + 1}. ",
             valueLogTemplate: "Код поставщика: {0}");
@@ -167,6 +169,8 @@ public partial class ReadSoftCodePlugStep
             startRegister: RegisterCounterNumberHi,
             registerCount: 2,
             resultName: CounterNumberResultName,
+            min: "0",
+            max: "999999",
             readLogMessage: $"Чтение порядкового номера из регистров {RegisterCounterNumberHi}-{RegisterCounterNumberHi + 1}",
             readErrorPrefix: $"Ошибка при чтении порядкового номера из регистров {RegisterCounterNumberHi}-{RegisterCounterNumberHi + 1}. ",
             valueLogTemplate: "Порядковый номер: {0}");

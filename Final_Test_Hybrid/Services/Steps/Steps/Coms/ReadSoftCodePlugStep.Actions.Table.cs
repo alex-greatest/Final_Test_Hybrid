@@ -171,6 +171,8 @@ public partial class ReadSoftCodePlugStep
         ushort startRegister,
         int registerCount,
         string resultName,
+        string min,
+        string max,
         string readLogMessage,
         string readErrorPrefix,
         string valueLogTemplate)
@@ -182,6 +184,8 @@ public partial class ReadSoftCodePlugStep
             RegisterCount: registerCount,
             ResultName: resultName,
             Unit: "",
+            Min: min,
+            Max: max,
             ReadLogMessage: readLogMessage,
             ReadErrorPrefix: readErrorPrefix,
             ValueLogTemplate: valueLogTemplate);

@@ -21,6 +21,7 @@ public class SetTankModeStep(
     private const string ErrorTag = "ns=3;s=\"DB_VI\".\"DHW\".\"Set_Tank_Mode\".\"Error\"";
     private const string TankModeTag = "ns=3;s=\"DB_Parameter\".\"DHW\".\"Tank_Mode\"";
     private const string TankModeRecipe = "ns=3;s=\"DB_Recipe\".\"DHW\".\"Tank\".\"Mode\"";
+    private const float TankModeMaxLimit = 60f;
 
     public string Id => "dhw-set-tank-mode";
     public string Name => "DHW/Set_Tank_Mode";
@@ -93,7 +94,7 @@ public class SetTankModeStep(
             parameterName: "Tank_DHW_Mode",
             value: $"{tankMode:F3}",
             min: $"{tankModeLimit:F3}",
-            max: "",
+            max: $"{TankModeMaxLimit:F3}",
             status: status,
             isRanged: true,
             unit: "");
