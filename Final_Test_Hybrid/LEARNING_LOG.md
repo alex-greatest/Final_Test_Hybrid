@@ -143,3 +143,33 @@
 - Почему: иначе можно остаться на вкладке `Тест связи`, отсканировать этикетку и получить старт подготовки/теста при открытом инженерном окне.
 - Риск/урок: блокировка только по кнопке открытия недостаточна; нужен runtime-guard для уже открытого окна при смене системной фазы.
 - Ссылки: `Final_Test_Hybrid/Components/Engineer/Modals/HandProgramDialog.razor`, `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.cs`
+
+### 2026-02-09 (ConnectionTestPanel: preset версии прошивки + человекочитаемое чтение)
+- Что изменили: в `ConnectionTestPanel` добавили готовый preset `Версия прошивки` (чтение `1055/1056`) с выводом `Версия прошивки: vMajor.Minor`; для подготовленных preset-ов чтения добавили человекочитаемую расшифровку (`ModeKey`, `BoilerStatus`, `типы/состояния` по enum-ам).
+- Почему: оператору в ручной диагностике нужен быстрый понятный результат без ручной интерпретации сырых чисел.
+- Риск/урок: человекочитаемые подписи должны быть привязаны к документированным адресам/enum-ам; ручной режим `Вручную...` оставлять raw, чтобы не скрывать фактические значения.
+- Ссылки: `Final_Test_Hybrid/Components/Overview/ConnectionTestPanel.razor`, `Final_Test_Hybrid/Диагностический_протокол_1_8_10.md`
+
+### 2026-02-09 (lost tags: внедрены недостающие параметры результата)
+- Что изменили: в `ScanBarcode` (MES/non-MES) добавили сохранение `Plant_ID` (из рецепта), `Shift_No`, `Tester_No` и чтение `Pres_atmosph.`/`Pres_in_gas` из `DB_Measure.Sensor.Gas_Pa/Gas_P` в `TestResultsService`; при ошибке чтения давления scan завершаетcя `Fail`. В completion-flow добавили `Final_result` + `Testing_date` при каждом сохранении результата. В `ReadSoftCodePlugStep` добавили отдельную запись `Soft_Code_Plug` из `BoilerState.Article`.
+- Почему: закрыли подтверждённые разрывы между `report_lost_tags.md`/`NewFile2.txt` и фактическим набором параметров, передаваемых в storage/MES.
+- Риск/урок: pressure-поля в pre-execution теперь fail-fast и могут чаще останавливать scan при нестабильной OPC-связи; fallback-метаданные (`Plant_ID=""`, `Shift_No="0"`, `Tester_No="Unknown"`) не должны маскировать системные проблемы, поэтому ошибки чтения PLC оставлены критичными.
+- Ссылки: `Final_Test_Hybrid/Services/Steps/Steps/ScanStepBase.cs`, `Final_Test_Hybrid/Services/Steps/Steps/ScanBarcodeStep.cs`, `Final_Test_Hybrid/Services/Steps/Steps/ScanBarcodeMesStep.cs`, `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.cs`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Execution.cs`
+
+### 2026-02-09 (Soft_Code_Plug: переведён в non-ranged)
+- Что изменили: для `Soft_Code_Plug` в `ReadSoftCodePlugStep` изменили флаг `isRanged` с `true` на `false`.
+- Почему: параметр должен сохраняться как обычное значение (без диапазона), чтобы попадать в non-ranged набор результатов.
+- Риск/урок: флаг `IsRanged` напрямую влияет на маршрутизацию данных в MES (`Items` vs `ItemsLimited`), поэтому его нельзя выбирать «по аналогии» с соседними полями.
+- Ссылки: `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Execution.cs`, `Final_Test_Hybrid/Services/Storage/MesTestResultStorage.cs`
+
+### 2026-02-09 (Soft_Code_Plug: унификация очистки и правило IsRanged)
+- Что изменили: `SoftCodePlugResultName` включили в `ResultNamesInternal` в `BuildResultNames(...)`; в `ClearPreviousResults()` оставили единый цикл `foreach` без отдельного `testResultsService.Remove(SoftCodePlugResultName)`.
+- Почему: единая точка списка результатов снижает шанс забыть отдельный `Remove` при следующих изменениях.
+- Риск/урок: `IsRanged` нужно согласовывать по каждому параметру отдельно (контракт хранения/выгрузки), а не выставлять «как у похожих» полей.
+- Ссылки: `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.cs`, `Final_Test_Hybrid/Services/Storage/MesTestResultStorage.cs`
+
+### 2026-02-09 (HandProgram: переключение вкладок на Server render)
+- Что изменили: в `HandProgramDialog` переключили `RadzenTabs RenderMode` с `TabRenderMode.Client` на `TabRenderMode.Server` для стабильной отрисовки условного контента вкладки `Тест связи` (`@if (_selectedTabIndex == 8)`).
+- Почему: при `Client` в связке с условным рендером по индексу вкладки наблюдалась пустая вкладка `Тест связи`.
+- Риск/урок: если содержимое вкладки зависит от серверного состояния (`@if` по `SelectedIndex`), `Client`-режим может давать расхождение между визуальным активным табом и фактическим серверным рендером.
+- Ссылки: `Final_Test_Hybrid/Components/Engineer/Modals/HandProgramDialog.razor`

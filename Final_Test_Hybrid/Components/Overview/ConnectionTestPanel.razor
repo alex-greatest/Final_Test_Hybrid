@@ -3,6 +3,7 @@
 @using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue
 @using Final_Test_Hybrid.Services.Diagnostic.Protocol
 @using Final_Test_Hybrid.Services.Diagnostic.Models
+@using Final_Test_Hybrid.Services.Diagnostic.Models.Enums
 @using Final_Test_Hybrid.Services.Diagnostic.Connection
 @using Final_Test_Hybrid.Services.Diagnostic.Services
 @using Microsoft.Extensions.Options
@@ -200,6 +201,8 @@
     private const ushort DisplayBrightnessAddress = 1048;
     private const ushort DisplayBrightnessMin = 10;
     private const ushort DisplayBrightnessMax = 100;
+    private const ushort FirmwareVersionMajorAddress = 1055;
+    private const ushort FirmwareVersionMinorAddress = 1056;
     private const uint StandModeKey = 0xD7F8_DB56;
     private const uint EngineeringModeKey = 0xFA87_CD5E;
     private const int ModeVerificationCycles = 2;
@@ -209,6 +212,7 @@
     [
         new("Ключ режима", 1000, "UInt32", "Ключ режима (стенд/инженер)"),
         new("Статус котла", 1005, "Int16", "Статус котла (-1=тест, 0=вкл, 1-10=режимы)"),
+        new("Версия прошивки", FirmwareVersionMajorAddress, "UInt16", "Версия прошивки ЭБУ (1055/1056)", RegisterPresetKind.FirmwareVersion),
         new("Тип мощности", 1002, "UInt16", "Тип мощности котла"),
         new("Тип насоса", 1003, "UInt16", "Тип насоса"),
         new("Тип датчика давл.", 1004, "UInt16", "Тип датчика давления"),
@@ -422,6 +426,12 @@
         try
         {
             var docAddress = _selectedReadPreset?.Address > 0 ? _selectedReadPreset.Address : _readAddress;
+            if (IsFirmwareVersionPreset())
+            {
+                await ReadFirmwareVersionAsync();
+                return;
+            }
+
             var address = (ushort)(docAddress - Settings.Value.BaseAddressOffset);
 
             switch (_selectedReadType)
@@ -430,7 +440,7 @@
                     var resultU16 = await Reader.ReadUInt16Async(address);
                     if (resultU16.Success)
                     {
-                        _readResult = resultU16.Value.ToString();
+                        _readResult = FormatUInt16Result(docAddress, resultU16.Value);
                     }
                     else
                     {
@@ -442,7 +452,7 @@
                     var resultI16 = await Reader.ReadInt16Async(address);
                     if (resultI16.Success)
                     {
-                        _readResult = resultI16.Value.ToString();
+                        _readResult = FormatInt16Result(docAddress, resultI16.Value);
                     }
                     else
                     {
@@ -454,7 +464,7 @@
                     var resultU32 = await Reader.ReadUInt32Async(address);
                     if (resultU32.Success)
                     {
-                        _readResult = $"{resultU32.Value} (0x{resultU32.Value:X8})";
+                        _readResult = FormatUInt32Result(docAddress, resultU32.Value);
                     }
                     else
                     {
@@ -559,6 +569,241 @@
         {
             _isWriting = false;
         }
+    }
+
+    /// <summary>
+    /// Возвращает true, если выбран готовый preset чтения версии прошивки.
+    /// </summary>
+    private bool IsFirmwareVersionPreset()
+    {
+        return _selectedReadPreset?.Kind == RegisterPresetKind.FirmwareVersion;
+    }
+
+    /// <summary>
+    /// Читает версию прошивки (1055/1056) и возвращает её в человекочитаемом виде.
+    /// </summary>
+    private async Task ReadFirmwareVersionAsync()
+    {
+        var majorAddress = (ushort)(FirmwareVersionMajorAddress - Settings.Value.BaseAddressOffset);
+        var majorResult = await Reader.ReadUInt16Async(majorAddress);
+        if (!majorResult.Success)
+        {
+            _readError = $"1055 (major): {majorResult.Error}";
+            return;
+        }
+
+        var minorAddress = (ushort)(FirmwareVersionMinorAddress - Settings.Value.BaseAddressOffset);
+        var minorResult = await Reader.ReadUInt16Async(minorAddress);
+        if (!minorResult.Success)
+        {
+            _readError = $"1056 (minor): {minorResult.Error}";
+            return;
+        }
+
+        _readResult = $"Версия прошивки: v{majorResult.Value}.{minorResult.Value} (1055={majorResult.Value}, 1056={minorResult.Value})";
+    }
+
+    /// <summary>
+    /// Форматирует результат UInt16 для готовых preset-ов в человекочитаемом виде.
+    /// </summary>
+    private string FormatUInt16Result(ushort docAddress, ushort value)
+    {
+        return (IsPresetRead(), docAddress) switch
+        {
+            (true, 1002) => $"{value} ({FormatBoilerPowerType(value)})",
+            (true, 1003) => $"{value} ({FormatPumpType(value)})",
+            (true, 1004) => $"{value} ({FormatPressureDeviceType(value)})",
+            (true, 1054) => $"{value} ({FormatConnectionType(value)})",
+            (true, 1066) => $"{value} ({FormatContactState(value)})",
+            (true, 1067) => $"{value} ({FormatContactState(value)})",
+            (true, 1068) => $"{value} ({FormatContactState(value)})",
+            (true, 1069) => $"{value} ({FormatThreeWayValveState(value)})",
+            (true, 1070) => $"{value} ({FormatPumpState(value)})",
+            (true, 1071) => $"{value} ({FormatContactState(value)})",
+            (true, 1157) => $"{value} ({FormatGasRegulatorType(value)})",
+            _ => value.ToString(),
+        };
+    }
+
+    /// <summary>
+    /// Форматирует результат Int16 для готовых preset-ов в человекочитаемом виде.
+    /// </summary>
+    private string FormatInt16Result(ushort docAddress, short value)
+    {
+        return (IsPresetRead(), docAddress) switch
+        {
+            (true, 1005) => $"{value} ({FormatBoilerStatus(value)})",
+            _ => value.ToString(),
+        };
+    }
+
+    /// <summary>
+    /// Форматирует результат UInt32 для готовых preset-ов в человекочитаемом виде.
+    /// </summary>
+    private string FormatUInt32Result(ushort docAddress, uint value)
+    {
+        return (IsPresetRead(), docAddress) switch
+        {
+            (true, 1000) => $"Ключ режима: 0x{value:X8} ({FormatModeNameByKey(value)})",
+            _ => $"{value} (0x{value:X8})",
+        };
+    }
+
+    /// <summary>
+    /// Возвращает true, если чтение выполняется по готовому preset, а не вручную.
+    /// </summary>
+    private bool IsPresetRead()
+    {
+        return _selectedReadPreset is { Address: > 0 };
+    }
+
+    /// <summary>
+    /// Человекочитаемая расшифровка типа мощности.
+    /// </summary>
+    private static string FormatBoilerPowerType(ushort value)
+    {
+        return value switch
+        {
+            (ushort)BoilerPowerType.NotSet => "Не задан",
+            (ushort)BoilerPowerType.Type21_18kW => "Тип 21 (18 кВт)",
+            (ushort)BoilerPowerType.Type31_24kW => "Тип 31 (24 кВт)",
+            (ushort)BoilerPowerType.Type41_28kW => "Тип 41 (28 кВт)",
+            _ => "Неизвестный тип мощности",
+        };
+    }
+
+    /// <summary>
+    /// Человекочитаемая расшифровка типа насоса.
+    /// </summary>
+    private static string FormatPumpType(ushort value)
+    {
+        return value switch
+        {
+            (ushort)PumpType.NotSet => "Не задан",
+            (ushort)PumpType.DWP15_50_G1 => "DWP15-50-G1",
+            _ => "Неизвестный тип насоса",
+        };
+    }
+
+    /// <summary>
+    /// Человекочитаемая расшифровка типа датчика давления.
+    /// </summary>
+    private static string FormatPressureDeviceType(ushort value)
+    {
+        return value switch
+        {
+            (ushort)PressureDeviceType.NotSet => "Не задан",
+            (ushort)PressureDeviceType.PressureRelay => "Реле давления",
+            _ => "Неизвестный тип датчика давления",
+        };
+    }
+
+    /// <summary>
+    /// Человекочитаемая расшифровка типа подключения.
+    /// </summary>
+    private static string FormatConnectionType(ushort value)
+    {
+        return value switch
+        {
+            (ushort)ConnectionType.SingleCircuit => "Одноконтурный",
+            (ushort)ConnectionType.DualCircuit => "Двухконтурный",
+            (ushort)ConnectionType.BoilerWithNTC => "Бойлер с NTC",
+            (ushort)ConnectionType.BoilerWithThermostat => "Бойлер с термостатом",
+            _ => "Неизвестный тип подключения",
+        };
+    }
+
+    /// <summary>
+    /// Человекочитаемая расшифровка бинарного контакта.
+    /// </summary>
+    private static string FormatContactState(ushort value)
+    {
+        return value switch
+        {
+            (ushort)ContactState.Open => "Разомкнут",
+            (ushort)ContactState.Closed => "Замкнут",
+            _ => "Неизвестное состояние контакта",
+        };
+    }
+
+    /// <summary>
+    /// Человекочитаемая расшифровка состояния трёхходового клапана.
+    /// </summary>
+    private static string FormatThreeWayValveState(ushort value)
+    {
+        return value switch
+        {
+            (ushort)ThreeWayValveState.Unknown => "Неизвестно",
+            (ushort)ThreeWayValveState.TransitionToOS => "Переход в ОС",
+            (ushort)ThreeWayValveState.OS => "ОС",
+            (ushort)ThreeWayValveState.TransitionToDHW => "Переход в ГВС",
+            (ushort)ThreeWayValveState.DHW => "ГВС",
+            (ushort)ThreeWayValveState.Error => "Ошибка",
+            _ => "Неизвестное состояние клапана",
+        };
+    }
+
+    /// <summary>
+    /// Человекочитаемая расшифровка состояния насоса.
+    /// </summary>
+    private static string FormatPumpState(ushort value)
+    {
+        return value switch
+        {
+            (ushort)PumpState.Off => "Выключен",
+            (ushort)PumpState.On => "Включен",
+            (ushort)PumpState.Error => "Ошибка",
+            _ => "Неизвестное состояние насоса",
+        };
+    }
+
+    /// <summary>
+    /// Человекочитаемая расшифровка типа газового регулятора.
+    /// </summary>
+    private static string FormatGasRegulatorType(ushort value)
+    {
+        return value switch
+        {
+            (ushort)GasRegulatorType.NotSet => "Не задан",
+            (ushort)GasRegulatorType.EBR2008N010901 => "EBR2008N010901",
+            _ => "Неизвестный тип регулятора",
+        };
+    }
+
+    /// <summary>
+    /// Человекочитаемая расшифровка статуса котла.
+    /// </summary>
+    private static string FormatBoilerStatus(short value)
+    {
+        return value switch
+        {
+            (short)BoilerStatus.TestingMode => "Тест на линии",
+            (short)BoilerStatus.PowerOn => "Включение питания",
+            (short)BoilerStatus.BlockB => "Блокировка Б",
+            (short)BoilerStatus.BlockA => "Блокировка А",
+            (short)BoilerStatus.EmergencyMode => "Аварийный режим",
+            (short)BoilerStatus.StandbyMode => "Ожидание",
+            (short)BoilerStatus.SetPowerMode => "Установка мощности",
+            (short)BoilerStatus.ShortHeatingOS => "Короткий нагрев ОС",
+            (short)BoilerStatus.ConstantHeatingOS => "Постоянный нагрев ОС",
+            (short)BoilerStatus.LongPurge => "Длинная продувка",
+            (short)BoilerStatus.SummerMode => "Лето (ГВС)",
+            (short)BoilerStatus.WinterMode => "Зима (ОС+ГВС)",
+            _ => "Неизвестный статус",
+        };
+    }
+
+    /// <summary>
+    /// Возвращает имя режима по значению ModeKey.
+    /// </summary>
+    private static string FormatModeNameByKey(uint modeKey)
+    {
+        return modeKey switch
+        {
+            StandModeKey => "Стенд",
+            EngineeringModeKey => "Инженерный",
+            _ => "Обычный",
+        };
     }
 
     /// <summary>
@@ -784,7 +1029,16 @@
     /// <summary>
     /// Предустановка регистра для выбора.
     /// </summary>
-    private record RegisterPreset(string Name, ushort Address, string Type, string Description);
+    private record RegisterPreset(string Name, ushort Address, string Type, string Description, RegisterPresetKind Kind = RegisterPresetKind.Raw);
+
+    /// <summary>
+    /// Категория preset чтения.
+    /// </summary>
+    private enum RegisterPresetKind
+    {
+        Raw,
+        FirmwareVersion
+    }
 
     /// <summary>
     /// Предустановка режима котла.

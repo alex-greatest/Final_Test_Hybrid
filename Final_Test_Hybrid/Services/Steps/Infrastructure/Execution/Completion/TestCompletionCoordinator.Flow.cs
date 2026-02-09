@@ -1,3 +1,4 @@
+using System.Globalization;
 using Final_Test_Hybrid.Models.Plc.Tags;
 using Final_Test_Hybrid.Services.Storage;
 
@@ -5,6 +6,10 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 
 public partial class TestCompletionCoordinator
 {
+    private const string FinalResultName = "Final_result";
+    private const string TestingDateName = "Testing_date";
+    private const string TestingDateFormat = "dd.MM.yyyy HH:mm:ss";
+
     public async Task<CompletionResult> HandleTestCompletedAsync(int testResult, CancellationToken ct)
     {
         IsWaitingForCompletion = true;
@@ -82,6 +87,7 @@ public partial class TestCompletionCoordinator
 
     private async Task<bool> TrySaveWithRetryAsync(int testResult, CancellationToken ct)
     {
+        AddCompletionResults(testResult);
         while (!ct.IsCancellationRequested)
         {
             InvokeSaveProgressSafely(true);
@@ -120,6 +126,19 @@ public partial class TestCompletionCoordinator
             }
         }
         return false;
+    }
+
+    private void AddCompletionResults(int testResult)
+    {
+        var status = testResult == 1 ? 1 : 0;
+        var finalResultValue = testResult == 1 ? "ok" : "nok";
+        var testingDateValue = DateTime.Now.ToString(TestingDateFormat, CultureInfo.InvariantCulture);
+
+        deps.TestResultsService.Remove(FinalResultName);
+        deps.TestResultsService.Remove(TestingDateName);
+
+        deps.TestResultsService.Add(FinalResultName, finalResultValue, "", "", status, false, "");
+        deps.TestResultsService.Add(TestingDateName, testingDateValue, "", "", status, false, "");
     }
 
     private async Task<bool> ShowSaveErrorDialogAsync(string? errorMessage)

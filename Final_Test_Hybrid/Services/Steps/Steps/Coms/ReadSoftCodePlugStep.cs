@@ -4,7 +4,6 @@ using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Diagnostic.Models.Enums;
 using Final_Test_Hybrid.Services.Results;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Options;
 
@@ -17,7 +16,7 @@ public partial class ReadSoftCodePlugStep(
     BoilerState boilerState,
     IOptions<DiagnosticSettings> settings,
     ITestResultsService testResultsService,
-    DualLogger<ReadSoftCodePlugStep> logger) : ITestStep, IRequiresRecipes
+    DualLogger<ReadSoftCodePlugStep> logger) : IRequiresRecipes
 {
     // Регистры для чтения (адреса из документации)
     private const ushort RegisterConnectionType = 1054;
@@ -119,6 +118,7 @@ public partial class ReadSoftCodePlugStep(
     private const string ProductionDateResultName = "Month_Date";
     private const string SupplierCodeResultName = "Supplier_Code";
     private const string CounterNumberResultName = "Counter_Number";
+    private const string SoftCodePlugResultName = "Soft_Code_Plug";
 
     private static readonly IReadOnlyList<SoftCodePlugAction> Actions = BuildActions();
     private static readonly IReadOnlyList<string> RequiredRecipeAddressesInternal = BuildRequiredRecipeAddresses(Actions);
@@ -158,6 +158,12 @@ public partial class ReadSoftCodePlugStep(
             }
         }
 
+        var softCodeResult = SaveSoftCodePlugResult();
+        if (!softCodeResult.Success)
+        {
+            return softCodeResult;
+        }
+
         logger.LogInformation("Все параметры успешно прочитаны и верифицированы");
         return TestStepResult.Pass();
     }
@@ -195,6 +201,10 @@ public partial class ReadSoftCodePlugStep(
 
     private static IReadOnlyList<string> BuildResultNames(IReadOnlyList<SoftCodePlugAction> actions)
     {
-        return (from action in actions where !string.IsNullOrWhiteSpace(action.ResultParameterName) select action.ResultParameterName).ToList();
+        var resultNames = (from action in actions
+            where !string.IsNullOrWhiteSpace(action.ResultParameterName)
+            select action.ResultParameterName).ToList();
+        resultNames.Add(SoftCodePlugResultName);
+        return resultNames;
     }
 }
