@@ -112,3 +112,42 @@
 - Риск/урок: при переносе критично сохранять `Code/PlcTag/RelatedStepId/RelatedStepName` 1:1; проверка по счётчикам обязательна (`STEP_TOTAL=140`, `STEP_DUP_CODES=0`).
 - Верификация: `dotnet build`, `dotnet format analyzers --verify-no-changes`, `dotnet format style --verify-no-changes`, `jb inspectcode` по изменённым `*.cs` (report без WARNING/ERROR).
 - Ссылки: `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Coms.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Ch.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Dhw.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Gas.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.cs`
+
+### 2026-02-09 (Prod SQL для `traceability_boiler`: полная перезаливка ошибок из программы)
+- Что изменили: добавили скрипт `Final_Test_Hybrid/tools/db-maintenance/reseed_traceability_boiler_errors_from_program.sql` для `traceability_boiler` — деактивация active history по `station_type_id=7`, удаление шаблонов этого station, вставка всех ошибок из `ErrorDefinitions*.cs` (`190` кодов) в `tb_error_settings_template`, затем создание active записей в `tb_error_settings_history`.
+- Почему: нужен воспроизводимый прод-артефакт «программа -> БД» без ручного копирования и с контролем целостности.
+- Риск/урок: fail-fast обязателен — скрипт прерывается при несопоставленных `RelatedStepName` в `tb_step_final_test` или отсутствии active `tb_step_final_test_history` для шаговых ошибок.
+- Компромисс: параметры `station_type_id` и `version` заданы в скрипте как переменные (`7` и `2`) для простого ручного запуска/правки в проде.
+- Ссылки: `Final_Test_Hybrid/tools/db-maintenance/reseed_traceability_boiler_errors_from_program.sql`
+
+### 2026-02-09 (Исправление SQL под реальную схему `traceability_boiler`)
+- Что изменили: в `reseed_traceability_boiler_errors_from_program.sql` исправили вставку history под фактические поля БД (`error_settings_id`, `step_final_test_id`, `version`, `station_type_id`) и убрали зависимость от несуществующей таблицы `tb_step_final_test_history`.
+- Почему: схема `traceability_boiler` отличается от локальной модели Final_Test, старый вариант скрипта не запускался бы в проде.
+- Риск/урок: для шага `Block Boiler Adapter` в коде и `Block boiler adapter` в БД добавлен case-insensitive матчинг (`lower(btrim(...))`), плюс fail-fast на неоднозначные совпадения.
+- Верификация: read-only аудит подтвердил отсутствие дублей по нормализованным именам шагов (`DUP_NORM_COUNT=0`) в `tb_step_final_test`.
+- Ссылки: `Final_Test_Hybrid/tools/db-maintenance/reseed_traceability_boiler_errors_from_program.sql`
+
+### 2026-02-09 (Фикс fail-fast проверки неоднозначных шагов в reseed SQL)
+- Что изменили: в блоке проверки `v_ambiguous_steps` заменили `COUNT(st.id)` на `COUNT(DISTINCT st.id)` и считаем только по `DISTINCT related_step_name` из `src_errors`.
+- Почему: прежняя версия ложнопозитивно считала один и тот же шаг «неоднозначным», если к шагу привязано несколько кодов ошибок.
+- Риск/урок: проверки целостности в SQL нужно строить на уровне сущностей (уникальных шагов), а не на уровне строк ошибок, иначе fail-fast блокирует валидный прогон.
+- Ссылки: `Final_Test_Hybrid/tools/db-maintenance/reseed_traceability_boiler_errors_from_program.sql`
+
+### 2026-02-09 (Фикс ID-вставки для `traceability_boiler`)
+- Что изменили: в `reseed_traceability_boiler_errors_from_program.sql` перевели вставку в `tb_error_settings_template` и `tb_error_settings_history` на явное задание `id` через `COALESCE(MAX(id),0)+ROW_NUMBER()`.
+- Почему: в целевой БД `traceability_boiler` у полей `id` нет `DEFAULT nextval(...)`; вставка без `id` падала с `NOT NULL violation`.
+- Риск/урок: нельзя переносить предположение об identity/sequence между контурами БД; перед прод-скриптом обязателен inspect `information_schema.columns.column_default`.
+- Ссылки: `Final_Test_Hybrid/tools/db-maintenance/reseed_traceability_boiler_errors_from_program.sql`
+
+### 2026-02-09 (Синхронизация sequence для Jmix после reseed)
+- Что изменили: в `reseed_traceability_boiler_errors_from_program.sql` добавили `setval` для `public.tb_error_settings_template_id_seq` и `public.tb_error_settings_history_id_seq` (через `to_regclass` с безопасной проверкой существования).
+- Почему: после ручной вставки `id` Jmix должен продолжать генерацию без конфликтов PK.
+- Риск/урок: sequence синхронизируем по глобальному `MAX(id)` таблицы (`setval(..., max+1, false)`), а не по конкретному `station_type_id`, иначе возможны коллизии в другом station.
+- Верификация: повторный запуск скрипта успешен (`TEMPLATE_ST7=190`, `ACTIVE_HISTORY_ST7=190`).
+- Ссылки: `Final_Test_Hybrid/tools/db-maintenance/reseed_traceability_boiler_errors_from_program.sql`
+
+### 2026-02-09 (Фикс sequence-нейминга под Jmix в `traceability_boiler`)
+- Что изменили: в `reseed_traceability_boiler_errors_from_program.sql` добавили приоритетную синхронизацию реальных Jmix sequence `public.seq_id_tb_errorsettingstemplate` и `public.seq_id_tb_errorsettingshistory` с fallback на legacy-имена `tb_error_settings_*_id_seq`.
+- Почему: в прод-контуре Jmix использует `seq_id_tb_*`; из-за несинхронизированной `seq_id_tb_errorsettingshistory` возникал PK-конфликт (`id=519` уже существовал).
+- Риск/урок: не полагаться на одно имя sequence между контурами; корректный паттерн — `COALESCE(to_regclass(new), to_regclass(legacy))`.
+- Ссылки: `Final_Test_Hybrid/tools/db-maintenance/reseed_traceability_boiler_errors_from_program.sql`
