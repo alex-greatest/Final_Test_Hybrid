@@ -2,8 +2,11 @@
 @using Final_Test_Hybrid.Components.Overview
 @using Final_Test_Hybrid.Services.OpcUa
 @using Final_Test_Hybrid.Services.OpcUa.Connection
+@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution
 @inject PlcSubscriptionState SubscriptionState
 @inject OpcUaConnectionState ConnectionState
+@inject PreExecutionCoordinator PreExecution
+@inject DialogService DialogService
 @implements IAsyncDisposable
 
 <div class="hand-program-container">
@@ -51,12 +54,14 @@
     private const int TestConnectionTabIndex = 8;
 
     private bool _disposed;
+    private bool _isClosing;
     private int _selectedTabIndex;
 
     protected override void OnInitialized()
     {
         SubscriptionState.OnStateChanged += HandleStateChanged;
         ConnectionState.ConnectionStateChanged += HandleConnectionChanged;
+        PreExecution.OnStateChanged += HandlePreExecutionChanged;
     }
 
     private void HandleStateChanged()
@@ -77,11 +82,23 @@
         _ = InvokeAsync(StateHasChanged);
     }
 
+    private void HandlePreExecutionChanged()
+    {
+        if (_disposed || _isClosing || PreExecution.IsAcceptingInput)
+        {
+            return;
+        }
+
+        _isClosing = true;
+        _ = InvokeAsync(() => DialogService.Close());
+    }
+
     public ValueTask DisposeAsync()
     {
         _disposed = true;
         SubscriptionState.OnStateChanged -= HandleStateChanged;
         ConnectionState.ConnectionStateChanged -= HandleConnectionChanged;
+        PreExecution.OnStateChanged -= HandlePreExecutionChanged;
         return ValueTask.CompletedTask;
     }
 }

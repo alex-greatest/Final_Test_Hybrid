@@ -4,6 +4,7 @@
 @using Final_Test_Hybrid.Services.Diagnostic.Protocol
 @using Final_Test_Hybrid.Services.Diagnostic.Models
 @using Final_Test_Hybrid.Services.Diagnostic.Connection
+@using Final_Test_Hybrid.Services.Diagnostic.Services
 @using Microsoft.Extensions.Options
 @inject IModbusDispatcher Dispatcher
 @inject RegisterReader Reader
@@ -11,6 +12,7 @@
 @inject IOptions<DiagnosticSettings> Settings
 @inject IOptions<ModbusDispatcherOptions> DispatcherOptions
 @inject AccessLevelManager AccessLevelManager
+@inject DiagnosticManualSessionState ManualSessionState
 @implements IAsyncDisposable
 
 <div class="connection-test-container">
@@ -242,6 +244,7 @@
     private bool _isReconnecting;
     private DiagnosticPingData? _pingData;
     private bool _disposed;
+    private bool _manualSessionEntered;
 
     // Read state
     private RegisterPreset? _selectedReadPreset = ReadPresets[0];
@@ -269,6 +272,9 @@
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
+        ManualSessionState.EnterConnectionTest();
+        _manualSessionEntered = true;
+
         // Subscribe to dispatcher events
         Dispatcher.Connected += OnConnected;
         Dispatcher.Disconnecting += OnDisconnecting;
@@ -759,6 +765,11 @@
     public async ValueTask DisposeAsync()
     {
         _disposed = true;
+        if (_manualSessionEntered)
+        {
+            ManualSessionState.ExitConnectionTest();
+            _manualSessionEntered = false;
+        }
 
         // Unsubscribe from events
         Dispatcher.Connected -= OnConnected;

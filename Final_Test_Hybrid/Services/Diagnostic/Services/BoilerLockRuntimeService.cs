@@ -29,6 +29,7 @@ public sealed class BoilerLockRuntimeService : IDisposable
     private readonly RegisterWriter _writer;
     private readonly DiagnosticSettings _settings;
     private readonly ExecutionActivityTracker _activityTracker;
+    private readonly DiagnosticManualSessionState _manualSessionState;
     private readonly IErrorCoordinator _errorCoordinator;
     private readonly DualLogger<BoilerLockRuntimeService> _logger;
     private readonly SemaphoreSlim _sync = new(1, 1);
@@ -53,6 +54,7 @@ public sealed class BoilerLockRuntimeService : IDisposable
         RegisterWriter writer,
         IOptions<DiagnosticSettings> settings,
         ExecutionActivityTracker activityTracker,
+        DiagnosticManualSessionState manualSessionState,
         IErrorCoordinator errorCoordinator,
         DualLogger<BoilerLockRuntimeService> logger)
     {
@@ -62,6 +64,7 @@ public sealed class BoilerLockRuntimeService : IDisposable
         _writer = writer;
         _settings = settings.Value;
         _activityTracker = activityTracker;
+        _manualSessionState = manualSessionState;
         _errorCoordinator = errorCoordinator;
         _logger = logger;
         _modeKeyAddress = (ushort)(ModeKeyRegisterDoc - _settings.BaseAddressOffset);
@@ -149,7 +152,9 @@ public sealed class BoilerLockRuntimeService : IDisposable
     private bool ShouldProcessBranches()
     {
         var config = _settings.BoilerLock;
-        return config.Enabled && _activityTracker.IsTestExecutionActive;
+        return config.Enabled
+               && _activityTracker.IsTestExecutionActive
+               && !_manualSessionState.IsConnectionTestActive;
     }
 
     private bool ShouldPauseOnStatus1(DiagnosticPingData data)
@@ -157,6 +162,7 @@ public sealed class BoilerLockRuntimeService : IDisposable
         var config = _settings.BoilerLock;
         return config is { Enabled: true, PauseOnStatus1Enabled: true }
                && _activityTracker.IsTestExecutionActive
+               && !_manualSessionState.IsConnectionTestActive
                && data.BoilerStatus == StatusPauseBranch
                && data.LastErrorId is { } errorId
                && BoilerLockCriteria.IsTargetErrorId(errorId);
@@ -167,6 +173,7 @@ public sealed class BoilerLockRuntimeService : IDisposable
         var config = _settings.BoilerLock;
         return config is { Enabled: true, PlcSignalOnStatus2Enabled: true }
                && _activityTracker.IsTestExecutionActive
+               && !_manualSessionState.IsConnectionTestActive
                && data.BoilerStatus == StatusPlcSignalBranch
                && data.LastErrorId is { } errorId
                && BoilerLockCriteria.IsTargetErrorId(errorId);

@@ -29,6 +29,7 @@ public static class DiagnosticServiceExtensions
         services.AddSingleton<RegisterReader>();
         services.AddSingleton<RegisterWriter>();
         services.AddSingleton<AccessLevelManager>();
+        services.AddSingleton<DiagnosticManualSessionState>();
         services.AddSingleton<PollingService>();
 
         // High-level boiler services

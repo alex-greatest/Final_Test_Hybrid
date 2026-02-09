@@ -131,3 +131,15 @@
 - Почему: уменьшили рассинхрон документации, убрали ложные UX-сигналы и стабилизировали сопровождение контекста.
 - Риск/урок: без единого source-of-truth и лимитов журнал/доки быстро деградируют в противоречивый шум.
 - Ссылки: `Final_Test_Hybrid/Docs/BoilerLockGuide.md`, `Final_Test_Hybrid/Services/OpcUa/PlcInitializationCoordinator.cs`, `Final_Test_Hybrid/LEARNING_LOG_ARCHIVE.md`, `AGENTS.md`
+
+### 2026-02-09 (BoilerLock: запрет auto-stand в ручном тесте связи)
+- Что изменили: добавили singleton-контекст `DiagnosticManualSessionState`; `ConnectionTestPanel` помечает вход/выход из вкладки `Тест связи`; `BoilerLockRuntimeService` теперь отключает ветки `pause/status2/auto-stand/reset`, когда активен ручной тест связи.
+- Почему: авто-перевод в `Stand` по ping при ручной диагностике конфликтует с осознанными действиями инженера и может менять режим котла без явного запроса.
+- Риск/урок: runtime-автоматика должна уважать операторский контекст; без отдельного флага контекста фоновые recovery-потоки вмешиваются в ручные сценарии.
+- Ссылки: `Final_Test_Hybrid/Services/Diagnostic/Services/DiagnosticManualSessionState.cs`, `Final_Test_Hybrid/Components/Overview/ConnectionTestPanel.razor`, `Final_Test_Hybrid/Services/Diagnostic/Services/BoilerLockRuntimeService.cs`, `Final_Test_Hybrid/Services/DependencyInjection/DiagnosticServiceExtensions.cs`
+
+### 2026-02-09 (HandProgram: авто-закрытие при выходе из scan-phase)
+- Что изменили: в `HandProgramDialog` добавили подписку на `PreExecution.OnStateChanged`; при `PreExecution.IsAcceptingInput = false` диалог закрывается автоматически через `DialogService.Close()`.
+- Почему: иначе можно остаться на вкладке `Тест связи`, отсканировать этикетку и получить старт подготовки/теста при открытом инженерном окне.
+- Риск/урок: блокировка только по кнопке открытия недостаточна; нужен runtime-guard для уже открытого окна при смене системной фазы.
+- Ссылки: `Final_Test_Hybrid/Components/Engineer/Modals/HandProgramDialog.razor`, `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.cs`
