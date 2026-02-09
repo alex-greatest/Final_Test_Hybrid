@@ -1,26 +1,45 @@
 @using Microsoft.AspNetCore.Components.Web.Virtualization
+@using Final_Test_Hybrid.Components.Results
 @using Final_Test_Hybrid.Services.Common.Logging
 @implements IDisposable
 
 @inject ITestStepLogger TestStepLogger
 
-<div class="log-viewer-container">
-    <div class="log-toolbar">
-        <RadzenButton Icon="refresh" Text="Обновить" Click="@LoadLogAsync" />
-        <RadzenButton Icon="delete" Text="Очистить" Click="@ClearLog" />
-        <span class="log-info">Строк: @_lines.Count</span>
-    </div>
-    <div class="log-content">
-        @if (_lines.Count == 0)
-        {
-            <span class="log-empty">Лог пуст</span>
-        }
-        else
-        {
-            <Virtualize Items="_lines" Context="line" ItemSize="24">
-                <div class="log-line @GetLogLevelClass(line)">@line</div>
-            </Virtualize>
-        }
+<div class="tab-content">
+    <div class="app-tabs-shell">
+        <RadzenTabs RenderMode="TabRenderMode.Client"
+                    @bind-SelectedIndex="@_selectedTabIndex"
+                    Style="height: 100%; width: 100%"
+                    class="app-tabs-90">
+            <Tabs>
+                <RadzenTabsItem Text="Лог-файл">
+                    <div class="log-viewer-container">
+                        <div class="log-toolbar">
+                            <RadzenButton Icon="refresh" Text="Обновить" Click="@LoadLogAsync" />
+                            <RadzenButton Icon="delete" Text="Очистить" Click="@ClearLog" />
+                            <span class="log-info">Строк: @_lines.Count</span>
+                        </div>
+                        <div class="log-content">
+                            @if (_lines.Count == 0)
+                            {
+                                <span class="log-empty">Лог пуст</span>
+                            }
+                            else
+                            {
+                                <Virtualize Items="_lines" Context="line" ItemSize="24">
+                                    <div class="log-line @GetLogLevelClass(line)">@line</div>
+                                </Virtualize>
+                            }
+                        </div>
+                    </div>
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Время шагов">
+                    <div class="step-timings-tab-container">
+                        <StepTimingsGrid />
+                    </div>
+                </RadzenTabsItem>
+            </Tabs>
+        </RadzenTabs>
     </div>
 </div>
 
@@ -28,6 +47,7 @@
     private const int MaxLines = 50_000;
     private const int RefreshIntervalMs = 3000;
 
+    private int _selectedTabIndex;
     private List<string> _lines = [];
     private System.Threading.Timer? _refreshTimer;
 

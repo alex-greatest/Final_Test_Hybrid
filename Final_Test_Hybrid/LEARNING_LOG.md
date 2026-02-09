@@ -18,6 +18,18 @@
 
 ## Активные записи
 
+### 2026-02-09 (StepTimingsGrid: исправление обрезания заголовков колонок)
+- Что изменили: в `StepTimingsGrid.razor.css` добавили правила для контейнеров заголовков (`.rz-cell-data`, `.rz-column-title-content`, `.rz-sortable-column`, `.rz-column-title`) с `overflow: visible` и `text-overflow: clip` по паттерну `RecipesGrid`.
+- Почему: после переноса `StepTimingsGrid` в `LogViewerTab` заголовки колонок визуально обрезались.
+- Риск/урок: для Radzen DataGrid недостаточно править только `th`; нужно отдельно раскрывать внутренние обёртки заголовка.
+- Ссылки: `Final_Test_Hybrid/Components/Results/StepTimingsGrid.razor.css`, `Final_Test_Hybrid/Components/Engineer/StandDatabase/Recipe/RecipesGrid.razor.css`
+
+### 2026-02-09 (LogViewer: внутренние вкладки и перенос времени шагов)
+- Что изменили: в `LogViewerTab` добавили внутренние вкладки в стиле `MyComponent` (`Лог-файл`, `Время шагов`), перенесли `StepTimingsGrid` из `TestResultsTab` во вкладку `Лог`, контейнер вкладок растянули на всю высоту компонента.
+- Почему: требовалась единая точка просмотра лог-файла и времени шагов с сохранением текущих стилей контента и без изменения runtime-источников данных.
+- Риск/урок: при переносе UI-вкладок критично сохранять локальные `.razor.css` дочерних компонентов; изменения должны ограничиваться контейнерным layout и shell-вкладок.
+- Ссылки: `Final_Test_Hybrid/Components/Logs/LogViewerTab.razor`, `Final_Test_Hybrid/Components/Logs/LogViewerTab.razor.css`, `Final_Test_Hybrid/Components/Results/TestResultsTab.razor`
+
 ### 2026-02-09 (LEARNING_LOG: полная консолидация)
 - Что изменили: полную развёрнутую активную секцию перенесли в архив как snapshot; активный файл сжали до короткого индекса по решениям и урокам.
 - Почему: активный лог должен ускорять навигацию по текущим рискам/инвариантам, а не дублировать длинные расследования.

@@ -55,6 +55,16 @@
     height: auto !important;
 }
 
+.step-timings-wrapper ::deep .rz-data-grid th .rz-cell-data,
+.step-timings-wrapper ::deep .rz-data-grid th .rz-column-title-content,
+.step-timings-wrapper ::deep .rz-data-grid th .rz-sortable-column,
+.step-timings-wrapper ::deep .rz-data-grid .rz-column-title {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    height: auto !important;
+}
+
 /* Скролл */
 .step-timings-wrapper ::deep .rz-data-grid .rz-data-grid-data {
     overflow-x: auto;

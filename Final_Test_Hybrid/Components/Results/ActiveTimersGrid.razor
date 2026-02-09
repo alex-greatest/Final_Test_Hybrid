@@ -9,7 +9,7 @@
                     EmptyText="Нет активных таймеров">
         <Columns>
             <RadzenDataGridColumn TItem="TimerDisplayItem" Property="Key" Title="Ключ таймера" />
-            <RadzenDataGridColumn TItem="TimerDisplayItem" Title="Прошло времени" Width="150px">
+            <RadzenDataGridColumn TItem="TimerDisplayItem" Title="Время" Width="150px">
                 <Template Context="item">@item.ElapsedFormatted</Template>
             </RadzenDataGridColumn>
         </Columns>

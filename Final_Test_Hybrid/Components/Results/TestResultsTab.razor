@@ -5,29 +5,24 @@
                 Style="height: 100%; width: 100%"
                 class="results-tabs">
         <Tabs>
+            <RadzenTabsItem Text="История шагов теста">
+                <div class="grid-container">
+                    <StepHistoryGrid />
+                </div>
+            </RadzenTabsItem>
             <RadzenTabsItem Text="Результаты тестов">
                 <div class="grid-container">
-                    <TestResultsGrid />
+                    <TestResultsGrid/>
                 </div>
             </RadzenTabsItem>
             <RadzenTabsItem Text="История ошибок">
                 <div class="grid-container">
-                    <ErrorHistoryGrid />
-                </div>
-            </RadzenTabsItem>
-            <RadzenTabsItem Text="Время шагов">
-                <div class="grid-container">
-                    <StepTimingsGrid />
+                    <ErrorHistoryGrid/>
                 </div>
             </RadzenTabsItem>
             <RadzenTabsItem Text="Таймеры">
                 <div class="grid-container">
-                    <ActiveTimersGrid />
-                </div>
-            </RadzenTabsItem>
-            <RadzenTabsItem Text="Шаги">
-                <div class="grid-container">
-                    <StepHistoryGrid />
+                    <ActiveTimersGrid/>
                 </div>
             </RadzenTabsItem>
         </Tabs>
