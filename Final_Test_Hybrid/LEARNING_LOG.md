@@ -73,3 +73,16 @@
 - Компромисс: для SQL-доступа скрипт поднимает временный `net10.0` раннер с `Npgsql` в `%TEMP%`; это медленнее первого запуска, но не требует установленного `psql`.
 - Дополнительно: по запросу пользователя сохранили фактический отчёт сверки в репозитории (`Final_Test_Hybrid/tools/error-audit/reports/error-code-diff-20260209-153105.txt`) для ревью/истории изменений.
 - Ссылки: `Final_Test_Hybrid/tools/error-audit/Compare-ErrorCodes.ps1`
+
+### 2026-02-09 (Синхронизация ошибок: БД -> программа)
+- Что изменили: добавили в `ErrorDefinitions.Steps1.cs` 19 отсутствующих step-ошибок из `tb_error_settings_template` (коды: `П-015-*`, `П-038-*`, `П-049-*`, `П-051-*`, `П-061-*`, `П-066-00`, `П-070-00`, `П-085-*`) с `PlcTag` и корректными `RelatedStepId/RelatedStepName` по текущим шагам программы.
+- Почему: программа должна стать source of truth для последующей нормализации и замены записей в БД.
+- Риск/урок: ошибки с несуществующим `RelatedStepId` ломают запуск через `PlcInitializationCoordinator.ValidateErrorStepBindings`; нельзя переносить коды «как есть» из БД без проверки реального `step.Id` в коде.
+- Компромисс: 8 конфликтных кодов (`П-028-*`, `П-040-*`, `П-057-*`) не переносили на этом этапе, так как их шаги отсутствуют в текущем runtime-каталоге программы.
+- Ссылки: `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps1.cs`, `Final_Test_Hybrid/Services/OpcUa/PlcInitializationCoordinator.cs`
+
+### 2026-02-09 (Global PLC: добавлен блок DB_Elec)
+- Что изменили: в `ErrorDefinitions.GlobalPlc.cs` добавили 6 глобальных PLC-ошибок `DB_Elec` с кодами `О-005-00..О-005-05` (`Al_6K1`, `Al_6K2`, `Al_Isometer`, `Al_VoltageMin`, `Al_VoltageMax`, `Al_AdapterNotIn`) и включили их в `GlobalPlcErrors`.
+- Почему: закрыли разрыв между фактическими глобальными PLC-сигналами и программным каталогом ошибок перед дальнейшей синхронизацией в БД.
+- Риск/урок: при добавлении глобальных ошибок нельзя смешивать их со step-привязками; источник истины — PLC-тег + уникальный код.
+- Ссылки: `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.GlobalPlc.cs`

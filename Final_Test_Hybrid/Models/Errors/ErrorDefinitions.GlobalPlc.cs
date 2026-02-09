@@ -89,6 +89,43 @@ public static partial class ErrorDefinitions
         Severity: ErrorSeverity.Critical,
         ActivatesResetButton: true);
 
+    // DB_Elec (О-005-xx)
+    public static readonly ErrorDefinition ElecRelay6K1Fault = new(
+        "О-005-00", "Неисправность реле 6K1",
+        PlcTag: "ns=3;s=\"DB_Elec\".\"Al_6K1\"",
+        Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true);
+
+    public static readonly ErrorDefinition ElecRelay6K2Fault = new(
+        "О-005-01", "Неисправность реле 6K2",
+        PlcTag: "ns=3;s=\"DB_Elec\".\"Al_6K2\"",
+        Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true);
+
+    public static readonly ErrorDefinition ElecIsometerFault = new(
+        "О-005-02", "Неисправность изоляции",
+        PlcTag: "ns=3;s=\"DB_Elec\".\"Al_Isometer\"",
+        Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true);
+
+    public static readonly ErrorDefinition ElecVoltageMinFault = new(
+        "О-005-03", "Неисправность. Напряжение меньше допустимого",
+        PlcTag: "ns=3;s=\"DB_Elec\".\"Al_VoltageMin\"",
+        Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true);
+
+    public static readonly ErrorDefinition ElecVoltageMaxFault = new(
+        "О-005-04", "Неисправность. Напряжение больше допустимого",
+        PlcTag: "ns=3;s=\"DB_Elec\".\"Al_VoltageMax\"",
+        Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true);
+
+    public static readonly ErrorDefinition ElecAdapterNotInFault = new(
+        "О-005-05", "Неисправность. Адаптер не вставлен",
+        PlcTag: "ns=3;s=\"DB_Elec\".\"Al_AdapterNotIn\"",
+        Severity: ErrorSeverity.Critical,
+        ActivatesResetButton: true);
+
     internal static IEnumerable<ErrorDefinition> GlobalPlcErrors =>
     [
         Message_ControlNotEnabled,
@@ -104,6 +141,12 @@ public static partial class ErrorDefinitions
         Coms_NoWaterFlow,
         Coms_IonCurrentOutTol,
         Coms_NotStandReady,
-        Coms_CloseTimeExceeded
+        Coms_CloseTimeExceeded,
+        ElecRelay6K1Fault,
+        ElecRelay6K2Fault,
+        ElecIsometerFault,
+        ElecVoltageMinFault,
+        ElecVoltageMaxFault,
+        ElecAdapterNotInFault
     ];
 }

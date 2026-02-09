@@ -1,54 +1,6 @@
-﻿Критические проблемы                                                                                                                                                                                                              
-   
-  1. Phase = Idle в OpenGate() — ошибка логики                                                                                                                                                                                      
-  - OpenGate() вызывается во время retry до продолжения выполнения шагов
-  - Это может сделать AreExecutorsIdle() истинным преждевременно
-  - Координатор перейдёт к следующей карте, пока колонка ещё работает
-
-  2. TimeoutException приводит к "Completed" вместо "Failed"
-  - RunWithErrorHandlingAsync сейчас только логирует и всё равно вызывает Complete()
-  - Итог: таймаут → исключение → "Completed" при реальной ошибке
-
-  Высокий приоритет
-
-  3. Нарушен порядок зависимостей
-  - ExecutionTimeouts.IdleCheckDelayMs используется в Phase 1, но класс создаётся в Phase 4
-  - Сборка сломается при следовании плану
-
-  4. Переходы Phase неполные
-  - Нет обновления в RestartFailedStep(), ApplyRunningState(), Reset()
-  - Phase может остаться WaitingForInput или стать Idle не в тот момент
-
-  5. Нарушение правила "один control-statement на метод"
-  - while с вложенным if и timeout-проверкой — нужны helper-методы
-
-  Средний приоритет
-
-  6. OnErrorOccurred остаётся небезопасным
-  - Защищаете OnStateChanged, но не OnErrorOccurred
-
-  7. DI-регистрация
-  - DualLogger в ExecutionStateManager меняет DI-подписи
-
-  8. Settlement barrier без таймаута
-  - Может зависнуть навсегда
-
-  ---
-  Предложения по исправлению
-
-  1. Вынести ExecutionTimeouts в начало плана (до Phase 1)
-  2. Пересмотреть Phase-переходы:
-    - ApplyRunningState/RestartFailedStep → Executing
-    - OpenGate → не Idle
-    - Reset → Idle
-  3. Уточнить семантику таймаутов — явно переводить в Failed/StopAsFailure
-  4. Добавить safe-invoke для OnErrorOccurred
-  5. Settlement barrier с таймаутом
-
-  ---
-  Недостающие тест-кейсы
-
-  - Таймаут WaitForMapAccessAsync → корректный stop/fail (не Completed)
-  - Retry-сценарий: error → retry success → продолжение карты без преждевременного Idle
-  - Stop/cancel во время WaitForExecutorsIdleAsync и WaitForMapAccessAsync
-  - PLC-таймаут при WaitForFalseAsync → корректный error flow
+﻿DB_Elec		Al_6K1	Неисправность реле 6K1
+DB_Elec		Al_6K2	Неисправность реле 6K2
+DB_Elec		Al_Isometer	Неисправность изоляции
+DB_Elec		Al_VoltageMin	Неисправность. Напряжение меньше допустимого
+DB_Elec		Al_VoltageMax	Неисправность. Напряжение больше допустимого
+DB_Elec		Al_AdapterNotIn	Неисправность. Адаптер не вставлен
