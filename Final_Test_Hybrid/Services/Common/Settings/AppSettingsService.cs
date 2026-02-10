@@ -13,6 +13,7 @@ public class AppSettingsService(IOptions<AppSettings> options)
     public bool UseAdminQrAuth { get; private set; } = options.Value.UseAdminQrAuth;
     public bool ExportStepsToExcel { get; private set; } = options.Value.ExportStepsToExcel;
     public bool UseInterruptReason { get; private set; } = options.Value.UseInterruptReason;
+    public bool UseFloatingErrorBadge { get; } = options.Value.UseFloatingErrorBadge;
     public string EngineerPassword { get; } = options.Value.EngineerPassword;
     public string NameStation { get; } = options.Value.NameStation;
     public string ExportPath { get; } = options.Value.ExportPath;

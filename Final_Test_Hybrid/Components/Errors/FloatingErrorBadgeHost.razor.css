@@ -1,0 +1,152 @@
+.floating-error-badge {
+    position: fixed;
+    right: 24px;
+    top: 24px;
+    bottom: auto;
+    width: 84px;
+    height: 84px;
+    background: rgba(17, 24, 39, 0.92);
+    border: 2px solid #374151;
+    border-radius: 12px;
+    color: #111111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
+    animation: floating-error-badge-blink 1.15s infinite;
+    z-index: 10050;
+}
+
+/* RadzenIcon рендерится дочерним компонентом, поэтому стиль задаём через ::deep */
+.floating-error-badge ::deep .floating-error-badge-icon {
+    font-size: 78px !important;
+    color: #ffde00 !important;
+    line-height: 1;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+}
+
+.floating-error-badge-count {
+    position: absolute;
+    top: -6px;
+    right: -10px;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    border-radius: 999px;
+    border: 2px solid #ffffff;
+    background: #111827;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 20px;
+    text-align: center;
+}
+
+.floating-active-errors-window {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    width: 70vw;
+    height: 70vh;
+    min-width: 900px;
+    min-height: 520px;
+    max-width: 1600px;
+    max-height: 1000px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    z-index: 10040;
+}
+
+.floating-active-errors-titlebar {
+    padding: 0;
+    min-height: auto;
+    height: 46px;
+    background-color: #f0f0f0;
+    border-bottom: 1px solid #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: move;
+    user-select: none;
+}
+
+.floating-active-errors-title {
+    font-size: 26px;
+    font-weight: bold;
+    margin-left: 15px;
+    line-height: 46px;
+    color: #333;
+}
+
+.floating-active-errors-close {
+    width: 66px;
+    min-width: 66px;
+    height: 46px;
+    margin: 0;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 1;
+}
+
+.floating-active-errors-close:hover {
+    background-color: #e81123;
+    color: white;
+}
+
+/* RadzenIcon рендерится дочерним компонентом, поэтому для размера/масштаба нужен ::deep */
+.floating-active-errors-close ::deep .floating-active-errors-close-icon {
+    font-size: 20px !important;
+    transform: scale(1.4) !important;
+    font-weight: 900 !important;
+    display: block !important;
+}
+
+.floating-active-errors-content {
+    flex: 1;
+    min-height: 0;
+    padding: 10px;
+    overflow: hidden;
+}
+
+.floating-active-errors-content ::deep .errors-grid-wrapper,
+.floating-active-errors-content ::deep .grid-unified-host,
+.floating-active-errors-content ::deep .grid-unified {
+    height: 100%;
+    min-height: 0;
+}
+
+@keyframes floating-error-badge-blink {
+    0%,
+    42%,
+    100% {
+        opacity: 1;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
+    }
+
+    55%,
+    75% {
+        opacity: 0.48;
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .floating-error-badge {
+        animation: none;
+    }
+}

@@ -1,8 +1,10 @@
 using Final_Test_Hybrid.Models.Errors;
+using Final_Test_Hybrid.Services.Common.Logging;
 
 namespace Final_Test_Hybrid.Services.Errors;
 
-public sealed class ErrorService : IErrorService
+public sealed class ErrorService(
+    DualLogger<ErrorService> logger) : IErrorService
 {
     private const int MaxHistorySize = 1000;
 
@@ -164,17 +166,32 @@ public sealed class ErrorService : IErrorService
     private void AddError(ErrorDefinition def, ErrorSource source,
         string? stepId, string? stepName, string? details)
     {
+        ActiveError? existingError;
+
         lock (_errorsLock)
         {
-            if (IsErrorAlreadyActive(def.Code))
+            existingError = _activeErrors.FirstOrDefault(e => e.Code == def.Code);
+            if (existingError is null)
             {
-                return;
+                var now = DateTime.Now;
+                var description = BuildDescription(def, details);
+                var addedError = CreateActiveError(def, source, stepId, stepName, description, now);
+                _activeErrors.Add(addedError);
+                AddToHistory(CreateHistoryItem(def, source, stepId, stepName, description, now));
             }
-            var now = DateTime.Now;
-            var description = BuildDescription(def, details);
-            _activeErrors.Add(CreateActiveError(def, source, stepId, stepName, description, now));
-            AddToHistory(CreateHistoryItem(def, source, stepId, stepName, description, now));
         }
+
+        if (existingError is not null)
+        {
+            logger.LogWarning(
+                "ErrorService duplicate raise: Code={Code}, ExistingActivatesResetButton={ExistingFlag}, IncomingActivatesResetButton={IncomingFlag}, Source={Source}",
+                def.Code,
+                existingError.ActivatesResetButton,
+                def.ActivatesResetButton,
+                source);
+            return;
+        }
+
         NotifyChanges();
     }
 
@@ -194,11 +211,9 @@ public sealed class ErrorService : IErrorService
         if (removed)
         {
             NotifyChanges();
+            return;
         }
     }
-
-    private bool IsErrorAlreadyActive(string code)
-        => _activeErrors.Any(e => e.Code == code);
 
     private static string BuildDescription(ErrorDefinition def, string? details)
         => string.IsNullOrEmpty(details) ? def.Description : $"{def.Description}: {details}";

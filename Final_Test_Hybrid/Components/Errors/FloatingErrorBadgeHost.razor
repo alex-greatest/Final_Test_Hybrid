@@ -1,0 +1,29 @@
+@if (ShouldShowBadge)
+{
+    <div class="floating-error-badge"
+         id="@BadgeElementId"
+         title="Активные ошибки"
+         @onmousedown="StartBadgeDrag"
+         @onclick="TogglePanel">
+        <RadzenIcon Icon="warning" class="floating-error-badge-icon" />
+        <span class="floating-error-badge-count">@_resettableErrorsCount</span>
+    </div>
+}
+
+@if (ShouldShowPanel)
+{
+    <div class="floating-active-errors-window" id="@PanelElementId">
+        <div class="floating-active-errors-titlebar" @onmousedown="StartPanelDrag">
+            <span class="floating-active-errors-title">Активные ошибки</span>
+            <button type="button"
+                    class="floating-active-errors-close"
+                    @onmousedown:stopPropagation="true"
+                    @onclick="ClosePanel">
+                <RadzenIcon Icon="close" class="floating-active-errors-close-icon" />
+            </button>
+        </div>
+        <div class="floating-active-errors-content">
+            <ActiveErrorsGrid />
+        </div>
+    </div>
+}

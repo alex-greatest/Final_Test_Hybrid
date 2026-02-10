@@ -79,15 +79,21 @@ public partial class OpcUaSubscription(
 
     private TagError? ProcessAddResult(MonitoredItem item, string nodeId)
     {
-        if (!ServiceResult.IsBad(item.Status.Error))
+        var statusResult = item.Status?.Error;
+        var statusCode = statusResult?.StatusCode;
+        var hasBadStatus = statusResult != null && ServiceResult.IsBad(statusResult);
+
+        if (!hasBadStatus)
         {
             logger.LogInformation("Тег {NodeId} добавлен в подписку", nodeId);
             LogDiagnosticsForMonitoredChange("add", nodeId);
             return null;
         }
+
         _monitoredItems.TryRemove(nodeId, out _);
         item.Notification -= OnNotification;
-        var message = OpcUaErrorMapper.ToHumanReadable(item.Status.Error.StatusCode);
+        var effectiveStatusCode = statusCode ?? StatusCodes.BadUnexpectedError;
+        var message = OpcUaErrorMapper.ToHumanReadable(effectiveStatusCode);
         logger.LogError("Не удалось добавить тег {NodeId}: {Error}", nodeId, message);
         return new TagError(nodeId, message);
     }
@@ -134,7 +140,9 @@ public partial class OpcUaSubscription(
     private List<TagError> CollectErrors(List<MonitoredItem> items)
     {
         return items
-            .Select(item => ProcessAddResult(item, item.StartNodeId.ToString()))
+            .Select(item => ProcessAddResult(item, string.IsNullOrWhiteSpace(item.DisplayName)
+                ? item.StartNodeId.ToString()
+                : item.DisplayName))
             .Where(error => error != null)
             .ToList()!;
     }

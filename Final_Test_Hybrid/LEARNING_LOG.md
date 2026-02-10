@@ -16,6 +16,120 @@
 
 ## Активные записи
 
+### 2026-02-10 (FloatingErrorBadgeHost: выравнивание размера крестика через ::deep)
+- Что изменили: для иконки закрытия в `floating-active-errors-close` заменили прямой селектор на `::deep .floating-active-errors-close-icon` и добавили фикс `min-width/padding` кнопки, чтобы размер крестика совпадал со стилем `stand-database-dialog`.
+- Почему: без `::deep` scoped CSS не применялся к `RadzenIcon`, из-за чего крестик визуально расходился с эталонным диалогом.
+- Риск/урок: при CSS isolation стили `RadzenIcon` нужно задавать через `::deep`, иначе точные размеры/масштаб не гарантируются.
+- Ссылки: `Final_Test_Hybrid/Components/Errors/FloatingErrorBadgeHost.razor.css`, `Final_Test_Hybrid/wwwroot/css/app.css`
+
+### 2026-02-10 (FloatingErrorBadgeHost: окно ошибок 70x70, центр и titlebar как StandDatabase)
+- Что изменили: окно `floating-active-errors-window` увеличили до `70vw x 70vh` (с новыми min/max), перенесли стартовое положение в центр экрана и выровняли titlebar/заголовок/кнопку `close` под стиль `stand-database-dialog`.
+- Почему: требовалось более крупное окно для анализа активных ошибок и единый визуальный стандарт шапки/крестика с инженерными диалогами.
+- Риск/урок: центрирование через `transform` требует отдельной обработки в drag-start; иначе при первом перемещении появляется скачок позиции.
+- Ссылки: `Final_Test_Hybrid/Components/Errors/FloatingErrorBadgeHost.razor.css`, `Final_Test_Hybrid/wwwroot/index.html`, `Final_Test_Hybrid/Components/Errors/FloatingErrorBadgeHost.razor.cs`, `Final_Test_Hybrid/wwwroot/css/app.css`
+
+### 2026-02-10 (FloatingErrorBadge: мигающий attention-режим)
+- Что изменили: добавили анимацию мигания `floating-error-badge-blink` для `floating-error-badge` с уменьшением opacity и тени в цикле; для `prefers-reduced-motion` мигание отключается.
+- Почему: требовалось усилить визуальное привлечение внимания к активным resettable-ошибкам.
+- Риск/урок: attention-анимацию в операторском UI нужно делать заметной, но управляемой по частоте и с fallback для сниженной анимации.
+- Ссылки: `Final_Test_Hybrid/Components/Errors/FloatingErrorBadgeHost.razor.css`
+
+### 2026-02-10 (FloatingErrorBadge: непрозрачный фон под warning-иконкой)
+- Что изменили: у `floating-error-badge` задали непрозрачный тёмный фон, рамку и скругление контейнера вместо прозрачного фона.
+- Почему: по обратной связи warning-иконка на прозрачном фоне читалась недостаточно стабильно.
+- Риск/урок: для плавающих предупреждающих индикаторов контрастный непрозрачный подложечный слой повышает предсказуемость восприятия на разных экранах.
+- Ссылки: `Final_Test_Hybrid/Components/Errors/FloatingErrorBadgeHost.razor.css`
+
+### 2026-02-10 (FloatingErrorBadge: фикс размера/цвета warning-иконки через ::deep)
+- Что изменили: для `FloatingErrorBadgeHost` увеличили контейнер бейджа и перевели стили `RadzenIcon` на `::deep .floating-error-badge-icon` с принудительным жёлтым цветом и крупным размером.
+- Почему: при CSS isolation стиль на `RadzenIcon` не применялся стабильно, из-за чего warning-треугольник оставался маленьким и не жёлтым.
+- Риск/урок: для иконок из дочерних компонентов в Blazor scoped CSS нужны `::deep`-селекторы, иначе локальные классы не пробиваются к итоговому DOM.
+- Ссылки: `Final_Test_Hybrid/Components/Errors/FloatingErrorBadgeHost.razor.css`
+
+### 2026-02-10 (FloatingErrorBadge: переход на готовый warning-значок Radzen)
+- Что изменили: убрали кастомную форму `floating-error-badge-triangle` на `clip-path` и оставили готовый `RadzenIcon Icon="warning"` как основной визуал бейджа; под него скорректировали размеры контейнера и позицию счётчика.
+- Почему: требовался «готовый жёлтый треугольник с восклицательным знаком» без эффекта «треугольник в треугольнике».
+- Риск/урок: если нужен стандартный warning-символ, готовая иконка стабильнее и дешевле в поддержке, чем ручная геометрия псевдоэлементами.
+- Ссылки: `Final_Test_Hybrid/Components/Errors/FloatingErrorBadgeHost.razor`, `Final_Test_Hybrid/Components/Errors/FloatingErrorBadgeHost.razor.css`
+
+### 2026-02-10 (FloatingErrorBadge: полноценный треугольник в стиле WinCC)
+- Что изменили: перевели `FloatingErrorBadgeHost` с круглой формы на полноценный треугольный warning-бейдж (`floating-error-badge-triangle`) с палитрой `жёлтый + чёрный`; счётчик оставили отдельным бейджем в правом верхнем углу.
+- Почему: операторский запрос на визуал «как в WinCC» требовал не иконку в круге, а целиком треугольный предупреждающий индикатор.
+- Риск/урок: при переходе на `clip-path`-геометрию важно сохранять единый клик/drag-контур контейнера и отдельно контролировать z-index псевдоэлементов/счётчика.
+- Ссылки: `Final_Test_Hybrid/Components/Errors/FloatingErrorBadgeHost.razor`, `Final_Test_Hybrid/Components/Errors/FloatingErrorBadgeHost.razor.css`
+
+### 2026-02-10 (FloatingErrorBadge: triangle + top-right + click suppression after drag)
+- Что изменили: в `FloatingErrorBadgeHost` заменили иконку на треугольник `warning`, перенесли стартовую позицию бейджа в правый верхний угол и добавили подавление `TogglePanel` после фактического drag через JS-флаг `floatingPanel.consumeRecentDrag`.
+- Почему: после перетаскивания бейджа на `mouseup` срабатывал лишний click и окно ошибок открывалось/закрывалось не по намерению оператора.
+- Риск/урок: для элементов с совмещёнными `drag + click` нужен явный порог движения и одноразовый TTL-флаг «был drag», иначе UX остаётся недетерминированным.
+- Ссылки: `Final_Test_Hybrid/Components/Errors/FloatingErrorBadgeHost.razor`, `Final_Test_Hybrid/Components/Errors/FloatingErrorBadgeHost.razor.cs`, `Final_Test_Hybrid/Components/Errors/FloatingErrorBadgeHost.razor.css`, `Final_Test_Hybrid/wwwroot/index.html`
+
+### 2026-02-10 (Очистка временной диагностики Alarm4/О-001-00 после фикса)
+- Что изменили: удалили временные трассировочные логи и сравнения для `О-001-00` в `PlcErrorMonitorService`, `ErrorService` и `OpcUaSubscription*`; оставили рабочую обработку PLC ошибок и базовые предупреждения только для невалидного payload.
+- Почему: проблема с индексом `Alarm4` подтверждена и исправлена, детальная телеметрия больше не нужна и засоряет runtime-логи.
+- Риск/урок: временную диагностику в критичных потоках нужно удалять сразу после подтверждения причины, иначе затрудняется эксплуатационный анализ.
+- Ссылки: `Final_Test_Hybrid/Services/Errors/PlcErrorMonitorService.cs`, `Final_Test_Hybrid/Services/Errors/ErrorService.cs`, `Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.cs`, `Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.Callbacks.cs`
+
+### 2026-02-10 (DB_Message.Alarm4: сдвиг индексов О-001-xx на 1..8)
+- Что изменили: в `ErrorDefinitions.GlobalPlc.cs` сместили PLC-теги `О-001-00..О-001-07` с `Alarm4[2..9]` на `Alarm4[1..8]`; в `PlcErrorMonitorService` синхронизировали `ControlNotEnabledTag`, `ControlNotEnabledArrayIndex`, диагностическое окно `Alarm4` и маппинг `GetAlarmCodeByIndex`.
+- Почему: фактическая адресация сигналов в PLC для `DB_Message.Alarm4` использует ожидаемые аварии в диапазоне `[1..8]`; из-за смещения `О-001-00` слушала не тот индекс и не активировалась.
+- Риск/урок: при битовых массивах PLC критично зафиксировать единый контракт индексации (0-based/1-based) между PLC/HMI и приложением, иначе ошибка выглядит как «нет сигнала при true».
+- Ссылки: `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.GlobalPlc.cs`, `Final_Test_Hybrid/Services/Errors/PlcErrorMonitorService.cs`
+
+### 2026-02-10 (Alarm4: delta-диагностика индексов О-001-00..07)
+- Что изменили: в `PlcErrorMonitorService` для массива `ns=3;s="DB_Message"."Alarm4"` добавили snapshot-диагностику: лог `Alarm4 window init`, дельты только по изменениям `Alarm4[2..9]` с привязкой индекса к коду `О-001-00..О-001-07`, и агрегированный `Alarm4 window` при любом изменении.
+- Почему: требовалось понять, почему не срабатывает только `О-001-00`, при том что остальные сигналы системы работают; нужен был фактологический ответ, какой именно индекс массива реально меняется в runtime.
+- Риск/урок: для групповых PLC-массивов бизнес-ошибка часто в несоответствии индекса/полярности, а не в подписке; delta-лог по окну индексов локализует причину быстрее, чем точечный лог одного бита.
+- Ссылки: `Final_Test_Hybrid/Services/Errors/PlcErrorMonitorService.cs`, `Final_Test_Hybrid/CommonErrorTags.md`
+
+### 2026-02-10 (О-001-00: двойной мониторинг IndexRange vs базовый Alarm4)
+- Что изменили: в `PlcErrorMonitorService` добавили дополнительную диагностическую подписку на `ns=3;s="DB_Message"."Alarm4"` (базовый массив) с извлечением `index=2`, хранением последних значений двух каналов (`IndexRange` и `Array`) и сравнительным логом `compare match/mismatch`.
+- Почему: после фикса `bool[]` callback работал, но `О-001-00` всё равно не поднималась; нужно было доказуемо отделить проблему маршрута `IndexRange` от факта, что PLC не переключает сам бит.
+- Риск/урок: для индексных OPC тегов нельзя опираться на один канал наблюдения при расследовании; сравнение `IndexRange` и полного массива быстро локализует источник расхождения.
+- Ссылки: `Final_Test_Hybrid/Services/Errors/PlcErrorMonitorService.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.GlobalPlc.cs`
+
+### 2026-02-10 (PLC error callback: нормализация bool[] после IndexRange)
+- Что изменили: в `PlcErrorMonitorService.OnTagChanged` добавили нормализацию `object?` в `bool`: поддержали `bool`, `bool[]`, `IEnumerable<bool>`; для пустых коллекций — skip с warning, для длины > 1 — warning и fail-safe `first` элемент. Добавили целевые логи `normalized`/`normalized with warning`.
+- Почему: после перевода `Alarm4[2]` на `IndexRange` OPC начал отдавать `System.Boolean[]`, из-за чего callback трактовался как `не bool` и не вызывал `RaisePlc/ClearPlc`.
+- Риск/урок: при OPC range-access тип данных в callback может быть массивом даже для одного индекса; PLC error-flow обязан нормализовать payload до доменного `bool`.
+- Ссылки: `Final_Test_Hybrid/Services/Errors/PlcErrorMonitorService.cs`, `Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.Callbacks.cs`, `Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.cs`
+
+### 2026-02-10 (OPC массивы: подписка индексов через IndexRange)
+- Что изменили: в `OpcUaSubscription` для тегов вида `...[i]` добавили разбор на `StartNodeId=<base array node>` + `MonitoredItem.IndexRange=<i>`; callback/кэш продолжают использовать исходный ключ `DisplayName` (`...[i]`), чтобы не ломать `PlcErrorMonitorService`. Для целевого `Alarm4[2]` расширили диагностику route (`startNode/indexRange`) на add/notification.
+- Почему: по логу `111.txt` скалярные теги работают, а индексный `DB_Message.Alarm4[2]` не поднимал `True`; требовался spec-compliant путь подписки для массивов OPC UA.
+- Риск/урок: для OPC UA массивов индекс должен задаваться через `IndexRange`; индекс в строке NodeId может выглядеть корректно, но не гарантирует ожидаемые data-change уведомления.
+- Ссылки: `Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.Callbacks.cs`, `Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.GlobalPlc.cs`
+
+### 2026-02-10 (OPC AddTag: null-safe обработка статуса monitored item)
+- Что изменили: в `OpcUaSubscription.ProcessAddResult` убрали прямой доступ к `item.Status.Error.StatusCode`; добавили null-safe чтение `item.Status?.Error`, вычисление `hasBadStatus` и fallback `StatusCodes.BadUnexpectedError` только для error-ветки.
+- Почему: при инициализации PLC-подписок словили `NullReferenceException` в `ProcessAddResult` на диагностическом логе статуса.
+- Риск/урок: в OPC SDK статус monitored item может быть временно `null`; даже диагностические логи должны быть null-safe в критическом startup-пути.
+- Ссылки: `Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.cs`
+
+### 2026-02-10 (PLC error-flow: расширенная трассировка О-001-00 до точки dispatch)
+- Что изменили: для `О-001-00` добавили стартовый аудит в `PlcErrorMonitorService` (наличие definition в `PlcErrors` + ключевые поля), диагностику регистрации callback в `SubscribeAsync`, детальные логи результата `ProcessAddResult`, предупреждение для unexpected payload и явный лог `NoCallbacks` в `InvokeCallbacks`; в `ErrorService` добавили фазовые логи `Raise/Clear/Duplicate` для кода `О-001-00`.
+- Почему: по логам в рантайме отсутствовали любые упоминания `О-001-00`, нужно было сузить точку разрыва в цепочке `definition -> monitored item -> notification -> callback -> raise`.
+- Риск/урок: при диагностике PLC-ошибок нужна телеметрия не только на `OnNotification`, но и в точках регистрации callback/dispatch, иначе легко получить ложный вывод «сигнал не приходит».
+- Ссылки: `Final_Test_Hybrid/Services/Errors/PlcErrorMonitorService.cs`, `Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.cs`, `Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.Callbacks.cs`, `Final_Test_Hybrid/Services/Errors/ErrorService.cs`
+
+### 2026-02-10 (PLC диагностика: трассировка О-001-00 от OPC callback до Raise/Clear)
+- Что изменили: добавили прицельные runtime-логи для `ns=3;s="DB_Message"."Alarm4"[2]` в `PlcErrorMonitorService` (полученное значение/тип + действие `RaisePlc`/`ClearPlc`) и в `OpcUaSubscription.OnNotification` (status/value/type + отдельный лог bad-quality).
+- Почему: при ручном переключении сигнала для `О-001-00` не наблюдалась реакция в `ErrorService`; требовалась сквозная трассировка цепочки `OPC notification -> callback -> Raise/Clear`.
+- Риск/урок: без сквозной телеметрии в PLC error-flow невозможно отличить проблему адресации/quality от проблемы бизнес-обработчика.
+- Ссылки: `Final_Test_Hybrid/Services/Errors/PlcErrorMonitorService.cs`, `Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.Callbacks.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.GlobalPlc.cs`
+
+### 2026-02-10 (ErrorService: runtime-диагностика reset-кнопки для PLC ошибок)
+- Что изменили: в `ErrorService` добавили `DualLogger<ErrorService>` и диагностические логи при `Raise`/`NotifyChanges`; лог фиксирует `ActivatesResetButton` у активной `О-002-01`, итоговый `HasResettableErrors` и snapshot активных ошибок вида `Код:Флаг`.
+- Почему: при активной `О-002-01` в `ActiveErrorsGrid` кнопка `Сброс ошибки` не переходила в красный режим, требовалось подтвердить фактические runtime-флаги, а не только definition.
+- Риск/урок: в диагностике ошибок недостаточно проверять `ErrorDefinition`; решение о состоянии reset-кнопки принимается по фактическому `ActiveError.ActivatesResetButton` в моменте.
+- Ссылки: `Final_Test_Hybrid/Services/Errors/ErrorService.cs`, `Final_Test_Hybrid/Components/Errors/ErrorResetButton.razor`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.GlobalPlc.cs`
+
+### 2026-02-10 (UI: плавающий индикатор resettable-ошибок с немодальным окном)
+- Что изменили: добавили opt-in флаг `Settings.UseFloatingErrorBadge` в `AppSettings`/`AppSettingsService` и реализовали `FloatingErrorBadgeHost` (плавающая иконка с числом resettable-ошибок + немодальное перетаскиваемое окно `Активные ошибки` на ~50% экрана); подключили host в `MyComponent`.
+- Почему: требовался быстрый визуальный индикатор ошибок, синхронизированный с активностью кнопки `Сброс ошибки`, без блокировки основного экрана.
+- Риск/урок: при сочетании click+drag на одной иконке важно держать поведение простым и предсказуемым; фильтрацию по `ActivatesResetButton` нужно считать единым источником для видимости и счётчика.
+- Ссылки: `Final_Test_Hybrid/Settings/App/AppSettings.cs`, `Final_Test_Hybrid/Services/Common/Settings/AppSettingsService.cs`, `Final_Test_Hybrid/appsettings.json`, `Final_Test_Hybrid/Components/Errors/FloatingErrorBadgeHost.razor`, `Final_Test_Hybrid/Components/Errors/FloatingErrorBadgeHost.razor.cs`, `Final_Test_Hybrid/Components/Errors/FloatingErrorBadgeHost.razor.css`, `Final_Test_Hybrid/MyComponent.razor`
+
 ### 2026-02-10 (Overview: немедленная выдача cached-значений как в Hand Program)
 - Что изменили: в `MyComponent.razor` для всех overview-панелей (`Gas/Heating/HotWater/Inputs/Outputs`) включили `EmitCachedValueImmediately="true"`; в `OutputsPanel2.razor` добавили параметр `EmitCachedValueImmediately` и пробросили его в оба `ValueIndicator`.
 - Почему: в `Обзор` часть значений оставалась пустой до первого изменения тега, тогда как в `HandProgramDialog` те же панели показывали кэш сразу.

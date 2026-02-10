@@ -149,36 +149,92 @@ public partial class OpcUaSubscription
 
     private MonitoredItem CreateMonitoredItem(string nodeId)
     {
+        var startNodeId = nodeId;
+        string? indexRange = null;
+        if (TryParseArrayElementNodeId(nodeId, out var arrayNodeId, out var arrayIndex))
+        {
+            startNodeId = arrayNodeId;
+            indexRange = arrayIndex;
+        }
+
         var item = new MonitoredItem(_subscription!.DefaultItem)
         {
-            StartNodeId = new NodeId(nodeId),
+            StartNodeId = new NodeId(startNodeId),
             AttributeId = Attributes.Value,
             DisplayName = nodeId,
             SamplingInterval = _settings.SamplingIntervalMs,
             QueueSize = (uint)_settings.QueueSize,
             DiscardOldest = true
         };
+        if (indexRange is not null)
+        {
+            item.IndexRange = indexRange;
+        }
+
         item.Notification += OnNotification;
+
         return item;
+    }
+
+    private static string GetMonitoredNodeKey(MonitoredItem item)
+    {
+        return string.IsNullOrWhiteSpace(item.DisplayName)
+            ? item.StartNodeId.ToString()
+            : item.DisplayName;
+    }
+
+    private static bool TryParseArrayElementNodeId(string rawNodeId, out string baseNodeId, out string indexRange)
+    {
+        baseNodeId = rawNodeId;
+        indexRange = string.Empty;
+        if (string.IsNullOrWhiteSpace(rawNodeId))
+        {
+            return false;
+        }
+        if (rawNodeId[^1] != ']')
+        {
+            return false;
+        }
+        var openBracketIndex = rawNodeId.LastIndexOf('[');
+        if (openBracketIndex <= 0 || openBracketIndex >= rawNodeId.Length - 1)
+        {
+            return false;
+        }
+        var parsedBaseNodeId = rawNodeId[..openBracketIndex];
+        var parsedIndex = rawNodeId[(openBracketIndex + 1)..^1];
+        if (string.IsNullOrWhiteSpace(parsedBaseNodeId) || string.IsNullOrWhiteSpace(parsedIndex))
+        {
+            return false;
+        }
+        if (parsedIndex.Any(t => !char.IsDigit(t)))
+        {
+            return false;
+        }
+        baseNodeId = parsedBaseNodeId;
+        indexRange = parsedIndex;
+        return true;
     }
 
     private void OnNotification(MonitoredItem item, MonitoredItemNotificationEventArgs e)
     {
+        var nodeId = GetMonitoredNodeKey(item);
+
         if (e.NotificationValue is not MonitoredItemNotification notification)
         {
             return;
         }
 
-        if (notification.Value == null || StatusCode.IsBad(notification.Value.StatusCode))
+        var dataValue = notification.Value;
+
+        if (dataValue == null || StatusCode.IsBad(dataValue.StatusCode))
         {
-            var failedNodeId = item.StartNodeId.ToString();
-            _values.TryRemove(failedNodeId, out _);
-            logger.LogDebug("Игнорируем bad quality для тега {NodeId}", failedNodeId);
+            _values.TryRemove(nodeId, out _);
+            logger.LogDebug("Игнорируем bad quality для тега {NodeId}", nodeId);
+
             return;
         }
 
-        var nodeId = item.StartNodeId.ToString();
-        var value = notification.Value?.Value;
+        var value = dataValue.Value;
         _values[nodeId] = value;
         InvokeCallbacks(nodeId, value);
     }
@@ -194,6 +250,7 @@ public partial class OpcUaSubscription
             }
             callbacks = [.. list];
         }
+
         foreach (var callback in callbacks)
         {
             callback(value).SafeFireAndForget(ex =>

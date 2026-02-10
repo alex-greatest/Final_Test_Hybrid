@@ -1,6 +1,5 @@
 using Final_Test_Hybrid.Models.Steps;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 
 namespace Final_Test_Hybrid.Components.Errors;
@@ -8,7 +7,6 @@ namespace Final_Test_Hybrid.Components.Errors;
 public partial class FloatingErrorPanel : ComponentBase, IAsyncDisposable
 {
     private const string DefaultStepName = "Неизвестный шаг";
-
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public string? StepName { get; set; }
     [Parameter] public string? ErrorMessage { get; set; }
@@ -16,8 +14,7 @@ public partial class FloatingErrorPanel : ComponentBase, IAsyncDisposable
     [Parameter] public int ColumnIndex { get; set; }
     [Parameter] public ExecutionStateManager? StateManager { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
-
-    [Inject] private IJSRuntime JSRuntime { get; set; } = null!;
+    [Inject] private IJSRuntime JsRuntime { get; set; } = null!;
 
     private double _posX = -1;
     private double _posY = -1;
@@ -87,6 +84,6 @@ public partial class FloatingErrorPanel : ComponentBase, IAsyncDisposable
 
     private void StartDrag(Microsoft.AspNetCore.Components.Web.MouseEventArgs e)
     {
-        _ = JSRuntime.InvokeVoidAsync("floatingPanel.startDrag", "floating-error-panel", e.ClientX, e.ClientY);
+        _ = JsRuntime.InvokeVoidAsync("floatingPanel.startDrag", "floating-error-panel", e.ClientX, e.ClientY);
     }
 }

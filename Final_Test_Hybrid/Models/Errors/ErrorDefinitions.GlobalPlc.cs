@@ -5,49 +5,49 @@ public static partial class ErrorDefinitions
     // DB_Message (О-001-xx)
     public static readonly ErrorDefinition Message_ControlNotEnabled = new(
         "О-001-00", "Управление не включено",
-        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[2]",
+        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[1]",
         Severity: ErrorSeverity.Critical,
         ActivatesResetButton: true);
 
     public static readonly ErrorDefinition Message_NoMode = new(
         "О-001-01", "Нет режима",
-        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[3]",
+        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[2]",
         Severity: ErrorSeverity.Critical,
         ActivatesResetButton: true);
 
     public static readonly ErrorDefinition Message_ModeSelector = new(
         "О-001-02", "Селектор выбора режима",
-        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[4]",
+        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[3]",
         Severity: ErrorSeverity.Critical,
         ActivatesResetButton: true);
 
     public static readonly ErrorDefinition Message_ProfibusError = new(
         "О-001-03", "Ошибка Profibus",
-        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[5]",
+        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[4]",
         Severity: ErrorSeverity.Critical,
         ActivatesResetButton: true);
 
     public static readonly ErrorDefinition Message_NoAirSupply = new(
         "О-001-04", "Нет подачи воздуха",
-        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[6]",
+        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[5]",
         Severity: ErrorSeverity.Critical,
         ActivatesResetButton: true);
     
     public static readonly ErrorDefinition Message_AutomatNotOn = new(
         "О-001-05", "Не включен один из автоматов питания",
-        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[7]",
+        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[6]",
         Severity: ErrorSeverity.Critical,
         ActivatesResetButton: true);
     
     public static readonly ErrorDefinition Message_PressButtonStopGas = new(
         "О-001-06", "Нажата кнопка \"Стоп подачи газа\"",
-        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[8]",
+        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[7]",
         Severity: ErrorSeverity.Critical,
         ActivatesResetButton: true);
     
     public static readonly ErrorDefinition Message_PressButtonStopAutoCycle = new(
         "О-001-07", "Нажата кнопка \"Выключение автоматического цикла\"",
-        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[9]",
+        PlcTag: "ns=3;s=\"DB_Message\".\"Alarm4\"[8]",
         Severity: ErrorSeverity.Critical,
         ActivatesResetButton: true);
 

@@ -32,8 +32,20 @@ public sealed class PlcErrorMonitorService(
 
     private Task OnTagChanged(ErrorDefinition error, object? value)
     {
-        if (value is not bool isActive)
+        if (!TryNormalizeBooleanValue(
+                value,
+                out var isActive,
+                out var normalizedType,
+                out var normalizationNote))
         {
+            logger.LogWarning(
+                "PLC error callback skipped (не bool): Code={Code}, Tag={Tag}, Value={Value}, Type={Type}, NormalizeNote={NormalizeNote}",
+                error.Code,
+                error.PlcTag,
+                value,
+                normalizedType,
+                normalizationNote);
+
             return Task.CompletedTask;
         }
 
@@ -47,5 +59,58 @@ public sealed class PlcErrorMonitorService(
         }
 
         return Task.CompletedTask;
+    }
+
+    private static bool TryNormalizeBooleanValue(
+        object? rawValue,
+        out bool normalizedValue,
+        out string normalizedType,
+        out string normalizationNote)
+    {
+        normalizedValue = false;
+        normalizedType = rawValue?.GetType().FullName ?? "null";
+        normalizationNote = "UnsupportedType";
+
+        switch (rawValue)
+        {
+            case bool boolValue:
+                normalizedValue = boolValue;
+                normalizedType = typeof(bool).FullName!;
+                normalizationNote = "DirectBool";
+                return true;
+
+            case bool[] boolArray when boolArray.Length == 0:
+                normalizationNote = "BoolArrayEmpty";
+                return false;
+
+            case bool[] boolArray:
+                normalizedValue = boolArray[0];
+                normalizedType = typeof(bool[]).FullName!;
+                normalizationNote = boolArray.Length == 1
+                    ? "BoolArrayLength1"
+                    : $"BoolArrayLength{boolArray.Length}UseFirst";
+                return true;
+
+            case IEnumerable<bool> boolEnumerable:
+                using (var enumerator = boolEnumerable.GetEnumerator())
+                {
+                    if (!enumerator.MoveNext())
+                    {
+                        normalizationNote = "BoolEnumerableEmpty";
+                        return false;
+                    }
+
+                    normalizedValue = enumerator.Current;
+                    var hasSecondValue = enumerator.MoveNext();
+                    normalizedType = boolEnumerable.GetType().FullName
+                        ?? "System.Collections.Generic.IEnumerable<System.Boolean>";
+                    normalizationNote = hasSecondValue
+                        ? "BoolEnumerableLength>1UseFirst"
+                        : "BoolEnumerableLength1";
+                    return true;
+                }
+        }
+
+        return false;
     }
 }
