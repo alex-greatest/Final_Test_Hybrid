@@ -5,10 +5,16 @@
         <div>
             <PanelBox Style="width: 375px; height: 115px">
                 <ValueIndicator Label="DHW Flow"
+                                EmitCachedValueImmediately="@EmitCachedValueImmediately"
                                 Tag="@OutputsPanel2Tags.Vrp2_1"/>
                 <ValueIndicator Label="Blr Gas Pressure"
+                                EmitCachedValueImmediately="@EmitCachedValueImmediately"
                                 Tag="@OutputsPanel2Tags.Vpp3_1"/>
             </PanelBox>
         </div>
     </div>
 </div>
+
+@code {
+    [Parameter] public bool EmitCachedValueImmediately { get; set; }
+}

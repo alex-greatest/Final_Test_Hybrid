@@ -16,6 +16,24 @@
 
 ## Активные записи
 
+### 2026-02-10 (Overview: немедленная выдача cached-значений как в Hand Program)
+- Что изменили: в `MyComponent.razor` для всех overview-панелей (`Gas/Heating/HotWater/Inputs/Outputs`) включили `EmitCachedValueImmediately="true"`; в `OutputsPanel2.razor` добавили параметр `EmitCachedValueImmediately` и пробросили его в оба `ValueIndicator`.
+- Почему: в `Обзор` часть значений оставалась пустой до первого изменения тега, тогда как в `HandProgramDialog` те же панели показывали кэш сразу.
+- Риск/урок: при смешанном использовании `EmitCachedValueImmediately` между экранами появляются ложные различия UI-состояния при одинаковых источниках OPC-подписок.
+- Ссылки: `Final_Test_Hybrid/MyComponent.razor`, `Final_Test_Hybrid/Components/Overview/OutputsPanel2.razor`, `Final_Test_Hybrid/Components/Engineer/Modals/HandProgramDialog.razor`
+
+### 2026-02-10 (ErrorHistoryGrid: реактивная шапка last boiler/дата)
+- Что изменили: в `ErrorHistoryGrid` перевели подписку с `BoilerState.OnCleared` на `BoilerState.OnChanged`, синхронно обновили отписку и добавили guard по `_disposed` в обработчике изменения состояния.
+- Почему: шапка с `LastSerialNumber`/`LastTestCompletedAt` должна появляться, обновляться и скрываться в те же моменты, что и в `TestResultsGrid` (включая `SaveLastSerialNumber` и `ClearLastTestInfo`).
+- Риск/урок: подписка только на `OnCleared` теряет часть переходов `BoilerState`; для UI-индикаторов предыдущего теста нужен полный поток `OnChanged`.
+- Ссылки: `Final_Test_Hybrid/Components/Errors/ErrorHistoryGrid.razor`, `Final_Test_Hybrid/Components/Results/TestResultsGrid.razor`, `Final_Test_Hybrid/Models/BoilerState.cs`
+
+### 2026-02-10 (Overview: заголовки DataGrid по паттерну unified)
+- Что изменили: в `overview-grid-io` заменили header-селекторы `.rz-grid-table thead th*` на паттерн из `grid-unified`: `.overview-grid-io th` + внутренние контейнеры (`th .rz-cell-data`, `th .rz-column-title-content`, `th .rz-sortable-column`, `.rz-column-title`); размер текста в body/edit оставили `19px`.
+- Почему: в Overview заголовок обрезался по высоте; паттерн `grid-unified` уже показал более стабильное поведение в этом проекте.
+- Риск/урок: для Radzen DataGrid устойчивость заголовка зависит от покрытия внутренних контейнеров и прицельных селекторов `th`, а не только от `thead`-селектора.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/LEARNING_LOG.md`
+
 ### 2026-02-09 (Overview: фиксация роста шрифта ячеек + anti-clipping заголовков)
 - Что изменили: в профиле `overview-grid-io` добавили `thead th` и внутренние контейнеры заголовков по паттерну `grid-unified` (`overflow: visible`, `height: auto`, `text-overflow: clip`), а также усилили применение шрифта к содержимому через `.rz-grid-table td, td *` на `19px`.
 - Почему: после увеличения шрифта заголовки начали обрезаться по высоте, а текст ячеек в templated-контенте визуально не увеличивался.

@@ -98,7 +98,7 @@
     protected override void OnInitialized()
     {
         ErrorService.OnHistoryChanged += OnHistoryChanged;
-        BoilerState.OnCleared += OnBoilerStateChanged;
+        BoilerState.OnChanged += OnBoilerStateChanged;
         _history = ErrorService.GetHistory();
     }
 
@@ -117,7 +117,14 @@
 
     private void OnBoilerStateChanged()
     {
-        _ = InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(() =>
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            StateHasChanged();
+        });
     }
 
     private static string FormatDuration(ErrorHistoryItem item)
@@ -133,7 +140,7 @@
     {
         _disposed = true;
         ErrorService.OnHistoryChanged -= OnHistoryChanged;
-        BoilerState.OnCleared -= OnBoilerStateChanged;
+        BoilerState.OnChanged -= OnBoilerStateChanged;
         return ValueTask.CompletedTask;
     }
 }

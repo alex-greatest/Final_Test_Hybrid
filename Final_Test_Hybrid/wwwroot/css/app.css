@@ -596,22 +596,21 @@ svg {
     font-size: 19px;
 }
 
-.overview-grid-io .rz-grid-table thead th {
+.overview-grid-io th {
     padding: 10px 8px !important;
     overflow: visible !important;
     line-height: 1.2 !important;
     height: auto !important;
 }
 
-.overview-grid-io .rz-grid-table thead th .rz-cell-data,
-.overview-grid-io .rz-grid-table thead th .rz-column-title-content,
-.overview-grid-io .rz-grid-table thead th .rz-sortable-column,
-.overview-grid-io .rz-grid-table thead th .rz-column-title {
+.overview-grid-io th .rz-cell-data,
+.overview-grid-io th .rz-column-title-content,
+.overview-grid-io th .rz-sortable-column,
+.overview-grid-io .rz-column-title {
     overflow: visible !important;
     text-overflow: clip !important;
     white-space: nowrap !important;
     height: auto !important;
-    line-height: 1.2 !important;
 }
 
 .overview-grid-io .rz-grid-table td,

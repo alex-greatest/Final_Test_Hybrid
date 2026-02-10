@@ -27,6 +27,9 @@
 - В родительских вкладках запрещены широкие `::deep .rz-data-grid*` override: shell/layout можно, типографику и геометрию таблицы — нельзя.
 - Исключение зафиксировано: `Components/Main/TestSequenseGrid.razor` использует `main-grid-legacy` (компактный исторический вид главного экрана).
 - Для обрезания заголовков DataGrid править не только `th`, но и внутренние контейнеры (`.rz-cell-data`, `.rz-column-title-content`, `.rz-sortable-column`, `.rz-column-title`).
+- Для любого DataGrid-профиля (`grid-unified`, `main-grid-legacy`, `overview-grid-io`, новые профили) использовать отдельный opt-in class в `wwwroot/css/app.css`; новый визуальный режим — новый класс, а не «подкрутка» существующего профиля под все экраны.
+- Заголовки DataGrid настраивать по устойчивому паттерну: селекторы от `th` + внутренние контейнеры (`.rz-cell-data`, `.rz-column-title-content`, `.rz-sortable-column`, `.rz-column-title`); полагаться только на `.rz-grid-table thead th*` нельзя.
+- В каждом профиле раздельно настраивать header и body/edit: anti-clipping/высота/overflow на уровне шапки, типографика (`font-size`, `font-weight`, `line-height`) — отдельным слоем для данных и редакторов.
 - Новые вкладочные контейнеры обязаны занимать всю высоту родителя (`display:flex`, `flex-direction:column`, `min-height:0`, `height:100%`), ориентир — `RecipesGrid`.
 - `LogViewerTab`: внутренняя структура зафиксирована как две вкладки — `Лог-файл` и `Время шагов`; `StepTimingsGrid` живёт во вкладке `Лог`, не в `Results`.
 
