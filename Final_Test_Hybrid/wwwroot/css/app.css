@@ -474,6 +474,165 @@ svg {
     z-index: 10000 !important;
 }
 
+/* ===== UNIFIED GRID STYLES ===== */
+/* Единый стиль таблиц для основных экранов */
+.grid-unified-host {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+}
+
+.grid-unified {
+    flex: 1;
+    min-height: 0;
+}
+
+.grid-unified .rz-column-title,
+.grid-unified .rz-column-title-content {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+}
+
+.grid-unified .rz-grid-table thead th .rz-column-title,
+.grid-unified .rz-grid-table thead th .rz-column-title-content {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+}
+
+.grid-unified .rz-cell-data {
+    font-size: 19px !important;
+    font-weight: 400 !important;
+    line-height: 1.4 !important;
+    color: black !important;
+    white-space: nowrap;
+}
+
+.grid-unified .rz-grid-table td .rz-cell-data {
+    font-size: 19px !important;
+}
+
+.grid-unified .rz-data-grid-empty {
+    font-size: 19px !important;
+    color: black !important;
+}
+
+.grid-unified .rz-data-grid-data {
+    overflow-x: auto;
+    overflow-y: auto;
+}
+
+.grid-unified .rz-grid-table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: collapse;
+}
+
+.grid-unified th,
+.grid-unified td {
+    border: 1px solid #ccc !important;
+}
+
+.grid-unified th {
+    padding: 10px 8px !important;
+    overflow: visible !important;
+    line-height: 1.2 !important;
+    height: auto !important;
+}
+
+.grid-unified th .rz-cell-data,
+.grid-unified th .rz-column-title-content,
+.grid-unified th .rz-sortable-column,
+.grid-unified .rz-column-title {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    height: auto !important;
+}
+
+.grid-unified .cell-text {
+    font-size: 19px !important;
+    font-weight: 400 !important;
+    line-height: 1.4 !important;
+    color: black !important;
+}
+
+.grid-unified .rz-textbox,
+.grid-unified .rz-dropdown,
+.grid-unified .rz-textarea {
+    font-size: 19px !important;
+    color: black !important;
+}
+
+.grid-unified .rz-dropdown .rz-dropdown-label {
+    color: black !important;
+}
+
+.grid-unified td .rz-button {
+    width: 35px;
+    height: 35px;
+    min-width: 35px;
+    font-size: 18px;
+}
+
+.grid-unified td .rz-button .rzi {
+    font-size: 21px;
+}
+
+/* Overview: типографика таблиц как в IoEditorDialog */
+.overview-grid-io {
+    font-size: 19px;
+}
+
+.overview-grid-io .rz-cell-data {
+    font-size: 19px;
+}
+
+.overview-grid-io .rz-column-title,
+.overview-grid-io .rz-column-title-content {
+    font-size: 19px;
+}
+
+.overview-grid-io .rz-grid-table thead th {
+    padding: 10px 8px !important;
+    overflow: visible !important;
+    line-height: 1.2 !important;
+    height: auto !important;
+}
+
+.overview-grid-io .rz-grid-table thead th .rz-cell-data,
+.overview-grid-io .rz-grid-table thead th .rz-column-title-content,
+.overview-grid-io .rz-grid-table thead th .rz-sortable-column,
+.overview-grid-io .rz-grid-table thead th .rz-column-title {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    height: auto !important;
+    line-height: 1.2 !important;
+}
+
+.overview-grid-io .rz-grid-table td,
+.overview-grid-io .rz-grid-table td * {
+    font-size: 19px !important;
+}
+
+.overview-grid-io .rz-textbox,
+.overview-grid-io .rz-textbox input {
+    font-size: 19px;
+}
+
+.overview-grid-io .rz-dropdown,
+.overview-grid-io .rz-dropdown-label {
+    font-size: 19px;
+}
+
+.overview-grid-io .rz-numeric input {
+    font-size: 19px;
+}
+
 /* Ячейки редактирования в DataGrid */
 .rz-data-grid td,
 .rz-data-grid td > *,

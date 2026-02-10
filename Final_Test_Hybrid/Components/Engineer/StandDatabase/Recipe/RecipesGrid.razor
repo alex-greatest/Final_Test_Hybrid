@@ -1,7 +1,7 @@
 @using Final_Test_Hybrid.Models.Database
 @using Final_Test_Hybrid.Models.Database.Edit
 
-<div class="tab-content">
+<div class="tab-content grid-unified-host">
     @if (_loadError)
     {
         <RadzenAlert AlertStyle="AlertStyle.Danger" Shade="Shade.Lighter"
@@ -39,7 +39,7 @@
             </div>
             <span class="record-count">Записей: @_filteredRecipes.Count</span>
         </div>
-        <RadzenDataGrid @ref="_grid" Data="@_filteredRecipes" TItem="RecipeEditModel"
+        <RadzenDataGrid @ref="_grid" Data="@_filteredRecipes" TItem="RecipeEditModel" class="grid-unified"
                         EditMode="DataGridEditMode.Single"
                         AllowFiltering="true" AllowSorting="true"
                         AllowColumnReorder="true"

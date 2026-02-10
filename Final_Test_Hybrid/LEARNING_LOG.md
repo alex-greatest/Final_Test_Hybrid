@@ -1,13 +1,11 @@
 ﻿# LEARNING LOG
 
-Короткий активный журнал проекта. Подробные расследования и длинные отчёты выносятся в `LEARNING_LOG_ARCHIVE.md`.
+Короткий активный журнал. Детали, длинные расследования и старые записи храним в `LEARNING_LOG_ARCHIVE.md`.
 
-## Политика роста (обязательно)
-- Активный файл хранит только последние `30` дней или максимум `40` записей (что наступит раньше).
-- Одна запись: максимум `6` пунктов + строка `Ссылки`.
-- Подробные логи, альтернативы и длинные обсуждения сразу переносить в `LEARNING_LOG_ARCHIVE.md`.
-- При превышении лимита переносить самые старые записи в архив без удаления фактов.
-- После каждого значимого изменения фиксировать минимум: `Что изменили`, `Почему`, `Риск/урок`, `Ссылки`.
+## Политика роста
+- Активный файл: только оперативный индекс (последние 30 дней или до 40 записей).
+- Формат записи фиксированный: `Что изменили` / `Почему` / `Риск/урок` / `Ссылки`.
+- Всё подробное и устаревающее переносим в архив без потери фактов.
 
 ## Шаблон записи
 ### YYYY-MM-DD (тема)
@@ -18,148 +16,111 @@
 
 ## Активные записи
 
-### 2026-02-09 (StepTimingsGrid: исправление обрезания заголовков колонок)
-- Что изменили: в `StepTimingsGrid.razor.css` добавили правила для контейнеров заголовков (`.rz-cell-data`, `.rz-column-title-content`, `.rz-sortable-column`, `.rz-column-title`) с `overflow: visible` и `text-overflow: clip` по паттерну `RecipesGrid`.
-- Почему: после переноса `StepTimingsGrid` в `LogViewerTab` заголовки колонок визуально обрезались.
-- Риск/урок: для Radzen DataGrid недостаточно править только `th`; нужно отдельно раскрывать внутренние обёртки заголовка.
-- Ссылки: `Final_Test_Hybrid/Components/Results/StepTimingsGrid.razor.css`, `Final_Test_Hybrid/Components/Engineer/StandDatabase/Recipe/RecipesGrid.razor.css`
+### 2026-02-09 (Overview: фиксация роста шрифта ячеек + anti-clipping заголовков)
+- Что изменили: в профиле `overview-grid-io` добавили `thead th` и внутренние контейнеры заголовков по паттерну `grid-unified` (`overflow: visible`, `height: auto`, `text-overflow: clip`), а также усилили применение шрифта к содержимому через `.rz-grid-table td, td *` на `19px`.
+- Почему: после увеличения шрифта заголовки начали обрезаться по высоте, а текст ячеек в templated-контенте визуально не увеличивался.
+- Риск/урок: для Radzen DataGrid одного `.rz-cell-data` недостаточно; для стабильного результата нужны и `thead`-контейнеры, и покрытие содержимого `td`.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/Components/Overview/AiCallCheck.razor`, `Final_Test_Hybrid/Components/Overview/RtdCalCheck.razor`, `Final_Test_Hybrid/Components/Overview/PidRegulatorCheck.razor`
+
+### 2026-02-09 (Overview: +3px к заголовкам и содержимому трёх calibration-гридов)
+- Что изменили: для профиля `overview-grid-io` подняли размер шрифта с `16px` до `19px` для заголовков колонок, текста ячеек и элементов редактирования.
+- Почему: требовалось увеличить читаемость трёх Overview-таблиц (`AiCallCheck`, `RtdCalCheck`, `PidRegulatorCheck`) ровно на `+3px`.
+- Риск/урок: увеличение шрифта в DataGrid нужно делать одновременно для display и edit-состояний, иначе появляется визуальный «скачок» при редактировании.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/Components/Overview/AiCallCheck.razor`, `Final_Test_Hybrid/Components/Overview/RtdCalCheck.razor`, `Final_Test_Hybrid/Components/Overview/PidRegulatorCheck.razor`
+
+### 2026-02-09 (Overview: единый источник типографики через overview-grid-io)
+- Что изменили: убрали локальные `::deep`-дубли из `AiCallCheck.razor.css`, `RtdCalCheck.razor.css`, `PidRegulatorCheck.razor.css`; оставили типографику только через класс `overview-grid-io` в `app.css`.
+- Почему: требовалось стабильно выровнять стиль таблиц Overview относительно `IoEditorDialog` без расхождения между глобальными и scoped-правилами.
+- Риск/урок: когда один визуальный профиль задан в двух слоях (shared + component-scoped), результат становится недетерминированным; нужен single source of truth.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/Components/Overview/AiCallCheck.razor.css`, `Final_Test_Hybrid/Components/Overview/RtdCalCheck.razor.css`, `Final_Test_Hybrid/Components/Overview/PidRegulatorCheck.razor.css`
+
+### 2026-02-09 (UI: заголовки unified 1.5rem + Overview в стиле IoEditorDialog)
+- Что изменили: увеличили размер заголовков колонок unified-гридов до `1.5rem` (вес `700`) и добавили shared-класс `overview-grid-io` для таблиц `AiCallCheck`, `RtdCalCheck`, `PidRegulatorCheck` с типографикой `16px` для заголовков/ячеек/редактирования как в `IoEditorDialog`.
+- Почему: требовалось сделать заголовки unified заметнее и выровнять визуальный профиль таблиц во вкладке Overview под эталонный стиль инженерного редактора.
+- Риск/урок: для повторяемости UI лучше задавать профиль таблиц через явный class opt-in, а не через разрозненные локальные `::deep` правила.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/Components/Overview/AiCallCheck.razor`, `Final_Test_Hybrid/Components/Overview/RtdCalCheck.razor`, `Final_Test_Hybrid/Components/Overview/PidRegulatorCheck.razor`
+
+### 2026-02-09 (UI: увеличен и утяжелён текст заголовков колонок)
+- Что изменили: для unified-гридов подняли типографику заголовков колонок до `1.3rem` и `700`, с явной фиксацией на селекторах `thead th`.
+- Почему: требовалось сделать именно текст заголовков колонок крупнее и жирнее, без изменения ячеек/вкладок.
+- Риск/урок: для стабильного визуального результата заголовки DataGrid нужно задавать не только общим селектором, но и на уровне `thead th`.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/LEARNING_LOG.md`
+
+### 2026-02-09 (UI: ячейки unified возвращены на 19px)
+- Что изменили: в `grid-unified` вернули размер текста данных с `24px` на `19px` для `.rz-cell-data`, `.rz-grid-table td .rz-cell-data` и `.cell-text`; профиль заголовков оставили без изменений.
+- Почему: требовалось сохранить рабочий размер/жирность заголовков и уменьшить только текст в ячейках.
+- Риск/урок: при массовой стилизации таблиц заголовки и данные должны настраиваться раздельно, иначе сложно удерживать ожидаемый визуальный баланс.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/Components/Engineer/StandDatabase/Recipe/RecipesGrid.razor`
+
+### 2026-02-09 (UI: возврат размера заголовков unified при сохранении ячеек)
+- Что изменили: в `grid-unified` вернули типографику заголовков к прежнему виду (`1.1rem`, `600`, `uppercase`), не меняя текущий размер текста в ячейках.
+- Почему: после фикса приоритета scoped CSS заголовки визуально стали больше ожидаемого.
+- Риск/урок: заголовки и ячейки в shared-стиле нужно настраивать независимо; иначе правка одного слоя затрагивает другой.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/LEARNING_LOG.md`
+
+### 2026-02-09 (UI: root-cause scoped override `[b-*]` в MyComponent)
+- Что изменили: в `MyComponent.razor.css` ограничили широкие `::deep .rz-grid-table*` и `::deep .rz-data-grid*` селекторы контейнером `.tab-content-wrapper`; в `grid-unified` добавили усиленный селектор `.rz-grid-table td .rz-cell-data` с `24px`.
+- Почему: scoped-правило вида `[b-*] .rz-grid-table td .rz-cell-data` перехватывало шрифт на вкладках и отменяло unified-увеличение.
+- Риск/урок: для shared UI нельзя оставлять глобальные deep-правила в корневом компоненте; локальные legacy-правки должны быть строго контейнеризованы.
+- Ссылки: `Final_Test_Hybrid/MyComponent.razor.css`, `Final_Test_Hybrid/wwwroot/css/app.css`
+
+### 2026-02-09 (UI: +5px к шрифту ячеек unified-гридов)
+- Что изменили: в `grid-unified` увеличили размер шрифта содержимого ячеек с `19px` до `24px` (`.rz-cell-data`, `.cell-text`).
+- Почему: требовалось визуально укрупнить текст в таблицах, приведённых к единому стилю.
+- Риск/урок: изменение внесено только в unified-контур; `main-grid-legacy` (`TestSequenseGrid`) оставлен без изменений как отдельное исключение.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/Components/Main/TestSequenseGrid.razor.css`
+
+### 2026-02-09 (UI таблиц: единый стиль и границы применения)
+- Что изменили: ввели единый стиль DataGrid через `grid-unified-host`/`grid-unified`; убрали конфликтующие parent/deep-override в табах, где они ломали единый вид.
+- Почему: при локальных `::deep .rz-data-grid*` единый стиль становился недетерминированным и расходился между вкладками.
+- Риск/урок: shared-стиль работает только при явном opt-in и отсутствии широких родительских переопределений.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/Components/Results/TestResultsTab.razor.css`, `Final_Test_Hybrid/Components/Errors/ErrorsTab.razor.css`
+
+### 2026-02-09 (Главный экран: legacy-вид TestSequenseGrid)
+- Что изменили: для `TestSequenseGrid` сделали точечный opt-out от `grid-unified` через `main-grid-legacy`; вернули компактную типографику и плотность строк главного экрана.
+- Почему: главный экран должен сохранить исторический UX, несмотря на общую унификацию остальных гридов.
+- Риск/урок: при массовой унификации нужны явно зафиксированные исключения, иначе глобальные `!important` ломают целевой локальный дизайн.
+- Ссылки: `Final_Test_Hybrid/Components/Main/TestSequenseGrid.razor`, `Final_Test_Hybrid/Components/Main/TestSequenseGrid.razor.css`
 
 ### 2026-02-09 (LogViewer: внутренние вкладки и перенос времени шагов)
-- Что изменили: в `LogViewerTab` добавили внутренние вкладки в стиле `MyComponent` (`Лог-файл`, `Время шагов`), перенесли `StepTimingsGrid` из `TestResultsTab` во вкладку `Лог`, контейнер вкладок растянули на всю высоту компонента.
-- Почему: требовалась единая точка просмотра лог-файла и времени шагов с сохранением текущих стилей контента и без изменения runtime-источников данных.
-- Риск/урок: при переносе UI-вкладок критично сохранять локальные `.razor.css` дочерних компонентов; изменения должны ограничиваться контейнерным layout и shell-вкладок.
+- Что изменили: в `LogViewerTab` добавили вкладки `Лог-файл` и `Время шагов`; `StepTimingsGrid` перенесли из `TestResultsTab` в `Лог`.
+- Почему: нужен единый экран для текстового лога и таймингов шагов без изменения runtime-источников данных.
+- Риск/урок: при переносе вкладок нельзя менять локальные стили содержимого; правки должны ограничиваться shell/layout контейнера.
 - Ссылки: `Final_Test_Hybrid/Components/Logs/LogViewerTab.razor`, `Final_Test_Hybrid/Components/Logs/LogViewerTab.razor.css`, `Final_Test_Hybrid/Components/Results/TestResultsTab.razor`
 
-### 2026-02-09 (LEARNING_LOG: полная консолидация)
-- Что изменили: полную развёрнутую активную секцию перенесли в архив как snapshot; активный файл сжали до короткого индекса по решениям и урокам.
-- Почему: активный лог должен ускорять навигацию по текущим рискам/инвариантам, а не дублировать длинные расследования.
-- Риск/урок: если держать детали в активном логе, контекст деградирует в шум и теряется приоритет фактов.
-- Ссылки: `Final_Test_Hybrid/LEARNING_LOG.md`, `Final_Test_Hybrid/LEARNING_LOG_ARCHIVE.md`
+### 2026-02-09 (Диагностика: ручной контекст и безопасность preset)
+- Что изменили: в ручной диагностике закрепили контекст оператора (без фоновой автоматики), оставили только безопасные preset-операции, расширили понятность отображаемых чтений.
+- Почему: ручной сценарий должен быть предсказуемым и не пересекаться с runtime-автоматикой.
+- Риск/урок: любые «удобные» preset в инженерном UI быстро становятся источником скрытых side effect без жёсткого whitelist.
+- Ссылки: `Final_Test_Hybrid/Components/Overview/ConnectionTestPanel.razor`, `Final_Test_Hybrid/Services/Diagnostic/Services/BoilerLockRuntimeService.cs`
 
-### 2026-02-09 (Процесс и quality-gates)
-- Что изменили: стандартизировали правила работы через сжатый `AGENTS.md` (стиль решений, анти-паттерны, инварианты, quality-gates).
-- Почему: нужен единый операционный стандарт, чтобы решения повторялись консистентно между задачами.
-- Риск/урок: “примеры вместо правил” копируют форму, но не удерживают качество; фиксировать нужно принципы и запреты.
-- Ссылки: `AGENTS.md`, `Final_Test_Hybrid/LEARNING_LOG.md`
-
-### 2026-02-09 (Ручная диагностика: приоритет операторского контекста)
-- Что изменили: для ручного теста связи ввели явный контекст с отключением фоновой авто-автоматики; в панель добавили безопасные preset-сценарии и человекочитаемую расшифровку чтений.
-- Почему: диагностика должна подчиняться осознанным действиям инженера, а не фоновым recovery-веткам.
-- Риск/урок: без runtime-контекста ручной режим конфликтует с автоматикой и даёт неуправляемые побочные изменения.
-- Ссылки: `Final_Test_Hybrid/Components/Overview/ConnectionTestPanel.razor`, `Final_Test_Hybrid/Services/Diagnostic/Services/BoilerLockRuntimeService.cs`, `Final_Test_Hybrid/Services/Diagnostic/Services/DiagnosticManualSessionState.cs`
-
-### 2026-02-09 (Lifecycle инженерных UI-окон)
-- Что изменили: выровняли lifecycle инженерных модалок (вкладочный рендер, авто-закрытие при выходе из scan-phase, единая блокировка запуска).
-- Почему: UI-гейтинг без runtime-guard не защищает от запуска действий в недопустимой фазе.
-- Риск/урок: состояние окна должно зависеть от состояния системы, иначе оператор может случайно пересечь критичные фазы выполнения.
-- Ссылки: `Final_Test_Hybrid/Components/Engineer/Modals/HandProgramDialog.razor`, `Final_Test_Hybrid/Components/Engineer/MainEngineering.razor`, `Final_Test_Hybrid/Components/Engineer/MainEngineering.razor.cs`
-
-### 2026-02-09 (Reconnect и подписки: детерминированное поведение)
-- Что изменили: закрепили практику полного rebuild runtime-подписок, opt-in выдачу cache для late-subscriber UI и перезагрузку экранов, которые не живут на подписках.
-- Почему: это устраняет рассинхрон UI после reconnect без глобальной смены порядка событий.
-- Риск/урок: глобальные auto-emit/auto-rebind без границ создают скрытые регрессии в runtime-потоке.
-- Ссылки: `Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.Callbacks.cs`, `Final_Test_Hybrid/Components/Engineer/Modals/IoEditorDialog.razor.cs`, `Final_Test_Hybrid/Services/OpcUa/PlcInitializationCoordinator.cs`
+### 2026-02-09 (Reconnect и подписки: детерминированный подход)
+- Что изменили: закрепили инвариант полного rebuild runtime-подписок после reconnect и точечный opt-in для late-subscriber UI.
+- Почему: это убирает рассинхрон экранов после потери соединения без глобальных изменений порядка событий.
+- Риск/урок: частичный auto-rebind без границ создает скрытые регрессии и нестабильный UI-state.
+- Ссылки: `Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.Callbacks.cs`, `Final_Test_Hybrid/Services/OpcUa/PlcInitializationCoordinator.cs`
 
 ### 2026-02-09 (Контракт результатов теста)
-- Что изменили: закрыли пропуски по сохранению результатов (`lost tags`), выровняли `isRanged/min/max` по контракту параметров и закрепили единый источник списков результатов.
-- Почему: разрывы в контракте результатов ломают классификацию/выгрузку и создают ложные “потери” данных.
-- Риск/урок: `isRanged`, границы и имя параметра нельзя выбирать “по аналогии” — только по явному контракту конкретного поля.
-- Ссылки: `Final_Test_Hybrid/Services/Steps/Steps/ScanStepBase.cs`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.cs`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Execution.cs`, `Final_Test_Hybrid/Services/Storage/MesTestResultStorage.cs`
+- Что изменили: синхронизировали сохранение результатов по каноническим именам параметров и корректным метаданным (`isRanged`, границы, единицы), закрыли разрывы в списках.
+- Почему: неконсистентный контракт ломал классификацию/выгрузку и давал ложные потери результатов.
+- Риск/урок: метаданные результатов нельзя наследовать «по соседству»; каждый параметр проверяется по своему контракту.
+- Ссылки: `Final_Test_Hybrid/Services/Steps/Steps/ScanStepBase.cs`, `Final_Test_Hybrid/Services/Storage/MesTestResultStorage.cs`
 
-### 2026-02-09 (DHW_Flow_Hot_Rate: закрытие разрыва покрытия)
-- Что изменили: в `DHW/Check_Flow_Temperature_Rise` добавили сохранение `DHW_Flow_Hot_Rate` из `DB_Measure.Sensor.DHW_FS` с пределами из рецепта.
-- Почему: параметр присутствовал в целевом списке, но отсутствовал в фактическом контуре сохранения.
-- Риск/урок: при добавлении нового результата нужно обновлять не только `Add(...)`, но и `RequiredPlcTags/RequiredRecipeAddresses` + `Remove(...)` для Retry.
-- Ссылки: `Final_Test_Hybrid/Services/Steps/Steps/DHW/CheckFlowTemperatureRiseStep.cs`, `Final_Test_Hybrid/NewFile2.txt`
+### 2026-02-09 (Каталог ошибок и reseed БД)
+- Что изменили: выровняли каталог ошибок программы и подготовили воспроизводимые SQL/скрипты для синхронизации `traceability_boiler` с fail-fast проверками.
+- Почему: источник истины по кодам должен быть в программе, а перенос в БД должен быть детерминированным.
+- Риск/урок: перед reseed обязательно проверять реальную схему, sequence и связность шагов, иначе высок риск PK/FK конфликтов.
+- Ссылки: `Final_Test_Hybrid/Models/Errors/ErrorDefinitions*.cs`, `Final_Test_Hybrid/tools/db-maintenance/reseed_traceability_boiler_errors_from_program.sql`
 
-### 2026-02-08 (Диагностический runtime: устойчивость и fail-fast)
-- Что изменили: в критичных ветках усилили fail-fast и bounded fairness (очередь Modbus), упростили шаги `CH_Start_*` до проверяемого статуса и привязали ECU-ошибки к lock-контексту.
-- Почему: это снижает риск зависаний, starvation и ложной аварийности.
-- Риск/урок: стабильность достигается не количеством проверок, а детерминированными переходами состояний и ограниченными retry.
-- Ссылки: `Final_Test_Hybrid/Services/Diagnostic/Protocol/CommandQueue/Internal/ModbusWorkerLoop.cs`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMaxHeatoutStep.cs`, `Final_Test_Hybrid/Services/Diagnostic/Services/EcuErrorSyncService.cs`
+### 2026-02-08 (Диагностический runtime: fail-fast и bounded retry)
+- Что изменили: усилили bounded-fairness очереди и fail-fast обработку в критичных ветках диагностики.
+- Почему: требовалось уменьшить зависания, starvation и ложные аварийные состояния.
+- Риск/урок: устойчивость достигается детерминированными переходами и ограниченными retry, а не ростом количества проверок.
+- Ссылки: `Final_Test_Hybrid/Services/Diagnostic/Protocol/CommandQueue/Internal/ModbusWorkerLoop.cs`, `Final_Test_Hybrid/Services/Diagnostic/Services/EcuErrorSyncService.cs`
 
-### 2026-02-09 (Аудит кодов ошибок vs `traceability_boiler`)
-- Что изменили: добавили reproducible read-only скрипт сверки `Final_Test_Hybrid/tools/error-audit/Compare-ErrorCodes.ps1` (сравнение кодов из `ErrorDefinitions*.cs` и `tb_error_settings_template`, отчёт `missing/extra`).
-- Почему: разовая ручная сверка неустойчива; нужен повторяемый инструмент с одинаковым результатом на одной БД.
-- Ошибка/урок: изначально использовали конструкции не совместимые с Windows PowerShell 5.1 (`??`, ранний `PSScriptRoot` в param default, некорректная интерполяция с `:`). Исправили на совместимый синтаксис.
-- Компромисс: для SQL-доступа скрипт поднимает временный `net10.0` раннер с `Npgsql` в `%TEMP%`; это медленнее первого запуска, но не требует установленного `psql`.
-- Дополнительно: по запросу пользователя сохранили фактический отчёт сверки в репозитории (`Final_Test_Hybrid/tools/error-audit/reports/error-code-diff-20260209-153105.txt`) для ревью/истории изменений.
-- Ссылки: `Final_Test_Hybrid/tools/error-audit/Compare-ErrorCodes.ps1`
+### 2026-02-09 (Процесс и quality-gates)
+- Что изменили: зафиксировали рабочий стандарт в `AGENTS.md`; обязательный финальный чек-лист: `build`, `format analyzers`, `format style`.
+- Почему: стабильный процесс нужен для одинакового качества решений между задачами и ветками.
+- Риск/урок: если чек-лист не формализован, регрессии в стиле/анализаторах начинают накапливаться незаметно.
+- Ссылки: `AGENTS.md`, `Final_Test_Hybrid/LEARNING_LOG_ARCHIVE.md`
 
-### 2026-02-09 (Синхронизация ошибок: БД -> программа)
-- Что изменили: добавили в `ErrorDefinitions.Steps1.cs` 19 отсутствующих step-ошибок из `tb_error_settings_template` (коды: `П-015-*`, `П-038-*`, `П-049-*`, `П-051-*`, `П-061-*`, `П-066-00`, `П-070-00`, `П-085-*`) с `PlcTag` и корректными `RelatedStepId/RelatedStepName` по текущим шагам программы.
-- Почему: программа должна стать source of truth для последующей нормализации и замены записей в БД.
-- Риск/урок: ошибки с несуществующим `RelatedStepId` ломают запуск через `PlcInitializationCoordinator.ValidateErrorStepBindings`; нельзя переносить коды «как есть» из БД без проверки реального `step.Id` в коде.
-- Компромисс: 8 конфликтных кодов (`П-028-*`, `П-040-*`, `П-057-*`) не переносили на этом этапе, так как их шаги отсутствуют в текущем runtime-каталоге программы.
-- Ссылки: `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps1.cs`, `Final_Test_Hybrid/Services/OpcUa/PlcInitializationCoordinator.cs`
-
-### 2026-02-09 (Global PLC: добавлен блок DB_Elec)
-- Что изменили: в `ErrorDefinitions.GlobalPlc.cs` добавили 6 глобальных PLC-ошибок `DB_Elec` с кодами `О-005-00..О-005-05` (`Al_6K1`, `Al_6K2`, `Al_Isometer`, `Al_VoltageMin`, `Al_VoltageMax`, `Al_AdapterNotIn`) и включили их в `GlobalPlcErrors`.
-- Почему: закрыли разрыв между фактическими глобальными PLC-сигналами и программным каталогом ошибок перед дальнейшей синхронизацией в БД.
-- Риск/урок: при добавлении глобальных ошибок нельзя смешивать их со step-привязками; источник истины — PLC-тег + уникальный код.
-- Ссылки: `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.GlobalPlc.cs`
-
-### 2026-02-09 (Рефакторинг step-ошибок по контурам/шагам)
-- Что изменили: разнесли объявления из `ErrorDefinitions.Steps.cs` по новым partial-файлам `ErrorDefinitions.Steps.Coms.cs`, `ErrorDefinitions.Steps.Dhw.cs`, `ErrorDefinitions.Steps.Ch.cs`, `ErrorDefinitions.Steps.Gas.cs`, `ErrorDefinitions.Steps.Other.cs`; внутри файлов добавили `#region` по шагам.
-- Почему: упростили навигацию и сопровождение каталога ошибок без изменения runtime-поведения.
-- Риск/урок: при авто-генерации групп в PowerShell одиночные элементы могут теряться из-за scalar/array-ловушки; после генерации обязателен контроль `StepErrors` list vs declarations 1:1.
-- Компромисс: добавили отдельный файл `Other` для `Block Boiler Adapter` и `Elec/*`, чтобы не смешивать их искусственно с `Coms/DHW/CH/Gas`.
-- Ссылки: `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Coms.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Dhw.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Ch.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Gas.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Other.cs`
-
-### 2026-02-09 (Перенумерация step-кодов по схеме контур->шаг->индекс)
-- Что изменили: перенумеровали все `П-*` в `ErrorDefinitions.Steps*.cs` и `ErrorDefinitions.Steps1.cs` в новую схему: `Coms=П-100..`, `DHW=П-200..`, `CH=П-300..`, `Gas=П-400..`, `Other=П-500..`; внутри каждого шага суффиксы `-00..`.
-- Почему: старая нумерация была исторической и слабо читаемой; после пересоздания БД программа должна стать логичным source of truth по кодам.
-- Риск/урок: нельзя менять `PlcTag`/`RelatedStepId` вместе с кодами; безопасная миграция — только `Code`, затем обязательная проверка уникальности и компиляции.
-- Ссылки: `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Coms.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Dhw.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Ch.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Gas.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Other.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps1.cs`
-
-### 2026-02-09 (SQL-скрипт очистки шаблонов ошибок для prod)
-- Что изменили: добавили скрипт `Final_Test_Hybrid/tools/db-maintenance/clear_error_templates_and_deactivate_history.sql` для транзакционного обновления `tb_error_settings_history.is_active=false` и удаления всех записей из `tb_error_settings_template`.
-- Почему: нужен воспроизводимый и безопасный артефакт для ручного запуска в production без изменения `tb_error`.
-- Риск/урок: удалять `tb_error_settings_history` нельзя, иначе по FK-каскаду потеряются данные в `tb_error`; корректный сценарий — только deactivate history + delete template.
-- Ссылки: `Final_Test_Hybrid/tools/db-maintenance/clear_error_templates_and_deactivate_history.sql`
-
-### 2026-02-09 (Завершение рефакторинга step-ошибок: удалён `Steps1`)
-- Что изменили: перенесли 38 step-ошибок из `ErrorDefinitions.Steps1.cs` в контурные файлы `ErrorDefinitions.Steps.Coms.cs`, `ErrorDefinitions.Steps.Ch.cs`, `ErrorDefinitions.Steps.Dhw.cs`, `ErrorDefinitions.Steps.Gas.cs`; удалили `ErrorDefinitions.Steps1.cs` и исключили `Steps1Errors` из `ErrorDefinitions.All`.
-- Почему: устранили второй источник step-ошибок и закрепили единую структуру по контурам/шагам.
-- Риск/урок: при переносе критично сохранять `Code/PlcTag/RelatedStepId/RelatedStepName` 1:1; проверка по счётчикам обязательна (`STEP_TOTAL=140`, `STEP_DUP_CODES=0`).
-- Верификация: `dotnet build`, `dotnet format analyzers --verify-no-changes`, `dotnet format style --verify-no-changes`, `jb inspectcode` по изменённым `*.cs` (report без WARNING/ERROR).
-- Ссылки: `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Coms.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Ch.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Dhw.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Gas.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.cs`
-
-### 2026-02-09 (Prod SQL для `traceability_boiler`: полная перезаливка ошибок из программы)
-- Что изменили: добавили скрипт `Final_Test_Hybrid/tools/db-maintenance/reseed_traceability_boiler_errors_from_program.sql` для `traceability_boiler` — деактивация active history по `station_type_id=7`, удаление шаблонов этого station, вставка всех ошибок из `ErrorDefinitions*.cs` (`190` кодов) в `tb_error_settings_template`, затем создание active записей в `tb_error_settings_history`.
-- Почему: нужен воспроизводимый прод-артефакт «программа -> БД» без ручного копирования и с контролем целостности.
-- Риск/урок: fail-fast обязателен — скрипт прерывается при несопоставленных `RelatedStepName` в `tb_step_final_test` или отсутствии active `tb_step_final_test_history` для шаговых ошибок.
-- Компромисс: параметры `station_type_id` и `version` заданы в скрипте как переменные (`7` и `2`) для простого ручного запуска/правки в проде.
-- Ссылки: `Final_Test_Hybrid/tools/db-maintenance/reseed_traceability_boiler_errors_from_program.sql`
-
-### 2026-02-09 (Исправление SQL под реальную схему `traceability_boiler`)
-- Что изменили: в `reseed_traceability_boiler_errors_from_program.sql` исправили вставку history под фактические поля БД (`error_settings_id`, `step_final_test_id`, `version`, `station_type_id`) и убрали зависимость от несуществующей таблицы `tb_step_final_test_history`.
-- Почему: схема `traceability_boiler` отличается от локальной модели Final_Test, старый вариант скрипта не запускался бы в проде.
-- Риск/урок: для шага `Block Boiler Adapter` в коде и `Block boiler adapter` в БД добавлен case-insensitive матчинг (`lower(btrim(...))`), плюс fail-fast на неоднозначные совпадения.
-- Верификация: read-only аудит подтвердил отсутствие дублей по нормализованным именам шагов (`DUP_NORM_COUNT=0`) в `tb_step_final_test`.
-- Ссылки: `Final_Test_Hybrid/tools/db-maintenance/reseed_traceability_boiler_errors_from_program.sql`
-
-### 2026-02-09 (Фикс fail-fast проверки неоднозначных шагов в reseed SQL)
-- Что изменили: в блоке проверки `v_ambiguous_steps` заменили `COUNT(st.id)` на `COUNT(DISTINCT st.id)` и считаем только по `DISTINCT related_step_name` из `src_errors`.
-- Почему: прежняя версия ложнопозитивно считала один и тот же шаг «неоднозначным», если к шагу привязано несколько кодов ошибок.
-- Риск/урок: проверки целостности в SQL нужно строить на уровне сущностей (уникальных шагов), а не на уровне строк ошибок, иначе fail-fast блокирует валидный прогон.
-- Ссылки: `Final_Test_Hybrid/tools/db-maintenance/reseed_traceability_boiler_errors_from_program.sql`
-
-### 2026-02-09 (Фикс ID-вставки для `traceability_boiler`)
-- Что изменили: в `reseed_traceability_boiler_errors_from_program.sql` перевели вставку в `tb_error_settings_template` и `tb_error_settings_history` на явное задание `id` через `COALESCE(MAX(id),0)+ROW_NUMBER()`.
-- Почему: в целевой БД `traceability_boiler` у полей `id` нет `DEFAULT nextval(...)`; вставка без `id` падала с `NOT NULL violation`.
-- Риск/урок: нельзя переносить предположение об identity/sequence между контурами БД; перед прод-скриптом обязателен inspect `information_schema.columns.column_default`.
-- Ссылки: `Final_Test_Hybrid/tools/db-maintenance/reseed_traceability_boiler_errors_from_program.sql`
-
-### 2026-02-09 (Синхронизация sequence для Jmix после reseed)
-- Что изменили: в `reseed_traceability_boiler_errors_from_program.sql` добавили `setval` для `public.tb_error_settings_template_id_seq` и `public.tb_error_settings_history_id_seq` (через `to_regclass` с безопасной проверкой существования).
-- Почему: после ручной вставки `id` Jmix должен продолжать генерацию без конфликтов PK.
-- Риск/урок: sequence синхронизируем по глобальному `MAX(id)` таблицы (`setval(..., max+1, false)`), а не по конкретному `station_type_id`, иначе возможны коллизии в другом station.
-- Верификация: повторный запуск скрипта успешен (`TEMPLATE_ST7=190`, `ACTIVE_HISTORY_ST7=190`).
-- Ссылки: `Final_Test_Hybrid/tools/db-maintenance/reseed_traceability_boiler_errors_from_program.sql`
-
-### 2026-02-09 (Фикс sequence-нейминга под Jmix в `traceability_boiler`)
-- Что изменили: в `reseed_traceability_boiler_errors_from_program.sql` добавили приоритетную синхронизацию реальных Jmix sequence `public.seq_id_tb_errorsettingstemplate` и `public.seq_id_tb_errorsettingshistory` с fallback на legacy-имена `tb_error_settings_*_id_seq`.
-- Почему: в прод-контуре Jmix использует `seq_id_tb_*`; из-за несинхронизированной `seq_id_tb_errorsettingshistory` возникал PK-конфликт (`id=519` уже существовал).
-- Риск/урок: не полагаться на одно имя sequence между контурами; корректный паттерн — `COALESCE(to_regclass(new), to_regclass(legacy))`.
-- Ссылки: `Final_Test_Hybrid/tools/db-maintenance/reseed_traceability_boiler_errors_from_program.sql`

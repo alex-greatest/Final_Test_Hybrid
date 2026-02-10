@@ -5,100 +5,18 @@
     height: 100%;
 }
 
-.step-timings-wrapper ::deep .rz-data-grid {
-    flex: 1;
-    min-height: 0;
-}
-
-/* Заголовки колонок */
-.step-timings-wrapper ::deep .rz-data-grid .rz-column-title {
-    font-size: 20px !important;
-    font-weight: 700 !important;
-}
-
-/* Ячейки данных */
-.step-timings-wrapper ::deep .rz-data-grid .rz-cell-data {
-    font-size: 19px !important;
-    color: black !important;
-    white-space: nowrap;
-}
-
-/* Пустое сообщение */
-.step-timings-wrapper ::deep .rz-data-grid .rz-data-grid-empty {
-    font-size: 19px !important;
-    color: black !important;
-}
-
-/* Таблица */
-.step-timings-wrapper ::deep .rz-grid-table {
-    width: max-content;
-    min-width: 100%;
-    border-collapse: collapse;
-}
-
-/* Границы ячеек */
-.step-timings-wrapper ::deep .rz-data-grid th,
-.step-timings-wrapper ::deep .rz-data-grid td {
-    border: 1px solid #ccc !important;
-}
-
 /* Убираем padding у ячеек данных - управляем через cell-container */
 .step-timings-wrapper ::deep .rz-data-grid td {
     padding: 0 !important;
-}
-
-/* Заголовки */
-.step-timings-wrapper ::deep .rz-data-grid th {
-    padding: 10px 8px !important;
-    overflow: visible !important;
-    line-height: 1.2 !important;
-    height: auto !important;
-}
-
-.step-timings-wrapper ::deep .rz-data-grid th .rz-cell-data,
-.step-timings-wrapper ::deep .rz-data-grid th .rz-column-title-content,
-.step-timings-wrapper ::deep .rz-data-grid th .rz-sortable-column,
-.step-timings-wrapper ::deep .rz-data-grid .rz-column-title {
-    overflow: visible !important;
-    text-overflow: clip !important;
-    white-space: nowrap !important;
-    height: auto !important;
-}
-
-/* Скролл */
-.step-timings-wrapper ::deep .rz-data-grid .rz-data-grid-data {
-    overflow-x: auto;
-    overflow-y: auto;
-}
-
-/* Кастомный скроллбар */
-.step-timings-wrapper ::deep .rz-data-grid ::-webkit-scrollbar {
-    width: 26px;
-    height: 26px;
-}
-
-.step-timings-wrapper ::deep .rz-data-grid ::-webkit-scrollbar-track {
-    background-color: #e0e0e0;
-    border-radius: 4px;
-}
-
-.step-timings-wrapper ::deep .rz-data-grid ::-webkit-scrollbar-thumb {
-    background-color: #a0a0a0;
-    border-radius: 4px;
-    border: 4px solid transparent;
-    background-clip: content-box;
-}
-
-.step-timings-wrapper ::deep .rz-data-grid ::-webkit-scrollbar-thumb:hover {
-    background-color: #808080;
 }
 
 /* Контейнер для ячеек с подсветкой */
 .step-timings-wrapper ::deep .cell-container {
     display: flex;
     align-items: center;
-    min-height: 40px;
-    padding: 0.5rem;
+    padding: 0.625rem 0.5rem;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .step-timings-wrapper ::deep .cell-container.running {

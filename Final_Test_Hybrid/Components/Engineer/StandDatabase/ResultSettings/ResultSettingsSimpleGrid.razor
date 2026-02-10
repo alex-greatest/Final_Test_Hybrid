@@ -1,7 +1,7 @@
 @using Final_Test_Hybrid.Models.Database
 @using Final_Test_Hybrid.Models.Database.Edit
 
-<div class="grid-container">
+<div class="grid-container grid-unified-host">
     <div class="grid-toolbar">
         <div class="toolbar-buttons">
             <RadzenButton Icon="add" Text="Добавить"
@@ -10,7 +10,7 @@
         </div>
         <span class="record-count">Записей: @Items.Count</span>
     </div>
-    <RadzenDataGrid @ref="_grid" Data="@Items" TItem="ResultSettingsEditModel"
+    <RadzenDataGrid @ref="_grid" Data="@Items" TItem="ResultSettingsEditModel" class="grid-unified"
                 EditMode="DataGridEditMode.Single"
                 AllowFiltering="true" AllowSorting="true"
                 AllowColumnReorder="true"

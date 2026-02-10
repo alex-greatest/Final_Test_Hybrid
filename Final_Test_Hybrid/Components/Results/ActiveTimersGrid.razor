@@ -2,8 +2,8 @@
 @inject ITimerService TimerService
 @implements IAsyncDisposable
 
-<div class="active-timers-wrapper">
-    <RadzenDataGrid Data="@_timers" TItem="TimerDisplayItem"
+<div class="active-timers-wrapper grid-unified-host">
+    <RadzenDataGrid Data="@_timers" TItem="TimerDisplayItem" class="grid-unified"
                     KeyProperty="Key"
                     AllowSorting="true"
                     EmptyText="Нет активных таймеров">

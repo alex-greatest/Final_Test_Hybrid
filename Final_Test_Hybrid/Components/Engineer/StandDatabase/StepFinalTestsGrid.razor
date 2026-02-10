@@ -1,7 +1,7 @@
 @using Final_Test_Hybrid.Models.Database.Edit
 @implements IAsyncDisposable
 
-<div class="tab-content">
+<div class="tab-content grid-unified-host">
     @if (_loadError)
     {
         <RadzenAlert AlertStyle="AlertStyle.Danger" Shade="Shade.Lighter"
@@ -27,7 +27,7 @@
             </div>
             <span class="record-count">Записей: @_stepFinalTests.Count</span>
         </div>
-        <RadzenDataGrid @ref="_grid" Data="@_stepFinalTests" TItem="StepFinalTestEditModel"
+        <RadzenDataGrid @ref="_grid" Data="@_stepFinalTests" TItem="StepFinalTestEditModel" class="grid-unified"
                         EditMode="DataGridEditMode.Single"
                         AllowFiltering="true" AllowSorting="true"
                         FilterText="@DataGridRu.Filter"

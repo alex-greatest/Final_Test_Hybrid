@@ -5,7 +5,8 @@
                     EditMode="DataGridEditMode.Single"
                     CellClick="@OnCellClick"
                     RowUpdate="@OnUpdateRow"
-                    ColumnWidth="100px">
+                    ColumnWidth="100px"
+                    class="overview-grid-io">
         <Columns>
             <RadzenDataGridColumn TItem="PidRegulatorItem" Property="PlcTag" Title="Параметр" Width="120px">
                 <Template Context="item">

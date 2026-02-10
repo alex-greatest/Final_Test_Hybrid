@@ -5,8 +5,8 @@
 
 @implements IAsyncDisposable
 
-<div class="errors-grid-wrapper">
-    <RadzenDataGrid Data="@_activeErrors" TItem="ActiveError"
+<div class="errors-grid-wrapper grid-unified-host">
+    <RadzenDataGrid Data="@_activeErrors" TItem="ActiveError" class="grid-unified"
                 AllowFiltering="true" AllowSorting="true"
                 FilterText="@DataGridRu.Filter"
                 ApplyFilterText="@DataGridRu.ApplyFilter"

@@ -8,7 +8,7 @@
 
 @implements IAsyncDisposable
 
-<div class="step-history-grid">
+<div class="step-history-grid grid-unified-host">
     <div class="grid-header">
         @if (!string.IsNullOrEmpty(BoilerState.LastSerialNumber))
         {
@@ -33,6 +33,7 @@
 
     <RadzenDataGrid TItem="TestSequenseData"
         Data="_data"
+        class="grid-unified"
         ColumnWidth="150px"
         AllowPaging="false"
         AllowSorting="false"

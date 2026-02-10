@@ -5,8 +5,8 @@
 
 @implements IAsyncDisposable
 
-<div class="step-timings-wrapper">
-    <RadzenDataGrid Data="@_timings" TItem="StepTimingRecord"
+<div class="step-timings-wrapper grid-unified-host">
+    <RadzenDataGrid Data="@_timings" TItem="StepTimingRecord" class="grid-unified"
                     KeyProperty="Id"
                     AllowFiltering="true" AllowSorting="true"
                     FilterText="@DataGridRu.Filter"

@@ -5,27 +5,45 @@
     margin-top: -5px;
 }
 
-.test-sequense-grid ::deep .rz-data-grid {
+.test-sequense-grid ::deep .main-grid-legacy {
     overflow-x: hidden !important;
 }
 
-.test-sequense-grid ::deep .rz-data-grid-data {
+.test-sequense-grid ::deep .main-grid-legacy .rz-data-grid-data {
     overflow-x: hidden !important;
 }
 
-.test-sequense-grid ::deep .rz-grid-table td {
+.test-sequense-grid ::deep .main-grid-legacy .rz-grid-table thead th {
+    background-color: #ffffff !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    height: auto !important;
+}
+
+.test-sequense-grid ::deep .main-grid-legacy .rz-grid-table thead th .rz-column-title,
+.test-sequense-grid ::deep .main-grid-legacy .rz-grid-table thead th .rz-column-title-content {
+    color: #000000 !important;
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+}
+
+.test-sequense-grid ::deep .main-grid-legacy .rz-grid-table td {
     height: 40px;
     padding: 0 !important;
     border: 1px solid #dee2e6 !important;
 }
 
-.test-sequense-grid ::deep .rz-grid-table th {
+.test-sequense-grid ::deep .main-grid-legacy .rz-grid-table th {
     border: 1px solid #dee2e6 !important;
 }
 
-.test-sequense-grid ::deep .rz-cell-data {
+.test-sequense-grid ::deep .main-grid-legacy .rz-cell-data {
     height: 100%;
     padding: 0 !important;
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+    line-height: 1.3 !important;
 }
 
 .test-sequense-grid ::deep .cell-container {
@@ -49,9 +67,9 @@
 }
 
 .test-sequense-grid ::deep .cell-text {
-    font-size: 17px;
-    font-weight: bold;
-    color: #000000;
+    font-size: 17px !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

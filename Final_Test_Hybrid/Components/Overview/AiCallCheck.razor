@@ -5,7 +5,8 @@
                     EditMode="DataGridEditMode.Single"
                     CellClick="@OnCellClick"
                     RowUpdate="@OnUpdateRow"
-                    ColumnWidth="120px">
+                    ColumnWidth="120px"
+                    class="overview-grid-io">
         <Columns>
             <RadzenDataGridColumn TItem="AiCallCheckItem" Property="PlcTag" Title="Параметр" Width="150px">
                 <Template Context="item">

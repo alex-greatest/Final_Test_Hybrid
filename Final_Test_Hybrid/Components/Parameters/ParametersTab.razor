@@ -1,8 +1,8 @@
 @using Final_Test_Hybrid.Services.SpringBoot.Recipe
 
 <div style="display: flex; flex-direction: row; gap: 20px; height: 100%; padding: 20px;">
-    <div style="flex: 2; min-width: 0;">
-        <RadzenDataGrid Data="@_recipes" TItem="RecipeResponseDto"
+    <div class="grid-unified-host" style="flex: 2; min-width: 0;">
+        <RadzenDataGrid Data="@_recipes" TItem="RecipeResponseDto" class="grid-unified"
                         AllowSorting="true"
                         AllowFiltering="true"
                         ColumnWidth="120px"
@@ -35,8 +35,8 @@
             </Columns>
         </RadzenDataGrid>
     </div>
-    <div style="flex: 1; min-width: 0;">
-        <RadzenDataGrid Data="@_boilerParams" TItem="BoilerParam"
+    <div class="grid-unified-host" style="flex: 1; min-width: 0;">
+        <RadzenDataGrid Data="@_boilerParams" TItem="BoilerParam" class="grid-unified"
                         ColumnWidth="120px"
                         EmptyText="@DataGridRu.Empty"
                         Style="height: 100%;">
