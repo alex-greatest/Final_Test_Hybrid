@@ -35,7 +35,7 @@ public class CompareFlowNtcTemperatureColdStep(
 
     public string Id => "dhw-compare-flow-ntc-temperature-cold";
     public string Name => "DHW/Compare_Flow_NTC_Temperature_Cold";
-    public string Description => "Контур ГВС. Сравнение показаний температур холодной воды.";
+    public string Description => "Контур ГВС. Сравнение показаний температур холодной воды";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, Ready1Tag, Continua1Tag, FaultTag, DhwTusTag];
     public IReadOnlyList<string> RequiredRecipeAddresses => [TFlowDeltaMaxRecipe];

@@ -38,6 +38,8 @@ public partial class Form1 : Form
     public Form1()
     {
         InitializeComponent();
+        StartPosition = FormStartPosition.Manual;
+        WindowState = FormWindowState.Maximized;
 
         _config = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)

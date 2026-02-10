@@ -16,6 +16,18 @@
 
 ## Активные записи
 
+### 2026-02-10 (Form1: старт приложения в развернутом окне)
+- Что изменили: в `Form1` после `InitializeComponent()` добавили `StartPosition = FormStartPosition.Manual` и `WindowState = FormWindowState.Maximized`, чтобы главное окно сразу открывалось на весь экран в режиме `Maximized`.
+- Почему: требовалось запускать операторское приложение сразу в полноразмерном режиме без ручного разворачивания.
+- Риск/урок: `Maximized` сохраняет системную рамку и кнопки окна; это безопаснее kiosk-режима (`FormBorderStyle.None`) и не меняет жизненный цикл сервисов.
+- Ссылки: `Final_Test_Hybrid/Form1.cs`
+
+### 2026-02-10 (Steps: синхронизация Name/Description с NewFile2 + единый ScanBarcode)
+- Что изменили: синхронизировали `Name/Description` в шагах `Services/Steps/Steps/*` по `Final_Test_Hybrid/NewFile2.txt` для согласованного списка; для `ScanBarcodeStep` и `ScanBarcodeMesStep` установили одинаковые значения `Name = ScanBarcode` и `Description = Сканирование штрих-кода котла`; в целевых шагах убрали точку в конце описания.
+- Почему: требовалось привести отображаемые названия/описания шагов к единому источнику и зафиксировать единый контракт для MES/Non-MES scan-шага.
+- Риск/урок: `Name` участвует в резолве шагов из последовательности, поэтому менять можно только по согласованному источнику и без изменения `Id`; legacy-файлы `*Old.cs` должны оставаться неизменными.
+- Ссылки: `Final_Test_Hybrid/NewFile2.txt`, `Final_Test_Hybrid/Services/Steps/Steps/ScanBarcodeStep.cs`, `Final_Test_Hybrid/Services/Steps/Steps/ScanBarcodeMesStep.cs`, `Final_Test_Hybrid/Services/Steps/Steps/CH/CheckWaterFlowStep.cs`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/CheckTestByteOffStep.cs`
+
 ### 2026-02-10 (BoilerOrder: выравнивание ширины поля счётчика в UseMes=false)
 - Что изменили: в `Final_Test_Hybrid/Components/Main/BoilerOrder.razor` для строки `Успеш. тестов` оставили однострочный layout с кнопками справа, но зафиксировали ширину блока поля как одну колонку (`flex-basis/max-width = calc((100% - 13px) / 2)`), чтобы поле совпадало по ширине с полями выше.
 - Почему: при `UseMes=false` поле счётчика было заметно шире соседних полей из-за растяжения на всю строку.

@@ -18,7 +18,7 @@ public class ReduceCircuitPressureStep(
 
     public string Id => "dhw-reduce-circuit-pressure";
     public string Name => "DHW/Reduce_Circuit_Pressure";
-    public string Description => "Контур ГВС. Уменьшение давления.";
+    public string Description => "Контур ГВС. Уменьшение давления";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

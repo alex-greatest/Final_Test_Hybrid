@@ -37,7 +37,7 @@ public class SafetyTimeStep(
 
     public string Id => "coms-safety-time";
     public string Name => "Coms/Safety_Time";
-    public string Description => "Измерение времени безопасного отключения котла";
+    public string Description => "Время безопасного отключения котла";
 
     public IReadOnlyList<string> RequiredRecipeAddresses => [SafetyTimeMinRecipe, SafetyTimeMaxRecipe];
 

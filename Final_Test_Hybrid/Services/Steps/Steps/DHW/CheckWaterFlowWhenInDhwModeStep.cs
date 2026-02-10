@@ -25,7 +25,7 @@ public class CheckWaterFlowWhenInDhwModeStep(
 
     public string Id => "dhw-check-water-flow-when-in-dhw-mode";
     public string Name => "DHW/Check_Water_Flow_When_In_DHW_Mode";
-    public string Description => "Контур ГВС. Проверка расхода в контуре Отопления в режиме ГВС.";
+    public string Description => "Контур ГВС. Проверка расхода в контуре Отопления в режиме ГВС";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, FlowTag];
     public IReadOnlyList<string> RequiredRecipeAddresses => [MaxRecipe];

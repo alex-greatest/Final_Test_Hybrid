@@ -30,7 +30,7 @@ public class ReadEcuVersionStep(
 
     public string Id => "coms-read-ecu-version";
     public string Name => "Coms/Read_ECU_Version";
-    public string Description => "Чтение версии ПО ЭБУ";
+    public string Description => "Чтение версии прошивки котла";
 
     public IReadOnlyList<string> RequiredRecipeAddresses => [VersionMinRecipe, VersionMaxRecipe];
     

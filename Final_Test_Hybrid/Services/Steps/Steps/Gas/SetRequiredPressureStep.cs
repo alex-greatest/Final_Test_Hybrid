@@ -20,7 +20,7 @@ public class SetRequiredPressureStep(
 
     public string Id => "gas-set-required-pressure";
     public string Name => "Gas/Set_Required_Pressure";
-    public string Description => "Настройка установочного давления газа на входе.";
+    public string Description => "Настройка установочного давления газа на входе";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, GasPagTag, GasPaTag];
 

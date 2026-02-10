@@ -21,7 +21,7 @@ public class DeleteErrorHistoryStep(
 
     public string Id => "coms-delete-error-history";
     public string Name => "Coms/Delete_Error_History";
-    public string Description => "Очистка журнала ошибок котла";
+    public string Description => "Сброс ошибок котла";
 
     /// <summary>
     /// Записывает значение 0 в регистр очистки журнала ошибок (1154).

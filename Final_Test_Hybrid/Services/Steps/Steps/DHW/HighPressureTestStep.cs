@@ -25,7 +25,7 @@ public class HighPressureTestStep(
 
     public string Id => "dhw-high-pressure-test";
     public string Name => "DHW/High_Pressure_Test";
-    public string Description => "Контур ГВС. Тест высокого давления.";
+    public string Description => "Контур ГВС. Тест высокого давления";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, HighPressureTag];
     public IReadOnlyList<string> RequiredRecipeAddresses => [MinRecipe, MaxRecipe];

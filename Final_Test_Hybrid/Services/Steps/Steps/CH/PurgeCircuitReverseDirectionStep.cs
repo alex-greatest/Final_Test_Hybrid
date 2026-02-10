@@ -18,7 +18,7 @@ public class PurgeCircuitReverseDirectionStep(
 
     public string Id => "ch-purge-circuit-reverse-direction";
     public string Name => "CH/Purge_Circuit_Reverse_Direction";
-    public string Description => "Контур Отопления. Продувка в обратном направлении.";
+    public string Description => "Контур Отопления. Продувка в обратном направлении";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

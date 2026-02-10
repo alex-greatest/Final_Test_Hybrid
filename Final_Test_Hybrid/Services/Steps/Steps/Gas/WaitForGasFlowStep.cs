@@ -18,7 +18,7 @@ public class WaitForGasFlowStep(
 
     public string Id => "gas-wait-for-gas-flow";
     public string Name => "Gas/Wait_for_Gas_Flow";
-    public string Description => "Ожидание потока газа.";
+    public string Description => "Ожидание потока газа";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

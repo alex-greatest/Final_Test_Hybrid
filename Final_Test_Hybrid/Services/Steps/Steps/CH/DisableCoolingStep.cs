@@ -18,7 +18,7 @@ public class DisableCoolingStep(
 
     public string Id => "ch-disable-cooling";
     public string Name => "CH/Disable_Cooling";
-    public string Description => "Контур Отопления. Отключение охлаждения.";
+    public string Description => "Отключение охлаждения контура Отопления";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

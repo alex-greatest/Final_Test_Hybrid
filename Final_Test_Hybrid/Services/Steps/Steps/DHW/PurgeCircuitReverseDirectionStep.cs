@@ -18,7 +18,7 @@ public class PurgeCircuitReverseDirectionStep(
 
     public string Id => "dhw-purge-circuit-reverse-direction";
     public string Name => "DHW/Purge_Circuit_Reverse_Direction";
-    public string Description => "Контур ГВС. Продувка в обратном направлении.";
+    public string Description => "Контур ГВС. Продувка в обратном направлении";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

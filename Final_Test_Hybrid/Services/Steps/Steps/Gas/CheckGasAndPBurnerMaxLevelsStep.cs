@@ -46,7 +46,7 @@ public class CheckGasAndPBurnerMaxLevelsStep(
 
     public string Id => "gas-check-gas-and-p-burner-max-levels";
     public string Name => "Gas/Check_Gas_and_P_Burner_Max_Levels";
-    public string Description => "Проверка давления и расхода газа на максимальной мощности.";
+    public string Description => "Проверка давления и расхода газа на максимальной мощности";
     public string PlcBlockPath => BlockPath;
 
     public IReadOnlyList<string> RequiredPlcTags =>

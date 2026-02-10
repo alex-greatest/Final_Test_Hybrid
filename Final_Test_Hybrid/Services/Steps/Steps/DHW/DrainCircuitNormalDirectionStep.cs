@@ -18,7 +18,7 @@ public class DrainCircuitNormalDirectionStep(
 
     public string Id => "dhw-drain-circuit-normal-direction";
     public string Name => "DHW/Drain_Circuit_Normal_Direction";
-    public string Description => "Контур ГВС. Слив воды из контура.";
+    public string Description => "Контур ГВС. Слив воды из контура";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

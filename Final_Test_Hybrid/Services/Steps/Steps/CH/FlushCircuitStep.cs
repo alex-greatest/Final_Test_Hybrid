@@ -18,7 +18,7 @@ public class FlushCircuitStep(
 
     public string Id => "ch-flush-circuit";
     public string Name => "CH/Flush_Circuit";
-    public string Description => "Контур Отопления. Продувка контура.";
+    public string Description => "Контур Отопления. Продувка контура";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

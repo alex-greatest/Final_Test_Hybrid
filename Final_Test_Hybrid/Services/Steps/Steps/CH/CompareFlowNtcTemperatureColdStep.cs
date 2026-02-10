@@ -35,7 +35,7 @@ public class CompareFlowNtcTemperatureColdStep(
 
     public string Id => "ch-compare-flow-ntc-temperature-cold";
     public string Name => "CH/Compare_Flow_NTC_Temperature_Cold";
-    public string Description => "Контур Отопление. Сравнение температуры NTC (холодная вода).";
+    public string Description => "Контур Отопление. Сравнение показаний температур холодной воды";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, Ready1Tag, Continua1Tag, FaultTag, ChTmrTag];
     public IReadOnlyList<string> RequiredRecipeAddresses => [TFlowDeltaMaxRecipe];

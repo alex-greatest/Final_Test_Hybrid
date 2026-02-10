@@ -18,7 +18,7 @@ public class FillCircuitReverseDirectionStep(
 
     public string Id => "dhw-fill-circuit-reverse-direction";
     public string Name => "DHW/Fill_Circuit_Reverse_Direction";
-    public string Description => "Контур ГВС. Заполнение контура в обратном направлении.";
+    public string Description => "Заполнение контура ГВС в обратном направлении";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

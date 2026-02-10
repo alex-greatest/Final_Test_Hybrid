@@ -25,7 +25,7 @@ public class PowerSupplyTestStep(
 
     public string Id => "elec-power-supply-test";
     public string Name => "Elec/Power_Supply_Test";
-    public string Description => "Проверка напряжения питания котла.";
+    public string Description => "Проверка напряжения питания котла";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, SupplyTag];
     public IReadOnlyList<string> RequiredRecipeAddresses => [VoltageMinRecipe, VoltageMaxRecipe];

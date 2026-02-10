@@ -18,7 +18,7 @@ public class OpenCircuitStep(
 
     public string Id => "gas-open-circuit";
     public string Name => "Gas/Open_Circuit";
-    public string Description => "Открытие клапанов контура газа.";
+    public string Description => "Открытие клапанов контура газа";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

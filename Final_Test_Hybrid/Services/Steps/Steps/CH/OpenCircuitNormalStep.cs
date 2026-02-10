@@ -18,7 +18,7 @@ public class OpenCircuitNormalStep(
 
     public string Id => "ch-open-circuit-normal";
     public string Name => "CH/Open_Circuit_Normal";
-    public string Description => "Открытие контура Отопления.";
+    public string Description => "Открытие контура Отопления";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

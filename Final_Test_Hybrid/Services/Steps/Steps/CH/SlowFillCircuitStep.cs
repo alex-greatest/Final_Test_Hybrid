@@ -25,7 +25,7 @@ public class SlowFillCircuitStep(
 
     public string Id => "ch-slow-fill-circuit";
     public string Name => "CH/Slow_Fill_Circuit";
-    public string Description => "Контур Отопления. Медленное заполнение контура.";
+    public string Description => "Медленное заполнение контура Отопления";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, FlowPressTag];
     public IReadOnlyList<string> RequiredRecipeAddresses => [PressTestValueRecipe];

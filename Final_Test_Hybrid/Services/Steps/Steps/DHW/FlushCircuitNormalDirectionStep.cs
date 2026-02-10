@@ -18,7 +18,7 @@ public class FlushCircuitNormalDirectionStep(
 
     public string Id => "dhw-flush-circuit-normal-direction";
     public string Name => "DHW/Flush_DHW_Circuit_Normal_Direction";
-    public string Description => "Контур ГВС. Продувка в прямом направлении.";
+    public string Description => "Контур ГВС. Продувка в прямом направлении";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

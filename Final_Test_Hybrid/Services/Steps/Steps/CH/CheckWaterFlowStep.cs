@@ -27,7 +27,7 @@ public class CheckWaterFlowStep(
 
     public string Id => "ch-check-water-flow";
     public string Name => "CH/Check_Water_Flow";
-    public string Description => "Контур Отопления. Проверка расхода воды.";
+    public string Description => "Контур Отопления. Проверка расхода воды";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, FlowRateTag];
     public IReadOnlyList<string> RequiredRecipeAddresses => [FlowRateMinRecipe, FlowRateMaxRecipe, ChPressMax, ChPressMin];

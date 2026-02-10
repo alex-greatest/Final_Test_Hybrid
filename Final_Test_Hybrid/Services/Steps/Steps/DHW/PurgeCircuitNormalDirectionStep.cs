@@ -18,7 +18,7 @@ public class PurgeCircuitNormalDirectionStep(
 
     public string Id => "dhw-purge-circuit-normal-direction";
     public string Name => "DHW/Purge_Circuit_Normal_Direction";
-    public string Description => "Контур ГВС. Продувка в прямом направлении.";
+    public string Description => "Контур ГВС. Продувка в прямом направлении";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

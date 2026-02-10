@@ -18,7 +18,7 @@ public class CloseCircuitValveStep(
 
     public string Id => "dhw-close-circuit-valve";
     public string Name => "DHW/Close_Circuit_Valve";
-    public string Description => "Контур ГВС. Закрытие клапанов контура.";
+    public string Description => "Контур ГВС. Закрытие клапанов контура";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

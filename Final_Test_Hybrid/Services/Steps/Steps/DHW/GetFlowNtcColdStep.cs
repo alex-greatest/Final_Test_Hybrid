@@ -21,7 +21,7 @@ public class GetFlowNtcColdStep(
 
     public string Id => "dhw-get-flow-ntc-cold";
     public string Name => "DHW/Get_Flow_NTC_Cold";
-    public string Description => "Контур ГВС. Замер температуры холодной воды.";
+    public string Description => "Контур ГВС Замер температуры холодной воды";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, FlwTempColdTag];
 

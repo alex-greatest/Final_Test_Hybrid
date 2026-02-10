@@ -27,7 +27,7 @@ public class CheckCommsStep(
 
     public string Id => "coms-check-comms";
     public string Name => "Coms/Check_Comms";
-    public string Description => "Проверка связи с котлом";
+    public string Description => "Провека связи с котлом";
 
     /// <summary>
     /// Выполняет проверку связи с котлом.

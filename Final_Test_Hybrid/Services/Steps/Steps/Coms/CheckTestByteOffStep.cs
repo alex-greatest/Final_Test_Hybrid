@@ -26,7 +26,7 @@ public class CheckTestByteOffStep(
 
     public string Id => "coms-check-test-byte-off";
     public string Name => "Coms/Check_Test_Byte_OFF";
-    public string Description => "Проверка отключения режима \"Стенд\" котла";
+    public string Description => "Проверка отключение режима \"Стенд\"";
 
     /// <summary>
     /// Выполняет проверку выхода из режима Стенд котла.

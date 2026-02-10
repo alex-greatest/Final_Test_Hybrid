@@ -21,7 +21,7 @@ public class SetToZeroChPumpOverrunStep(
 
     public string Id => "coms-set-to-zero-ch-pump-overrun";
     public string Name => "Coms/Set_to_Zero_CH_Pump_Overrun";
-    public string Description => "Сброс времени выбега насоса ОС";
+    public string Description => "Сброс времени выбега насоса котла";
 
     /// <summary>
     /// Записывает значение 0 в регистр CH_Pump_Overrun (1060).

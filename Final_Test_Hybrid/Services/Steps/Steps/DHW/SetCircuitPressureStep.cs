@@ -25,7 +25,7 @@ public class SetCircuitPressureStep(
 
     public string Id => "dhw-set-circuit-pressure";
     public string Name => "DHW/Set_Circuit_Pressure";
-    public string Description => "Контур ГВС. Регулировка давления воды.";
+    public string Description => "Контур ГВС. Регулировка давления воды";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, InPressTag];
     public IReadOnlyList<string> RequiredRecipeAddresses => [MinRecipe];

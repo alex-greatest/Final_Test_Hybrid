@@ -24,7 +24,7 @@ public class ConnectEarthClipStep(
 
     public string Id => "elec-connect-earth-clip";
     public string Name => "Elec/Connect_Earth_Clip";
-    public string Description => "Проверка заземления. Продувка в прямом направлении.";
+    public string Description => "Проверка заземления";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, Ready1Tag];
 

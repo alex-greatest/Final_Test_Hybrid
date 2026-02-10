@@ -18,7 +18,7 @@ public class LeakTestStep(
 
     public string Id => "gas-leak-test";
     public string Name => "Gas/Leak_Test";
-    public string Description => "Проверка утечки контура газа.";
+    public string Description => "Проверка утечки контура газа";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

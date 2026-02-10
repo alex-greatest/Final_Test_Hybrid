@@ -25,7 +25,7 @@ public class CheckTankModeStep(
 
     public string Id => "dhw-check-tank-mode";
     public string Name => "DHW/Check_Tank_Mode";
-    public string Description => "ГВС. Проверка расхода воды режима БКН.";
+    public string Description => "Проверка расхода воды режима БКН";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, TankPressTag];
     public IReadOnlyList<string> RequiredRecipeAddresses => [WaterMinRecipe, WaterMaxRecipe];

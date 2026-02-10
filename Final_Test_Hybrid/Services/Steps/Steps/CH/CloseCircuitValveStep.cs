@@ -18,7 +18,7 @@ public class CloseCircuitValveStep(
 
     public string Id => "ch-close-circuit-valve";
     public string Name => "CH/Close_Circuit_Valve";
-    public string Description => "Контур Отопления. Закрытие клапанов контура.";
+    public string Description => "Закрытие клапанов контура газа";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

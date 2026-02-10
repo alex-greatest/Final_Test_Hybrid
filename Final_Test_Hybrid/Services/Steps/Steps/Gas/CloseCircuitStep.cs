@@ -18,7 +18,7 @@ public class CloseCircuitStep(
 
     public string Id => "gas-close-circuit";
     public string Name => "Gas/Close_Circuit";
-    public string Description => "Закрытие клапанов контура газа.";
+    public string Description => "Закрытие клапанов контура газа";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

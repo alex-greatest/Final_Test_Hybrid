@@ -18,7 +18,7 @@ public class BoilerPowerOnStep(
 
     public string Id => "elec-boiler-power-on";
     public string Name => "Elec/Boiler_Power_ON";
-    public string Description => "Включение котла, подача питания.";
+    public string Description => "Включение котла, подача питания";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

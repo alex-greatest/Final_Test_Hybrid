@@ -22,7 +22,7 @@ public class GetChwFlowNtcColdStep(
 
     public string Id => "ch-get-chw-flow-ntc-cold";
     public string Name => "CH/Get_CHW_Flow_NTC_Cold";
-    public string Description => "Контур Отопление. Замер температуры холодной воды.";
+    public string Description => "Контур Отопление. Замер температуры холодной воды";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, FlwTempColdTag];
 

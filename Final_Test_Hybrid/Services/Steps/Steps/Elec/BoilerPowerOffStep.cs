@@ -18,7 +18,7 @@ public class BoilerPowerOffStep(
 
     public string Id => "elec-boiler-power-off";
     public string Name => "Elec/Boiler_Power_OFF";
-    public string Description => "Выключение котла, отключение питания.";
+    public string Description => "Выключение котла, отключение питания";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

@@ -55,7 +55,7 @@ public class SetGasAndPBurnerMaxLevelsStep(
 
     public string Id => "gas-set-gas-and-p-burner-max-levels";
     public string Name => "Gas/Set_Gas_and_P_Burner_Max_Levels";
-    public string Description => "Регулировка давления и расхода газа на максимальной мощности.";
+    public string Description => "Регулировка давления и расхода газа на максимальной мощности";
     public string PlcBlockPath => BlockPath;
 
     public IReadOnlyList<string> RequiredPlcTags =>

@@ -18,7 +18,7 @@ public class EnableCoolingStep(
 
     public string Id => "ch-enable-cooling";
     public string Name => "CH/Enable_Cooling";
-    public string Description => "Контур Отопления. Включение охлаждения.";
+    public string Description => "Включение охлаждение контура Отопления";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

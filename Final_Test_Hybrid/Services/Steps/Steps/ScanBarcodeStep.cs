@@ -43,8 +43,8 @@ public class ScanBarcodeStep(
     private const string UnknownOperator = "Unknown";
 
     public override string Id => "scan-barcode";
-    public override string Name => "Сканирование штрихкода";
-    public override string Description => "Сканирует штрихкод и выполняет подготовку к тесту";
+    public override string Name => "ScanBarcode";
+    public override string Description => "Сканирование штрих-кода котла";
     protected override IDualLogger Logger => _logger;
 
     public override async Task<PreExecutionResult> ExecuteAsync(PreExecutionContext context, CancellationToken ct)

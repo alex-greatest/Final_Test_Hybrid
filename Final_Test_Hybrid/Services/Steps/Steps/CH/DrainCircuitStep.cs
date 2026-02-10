@@ -17,7 +17,7 @@ public class DrainCircuitStep(DualLogger<DrainCircuitStep> logger) : ITestStep, 
 
     public string Id => "ch-drain-circuit";
     public string Name => "CH/Drain_Circuit";
-    public string Description => "Контур Отопления. Слив воды.";
+    public string Description => "Контур Отопления. Слив воды";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

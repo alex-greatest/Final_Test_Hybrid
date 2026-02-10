@@ -25,7 +25,7 @@ public class SetTankModeStep(
 
     public string Id => "dhw-set-tank-mode";
     public string Name => "DHW/Set_Tank_Mode";
-    public string Description => "ГВС. Давление воды в режиме БКН.";
+    public string Description => "Давление воды в режиме БКН";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, TankModeTag];
     public IReadOnlyList<string> RequiredRecipeAddresses => [TankModeRecipe];

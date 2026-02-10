@@ -55,7 +55,7 @@ public class SetGasAndPBurnerMinLevelsStep(
 
     public string Id => "gas-set-gas-and-p-burner-min-levels";
     public string Name => "Gas/Set_Gas_and_P_Burner_Min_Levels";
-    public string Description => "Регулировка давления и расхода газа на минимальной мощности.";
+    public string Description => "Регулировка давления и расхода газа на минимальной мощности";
     public string PlcBlockPath => BlockPath;
 
     public IReadOnlyList<string> RequiredPlcTags =>

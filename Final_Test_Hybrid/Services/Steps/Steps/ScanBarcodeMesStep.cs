@@ -52,8 +52,8 @@ public class ScanBarcodeMesStep(
     public Func<string, Func<string, string, Task<ReworkSubmitResult>>, Task<ReworkFlowResult>>? OnReworkRequired { get; set; }
 
     public override string Id => "scan-barcode-mes";
-    public override string Name => "Сканирование штрихкода MES";
-    public override string Description => "Сканирует штрихкод и получает данные из MES";
+    public override string Name => "ScanBarcode";
+    public override string Description => "Сканирование штрих-кода котла";
     protected override IDualLogger Logger => _logger;
 
     private string CurrentOperatorName => operatorState.Username ?? UnknownOperator;

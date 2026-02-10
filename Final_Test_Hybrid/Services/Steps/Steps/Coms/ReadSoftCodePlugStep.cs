@@ -128,7 +128,7 @@ public partial class ReadSoftCodePlugStep(
 
     public string Id => "coms-read-soft-code-plug";
     public string Name => "Coms/Read_Soft_Code_Plug";
-    public string Description => "Чтение параметров из ЭБУ";
+    public string Description => "Чтение параметров из котла";
 
     public IReadOnlyList<string> RequiredRecipeAddresses => RequiredRecipeAddressesInternal;
 

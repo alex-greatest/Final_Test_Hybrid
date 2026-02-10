@@ -23,7 +23,7 @@ public class ConnectPowerCableStep(
 
     public string Id => "elec-connect-power-cable";
     public string Name => "Elec/Connect_Power_Cable";
-    public string Description => "Подключение силового кабеля.";
+    public string Description => "Подключение силового кабеля";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

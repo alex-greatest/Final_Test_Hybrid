@@ -18,7 +18,7 @@ public class PurgeCircuitNormalDirectionStep(
 
     public string Id => "ch-purge-circuit-normal-direction";
     public string Name => "CH/Purge_Circuit_Normal_Direction";
-    public string Description => "Контур Отопления. Продувка в прямом направлении.";
+    public string Description => "Контур Отопления. Продувка в прямом направлении";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 

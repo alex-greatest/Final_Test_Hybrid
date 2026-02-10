@@ -25,7 +25,7 @@ public class CheckFlowRateStep(
 
     public string Id => "dhw-check-flow-rate";
     public string Name => "DHW/Check_Flow_Rate";
-    public string Description => "Контур ГВС. Проверка расхода воды.";
+    public string Description => "Контур ГВС. Проверка расхода воды";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, FlowRateTag];
     public IReadOnlyList<string> RequiredRecipeAddresses => [FlowMinRecipe, FlowMaxRecipe];

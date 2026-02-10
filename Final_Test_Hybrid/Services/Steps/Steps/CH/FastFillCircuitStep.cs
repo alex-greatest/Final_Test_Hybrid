@@ -18,7 +18,7 @@ public class FastFillCircuitStep(
 
     public string Id => "ch-fast-fill-circuit";
     public string Name => "CH/Fast_Fill_Circuit";
-    public string Description => "Контур Отопления. Быстрое заполнение контура.";
+    public string Description => "Быстрое заполнение контура Отопления";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
 
