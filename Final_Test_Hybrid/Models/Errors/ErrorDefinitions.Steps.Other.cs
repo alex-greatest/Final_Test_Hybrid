@@ -6,6 +6,7 @@ public static partial class ErrorDefinitions
 
     public static readonly ErrorDefinition BoilerNotLocked = new(
         "П-500-00", "Котел не заблокирован",
+        ActivatesResetButton: true,
         PlcTag: "ns=3;s=\"DB_Common\".\"Al_Not_17K4\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "block-boiler-adapter",
@@ -13,6 +14,7 @@ public static partial class ErrorDefinitions
 
     public static readonly ErrorDefinition Relay17K5Fault = new(
         "П-500-01", "Реле 17K5 неисправно",
+        ActivatesResetButton: true,
         PlcTag: "ns=3;s=\"DB_Common\".\"Al_17K5Fault\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "block-boiler-adapter",

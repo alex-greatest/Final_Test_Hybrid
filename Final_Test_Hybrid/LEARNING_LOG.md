@@ -16,6 +16,12 @@
 
 ## Активные записи
 
+### 2026-02-10 (ErrorDefinitions: унификация ActivatesResetButton для всех ошибок)
+- Что изменили: в `ErrorDefinitions*.cs` добавили `ActivatesResetButton: true` для 122 определений, где флаг отсутствовал; итоговый контракт — `190/190` ошибок имеют `ActivatesResetButton=true`.
+- Почему: требовалось, чтобы состояние кнопки `Сброс ошибки` активировалось единообразно для любых активных ошибок.
+- Риск/урок: массовое включение reset-флага расширяет область активации UI-кнопки на программные и step-ошибки; при изменении политики нужен явный аудит `ErrorDefinitions*` и повторная проверка операторского сценария.
+- Ссылки: `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.GlobalApp.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Coms.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Ch.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Dhw.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Gas.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Other.cs`, `Final_Test_Hybrid/Docs/ErrorSystemGuide.md`
+
 ### 2026-02-10 (ArchiveGrid: дефолт диапазона дат = текущие сутки)
 - Что изменили: в `ArchiveGrid` заменили стартовый диапазон фильтра с `-7/+1` дней на локальные границы текущих суток: `От = DateTime.Today`, `До = DateTime.Today.AddDays(1).AddTicks(-1)`.
 - Почему: требовалось, чтобы при первом показе вкладки `Архив` поля диапазона сразу соответствовали «сегодня с начала до конца дня».

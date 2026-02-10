@@ -47,9 +47,11 @@ public static readonly ErrorDefinition MyNewError = new(
     Description: "Описание для пользователя",
     PlcTag: null,                           // или "ns=3;s=..." для ПЛК
     Severity: ErrorSeverity.Warning,        // Info, Warning, Critical
-    ActivatesResetButton: false,            // Показывать красную кнопку сброса?
+    ActivatesResetButton: true,             // Показывать красную кнопку сброса
     PossibleStepIds: null);                 // null = глобальная (контекст шага добавляется при вызове)
 ```
+
+**Текущее правило проекта:** для всех ошибок в `ErrorDefinitions*.cs` используется `ActivatesResetButton: true`.
 
 **Не забудь добавить в `All`:**
 ```csharp

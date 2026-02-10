@@ -6,6 +6,7 @@ public static partial class ErrorDefinitions
 
     public static readonly ErrorDefinition NoDiagnosticConnection = new(
         "П-100-00", "Нет связи с котлом",
+        ActivatesResetButton: true,
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-check-comms",
         RelatedStepName: "Coms/Check_Comms");
@@ -16,6 +17,7 @@ public static partial class ErrorDefinitions
 
     public static readonly ErrorDefinition WriteBytesOn = new(
         "П-101-00", "Ошибка при смене режима котла",
+        ActivatesResetButton: true,
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-write-test-byte-on",
         RelatedStepName: "Coms/Write_Test_Byte_ON");
@@ -26,6 +28,7 @@ public static partial class ErrorDefinitions
 
     public static readonly ErrorDefinition WriteBytesOff = new(
         "П-102-00", "Ошибка при выходе из режима Стенд",
+        ActivatesResetButton: true,
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-write-test-byte-off",
         RelatedStepName: "Coms/Write_Test_Byte_OFF");
@@ -36,6 +39,7 @@ public static partial class ErrorDefinitions
 
     public static readonly ErrorDefinition BoilerNotStandMode = new(
         "П-103-00", "Котел не в стендовом режиме",
+        ActivatesResetButton: true,
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-check-test-byte-on",
         RelatedStepName: "Coms/Check_Test_Byte_ON");
@@ -46,6 +50,7 @@ public static partial class ErrorDefinitions
 
     public static readonly ErrorDefinition EcuWriteError = new(
         "П-104-00", "Ошибка записи в ЭБУ",
+        ActivatesResetButton: true,
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-write-soft-code-plug",
         RelatedStepName: "Coms/Write_Soft_Code_Plug");
@@ -56,6 +61,7 @@ public static partial class ErrorDefinitions
 
     public static readonly ErrorDefinition ChPumpStartError = new(
         "П-105-00", "Ошибка запуска насоса котла",
+        ActivatesResetButton: true,
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-ch-pump-start",
         RelatedStepName: "Coms/CH_Pump_Start");
@@ -203,6 +209,7 @@ public static partial class ErrorDefinitions
 
     public static readonly ErrorDefinition EcuFirmwareVersionMismatch = new(
         "П-107-00", "Неверная версия ПО",
+        ActivatesResetButton: true,
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-read-ecu-version",
         RelatedStepName: "Coms/Read_ECU_Version");
@@ -213,6 +220,7 @@ public static partial class ErrorDefinitions
 
     public static readonly ErrorDefinition BoilerStillInStandMode = new(
         "П-108-00", "Котел все еще в режиме Стенд",
+        ActivatesResetButton: true,
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-check-test-byte-off",
         RelatedStepName: "Coms/Check_Test_Byte_OFF");
@@ -223,6 +231,7 @@ public static partial class ErrorDefinitions
 
     public static readonly ErrorDefinition AlNoWaterFlowChStartMaxHeatout = new(
         "П-109-00", "Неисправность. Нет протока воды",
+        ActivatesResetButton: true,
         PlcTag: "ns=3;s=\"DB_Coms\".\"DB_CH_Start_Max_Heatout\".\"Al_NoWaterFlow\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-ch-start-max-heatout",
@@ -230,6 +239,7 @@ public static partial class ErrorDefinitions
 
     public static readonly ErrorDefinition AlIonCurrentOutTolChStartMaxHeatout = new(
         "П-109-01", "Неисправность. Ток ионизации вне допуска",
+        ActivatesResetButton: true,
         PlcTag: "ns=3;s=\"DB_Coms\".\"DB_CH_Start_Max_Heatout\".\"Al_IonCurrentOutTol\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-ch-start-max-heatout",
@@ -241,6 +251,7 @@ public static partial class ErrorDefinitions
 
     public static readonly ErrorDefinition AlNoWaterFlowChStartMinHeatout = new(
         "П-110-00", "Неисправность. Нет протока воды",
+        ActivatesResetButton: true,
         PlcTag: "ns=3;s=\"DB_Coms\".\"DB_CH_Start_Min_Heatout\".\"Al_NoWaterFlow\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-ch-start-min-heatout",
@@ -248,6 +259,7 @@ public static partial class ErrorDefinitions
 
     public static readonly ErrorDefinition AlIonCurrentOutTolChStartMinHeatout = new(
         "П-110-01", "Неисправность. Ток ионизации вне допуска",
+        ActivatesResetButton: true,
         PlcTag: "ns=3;s=\"DB_Coms\".\"DB_CH_Start_Min_Heatout\".\"Al_IonCurrentOutTol\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-ch-start-min-heatout",
@@ -259,6 +271,7 @@ public static partial class ErrorDefinitions
 
     public static readonly ErrorDefinition AlNotStendReadySafetyTime = new(
         "П-111-00", "DB_Gas_Safety_Time. Неисправность. Стенд не готов",
+        ActivatesResetButton: true,
         PlcTag: "ns=3;s=\"DB_Gas\".\"DB_Gas_Safety_Time\".\"Al_NotStendReady\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-safety-time",
@@ -266,6 +279,7 @@ public static partial class ErrorDefinitions
 
     public static readonly ErrorDefinition AlCloseTimeSafetyTime = new(
         "П-111-01", "DB_Gas_Safety_Time. Неисправность. Время закрытия клапана превышено",
+        ActivatesResetButton: true,
         PlcTag: "ns=3;s=\"DB_Gas\".\"DB_Gas_Safety_Time\".\"Al_CloseTime\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-safety-time",
