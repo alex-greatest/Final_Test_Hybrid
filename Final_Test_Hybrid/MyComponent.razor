@@ -92,6 +92,26 @@
                         </RadzenStack>
                     </div>
                 </RadzenTabsItem>
+                <RadzenTabsItem Text="Лог">
+                    <div style="height: 100%; padding: 0 20px;">
+                        <LogViewerTab/>
+                    </div>
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Параметры">
+                    <div style="height: 100%;">
+                        <ParametersTab />
+                    </div>
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Ошибки">
+                    <div style="height: 100%; padding: 0 20px;">
+                        <ErrorsTab/>
+                    </div>
+                </RadzenTabsItem>
+                <RadzenTabsItem Text="Результаты">
+                    <div style="height: 100%; padding: 0 20px;">
+                        <TestResultsTab/>
+                    </div>
+                </RadzenTabsItem>
                 <RadzenTabsItem Text="Обзор">
                     <div class="app-tabs-shell app-tabs-shell-inside">
                         <RadzenTabs RenderMode="TabRenderMode.Client" @bind-SelectedIndex="@innerSelectedIndex"
@@ -143,29 +163,9 @@
                         </RadzenTabs>
                     </div>
                 </RadzenTabsItem>
-                <RadzenTabsItem Text="Параметры">
-                    <div style="height: 100%;">
-                        <ParametersTab />
-                    </div>
-                </RadzenTabsItem>
-                <RadzenTabsItem Text="Ошибки">
-                    <div style="height: 100%; padding: 0 20px;">
-                        <ErrorsTab/>
-                    </div>
-                </RadzenTabsItem>
-                <RadzenTabsItem Text="Результаты">
-                    <div style="height: 100%; padding: 0 20px;">
-                        <TestResultsTab/>
-                    </div>
-                </RadzenTabsItem>
                 <RadzenTabsItem Text="Архив">
                     <div style="height: 100%; padding: 0 20px;">
                         <ArchiveGrid/>
-                    </div>
-                </RadzenTabsItem>
-                <RadzenTabsItem Text="Лог">
-                    <div style="height: 100%; padding: 0 20px;">
-                        <LogViewerTab/>
                     </div>
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Настройки">
@@ -217,7 +217,7 @@
 
     protected override void OnInitialized()
     {
-        BlazorDispatcherAccessor.Initialize(action => InvokeAsync(action), StateHasChanged);
+        BlazorDispatcherAccessor.Initialize(InvokeAsync, StateHasChanged);
         SubscriptionState.OnStateChanged += HandleStateChanged;
         ConnectionState.ConnectionStateChanged += HandleConnectionChanged;
         TestCompletionUiState.OnStateChanged += HandleTestCompletionChanged;

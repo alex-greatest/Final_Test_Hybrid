@@ -8,6 +8,12 @@
 
 # LEARNING LOG
 
+### 2026-02-08 (Диагностический runtime: fail-fast и bounded retry)
+- Что изменили: усилили bounded-fairness очереди и fail-fast обработку в критичных ветках диагностики.
+- Почему: требовалось уменьшить зависания, starvation и ложные аварийные состояния.
+- Риск/урок: устойчивость достигается детерминированными переходами и ограниченными retry, а не ростом количества проверок.
+- Ссылки: `Final_Test_Hybrid/Services/Diagnostic/Protocol/CommandQueue/Internal/ModbusWorkerLoop.cs`, `Final_Test_Hybrid/Services/Diagnostic/Services/EcuErrorSyncService.cs`
+
 ## 2026-02-07
 
 ### Контекст

@@ -16,6 +16,12 @@
 
 ## Активные записи
 
+### 2026-02-10 (MyComponent: перестановка вкладок верхнего уровня)
+- Что изменили: в `MyComponent.razor` переставили верхние вкладки в порядок `Главный экран -> Лог -> Параметры -> Ошибки -> Результаты -> Обзор -> Архив -> Настройки`; содержимое вкладок и их внутренние компоненты не меняли.
+- Почему: требовался новый рабочий порядок навигации по экрану без изменения runtime-логики.
+- Риск/урок: при перестановке вкладок нельзя менять индексные привязки и контент блоков; иначе легко получить скрытую регрессию маршрута по UI.
+- Ссылки: `Final_Test_Hybrid/MyComponent.razor`
+
 ### 2026-02-10 (FloatingErrorBadgeHost: выравнивание размера крестика через ::deep)
 - Что изменили: для иконки закрытия в `floating-active-errors-close` заменили прямой селектор на `::deep .floating-active-errors-close-icon` и добавили фикс `min-width/padding` кнопки, чтобы размер крестика совпадал со стилем `stand-database-dialog`.
 - Почему: без `::deep` scoped CSS не применялся к `RadzenIcon`, из-за чего крестик визуально расходился с эталонным диалогом.
@@ -243,12 +249,6 @@
 - Почему: источник истины по кодам должен быть в программе, а перенос в БД должен быть детерминированным.
 - Риск/урок: перед reseed обязательно проверять реальную схему, sequence и связность шагов, иначе высок риск PK/FK конфликтов.
 - Ссылки: `Final_Test_Hybrid/Models/Errors/ErrorDefinitions*.cs`, `Final_Test_Hybrid/tools/db-maintenance/reseed_traceability_boiler_errors_from_program.sql`
-
-### 2026-02-08 (Диагностический runtime: fail-fast и bounded retry)
-- Что изменили: усилили bounded-fairness очереди и fail-fast обработку в критичных ветках диагностики.
-- Почему: требовалось уменьшить зависания, starvation и ложные аварийные состояния.
-- Риск/урок: устойчивость достигается детерминированными переходами и ограниченными retry, а не ростом количества проверок.
-- Ссылки: `Final_Test_Hybrid/Services/Diagnostic/Protocol/CommandQueue/Internal/ModbusWorkerLoop.cs`, `Final_Test_Hybrid/Services/Diagnostic/Services/EcuErrorSyncService.cs`
 
 ### 2026-02-09 (Процесс и quality-gates)
 - Что изменили: зафиксировали рабочий стандарт в `AGENTS.md`; обязательный финальный чек-лист: `build`, `format analyzers`, `format style`.
