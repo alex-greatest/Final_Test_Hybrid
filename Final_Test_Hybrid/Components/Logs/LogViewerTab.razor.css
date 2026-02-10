@@ -115,10 +115,12 @@
     margin-bottom: 10px;
 }
 
+/* Временно скрыто вместе с кнопками в LogViewerTab.razor
 .log-toolbar ::deep .rz-button {
     font-size: 16px;
     padding: 10px 20px;
 }
+*/
 
 .log-info {
     margin-left: auto;

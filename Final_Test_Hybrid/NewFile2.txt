@@ -1,66 +1,335 @@
-App_Version		0.170.1		not/ok		ScanBarcode
-Blr_Gas_Pres_Max	19.70	20.10	20.30	not/ok	мбар	Gas/Set_Gas_and_P_Burner_Max_Levels
-Blr_Gas_Pres_Min	19.70	20.10	20.30	not/ok	мбар	Gas/Set_Gas_and_P_Burner_Min_Levels
-Blr_Supply	207.00	235.12	240	not/ok	В	Elec/Power_Supply_Test
-Bnr_Gas_Pres_Max	8.50	9.36	9.50	not/ok	мбар	Gas/Set_Gas_and_P_Burner_Max_Levels
-Bnr_Gas_Pres_Min	0.90	1.05	1.10	not/ok	мбар	Gas/Set_Gas_and_P_Burner_Min_Levels
-Boiler_Type	0	2	4	not/ok		Coms/Read_Soft_Code_Plug
-CH_Flow_In_DHW_Mode	-1.0	0	0.3	not/ok	л/мин	DHW/Check_Water_Flow_When_In_DHW_Mode
-CH_Flow_NTC_Temp_Rise	15.0	20.1	87.0	not/ok	град.	CH/Check_Flow_Temperature_Rise
-CH_Flow_Press	2.20	2.51	2.70	not/ok	бар	CH/Slow_Fill_Circuit
-CH_Flow_Rate	10.00	12.95	25.00	not/ok	л/мин	CH/Check_Water_Flow
-CH_Flw_Temp_Cold		29.8		not/ok	град.	CH/Get_CHW_Flow_NTC_Cold
-CH_Flw_Temp_Hot		49.9		not/ok	град.	CH/Check_Flow_Temperature_Rise
-CH_Temp_SP	40.0	40.0	82	not/ok	град.	Coms/Read_CH_Poti_Setpoint
-Change_Over_Time		265.02		not/ok	сек.	
-Comfort_Hysteresis	0	10	30			Coms/Read_Soft_Code_Plug
-Complete_Time		236.00		not/ok	сек.	
-Counter_Number	0	уникальный порядковый номер платы	999999			Coms/Read_Soft_Code_Plug
-Current_Offset	0	0	30	not/ok		Coms/Read_Soft_Code_Plug
-Delta_CH_Flow_Temp_Cold	0.00	2.50	3.00	not/ok	град.	CH/Compare_Flow_NTC_Temperature_Cold
-Delta_CH_Flow_Temp_Hot	0.00	2.00	3.00	not/ok	град.	CH/Compare_Flow_NTC_Temperatures_Hot
-Delta_DHW_Flow_Temp_Cold	0.00	0.80	3.00	not/ok	град.	DHW/Compare_Flow_NTC_Temperature_Cold
-Delta_DHW_Flow_Temp_Hot	0.00	1.82	3.00	not/ok	град.	DHW/Compare_Flow_NTC_Temperature_Hot
-DHW_Flow_Hot_Rate	5	6	7	not/ok	л/мин	DHW/Check_Flow_Hot_Rate
-DHW_Flow_NTC_Temp_Rise	6.00	10.5	60	not/ok	сек.	DHW/Check_Flow_Temperature_Rise
-DHW_Flow_Rate	8.00	9.78	12.00	not/ok	л/мин	DHW/Check_Flow_Rate
-DHW_Flw_Temp_Cold		25.2		not/ok	град.	DHW/Get_Flow_NTC_Cold
-DHW_Flw_Temp_Hot		30.12		not/ok	град.	DHW/Check_Flow_Temperature_Rise
-DHW_High_Pressure	6.00	7.12	8.00	not/ok	бар	DHW/High_Pressure_Test
-DHW_In_Pres	2.00	2.51	3.00	not/ok	бар	DHW/Set_Circuit_Pressure
-DHW_Temp_SP	30	35.0	60	not/ok	град.	Coms/Read_DHW_Poti_Setpoint
-Error_ID		"Уникальный код ошибки
-(Код ошибки_стенд_дата)"		not/ok		
-Final_result		nok/ok		not/ok		
-Flow_Coefficient	-100.0	-0.3	100.0			Coms/Read_Soft_Code_Plug
-Gas_Flow_Max	38.8	48.9	50.8	not/ok	л/мин	Gas/Set_Gas_and_P_Burner_Max_Levels
-Gas_Flow_Min	10.3	14.15	16.3	not/ok	л/мин	Gas/Set_Gas_and_P_Burner_Min_Levels
-Gas_Temp		26.5		not/ok	град.	Gas/Get_Temperature
-Gas_Type	0	0	1	not/ok		Coms/Read_Soft_Code_Plug
-Gas_Valve_Type	0	1	2	not/ok		Coms/Read_Soft_Code_Plug
-Max_CH_HeatOut 	30	200	200	not/ok		Coms/Read_Soft_Code_Plug
-Max_DHW_HeatOut 	30	160	200	not/ok		Coms/Read_Soft_Code_Plug
-Max_Flow_Temperature 	40	82	82			Coms/Read_Soft_Code_Plug
-Max_Pump_AutoModePower	10	0	60			Coms/Read_Soft_Code_Plug
-Min_CH_HeatOut 	30	30	200	not/ok		Coms/Read_Soft_Code_Plug
-Min_Pump_AutoModePower	10	0	60			Coms/Read_Soft_Code_Plug
-Month_Date		дата производства платы				Coms/Read_Soft_Code_Plug
-Nomenclature_EngP3		8732302018 (наша 10 значка на плату)				Coms/Read_Soft_Code_Plug
-Nomenclature_ITELMA		уникальный номер платы (ИТЭЛМА)				Coms/Read_Soft_Code_Plug
-Plant_ID		EngP3		not/ok		
-Pres_atmosph.		1.0379		not/ok	бар	
-Pres_in_gas		39.15		not/ok	мбар	
-Pres_sensor	0	1	2	not/ok		Coms/Read_Soft_Code_Plug
-Pump_Mode	0	0	2	not/ok		Coms/Read_Soft_Code_Plug
-Pump_Power	0	55	60	not/ok		Coms/Read_Soft_Code_Plug
-Safety_time	0.00	5.63	12.00	not/ok	sec	Coms/Safety_Time
-Shift_No		1		not/ok		
-Soft_Code_Plug		8732301814		not/ok		Coms/Read_Soft_Code_Plug
-Supplier_Code	0	00000625	99999999			Coms/Read_Soft_Code_Plug
-Test_Time		456.66		not/ok	сек.	
-Tester_No		5346		not/ok		
-Testing_date		25.09.2025		not/ok		
-Timer_1		183.8		not/ok	сек.	Misc/StopTimer1
-Timer_2		167.9		not/ok	сек.	Misc/StopTimer2
-Type_pumps	0	1	3	not/ok		Coms/Read_Soft_Code_Plug
-Version	110.16	110.19	110.19	not/ok		Coms/Read_ECU_Version
+Шаг тестирования
+
+Наименование
+
+ScanBarcode
+
+Сканирование штрих-кода котла
+
+Block boiler adapter
+
+Блокирование адаптера
+
+CH/Check_Flow_Temperature_Rise
+
+Контур Отопления. Проверка роста температуры
+
+CH/Check_Water_Flow
+
+Контур Отопления. Проверка расхода воды
+
+CH/Close_Circuit_Valve
+
+Закрытие клапанов контура газа
+
+CH/Compare_Flow_NTC_Temperature_Cold
+
+Контур Отопление. Сравнение показаний температур холодной воды
+
+CH/Compare_Flow_NTC_Temperatures_Hot
+
+Контур Отопление. Сравнение показаний температур горячей воды
+
+CH/Disable_Cooling
+
+Отключение охлаждения контура Отопления
+
+CH/Drain_Circuit
+
+Контур Отопления. Слив воды
+
+CH/Fast_Fill_Circuit
+
+Быстрое заполнение контура Отопления
+
+CH/Flush_Circuit
+
+Контур Отопления. Продувка контура
+
+CH/Get_CHW_Flow_NTC_Cold
+
+Контур Отопление. Замер температуры холодной воды
+
+CH/Open_Circuit_Normal
+
+Открытие контура Отопления
+
+CH/Purge_Circuit_Normal_Direction
+
+Контур Отопления. Продувка в прямом направлении
+
+CH/Purge_Circuit_Reverse_Direction
+
+Контур Отопления. Продувка в обратном направлении
+
+CH/Slow_Fill_Circuit
+
+Медленное заполнение контура Отопления
+
+Coms/CH_Pump_Start
+
+Запуск насоса котла
+
+Coms/CH_Reset
+
+Перевод котла в летний режим
+
+Coms/CH_Start_Max_Heatout
+
+Запуск максимального нагрева контура Отопления
+
+Coms/CH_Start_Min_Heatout
+
+Запуск минимального нагрева контура Отопления
+
+Coms/CH_Start_ST_Heatout
+
+Запуск нагрева котла в нормальном режиме
+
+Coms/Check_Boiler_Status
+
+Запуск мониторинга статуса котла
+
+Coms/Check_Comms
+
+Провека связи с котлом
+
+Coms/Check_Test_Byte_OFF
+
+Проверка отключение режима "Стенд"
+
+Coms/Check_Test_Byte_ON
+
+Проверка режима "Стенд" котла
+
+Coms/Delete_Error_History
+
+Сброс ошибок котла
+
+CH/Enable_Cooling
+
+Включение охлаждение контура Отопления
+
+Coms/Pump_Start_Func_Reset
+
+Сброс пуска насоса котла
+
+Coms/Read_CH_Poti_Setpoint
+
+Чтение установленной температуры контура Отопления
+
+Coms/Read_DHW_Poti_Setpoint
+
+Чтение установленной температуры контура ГВС
+
+Coms/Read_ECU_Version
+
+Чтение версии прошивки котла
+
+Coms/Read_Soft_Code_Plug
+
+Чтение параметров из котла
+
+Coms/Reset
+
+Сброс котла до заводских настроек
+
+Coms/Safety_Time
+
+Время безопасного отключения котла
+
+Coms/Set_DHW_Tank_Mode
+
+Переключение котла в режим БКН, включение насоса
+
+Coms/Set_Fan_Map
+
+Запись ступени вентилятора
+
+Coms/Set_to_Zero_CH_Pump_Overrun
+
+Сброс времени выбега насоса котла
+
+Coms/Write_Soft_Code_Plug
+
+Запись параметров в котел
+
+Coms/Write_Test_Byte_OFF
+
+Вывод котла из режима "Стенд"
+
+Coms/Write_Test_Byte_ON
+
+Установка котла в режим "Стенд"
+
+DHW/Check_Tank_Mode
+
+Проверка расхода воды режима БКН
+
+DHW/Check_Flow_Rate
+
+Контур ГВС. Проверка расхода воды
+
+DHW/Check_Flow_Hot_Rate
+
+Контур ГВС. Проверка расхода горячей воды
+
+DHW/Check_Flow_Temperature_Rise
+
+Контур ГВС. Проверка роста температуры
+
+DHW/Check_Water_Flow_When_In_DHW_Mode
+
+Контур ГВС. Проверка расхода в контуре Отопления в режиме ГВС
+
+DHW/Close_Circuit_Valve
+
+Контур ГВС. Закрытие клапанов контура
+
+DHW/Compare_Flow_NTC_Temperature_Cold
+
+Контур ГВС. Сравнение показаний температур холодной воды
+
+DHW/Compare_Flow_NTC_Temperature_Hot
+
+Контур ГВС. Сравнение показаний температур горячей воды
+
+DHW/Drain_Circuit_Normal_Direction
+
+Контур ГВС. Слив воды из контура
+
+DHW/Fill_Circuit_Normal_Direction
+
+Заполнение контура ГВС в прямом направлении
+
+DHW/Fill_Circuit_Reverse_Direction
+
+Заполнение контура ГВС в обратном направлении
+
+DHW/Flush_DHW_Circuit_Normal_Direction
+
+Контур ГВС. Продувка в прямом направлении
+
+DHW/High_Pressure_Test
+
+Контур ГВС. Тест высокого давления
+
+DHW/Get_Flow_NTC_Cold
+
+Контур ГВС Замер температуры холодной воды
+
+DHW/Purge_Circuit_Normal_Direction
+
+Контур ГВС. Продувка в прямом направлении
+
+DHW/Purge_Circuit_Reverse_Direction
+
+Контур ГВС. Продувка в обратном направлении
+
+DHW/Reduce_Circuit_Pressure
+
+Контур ГВС. Уменьшение давления
+
+DHW/Set_Circuit_Pressure
+
+Контур ГВС. Регулировка давления воды
+
+DHW/Set_Tank_Mode
+
+Давление воды в режиме БКН
+
+Elec/Boiler_Power_OFF
+
+Выключение котла, отключение питания
+
+Elec/Boiler_Power_ON
+
+Включение котла, подача питания
+
+Elec/Connect_Earth_Clip
+
+Проверка заземления
+
+Elec/Connect_Power_Cable
+
+Подключение силового кабеля
+
+Elec/Disconnect
+
+Отключение котла по Modbus
+
+Elec/Power_Supply_Test
+
+Проверка напряжения питания котла
+
+Gas/Check_Gas_and_P_Burner_Max_Levels
+
+Проверка давления и расхода газа на максимальной мощности
+
+Gas/Check_Gas_and_P_Burner_Min_Levels
+
+Проверка давления и расхода газа на минимальной мощности
+
+Gas/Close_Circuit
+
+Закрытие клапанов контура газа
+
+Gas/Get_Temperature
+
+Измерение температуры газа
+
+Gas/Leak_Test
+
+Проверка утечки контура газа
+
+Gas/Open_Circuit
+
+Открытие клапанов контура газа
+
+Gas/Set_Gas_and_P_Burner_Max_Levels
+
+Регулировка давления и расхода газа на максимальной мощности
+
+Gas/Set_Gas_and_P_Burner_Min_Levels
+
+Регулировка давления и расхода газа на минимальной мощности
+
+Gas/Set_Required_Pressure
+
+Настройка установочного давления газа на входе
+
+Gas/Wait_for_Gas_Flow
+
+Ожидание потока газа
+
+Misc/StartTimer1
+
+Запуск таймера 1
+
+Misc/StartTimer2
+
+Запуск таймера 2
+
+Misc/StopTimer1
+
+Остановка таймера 1
+
+Misc/StopTimer2
+
+Остановка таймера 2
+
+WaitTime/WaitFiveSec
+
+Ожидание в течение 5 секунд
+
+WaitTime/WaitOneSec
+
+Ожидание в течение 1 секунды
+
+WaitTime/WaitTenSec
+
+Ожидание в течение 10 секунд
+
+WaitTime/WaitThreeSec
+
+Ожидание в течение 3 секунд

@@ -16,6 +16,36 @@
 
 ## Активные записи
 
+### 2026-02-10 (BoilerOrder: выравнивание ширины поля счётчика в UseMes=false)
+- Что изменили: в `Final_Test_Hybrid/Components/Main/BoilerOrder.razor` для строки `Успеш. тестов` оставили однострочный layout с кнопками справа, но зафиксировали ширину блока поля как одну колонку (`flex-basis/max-width = calc((100% - 13px) / 2)`), чтобы поле совпадало по ширине с полями выше.
+- Почему: при `UseMes=false` поле счётчика было заметно шире соседних полей из-за растяжения на всю строку.
+- Риск/урок: при привязке к `13px` (gap двухколоночного блока) изменение сетки в `header-block-left` требует синхронной корректировки формулы ширины.
+- Ссылки: `Final_Test_Hybrid/Components/Main/BoilerOrder.razor`, `Final_Test_Hybrid/LEARNING_LOG.md`, `Final_Test_Hybrid/LEARNING_LOG_ARCHIVE.md`
+
+### 2026-02-10 (BoilerOrder: пароль для Изменить/Сброс + переименование кнопки)
+- Что изменили: в `Final_Test_Hybrid/Components/Main/BoilerOrder.razor` для кнопок `Изменить` и `Сброс` добавили парольный gate через `PasswordDialog`; кнопку `Обнулить` переименовали в `Сброс`; для сброса оставили безопасный поток `пароль -> подтверждение -> ResetCountAsync`.
+- Почему: требовалось защитить изменение и сброс счётчика успешных тестов тем же паролем, что и инженерные действия.
+- Риск/урок: для потенциально разрушительных действий сначала нужен контроль доступа, затем явное подтверждение действия.
+- Ссылки: `Final_Test_Hybrid/Components/Main/BoilerOrder.razor`, `Final_Test_Hybrid/LEARNING_LOG.md`, `Final_Test_Hybrid/LEARNING_LOG_ARCHIVE.md`
+
+### 2026-02-10 (LogViewerTab: кнопки Обновить/Очистить скрыты через комментарий)
+- Что изменили: во вкладке `Лог-файл` в `LogViewerTab.razor` закомментировали кнопки `Обновить` и `Очистить` (код оставлен в файле), а в `LogViewerTab.razor.css` закомментировали стиль `.log-toolbar ::deep .rz-button`.
+- Почему: требовалось убрать кнопки из UI, но сохранить быстрый возврат без восстановления кода.
+- Риск/урок: при отключении через комментарий логика `ClearLog()` остаётся неиспользуемой до обратного включения; это осознанный временный компромисс для оперативного отката.
+- Ссылки: `Final_Test_Hybrid/Components/Logs/LogViewerTab.razor`, `Final_Test_Hybrid/Components/Logs/LogViewerTab.razor.css`
+
+### 2026-02-10 (Main/Parameter: убраны единицы измерения из значений)
+- Что изменили: в `Components/Main/Parameter/CH.razor`, `DHW.razor`, `Delta.razor`, `Emissions.razor`, `Gas.razor`, `GasP.razor` убрали добавление суффиксов единиц (`°C`, `бар`, `мбар`, `ppm`, `%`, `м³/ч`, `л/мин`) из `FormatValue`; форматтеры оставили с `F3` и `CultureInfo.CurrentCulture`, fallback `N/A`. Для Modbus-полей `tCH котла` и `tDHW котла` также убраны суффиксы.
+- Почему: требовалось отображать на главном экране только числовое значение без единиц измерения.
+- Риск/урок: после удаления суффиксов единицы теперь определяются только контекстом названия поля; при похожих обозначениях (`P`, `T`, `Q`) важно сохранять однозначные лейблы.
+- Ссылки: `Final_Test_Hybrid/Components/Main/Parameter/CH.razor`, `Final_Test_Hybrid/Components/Main/Parameter/DHW.razor`, `Final_Test_Hybrid/Components/Main/Parameter/Delta.razor`, `Final_Test_Hybrid/Components/Main/Parameter/Emissions.razor`, `Final_Test_Hybrid/Components/Main/Parameter/Gas.razor`, `Final_Test_Hybrid/Components/Main/Parameter/GasP.razor`
+
+### 2026-02-10 (Main/Parameter: немедленная выдача cached-value + формат F3)
+- Что изменили: в `Components/Main/Parameter/*` добавили параметр `EmitCachedValueImmediately`, пробросили его в `SubscribeAsync(..., emitCachedValueImmediately: ...)`, а в `MyComponent.razor` для `Gas/Delta/DHW/CH/Emissions/GasP` включили `EmitCachedValueImmediately="true"` как в `HandProgramDialog`. Также унифицировали формат отображения чисел до `F3` с `CultureInfo.CurrentCulture`, включая Modbus-поля `tCH котла` и `tDHW котла`.
+- Почему: на главном экране значения оставались пустыми до первого изменения PLC; требовалось поведение как в hand-program и единая точность отображения (3 знака после запятой).
+- Риск/урок: при смешанном использовании `emitCachedValueImmediately` одинаковые источники OPC выглядят по-разному на разных экранах; формат чисел нужно задавать централизованно по единому контракту UI.
+- Ссылки: `Final_Test_Hybrid/MyComponent.razor`, `Final_Test_Hybrid/Components/Main/Parameter/CH.razor`, `Final_Test_Hybrid/Components/Main/Parameter/DHW.razor`, `Final_Test_Hybrid/Components/Main/Parameter/Delta.razor`, `Final_Test_Hybrid/Components/Main/Parameter/Emissions.razor`, `Final_Test_Hybrid/Components/Main/Parameter/Gas.razor`, `Final_Test_Hybrid/Components/Main/Parameter/GasP.razor`
+
 ### 2026-02-10 (MyComponent: перестановка вкладок верхнего уровня)
 - Что изменили: в `MyComponent.razor` переставили верхние вкладки в порядок `Главный экран -> Лог -> Параметры -> Ошибки -> Результаты -> Обзор -> Архив -> Настройки`; содержимое вкладок и их внутренние компоненты не меняли.
 - Почему: требовался новый рабочий порядок навигации по экрану без изменения runtime-логики.
@@ -225,34 +255,4 @@
 - Почему: нужен единый экран для текстового лога и таймингов шагов без изменения runtime-источников данных.
 - Риск/урок: при переносе вкладок нельзя менять локальные стили содержимого; правки должны ограничиваться shell/layout контейнера.
 - Ссылки: `Final_Test_Hybrid/Components/Logs/LogViewerTab.razor`, `Final_Test_Hybrid/Components/Logs/LogViewerTab.razor.css`, `Final_Test_Hybrid/Components/Results/TestResultsTab.razor`
-
-### 2026-02-09 (Диагностика: ручной контекст и безопасность preset)
-- Что изменили: в ручной диагностике закрепили контекст оператора (без фоновой автоматики), оставили только безопасные preset-операции, расширили понятность отображаемых чтений.
-- Почему: ручной сценарий должен быть предсказуемым и не пересекаться с runtime-автоматикой.
-- Риск/урок: любые «удобные» preset в инженерном UI быстро становятся источником скрытых side effect без жёсткого whitelist.
-- Ссылки: `Final_Test_Hybrid/Components/Overview/ConnectionTestPanel.razor`, `Final_Test_Hybrid/Services/Diagnostic/Services/BoilerLockRuntimeService.cs`
-
-### 2026-02-09 (Reconnect и подписки: детерминированный подход)
-- Что изменили: закрепили инвариант полного rebuild runtime-подписок после reconnect и точечный opt-in для late-subscriber UI.
-- Почему: это убирает рассинхрон экранов после потери соединения без глобальных изменений порядка событий.
-- Риск/урок: частичный auto-rebind без границ создает скрытые регрессии и нестабильный UI-state.
-- Ссылки: `Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.Callbacks.cs`, `Final_Test_Hybrid/Services/OpcUa/PlcInitializationCoordinator.cs`
-
-### 2026-02-09 (Контракт результатов теста)
-- Что изменили: синхронизировали сохранение результатов по каноническим именам параметров и корректным метаданным (`isRanged`, границы, единицы), закрыли разрывы в списках.
-- Почему: неконсистентный контракт ломал классификацию/выгрузку и давал ложные потери результатов.
-- Риск/урок: метаданные результатов нельзя наследовать «по соседству»; каждый параметр проверяется по своему контракту.
-- Ссылки: `Final_Test_Hybrid/Services/Steps/Steps/ScanStepBase.cs`, `Final_Test_Hybrid/Services/Storage/MesTestResultStorage.cs`
-
-### 2026-02-09 (Каталог ошибок и reseed БД)
-- Что изменили: выровняли каталог ошибок программы и подготовили воспроизводимые SQL/скрипты для синхронизации `traceability_boiler` с fail-fast проверками.
-- Почему: источник истины по кодам должен быть в программе, а перенос в БД должен быть детерминированным.
-- Риск/урок: перед reseed обязательно проверять реальную схему, sequence и связность шагов, иначе высок риск PK/FK конфликтов.
-- Ссылки: `Final_Test_Hybrid/Models/Errors/ErrorDefinitions*.cs`, `Final_Test_Hybrid/tools/db-maintenance/reseed_traceability_boiler_errors_from_program.sql`
-
-### 2026-02-09 (Процесс и quality-gates)
-- Что изменили: зафиксировали рабочий стандарт в `AGENTS.md`; обязательный финальный чек-лист: `build`, `format analyzers`, `format style`.
-- Почему: стабильный процесс нужен для одинакового качества решений между задачами и ветками.
-- Риск/урок: если чек-лист не формализован, регрессии в стиле/анализаторах начинают накапливаться незаметно.
-- Ссылки: `AGENTS.md`, `Final_Test_Hybrid/LEARNING_LOG_ARCHIVE.md`
 

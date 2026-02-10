@@ -1,3 +1,4 @@
+@using System.Globalization
 @using Final_Test_Hybrid.Models.Plc.Tags
 @using Final_Test_Hybrid.Services.OpcUa.Subscription
 @inject OpcUaSubscription Subscription
@@ -28,48 +29,49 @@
     private string _gasPog1 = "N/A";
     private string _pAtm = "N/A";
     private bool _disposed;
+    [Parameter] public bool EmitCachedValueImmediately { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        await Subscription.SubscribeAsync(MainScreenTags.FaCo, OnCoChanged);
-        await Subscription.SubscribeAsync(MainScreenTags.FaCo2, OnCo2Changed);
-        await Subscription.SubscribeAsync(MainScreenTags.GasPog1, OnGasPog1Changed);
-        await Subscription.SubscribeAsync(MainScreenTags.GasPa, OnPAtmChanged);
+        await Subscription.SubscribeAsync(MainScreenTags.FaCo, OnCoChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(MainScreenTags.FaCo2, OnCo2Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(MainScreenTags.GasPog1, OnGasPog1Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(MainScreenTags.GasPa, OnPAtmChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
     }
 
     private async Task OnCoChanged(object? value)
     {
         if (_disposed) return;
-        _co = FormatValue(value, "  ppm");
+        _co = FormatValue(value);
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnCo2Changed(object? value)
     {
         if (_disposed) return;
-        _co2 = FormatValue(value, "  %");
+        _co2 = FormatValue(value);
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnGasPog1Changed(object? value)
     {
         if (_disposed) return;
-        _gasPog1 = FormatValue(value, "  м³/ч");
+        _gasPog1 = FormatValue(value);
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnPAtmChanged(object? value)
     {
         if (_disposed) return;
-        _pAtm = FormatValue(value, "  мбар");
+        _pAtm = FormatValue(value);
         await InvokeAsync(StateHasChanged);
     }
 
-    private static string FormatValue(object? value, string unit)
+    private static string FormatValue(object? value)
     {
         if (value == null) return "N/A";
-        if (value is IFormattable formattable) return $"{formattable.ToString("F3", null)}{unit}";
-        return $"{value}{unit}";
+        if (value is IFormattable formattable) return formattable.ToString("F3", CultureInfo.CurrentCulture);
+        return value.ToString() ?? "N/A";
     }
 
     public async ValueTask DisposeAsync()

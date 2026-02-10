@@ -1,3 +1,4 @@
+@using System.Globalization
 @using Final_Test_Hybrid.Models.Plc.Tags
 @using Final_Test_Hybrid.Services.OpcUa.Subscription
 @inject OpcUaSubscription Subscription
@@ -13,24 +14,25 @@
 @code {
     private string _gasP = "N/A";
     private bool _disposed;
+    [Parameter] public bool EmitCachedValueImmediately { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        await Subscription.SubscribeAsync(MainScreenTags.GasP, OnGasPChanged);
+        await Subscription.SubscribeAsync(MainScreenTags.GasP, OnGasPChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
     }
 
     private async Task OnGasPChanged(object? value)
     {
         if (_disposed) return;
-        _gasP = FormatValue(value, "  мбар");
+        _gasP = FormatValue(value);
         await InvokeAsync(StateHasChanged);
     }
 
-    private static string FormatValue(object? value, string unit)
+    private static string FormatValue(object? value)
     {
         if (value == null) return "N/A";
-        if (value is IFormattable formattable) return $"{formattable.ToString("F3", null)}{unit}";
-        return $"{value}{unit}";
+        if (value is IFormattable formattable) return formattable.ToString("F3", CultureInfo.CurrentCulture);
+        return value.ToString() ?? "N/A";
     }
 
     public async ValueTask DisposeAsync()

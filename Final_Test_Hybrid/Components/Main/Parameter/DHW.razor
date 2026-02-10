@@ -1,3 +1,4 @@
+@using System.Globalization
 @using Final_Test_Hybrid.Models.Plc.Tags
 @using Final_Test_Hybrid.Services.OpcUa.Subscription
 @using Final_Test_Hybrid.Services.Diagnostic.Services
@@ -40,13 +41,14 @@
     private CancellationTokenSource? _cts;
     private Task? _pollingTask;
     private volatile bool _disposed;
+    [Parameter] public bool EmitCachedValueImmediately { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        await Subscription.SubscribeAsync(MainScreenTags.DhwFs, OnQDhwChanged);
-        await Subscription.SubscribeAsync(MainScreenTags.DhwPes, OnPDhwChanged);
-        await Subscription.SubscribeAsync(MainScreenTags.DhwTes, OnTDhwInChanged);
-        await Subscription.SubscribeAsync(MainScreenTags.DhwTus, OnTDhwOutChanged);
+        await Subscription.SubscribeAsync(MainScreenTags.DhwFs, OnQDhwChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(MainScreenTags.DhwPes, OnPDhwChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(MainScreenTags.DhwTes, OnTDhwInChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(MainScreenTags.DhwTus, OnTDhwOutChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
 
         Dispatcher.Connected += OnDispatcherConnected;
         Dispatcher.Disconnecting += OnDispatcherDisconnecting;
@@ -130,7 +132,7 @@
             while (timer != null && await timer.WaitForNextTickAsync(ct).ConfigureAwait(false))
             {
                 var result = await BoilerTemperatureService.ReadDHWTemperatureAsync(ct).ConfigureAwait(false);
-                _tDhwBoiler = result.Success ? $"{result.Value}  °C" : "N/A";
+                _tDhwBoiler = result.Success ? FormatValue(result.Value) : "N/A";
                 await InvokeAsync(StateHasChanged);
             }
         }
@@ -160,30 +162,42 @@
 
     private async Task OnQDhwChanged(object? value)
     {
-        _qDhw = FormatValue(value, "  л/мин");
+        _qDhw = FormatValue(value);
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnPDhwChanged(object? value)
     {
-        _pDhw = FormatValue(value, "  бар");
+        _pDhw = FormatValue(value);
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnTDhwInChanged(object? value)
     {
-        _tDhwIn = FormatValue(value, "  °C");
+        _tDhwIn = FormatValue(value);
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnTDhwOutChanged(object? value)
     {
-        _tDhwOut = FormatValue(value, "  °C");
+        _tDhwOut = FormatValue(value);
         await InvokeAsync(StateHasChanged);
     }
 
-    private static string FormatValue(object? value, string unit) =>
-        value != null ? $"{value}{unit}" : "N/A";
+    private static string FormatValue(object? value)
+    {
+        if (value == null)
+        {
+            return "N/A";
+        }
+
+        if (value is IFormattable formattable)
+        {
+            return formattable.ToString("F3", CultureInfo.CurrentCulture);
+        }
+
+        return value.ToString() ?? "N/A";
+    }
 
     public async ValueTask DisposeAsync()
     {

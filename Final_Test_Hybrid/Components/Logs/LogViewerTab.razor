@@ -15,8 +15,9 @@
                 <RadzenTabsItem Text="Лог-файл">
                     <div class="log-viewer-container">
                         <div class="log-toolbar">
-                            <RadzenButton Icon="refresh" Text="Обновить" Click="@LoadLogAsync" />
-                            <RadzenButton Icon="delete" Text="Очистить" Click="@ClearLog" />
+                            @* Временно скрыто по запросу: ручное обновление и очистка лога *@
+                            @* <RadzenButton Icon="refresh" Text="Обновить" Click="@LoadLogAsync" />
+                            <RadzenButton Icon="delete" Text="Очистить" Click="@ClearLog" /> *@
                             <span class="log-info">Строк: @_lines.Count</span>
                         </div>
                         <div class="log-content">

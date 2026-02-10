@@ -61,12 +61,12 @@
                                 <RadzenCard Class="header-card">
                                     <ChildContent>
                                         <div class="header-grid-parameter">
-                                            <Gas />
-                                            <Delta />
-                                            <DHW />
-                                            <CH />
-                                            <Emissions />
-                                            <GasP />
+                                            <Gas EmitCachedValueImmediately="true" />
+                                            <Delta EmitCachedValueImmediately="true" />
+                                            <DHW EmitCachedValueImmediately="true" />
+                                            <CH EmitCachedValueImmediately="true" />
+                                            <Emissions EmitCachedValueImmediately="true" />
+                                            <GasP EmitCachedValueImmediately="true" />
                                         </div>
                                     </ChildContent>
                                 </RadzenCard>
@@ -192,8 +192,8 @@
         <!-- Центр: занимает ровно столько, сколько контент, стоит по центру экрана -->
         <div class="app-bottom-10-content" style="flex: 0 0 auto; gap: 40px; margin-left: 230px">
             <TestTimerDisplay />
-            <BoilerStatusDisplay />
             <ChangeoverTimerDisplay />
+            <BoilerStatusDisplay />
         </div>
 
         <!-- Правая часть: занимает всё место справа, контент прижат вправо -->

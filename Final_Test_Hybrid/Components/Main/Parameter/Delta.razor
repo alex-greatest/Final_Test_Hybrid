@@ -1,3 +1,4 @@
+@using System.Globalization
 @using Final_Test_Hybrid.Models.Plc.Tags
 @using Final_Test_Hybrid.Services.OpcUa.Subscription
 @inject OpcUaSubscription Subscription
@@ -23,40 +24,41 @@
     private string _chDeltaTemp = "N/A";
     private string _dhwDeltaTemp = "N/A";
     private bool _disposed;
+    [Parameter] public bool EmitCachedValueImmediately { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        await Subscription.SubscribeAsync(MainScreenTags.GasTag, OnTGasChanged);
-        await Subscription.SubscribeAsync(MainScreenTags.ChDeltaTemp, OnChDeltaTempChanged);
-        await Subscription.SubscribeAsync(MainScreenTags.DhwDeltaTemp, OnDhwDeltaTempChanged);
+        await Subscription.SubscribeAsync(MainScreenTags.GasTag, OnTGasChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(MainScreenTags.ChDeltaTemp, OnChDeltaTempChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(MainScreenTags.DhwDeltaTemp, OnDhwDeltaTempChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
     }
 
     private async Task OnTGasChanged(object? value)
     {
         if (_disposed) return;
-        _tGas = FormatValue(value, "  °C");
+        _tGas = FormatValue(value);
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnChDeltaTempChanged(object? value)
     {
         if (_disposed) return;
-        _chDeltaTemp = FormatValue(value, "  °C");
+        _chDeltaTemp = FormatValue(value);
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnDhwDeltaTempChanged(object? value)
     {
         if (_disposed) return;
-        _dhwDeltaTemp = FormatValue(value, "  °C");
+        _dhwDeltaTemp = FormatValue(value);
         await InvokeAsync(StateHasChanged);
     }
 
-    private static string FormatValue(object? value, string unit)
+    private static string FormatValue(object? value)
     {
         if (value == null) return "N/A";
-        if (value is IFormattable formattable) return $"{formattable.ToString("F3", null)}{unit}";
-        return $"{value}{unit}";
+        if (value is IFormattable formattable) return formattable.ToString("F3", CultureInfo.CurrentCulture);
+        return value.ToString() ?? "N/A";
     }
 
     public async ValueTask DisposeAsync()
