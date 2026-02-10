@@ -10,13 +10,8 @@ public class TestSequenseService(
     StepHistoryExcelExporter stepHistoryExcelExporter,
     BoilerState boilerState)
 {
-    private static class ScanModuleNames
-    {
-        public const string BarcodeScanner = "Сканирование штрихкода";
-        public const string BarcodeScannerMes = "Сканирование штрихкода MES";
-    }
-
     private readonly List<TestSequenseData> _steps = [];
+    private Guid? _scanStepId;
     private readonly Lock _lock = new();
     public event Action? OnDataChanged;
 
@@ -36,17 +31,19 @@ public class TestSequenseService(
 
     private bool IsFirstStepActiveScan()
     {
-        var step = _steps.FirstOrDefault();
-        if (step == null)
+        var scanStep = GetScanStepUnsafe();
+        if (scanStep == null)
         {
             return false;
         }
-        return IsScanModule(step.Module) && step.StepStatus != TestStepStatus.Success;
-    }
 
-    private static bool IsScanModule(string moduleName)
-    {
-        return moduleName is ScanModuleNames.BarcodeScanner or ScanModuleNames.BarcodeScannerMes;
+        var firstStep = _steps.FirstOrDefault();
+        if (firstStep == null || firstStep.Id != scanStep.Id)
+        {
+            return false;
+        }
+
+        return scanStep.StepStatus != TestStepStatus.Success;
     }
 
     /// <summary>
@@ -196,6 +193,7 @@ public class TestSequenseService(
         lock (_lock)
         {
             _steps.Clear();
+            _scanStepId = null;
         }
         NotifyDataChanged();
     }
@@ -210,15 +208,24 @@ public class TestSequenseService(
 
         lock (_lock)
         {
-            _steps.RemoveAll(s => !IsScanModule(s.Module));
-            ResetScanStepToRunning();
+            var scanStep = GetScanStepUnsafe();
+            if (scanStep == null)
+            {
+                _steps.Clear();
+                _scanStepId = null;
+            }
+            else
+            {
+                _steps.RemoveAll(s => s.Id != scanStep.Id);
+                ResetScanStepToRunning();
+            }
         }
         NotifyDataChanged();
     }
 
     private void ResetScanStepToRunning()
     {
-        var scanStep = _steps.FirstOrDefault(s => IsScanModule(s.Module));
+        var scanStep = GetScanStepUnsafe();
         if (scanStep == null)
         {
             return;
@@ -236,7 +243,7 @@ public class TestSequenseService(
     {
         lock (_lock)
         {
-            var scanStep = _steps.FirstOrDefault(s => IsScanModule(s.Module));
+            var scanStep = GetScanStepUnsafe();
             if (scanStep == null)
             {
                 return;
@@ -250,7 +257,7 @@ public class TestSequenseService(
     {
         lock (_lock)
         {
-            var scanStep = _steps.FirstOrDefault(s => IsScanModule(s.Module));
+            var scanStep = GetScanStepUnsafe();
             if (scanStep == null)
             {
                 return;
@@ -270,9 +277,11 @@ public class TestSequenseService(
 
     public Guid EnsureScanStepExists(string moduleName, string description)
     {
+        Guid stepId;
+
         lock (_lock)
         {
-            var existing = _steps.FirstOrDefault(s => IsScanModule(s.Module));
+            var existing = GetScanStepUnsafe();
             if (existing != null)
             {
                 return existing.Id;
@@ -285,9 +294,12 @@ public class TestSequenseService(
                 StartTime = DateTime.Now
             };
             _steps.Insert(0, stepData);
-            NotifyDataChanged();
-            return stepData.Id;
+            _scanStepId = stepData.Id;
+            stepId = stepData.Id;
         }
+
+        NotifyDataChanged();
+        return stepId;
     }
 
     private static void ApplyScanStepUpdate(TestSequenseData step, TestStepStatus status, string message, string? limits)
@@ -331,6 +343,27 @@ public class TestSequenseService(
             Range = limits ?? "",
             StartTime = DateTime.Now
         };
+    }
+
+    /// <summary>
+    /// Возвращает scan-строку по внутреннему marker.
+    /// Если marker устарел, сбрасывает его в null.
+    /// </summary>
+    private TestSequenseData? GetScanStepUnsafe()
+    {
+        if (_scanStepId is not { } scanStepId)
+        {
+            return null;
+        }
+
+        var scanStep = _steps.FirstOrDefault(s => s.Id == scanStepId);
+        if (scanStep != null)
+        {
+            return scanStep;
+        }
+
+        _scanStepId = null;
+        return null;
     }
 
     private bool TryUpdateStep(Guid id, Action<TestSequenseData> updateAction)

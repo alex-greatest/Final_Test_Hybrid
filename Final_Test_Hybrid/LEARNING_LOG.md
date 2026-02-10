@@ -16,6 +16,18 @@
 
 ## Активные записи
 
+### 2026-02-10 (ArchiveGrid: дефолт диапазона дат = текущие сутки)
+- Что изменили: в `ArchiveGrid` заменили стартовый диапазон фильтра с `-7/+1` дней на локальные границы текущих суток: `От = DateTime.Today`, `До = DateTime.Today.AddDays(1).AddTicks(-1)`.
+- Почему: требовалось, чтобы при первом показе вкладки `Архив` поля диапазона сразу соответствовали «сегодня с начала до конца дня».
+- Риск/урок: при отображении формата `dd.MM.yyyy HH:mm` конец суток визуально виден как `23:59`, но фактически фильтр включает весь день до последнего тика.
+- Ссылки: `Final_Test_Hybrid/Components/Archive/ArchiveGrid.razor`
+
+### 2026-02-10 (SettingsAccess: marker-фиксация scan-шага + синхронизация Block boiler adapter)
+- Что изменили: в `TestSequenseService` заменили определение scan-шага по `Module`-строкам на внутренний marker `scanStepId`; на marker перевели `IsOnActiveScanStep`, `ClearAllExceptScan`, `ResetScanStepToRunning`, `UpdateScanStep`, `MutateScanStep`, `EnsureScanStepExists`, `ClearAll`, а уведомление `OnDataChanged` в `EnsureScanStepExists` вынесли из `lock`. Дополнительно выровняли `RelatedStepName` в `ErrorDefinitions.Steps.Other` до канонического `Block boiler adapter`.
+- Почему: после переименования scan-шага блокировки инженерных настроек перестали работать из-за жёсткой привязки к старым текстовым именам модуля.
+- Риск/урок: runtime-критерии фазы сканирования нельзя строить на display-name; нужен стабильный внутренний идентификатор и единый канонический `RelatedStepName`.
+- Ссылки: `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/TestSequenseService.cs`, `Final_Test_Hybrid/Services/Main/SettingsAccessState.cs`, `Final_Test_Hybrid/Models/Errors/ErrorDefinitions.Steps.Other.cs`, `Final_Test_Hybrid/Docs/SettingsBlockingGuide.md`
+
 ### 2026-02-10 (Form1: старт приложения в развернутом окне)
 - Что изменили: в `Form1` после `InitializeComponent()` добавили `StartPosition = FormStartPosition.Manual` и `WindowState = FormWindowState.Maximized`, чтобы главное окно сразу открывалось на весь экран в режиме `Maximized`.
 - Почему: требовалось запускать операторское приложение сразу в полноразмерном режиме без ручного разворачивания.

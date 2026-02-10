@@ -108,8 +108,8 @@
 </div>
 
 @code {
-    private DateTime? _dateFrom = DateTime.Now.AddDays(-7);
-    private DateTime? _dateTo = DateTime.Now.AddDays(1);
+    private DateTime? _dateFrom = DateTime.Today;
+    private DateTime? _dateTo = DateTime.Today.AddDays(1).AddTicks(-1);
     private List<Operation> _operations = [];
     private bool _isExporting;
 

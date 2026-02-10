@@ -41,6 +41,12 @@ State = hasNoTests || isOnScanStep
 **Разрешено:** нет тестов ИЛИ на scan step
 **Заблокировано:** тест выполняется И не на scan step
 
+### Источник истины для scan step
+
+- Runtime-определение scan шага выполняется через внутренний marker (`scanStepId`) в `TestSequenseService`.
+- Проверка `IsOnActiveScanStep` больше не зависит от текстового `Module` (переименования шага не ломают блокировки).
+- Marker обновляется только в lifecycle scan-строки (`EnsureScanStepExists`, `ClearAll`, `ClearAllExceptScan`).
+
 ## Подписки на события
 
 Все компоненты подписываются на события изменения состояния:
