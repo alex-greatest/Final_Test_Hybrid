@@ -226,12 +226,21 @@ public partial class TestExecutionCoordinator
         }
 
         _retryState.MarkStarted();
-        StateManager.DequeueError();
+        try
+        {
+            await PublishEventCritical(new ExecutionEvent(
+                ExecutionEventKind.RetryRequested,
+                StepError: error,
+                ColumnExecutor: executor));
+        }
+        catch (Exception ex)
+        {
+            _retryState.MarkCompleted();
+            await HandleRetryPublishFailureAsync(error, ex);
+            return;
+        }
 
-        await PublishEventCritical(new ExecutionEvent(
-            ExecutionEventKind.RetryRequested,
-            StepError: error,
-            ColumnExecutor: executor));
+        StateManager.DequeueError();
     }
 
     private async Task HandleAskRepeatFailureAsync(StepError error, Exception ex, CancellationToken ct)
@@ -246,6 +255,29 @@ public partial class TestExecutionCoordinator
             ? InterruptReason.PlcConnectionLost
             : InterruptReason.TagTimeout;
         await _errorCoordinator.HandleInterruptAsync(interruptReason, ct);
+        var cts = _cts;
+        if (cts != null)
+        {
+            await cts.CancelAsync();
+        }
+    }
+
+    private async Task HandleRetryPublishFailureAsync(StepError error, Exception ex)
+    {
+        if (IsCancellationRequested || _flowState.IsStopRequested)
+        {
+            _logger.LogDebug(
+                "Публикация RetryRequested для колонки {Column} прервана из-за остановки/отмены",
+                error.ColumnIndex);
+            return;
+        }
+
+        _logger.LogError(
+            ex,
+            "Критичная ошибка публикации RetryRequested для колонки {Column}. Выполняем fail-fast",
+            error.ColumnIndex);
+
+        RequestStopAsFailure(ExecutionStopReason.Operator);
         var cts = _cts;
         if (cts != null)
         {

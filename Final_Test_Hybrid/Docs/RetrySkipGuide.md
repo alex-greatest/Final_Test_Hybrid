@@ -156,6 +156,19 @@ public async Task RetryLastFailedStepAsync(CancellationToken ct)
 [00:17] Диалог Col 1 ← СРАЗУ!
 ```
 
+## Settlement между картами (после Retry/Skip)
+
+`TestExecutionCoordinator` ждёт settlement карты **без таймаута остановки**.
+
+- Условия settlement:
+  - `!StateManager.HasPendingErrors`
+  - `(_errorDrainTask == null || _errorDrainTask.IsCompleted)`
+  - `!_retryState.IsActive`
+  - `!HasPendingRetries()`
+  - `!executor.HasFailed` для всех колонок
+- Если settlement задерживается, координатор пишет диагностический snapshot раз в 2 минуты (без `Stop()`/`Cancel()`).
+- Это сохраняет прежнее поведение map-pipeline для штатных сценариев и убирает ложный аварийный выход при долгом ожидании завершения шага (например, ожидание `End/Error`).
+
 ## Ключевые методы
 
 ### ProcessRetryAsync
@@ -178,7 +191,7 @@ private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, C
         return;
     }
 
-    InvokeRetryStartedSafely();
+    TryPublishEvent(new ExecutionEvent(ExecutionEventKind.RetryStarted));
 
     try
     {
@@ -190,11 +203,22 @@ private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, C
         return;
     }
 
+    _retryState.MarkStarted();
+    try
+    {
+        await PublishEventCritical(new ExecutionEvent(
+            ExecutionEventKind.RetryRequested,
+            StepError: error,
+            ColumnExecutor: executor));
+    }
+    catch (Exception ex)
+    {
+        _retryState.MarkCompleted();
+        await HandleRetryPublishFailureAsync(error, ex);
+        return;
+    }
+
     StateManager.DequeueError();
-    await PublishEventCritical(new ExecutionEvent(
-        ExecutionEventKind.RetryRequested,
-        StepError: error,
-        ColumnExecutor: executor));
 }
 ```
 

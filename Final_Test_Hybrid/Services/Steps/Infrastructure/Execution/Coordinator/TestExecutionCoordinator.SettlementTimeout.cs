@@ -5,16 +5,28 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 public partial class TestExecutionCoordinator
 {
     private static readonly TimeSpan SettlementPollInterval = TimeSpan.FromMilliseconds(50);
-    private static readonly TimeSpan SettlementTimeout = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan SettlementDiagnosticInterval = TimeSpan.FromMinutes(2);
 
     /// <summary>
-    /// Обрабатывает таймаут ожидания settlement как жёсткую остановку теста.
+    /// Логирует диагностический снимок при длительном ожидании settlement карты.
     /// </summary>
-    private int ThrowSettlementTimeout()
+    private void LogSettlementWaitSnapshot(TimeSpan waitDuration)
     {
-        _logger.LogError("Таймаут ожидания settlement карты");
-        _testLogger.LogError(null, "Ошибка: таймаут ожидания settlement карты");
-        Stop(ExecutionStopReason.Operator, "Таймаут ожидания settlement карты", markFailed: true);
-        throw new OperationCanceledException("Settlement timeout", GetCancellationToken());
+        var executorsSnapshot = string.Join(
+            "; ",
+            _executors.Select(executor =>
+                $"ColumnIndex={executor.ColumnIndex}, IsFailed={executor.HasFailed}, CanSkip={executor.CanSkip}, Status={executor.Status ?? "-"}, FailedStep={executor.FailedStep?.Name ?? "-"}"));
+
+        _logger.LogWarning(
+            "Ожидание settlement продолжается: WaitSeconds={WaitSeconds}, CurrentMapIndex={CurrentMapIndex}, State={State}, HasPendingErrors={HasPendingErrors}, ErrorDrainCompleted={ErrorDrainCompleted}, RetryActive={RetryActive}, HasPendingRetries={HasPendingRetries}, CurrentInterrupt={CurrentInterrupt}, Executors=[{Executors}]",
+            (int)waitDuration.TotalSeconds,
+            CurrentMapIndex,
+            StateManager.State,
+            StateManager.HasPendingErrors,
+            _errorDrainTask == null || _errorDrainTask.IsCompleted,
+            _retryState.IsActive,
+            HasPendingRetries(),
+            _errorCoordinator.CurrentInterrupt,
+            executorsSnapshot);
     }
 }

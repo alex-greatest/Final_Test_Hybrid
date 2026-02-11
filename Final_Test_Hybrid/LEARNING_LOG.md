@@ -16,6 +16,12 @@
 
 ## Активные записи
 
+### 2026-02-11 (Execution: settlement без аварийного timeout + усиленный барьер map-ready)
+- Что изменили: в `TestExecutionCoordinator` убрали жёсткий stop по `SettlementTimeout`; ожидание settlement теперь бесконечное с диагностическим snapshot раз в 2 минуты. Дополнительно в `IsMapSettled` добавили обязательный критерий `!executor.HasFailed` для всех колонок, а в `ProcessRetryAsync` зафиксировали симметрию `_retryState` при сбое публикации `RetryRequested` (без утечки active retry).
+- Почему: при ручном toggling сигналов Retry/Error шаг мог остаться в состоянии «Выполняется», после чего coordinator уходил в completion по таймауту settlement, хотя карта не была реально завершена.
+- Риск/урок: timeout на уровне settlement не должен подменять бизнес-ожидание шага; безопаснее бесконечное ожидание с периодической диагностикой и жёстким барьером по `HasFailed`, чтобы не пропускать незавершённые карты.
+- Ссылки: `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.SettlementTimeout.cs`, `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.Maps.cs`, `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.ErrorResolution.cs`, `Final_Test_Hybrid/Docs/RetrySkipGuide.md`
+
 ### 2026-02-11 (StepHistoryGrid: шапка и toolbar разделены для 1:1 отступа с Results/Errors/Timers)
 - Что изменили: в `StepHistoryGrid` убрали объединённый `grid-header`; `last-test-header` вернули в отдельный потоковый блок по паттерну `TestResultsGrid`/`ErrorHistoryGrid`/`ActiveTimersGrid`, а кнопку `Сохранить в Excel` вынесли в отдельную строку `step-history-toolbar` ниже шапки.
 - Почему: требовалось получить одинаковый вертикальный отступ шапки во всех вкладках результатов, а совместная строка «шапка + кнопка» давала отличающуюся геометрию.

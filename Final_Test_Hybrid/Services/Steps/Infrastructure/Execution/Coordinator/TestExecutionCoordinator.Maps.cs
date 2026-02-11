@@ -164,16 +164,25 @@ public partial class TestExecutionCoordinator
 
     private async Task WaitForMapSettlementAsync(CancellationToken ct)
     {
-        var startTimestamp = Stopwatch.GetTimestamp();
+        var waitStartedAt = DateTime.UtcNow;
+        var nextDiagnosticAt = waitStartedAt + SettlementDiagnosticInterval;
         while (!IsMapSettled())
         {
             await Task.Delay(SettlementPollInterval, ct);
-            startTimestamp = ShouldFreezeIdleTimeout()
-                ? Stopwatch.GetTimestamp()
-                : startTimestamp;
-            _ = !ct.IsCancellationRequested && Stopwatch.GetElapsedTime(startTimestamp) > SettlementTimeout
-                ? ThrowSettlementTimeout()
-                : 0;
+
+            if (ct.IsCancellationRequested)
+            {
+                break;
+            }
+
+            var now = DateTime.UtcNow;
+            if (now < nextDiagnosticAt)
+            {
+                continue;
+            }
+
+            LogSettlementWaitSnapshot(now - waitStartedAt);
+            nextDiagnosticAt = now + SettlementDiagnosticInterval;
         }
     }
 
@@ -190,7 +199,8 @@ public partial class TestExecutionCoordinator
         return !StateManager.HasPendingErrors
             && (_errorDrainTask == null || _errorDrainTask.IsCompleted)
             && !_retryState.IsActive
-            && !HasPendingRetries();
+            && !HasPendingRetries()
+            && _executors.All(executor => !executor.HasFailed);
     }
 
     private (int MapIndex, Guid RunId) GetActiveMapSnapshot()
