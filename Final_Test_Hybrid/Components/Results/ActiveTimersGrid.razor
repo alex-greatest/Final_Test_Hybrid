@@ -1,8 +1,20 @@
+@using Final_Test_Hybrid.Models
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing
+@inject BoilerState BoilerState
 @inject ITimerService TimerService
 @implements IAsyncDisposable
 
 <div class="active-timers-wrapper grid-unified-host">
+    @if (!string.IsNullOrEmpty(BoilerState.LastSerialNumber))
+    {
+        <div class="last-test-header">
+            @if (BoilerState.LastTestCompletedAt.HasValue)
+            {
+                <div>Дата/время: @BoilerState.LastTestCompletedAt?.ToString("dd.MM.yyyy HH:mm:ss")</div>
+            }
+            <div>Серийный номер: @BoilerState.LastSerialNumber</div>
+        </div>
+    }
     <RadzenDataGrid Data="@_timers" TItem="TimerDisplayItem" class="grid-unified"
                     KeyProperty="Key"
                     AllowSorting="true"

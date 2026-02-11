@@ -16,6 +16,24 @@
 
 ## Активные записи
 
+### 2026-02-11 (Completion: `Final_result` в верхнем регистре)
+- Что изменили: в `TestCompletionCoordinator.AddCompletionResults` заменили значение `Final_result` с `ok/nok` на `OK/NOK`; `status` для `TestResultsService.Add(...)` оставили прежним (`1` для OK, `0` для NOK).
+- Почему: требовалось сохранить итог теста в `Final_result` в верхнем регистре без изменения поведения UI.
+- Риск/урок: UI и экспорт опираются на поле `Status`, поэтому безопасно менять формат `Value` точечно только для `Final_result`.
+- Ссылки: `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs`
+
+### 2026-02-10 (ActiveTimersGrid: хедер последнего теста как в TestResultsGrid)
+- Что изменили: в `ActiveTimersGrid` добавили верхний блок `last-test-header` с `Серийный номер` и `Дата/время` из `BoilerState` в формате `dd.MM.yyyy HH:mm:ss`, без добавления дублирующих колонок в DataGrid.
+- Почему: требовалось сделать отображение в табе `Таймеры` «один в один» с `TestResultsGrid` для контекста предыдущего теста.
+- Риск/урок: источник данных хедера — `BoilerState`, а не `ITimerService`; синхронизация UI опирается на существующий периодический refresh компонента.
+- Ссылки: `Final_Test_Hybrid/Components/Results/ActiveTimersGrid.razor`, `Final_Test_Hybrid/Components/Results/ActiveTimersGrid.razor.css`, `Final_Test_Hybrid/Components/Results/TestResultsGrid.razor`
+
+### 2026-02-10 (StepHistoryGrid: полная заливка пустой колонки «Результаты»)
+- Что изменили: в `StepHistoryGrid` для колонки `Результаты` добавили fallback `\u00A0` при пустом `data.Result`, а для `.cell-container` усилили растяжение (`min-width: 100%`, `height: 100%`).
+- Почему: при пустом значении в ячейке оставалась незакрашенная область, и цвет статуса визуально обрывался.
+- Риск/урок: для стабильной заливки в Radzen DataGrid нужно фиксировать и шаблон пустого значения, и геометрию контейнера.
+- Ссылки: `Final_Test_Hybrid/Components/Results/StepHistoryGrid.razor`, `Final_Test_Hybrid/Components/Results/StepHistoryGrid.razor.css`
+
 ### 2026-02-10 (ErrorDefinitions: унификация ActivatesResetButton для всех ошибок)
 - Что изменили: в `ErrorDefinitions*.cs` добавили `ActivatesResetButton: true` для 122 определений, где флаг отсутствовал; итоговый контракт — `190/190` ошибок имеют `ActivatesResetButton=true`.
 - Почему: требовалось, чтобы состояние кнопки `Сброс ошибки` активировалось единообразно для любых активных ошибок.

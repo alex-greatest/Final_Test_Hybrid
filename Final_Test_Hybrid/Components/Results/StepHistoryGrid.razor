@@ -63,7 +63,7 @@
             <RadzenDataGridColumn TItem="TestSequenseData" Property="Result" Title="Результаты">
                 <Template Context="data">
                     <div class="cell-container @GetCellClass(data)">
-                        <span class="cell-text" title="@data.Result">@data.Result</span>
+                        <span class="cell-text" title="@data.Result">@(string.IsNullOrEmpty(data.Result) ? "\u00A0" : data.Result)</span>
                     </div>
                 </Template>
             </RadzenDataGridColumn>
