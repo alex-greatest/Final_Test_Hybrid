@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Services.OpcUa;
+using Final_Test_Hybrid.Services.OpcUa.Auto;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.OpcUa.Heartbeat;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
@@ -21,6 +22,7 @@ public static class OpcUaServiceExtensions
         services.AddSingleton<OpcUaConnectionService>();
         services.AddSingleton<OpcUaTagService>();
         services.AddSingleton<OpcUaBrowseService>();
+        services.AddSingleton<PlcAutoWriterService>();
         services.AddSingleton<PausableOpcUaTagService>();
         services.AddSingleton<TagWaiter>();
         services.AddSingleton<PausableTagWaiter>();

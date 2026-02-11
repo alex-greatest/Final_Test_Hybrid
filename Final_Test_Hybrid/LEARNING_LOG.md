@@ -16,6 +16,12 @@
 
 ## Активные записи
 
+### 2026-02-11 (OPC: автозапись `DB_Station.Test.Auto=true` на connect/reconnect)
+- Что изменили: добавили тег `BaseTags.TestAuto` и новый `PlcAutoWriterService`, который слушает `OpcUaConnectionState.ConnectionStateChanged` и при каждом `connected=true` делает одноразовую запись `true` в `DB_Station.Test.Auto` с bounded retry (до 3 попыток, 300 мс, только transient-ошибки); сервис подключили в DI и инициализацию `Form1`.
+- Почему: требовалось гарантировать установку автомата PLC сразу после подключения и после каждого reconnect.
+- Риск/урок: запись `Auto=true` должна быть изолирована от reconnect-пайплайна и не ронять runtime при ошибках записи; безопасный режим — bounded retry + логирование + отсутствие throw наружу.
+- Ссылки: `Final_Test_Hybrid/Models/Plc/Tags/BaseTags.cs`, `Final_Test_Hybrid/Services/OpcUa/Auto/PlcAutoWriterService.cs`, `Final_Test_Hybrid/Services/DependencyInjection/OpcUaServiceExtensions.cs`, `Final_Test_Hybrid/Form1.cs`
+
 ### 2026-02-11 (Archive: второй шаг увеличения status badge до 1.125rem)
 - Что изменили: увеличили `font-size` класса `archive-status-badge` с `1rem` до `1.125rem` в `ArchiveGrid.razor.css` и `ArchiveResultsGrid.razor.css`.
 - Почему: после первой правки требовалось сделать текст в badge ещё заметнее в архивных таблицах.

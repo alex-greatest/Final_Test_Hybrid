@@ -7,6 +7,7 @@ using Final_Test_Hybrid.Services.Diagnostic.Services;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
+using Final_Test_Hybrid.Services.OpcUa.Auto;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.OpcUa.Heartbeat;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
@@ -284,6 +285,9 @@ public partial class Form1 : Form
         _opcUaService = serviceProvider.GetRequiredService<OpcUaConnectionService>();
         _opcUaService.ValidateSettings();
         await _opcUaService.ConnectAsync();
+
+        // Автозапись DB_Station.Test.Auto=true при connect/reconnect
+        _ = serviceProvider.GetRequiredService<PlcAutoWriterService>();
 
         // HMI Heartbeat — автоматически запустится после подключения
         _ = serviceProvider.GetRequiredService<HmiHeartbeatService>();
