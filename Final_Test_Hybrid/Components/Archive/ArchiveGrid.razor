@@ -64,7 +64,8 @@
 
             <RadzenDataGridColumn TItem="Operation" Property="Status" Title="Статус" Width="120px">
                 <Template Context="item">
-                    <RadzenBadge Style="padding: 5px" BadgeStyle="@GetStatusBadgeStyle(item.Status)"
+                    <RadzenBadge class="archive-status-badge"
+                                 Style="padding: 5px" BadgeStyle="@GetStatusBadgeStyle(item.Status)"
                                  Text="@GetStatusText(item.Status)" />
                 </Template>
             </RadzenDataGridColumn>

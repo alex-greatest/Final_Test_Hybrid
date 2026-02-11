@@ -16,7 +16,8 @@
             <Template Context="item">
                 @if (item.Status.HasValue)
                 {
-                    <RadzenBadge Style="padding: 5px" BadgeStyle="@(item.Status == 1 ? BadgeStyle.Success : BadgeStyle.Danger)"
+                    <RadzenBadge class="archive-status-badge"
+                                 Style="padding: 5px" BadgeStyle="@(item.Status == 1 ? BadgeStyle.Success : BadgeStyle.Danger)"
                                  Text="@(item.Status == 1 ? "OK" : "NOK")" />
                 }
                 else

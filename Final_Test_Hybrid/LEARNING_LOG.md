@@ -16,6 +16,18 @@
 
 ## Активные записи
 
+### 2026-02-11 (Archive: второй шаг увеличения status badge до 1.125rem)
+- Что изменили: увеличили `font-size` класса `archive-status-badge` с `1rem` до `1.125rem` в `ArchiveGrid.razor.css` и `ArchiveResultsGrid.razor.css`.
+- Почему: после первой правки требовалось сделать текст в badge ещё заметнее в архивных таблицах.
+- Риск/урок: постепенное увеличение (step-by-step) безопаснее для плотных колонок `Статус` (100-120px), чем резкий переход на крупный размер.
+- Ссылки: `Final_Test_Hybrid/Components/Archive/ArchiveGrid.razor.css`, `Final_Test_Hybrid/Components/Archive/ArchiveResultsGrid.razor.css`
+
+### 2026-02-11 (Archive: увеличен текст status badge в архивных гридах)
+- Что изменили: для статусных `RadzenBadge` в `ArchiveGrid` и `ArchiveResultsGrid` добавили opt-in класс `archive-status-badge`; в локальных `.razor.css` для него задали `font-size: 1rem` и `line-height: 1.2`.
+- Почему: требовалось сделать текст внутри badge крупнее в архивных таблицах без влияния на остальные экраны.
+- Риск/урок: безопаснее масштабировать badge через локальный opt-in класс в css-isolation, чем через глобальный селектор `::deep .rz-badge`.
+- Ссылки: `Final_Test_Hybrid/Components/Archive/ArchiveGrid.razor`, `Final_Test_Hybrid/Components/Archive/ArchiveGrid.razor.css`, `Final_Test_Hybrid/Components/Archive/ArchiveResultsGrid.razor`, `Final_Test_Hybrid/Components/Archive/ArchiveResultsGrid.razor.css`
+
 ### 2026-02-11 (Completion: `Final_result` в верхнем регистре)
 - Что изменили: в `TestCompletionCoordinator.AddCompletionResults` заменили значение `Final_result` с `ok/nok` на `OK/NOK`; `status` для `TestResultsService.Add(...)` оставили прежним (`1` для OK, `0` для NOK).
 - Почему: требовалось сохранить итог теста в `Final_result` в верхнем регистре без изменения поведения UI.

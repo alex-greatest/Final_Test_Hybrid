@@ -63,3 +63,8 @@
     font-size: 20px;
     padding: 12px 24px;
 }
+
+::deep .archive-status-badge {
+    font-size: 1.125rem;
+    line-height: 1.2;
+}
