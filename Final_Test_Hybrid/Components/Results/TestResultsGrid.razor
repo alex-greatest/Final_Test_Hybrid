@@ -69,9 +69,16 @@
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="TestResultItem" Property="Status" Title="Статус" Width="80px">
                     <Template Context="item">
-                        <RadzenBadge BadgeStyle="@(item.Status == 1 ? BadgeStyle.Success : BadgeStyle.Danger)"
-                                     Text="@(item.Status == 1 ? "OK" : "NOK")"
-                                     Style="padding: 10px;" />
+                        @if (TryGetStatusView(item.Status, out var badgeStyle, out var statusText))
+                        {
+                            <RadzenBadge BadgeStyle="@badgeStyle"
+                                         Text="@statusText"
+                                         Style="padding: 10px;" />
+                        }
+                        else
+                        {
+                            <span>-</span>
+                        }
                     </Template>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="TestResultItem" Property="Unit" Title="Ед. изм." Width="100px" />
@@ -125,5 +132,24 @@
         _disposed = true;
         TestResultsService.OnChanged -= OnResultsChanged;
         BoilerState.OnChanged -= OnBoilerStateChanged;
+    }
+
+    private static bool TryGetStatusView(int status, out BadgeStyle badgeStyle, out string statusText)
+    {
+        switch (status)
+        {
+            case 1:
+                badgeStyle = BadgeStyle.Success;
+                statusText = "OK";
+                return true;
+            case 2:
+                badgeStyle = BadgeStyle.Danger;
+                statusText = "NOK";
+                return true;
+            default:
+                badgeStyle = BadgeStyle.Success;
+                statusText = string.Empty;
+                return false;
+        }
     }
 }

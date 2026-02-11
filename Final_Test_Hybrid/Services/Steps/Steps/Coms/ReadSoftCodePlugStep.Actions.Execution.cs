@@ -81,7 +81,7 @@ public partial class ReadSoftCodePlugStep
             value: actualValue ?? "",
             min: "",
             max: "",
-            status: isMatch ? 1 : 0,
+            status: isMatch ? 1 : 2,
             isRanged: false,
             unit: action.Unit);
 
@@ -125,7 +125,7 @@ public partial class ReadSoftCodePlugStep
             value: actualValue.ToString(),
             min: minValue.ToString(),
             max: maxValue.ToString(),
-            status: isMatch ? 1 : 0,
+            status: isMatch ? 1 : 2,
             isRanged: true,
             unit: action.Unit);
 
@@ -169,7 +169,7 @@ public partial class ReadSoftCodePlugStep
             value: actualValue.ToString(action.ResultFormat),
             min: minValue.ToString(action.ResultFormat),
             max: maxValue.ToString(action.ResultFormat),
-            status: isMatch ? 1 : 0,
+            status: isMatch ? 1 : 2,
             isRanged: true,
             unit: action.Unit);
 

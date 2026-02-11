@@ -14,11 +14,11 @@
         }
         <RadzenDataGridColumn TItem="ArchiveResultItem" Property="Status" Title="Статус" Width="100px">
             <Template Context="item">
-                @if (item.Status.HasValue)
+                @if (TryGetStatusView(item.Status, out var badgeStyle, out var statusText))
                 {
                     <RadzenBadge class="archive-status-badge"
-                                 Style="padding: 5px" BadgeStyle="@(item.Status == 1 ? BadgeStyle.Success : BadgeStyle.Danger)"
-                                 Text="@(item.Status == 1 ? "OK" : "NOK")" />
+                                 Style="padding: 5px" BadgeStyle="@badgeStyle"
+                                 Text="@statusText" />
                 }
                 else
                 {
@@ -37,4 +37,23 @@
 
     [Parameter]
     public bool ShowRange { get; set; } = true;
+
+    private static bool TryGetStatusView(int? status, out BadgeStyle badgeStyle, out string statusText)
+    {
+        switch (status)
+        {
+            case 1:
+                badgeStyle = BadgeStyle.Success;
+                statusText = "OK";
+                return true;
+            case 2:
+                badgeStyle = BadgeStyle.Danger;
+                statusText = "NOK";
+                return true;
+            default:
+                badgeStyle = BadgeStyle.Success;
+                statusText = string.Empty;
+                return false;
+        }
+    }
 }

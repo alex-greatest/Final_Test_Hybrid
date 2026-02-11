@@ -9,26 +9,21 @@
 @implements IAsyncDisposable
 
 <div class="step-history-grid grid-unified-host">
-    <div class="grid-header">
-        @if (!string.IsNullOrEmpty(BoilerState.LastSerialNumber))
-        {
-            <div class="last-test-header">
-                @if (BoilerState.LastTestCompletedAt.HasValue)
-                {
-                    <div>Дата/время: @BoilerState.LastTestCompletedAt?.ToString("dd.MM.yyyy HH:mm:ss")</div>
-                }
-                <div>Серийный номер: @BoilerState.LastSerialNumber</div>
-            </div>
-        }
-        else
-        {
-            <div></div>
-        }
-        <div class="toolbar-buttons">
-            <RadzenButton Icon="file_download" Text="Сохранить в Excel"
-                          Click="@ExportToExcel"
-                          Disabled="@(!_data.Any())" />
+    @if (!string.IsNullOrEmpty(BoilerState.LastSerialNumber))
+    {
+        <div class="last-test-header">
+            @if (BoilerState.LastTestCompletedAt.HasValue)
+            {
+                <div>Дата/время: @BoilerState.LastTestCompletedAt?.ToString("dd.MM.yyyy HH:mm:ss")</div>
+            }
+            <div>Серийный номер: @BoilerState.LastSerialNumber</div>
         </div>
+    }
+
+    <div class="step-history-toolbar">
+        <RadzenButton Icon="file_download" Text="Сохранить в Excel"
+                      Click="@ExportToExcel"
+                      Disabled="@(!_data.Any())" />
     </div>
 
     <RadzenDataGrid TItem="TestSequenseData"

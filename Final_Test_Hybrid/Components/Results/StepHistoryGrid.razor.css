@@ -5,33 +5,24 @@
     height: 100%;
 }
 
-.step-history-grid .grid-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-    position: relative;
-}
-
-.step-history-grid .last-test-header {
+.last-test-header {
     text-align: center;
     color: black;
     font-size: 1.5rem;
     font-weight: 700;
+    margin-bottom: 0.5rem;
     display: flex;
     flex-direction: column;
     align-items: center;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
 }
 
-.step-history-grid .toolbar-buttons {
+.step-history-toolbar {
     display: flex;
-    gap: 8px;
+    justify-content: flex-end;
+    margin-bottom: 0.5rem;
 }
 
-.step-history-grid .toolbar-buttons ::deep .rz-button {
+.step-history-toolbar ::deep .rz-button {
     font-size: 20px;
     padding: 12px 24px;
 }

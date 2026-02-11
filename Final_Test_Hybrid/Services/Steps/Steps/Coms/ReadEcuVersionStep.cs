@@ -83,7 +83,7 @@ public class ReadEcuVersionStep(
             value: actualVersion,
             min: versionMinStr,
             max: versionMaxStr,
-            status: isInRange ? 1 : 0,
+            status: isInRange ? 1 : 2,
             isRanged: true,
             unit: "");
 

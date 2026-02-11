@@ -16,6 +16,30 @@
 
 ## Активные записи
 
+### 2026-02-11 (StepHistoryGrid: шапка и toolbar разделены для 1:1 отступа с Results/Errors/Timers)
+- Что изменили: в `StepHistoryGrid` убрали объединённый `grid-header`; `last-test-header` вернули в отдельный потоковый блок по паттерну `TestResultsGrid`/`ErrorHistoryGrid`/`ActiveTimersGrid`, а кнопку `Сохранить в Excel` вынесли в отдельную строку `step-history-toolbar` ниже шапки.
+- Почему: требовалось получить одинаковый вертикальный отступ шапки во всех вкладках результатов, а совместная строка «шапка + кнопка» давала отличающуюся геометрию.
+- Риск/урок: для визуального паритета между вкладками важна не только типографика, но и идентичная DOM-структура (шапка отдельно от action-toolbar).
+- Ссылки: `Final_Test_Hybrid/Components/Results/StepHistoryGrid.razor`, `Final_Test_Hybrid/Components/Results/StepHistoryGrid.razor.css`
+
+### 2026-02-11 (StepHistoryGrid: шапка `last-test-header` переведена в flow-layout)
+- Что изменили: в `StepHistoryGrid` убрали overlay-центрирование шапки (`position:absolute`) и перевели `grid-header` на сетку `1fr auto 1fr` с отдельным `header-spacer`; `last-test-header` оставили в normal flow и добавили вертикальную геометрию (`line-height`, `padding-block`).
+- Почему: в табе истории шагов строки `Дата/время` и `Серийный номер` визуально «слипались» по вертикали и не имели стабильных верхнего/нижнего отступов.
+- Риск/урок: absolute-позиционирование шапки в операторских DataGrid-панелях легко ломает вертикальные отступы; для предсказуемой геометрии безопаснее держать шапку в normal flow.
+- Ссылки: `Final_Test_Hybrid/Components/Results/StepHistoryGrid.razor`, `Final_Test_Hybrid/Components/Results/StepHistoryGrid.razor.css`
+
+### 2026-02-11 (Results: унификация `NOK=2` + явная трактовка статуса в UI/экспорте)
+- Что изменили: в `Coms`-шагах и completion-flow заменили остатки `NOK=0` на `NOK=2` (`Final_result` теперь `1/2`), сохранили исключение для `Testing_date` (`status=1` всегда). В `TestResultsGrid`, `ArchiveResultsGrid`, `ArchiveExcelExportService` ввели явную схему `1=OK`, `2=NOK`, иначе `-`.
+- Почему: требовался единый контракт статуса результатов без смешения `0/2` и без неявной интерпретации «всё, что не 1, это NOK».
+- Риск/урок: при отказе от legacy `0` исторические записи со старым кодом могут отображаться как `-`; UI и экспорт должны быть синхронизированы с текущим контрактом `1/2`.
+- Ссылки: `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadEcuVersionStep.cs`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadDhwPotiSetpointStep.cs`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadChPotiSetpointStep.cs`, `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Execution.cs`, `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs`, `Final_Test_Hybrid/Components/Results/TestResultsGrid.razor`, `Final_Test_Hybrid/Components/Archive/ArchiveResultsGrid.razor`, `Final_Test_Hybrid/Services/Archive/ArchiveExcelExportService.cs`
+
+### 2026-02-11 (Completion: `Testing_date` всегда сохраняется с `status=1`)
+- Что изменили: в `TestCompletionCoordinator.AddCompletionResults` для `Testing_date` зафиксировали `status=1` независимо от итогового результата теста; `Final_result` оставили без изменений.
+- Почему: требовалось, чтобы временные информационные параметры (`Testing_date` и временные метрики) всегда имели статус OK.
+- Риск/урок: для информационных полей нельзя наследовать итоговый статус теста, иначе в выгрузке они ошибочно маркируются как NOK.
+- Ссылки: `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs`, `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.MainLoop.cs`
+
 ### 2026-02-11 (SoftReset: interrupt reason без admin-auth)
 - Что изменили: в soft-reset interrupt-flow разделили `useMes` (маршрут сохранения) и `requireAdminAuth` (UI-авторизация), добавили временный флаг `bypassAdminAuthInSoftResetInterrupt=true` в `PreExecutionCoordinator`, чтобы при `UseInterruptReason=true` сразу открывался диалог причины без окна авторизации; обновили сигнатуры `ScanDialogCoordinator`/`BoilerInfo`/`InterruptFlowExecutor`. Дополнительно для MES-сохранения причины прерывания переключили endpoint на `POST /api/operation/interrupt`.
 - Почему: требовалось убрать лишний шаг admin-авторизации при soft reset и оставить быстрый обратимый откат.

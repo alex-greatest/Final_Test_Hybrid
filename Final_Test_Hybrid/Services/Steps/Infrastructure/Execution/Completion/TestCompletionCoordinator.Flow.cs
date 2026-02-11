@@ -130,7 +130,7 @@ public partial class TestCompletionCoordinator
 
     private void AddCompletionResults(int testResult)
     {
-        var status = testResult == 1 ? 1 : 0;
+        var status = testResult == 1 ? 1 : 2;
         var finalResultValue = testResult == 1 ? "OK" : "NOK";
         var testingDateValue = DateTime.Now.ToString(TestingDateFormat, CultureInfo.InvariantCulture);
 
@@ -138,7 +138,7 @@ public partial class TestCompletionCoordinator
         deps.TestResultsService.Remove(TestingDateName);
 
         deps.TestResultsService.Add(FinalResultName, finalResultValue, "", "", status, false, "");
-        deps.TestResultsService.Add(TestingDateName, testingDateValue, "", "", status, false, "");
+        deps.TestResultsService.Add(TestingDateName, testingDateValue, "", "", 1, false, "");
     }
 
     private async Task<bool> ShowSaveErrorDialogAsync(string? errorMessage)

@@ -95,7 +95,7 @@ public class ArchiveExcelExportService(IConfiguration configuration)
                     statusCell.Value = "OK";
                     statusCell.Style.Font.Color.SetColor(Color.Green);
                     break;
-                case 0:
+                case 2:
                     statusCell.Value = "NOK";
                     statusCell.Style.Font.Color.SetColor(Color.Red);
                     break;

@@ -63,7 +63,7 @@ public class ReadChPotiSetpointStep(
             value: value.ToString(),
             min: MinTemp.ToString(),
             max: MaxTemp.ToString(),
-            status: isInRange ? 1 : 0,
+            status: isInRange ? 1 : 2,
             isRanged: true,
             unit: "°C");
 
