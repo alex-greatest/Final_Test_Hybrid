@@ -13,13 +13,13 @@ public class InterruptFlowExecutor
     /// </summary>
     /// <param name="dialogService">Сервис диалогов.</param>
     /// <param name="saveCallback">Callback для сохранения (admin, reason, ct).</param>
-    /// <param name="useMes">Режим MES (true = с авторизацией админа).</param>
-    /// <param name="operatorUsername">Имя оператора для режима БД.</param>
+    /// <param name="requireAdminAuth">Нужно ли показывать авторизацию администратора перед вводом причины.</param>
+    /// <param name="operatorUsername">Имя оператора для flow без авторизации.</param>
     /// <param name="ct">Токен отмены.</param>
     public async Task<InterruptFlowResult> ExecuteAsync(
         InterruptDialogService dialogService,
         Func<string, string, CancellationToken, Task<SaveResult>> saveCallback,
-        bool useMes,
+        bool requireAdminAuth,
         string operatorUsername,
         CancellationToken ct)
     {
@@ -28,13 +28,13 @@ public class InterruptFlowExecutor
             return InterruptFlowResult.Cancelled();
         }
         using var registration = ct.Register(dialogService.CloseDialog);
-        return useMes
+        return requireAdminAuth
             ? await ExecuteFullFlowAsync(dialogService, saveCallback, ct)
             : await ExecuteSimpleFlowAsync(dialogService, saveCallback, operatorUsername, ct);
     }
 
     /// <summary>
-    /// Полный flow (MES): авторизация + причина.
+    /// Полный flow: авторизация администратора + причина.
     /// </summary>
     private async Task<InterruptFlowResult> ExecuteFullFlowAsync(
         InterruptDialogService dialogService,
@@ -46,7 +46,7 @@ public class InterruptFlowExecutor
     }
 
     /// <summary>
-    /// Упрощённый flow (БД): только причина, используем имя оператора.
+    /// Упрощённый flow: только причина, используем имя оператора.
     /// </summary>
     private Task<InterruptFlowResult> ExecuteSimpleFlowAsync(
         InterruptDialogService dialogService,

@@ -23,7 +23,7 @@ public class ScanDialogCoordinator
     public event Func<string, Func<string, string, Task<ReworkSubmitResult>>, Task<ReworkFlowResult>>? OnReworkDialogRequested;
     public event Func<string, string, string, Task>? OnBlockErrorDialogRequested;
     public event Action? OnBlockErrorDialogCloseRequested;
-    public event Func<string, Func<string, string, CancellationToken, Task<SaveResult>>, bool, string, CancellationToken, Task<InterruptFlowResult>>? OnInterruptReasonDialogRequested;
+    public event Func<string, Func<string, string, CancellationToken, Task<SaveResult>>, bool, bool, string, CancellationToken, Task<InterruptFlowResult>>? OnInterruptReasonDialogRequested;
 
     public ScanDialogCoordinator(
         ScanErrorHandler errorHandler,
@@ -60,6 +60,7 @@ public class ScanDialogCoordinator
         string serialNumber,
         Func<string, string, CancellationToken, Task<SaveResult>> onSave,
         bool useMes,
+        bool requireAdminAuth,
         string operatorUsername,
         CancellationToken ct)
     {
@@ -67,7 +68,7 @@ public class ScanDialogCoordinator
         {
             return InterruptFlowResult.Cancelled();
         }
-        return await OnInterruptReasonDialogRequested(serialNumber, onSave, useMes, operatorUsername, ct);
+        return await OnInterruptReasonDialogRequested(serialNumber, onSave, useMes, requireAdminAuth, operatorUsername, ct);
     }
 
     public async Task HandlePreExecutionErrorAsync(PreExecutionResult result)

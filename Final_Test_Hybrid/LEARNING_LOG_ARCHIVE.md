@@ -583,3 +583,80 @@
 - Риск/урок: любые «удобные» preset в инженерном UI быстро становятся источником скрытых side effect без жёсткого whitelist.
 - Ссылки: `Final_Test_Hybrid/Components/Overview/ConnectionTestPanel.razor`, `Final_Test_Hybrid/Services/Diagnostic/Services/BoilerLockRuntimeService.cs`
 
+
+---
+
+## 2026-02-11 (перенос из LEARNING_LOG.md)
+
+### 2026-02-09 (Overview: фиксация роста шрифта ячеек + anti-clipping заголовков)
+- Что изменили: в профиле `overview-grid-io` добавили `thead th` и внутренние контейнеры заголовков по паттерну `grid-unified` (`overflow: visible`, `height: auto`, `text-overflow: clip`), а также усилили применение шрифта к содержимому через `.rz-grid-table td, td *` на `19px`.
+- Почему: после увеличения шрифта заголовки начали обрезаться по высоте, а текст ячеек в templated-контенте визуально не увеличивался.
+- Риск/урок: для Radzen DataGrid одного `.rz-cell-data` недостаточно; для стабильного результата нужны и `thead`-контейнеры, и покрытие содержимого `td`.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/Components/Overview/AiCallCheck.razor`, `Final_Test_Hybrid/Components/Overview/RtdCalCheck.razor`, `Final_Test_Hybrid/Components/Overview/PidRegulatorCheck.razor`
+
+### 2026-02-09 (Overview: +3px к заголовкам и содержимому трёх calibration-гридов)
+- Что изменили: для профиля `overview-grid-io` подняли размер шрифта с `16px` до `19px` для заголовков колонок, текста ячеек и элементов редактирования.
+- Почему: требовалось увеличить читаемость трёх Overview-таблиц (`AiCallCheck`, `RtdCalCheck`, `PidRegulatorCheck`) ровно на `+3px`.
+- Риск/урок: увеличение шрифта в DataGrid нужно делать одновременно для display и edit-состояний, иначе появляется визуальный «скачок» при редактировании.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/Components/Overview/AiCallCheck.razor`, `Final_Test_Hybrid/Components/Overview/RtdCalCheck.razor`, `Final_Test_Hybrid/Components/Overview/PidRegulatorCheck.razor`
+
+### 2026-02-09 (Overview: единый источник типографики через overview-grid-io)
+- Что изменили: убрали локальные `::deep`-дубли из `AiCallCheck.razor.css`, `RtdCalCheck.razor.css`, `PidRegulatorCheck.razor.css`; оставили типографику только через класс `overview-grid-io` в `app.css`.
+- Почему: требовалось стабильно выровнять стиль таблиц Overview относительно `IoEditorDialog` без расхождения между глобальными и scoped-правилами.
+- Риск/урок: когда один визуальный профиль задан в двух слоях (shared + component-scoped), результат становится недетерминированным; нужен single source of truth.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/Components/Overview/AiCallCheck.razor.css`, `Final_Test_Hybrid/Components/Overview/RtdCalCheck.razor.css`, `Final_Test_Hybrid/Components/Overview/PidRegulatorCheck.razor.css`
+
+### 2026-02-09 (UI: заголовки unified 1.5rem + Overview в стиле IoEditorDialog)
+- Что изменили: увеличили размер заголовков колонок unified-гридов до `1.5rem` (вес `700`) и добавили shared-класс `overview-grid-io` для таблиц `AiCallCheck`, `RtdCalCheck`, `PidRegulatorCheck` с типографикой `16px` для заголовков/ячеек/редактирования как в `IoEditorDialog`.
+- Почему: требовалось сделать заголовки unified заметнее и выровнять визуальный профиль таблиц во вкладке Overview под эталонный стиль инженерного редактора.
+- Риск/урок: для повторяемости UI лучше задавать профиль таблиц через явный class opt-in, а не через разрозненные локальные `::deep` правила.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/Components/Overview/AiCallCheck.razor`, `Final_Test_Hybrid/Components/Overview/RtdCalCheck.razor`, `Final_Test_Hybrid/Components/Overview/PidRegulatorCheck.razor`
+
+### 2026-02-09 (UI: увеличен и утяжелён текст заголовков колонок)
+- Что изменили: для unified-гридов подняли типографику заголовков колонок до `1.3rem` и `700`, с явной фиксацией на селекторах `thead th`.
+- Почему: требовалось сделать именно текст заголовков колонок крупнее и жирнее, без изменения ячеек/вкладок.
+- Риск/урок: для стабильного визуального результата заголовки DataGrid нужно задавать не только общим селектором, но и на уровне `thead th`.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/LEARNING_LOG.md`
+
+### 2026-02-09 (UI: ячейки unified возвращены на 19px)
+- Что изменили: в `grid-unified` вернули размер текста данных с `24px` на `19px` для `.rz-cell-data`, `.rz-grid-table td .rz-cell-data` и `.cell-text`; профиль заголовков оставили без изменений.
+- Почему: требовалось сохранить рабочий размер/жирность заголовков и уменьшить только текст в ячейках.
+- Риск/урок: при массовой стилизации таблиц заголовки и данные должны настраиваться раздельно, иначе сложно удерживать ожидаемый визуальный баланс.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/Components/Engineer/StandDatabase/Recipe/RecipesGrid.razor`
+
+### 2026-02-09 (UI: возврат размера заголовков unified при сохранении ячеек)
+- Что изменили: в `grid-unified` вернули типографику заголовков к прежнему виду (`1.1rem`, `600`, `uppercase`), не меняя текущий размер текста в ячейках.
+- Почему: после фикса приоритета scoped CSS заголовки визуально стали больше ожидаемого.
+- Риск/урок: заголовки и ячейки в shared-стиле нужно настраивать независимо; иначе правка одного слоя затрагивает другой.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/LEARNING_LOG.md`
+
+### 2026-02-09 (UI: root-cause scoped override `[b-*]` в MyComponent)
+- Что изменили: в `MyComponent.razor.css` ограничили широкие `::deep .rz-grid-table*` и `::deep .rz-data-grid*` селекторы контейнером `.tab-content-wrapper`; в `grid-unified` добавили усиленный селектор `.rz-grid-table td .rz-cell-data` с `24px`.
+- Почему: scoped-правило вида `[b-*] .rz-grid-table td .rz-cell-data` перехватывало шрифт на вкладках и отменяло unified-увеличение.
+- Риск/урок: для shared UI нельзя оставлять глобальные deep-правила в корневом компоненте; локальные legacy-правки должны быть строго контейнеризованы.
+- Ссылки: `Final_Test_Hybrid/MyComponent.razor.css`, `Final_Test_Hybrid/wwwroot/css/app.css`
+
+### 2026-02-09 (UI: +5px к шрифту ячеек unified-гридов)
+- Что изменили: в `grid-unified` увеличили размер шрифта содержимого ячеек с `19px` до `24px` (`.rz-cell-data`, `.cell-text`).
+- Почему: требовалось визуально укрупнить текст в таблицах, приведённых к единому стилю.
+- Риск/урок: изменение внесено только в unified-контур; `main-grid-legacy` (`TestSequenseGrid`) оставлен без изменений как отдельное исключение.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/Components/Main/TestSequenseGrid.razor.css`
+
+### 2026-02-09 (UI таблиц: единый стиль и границы применения)
+- Что изменили: ввели единый стиль DataGrid через `grid-unified-host`/`grid-unified`; убрали конфликтующие parent/deep-override в табах, где они ломали единый вид.
+- Почему: при локальных `::deep .rz-data-grid*` единый стиль становился недетерминированным и расходился между вкладками.
+- Риск/урок: shared-стиль работает только при явном opt-in и отсутствии широких родительских переопределений.
+- Ссылки: `Final_Test_Hybrid/wwwroot/css/app.css`, `Final_Test_Hybrid/Components/Results/TestResultsTab.razor.css`, `Final_Test_Hybrid/Components/Errors/ErrorsTab.razor.css`
+
+### 2026-02-09 (Главный экран: legacy-вид TestSequenseGrid)
+- Что изменили: для `TestSequenseGrid` сделали точечный opt-out от `grid-unified` через `main-grid-legacy`; вернули компактную типографику и плотность строк главного экрана.
+- Почему: главный экран должен сохранить исторический UX, несмотря на общую унификацию остальных гридов.
+- Риск/урок: при массовой унификации нужны явно зафиксированные исключения, иначе глобальные `!important` ломают целевой локальный дизайн.
+- Ссылки: `Final_Test_Hybrid/Components/Main/TestSequenseGrid.razor`, `Final_Test_Hybrid/Components/Main/TestSequenseGrid.razor.css`
+
+### 2026-02-09 (LogViewer: внутренние вкладки и перенос времени шагов)
+- Что изменили: в `LogViewerTab` добавили вкладки `Лог-файл` и `Время шагов`; `StepTimingsGrid` перенесли из `TestResultsTab` в `Лог`.
+- Почему: нужен единый экран для текстового лога и таймингов шагов без изменения runtime-источников данных.
+- Риск/урок: при переносе вкладок нельзя менять локальные стили содержимого; правки должны ограничиваться shell/layout контейнера.
+- Ссылки: `Final_Test_Hybrid/Components/Logs/LogViewerTab.razor`, `Final_Test_Hybrid/Components/Logs/LogViewerTab.razor.css`, `Final_Test_Hybrid/Components/Results/TestResultsTab.razor`
+

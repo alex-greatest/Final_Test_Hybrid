@@ -138,6 +138,18 @@ RunSingleCycleAsync:
 | `ExecutePreExecutionPipelineAsync` | `Cancel()` → catch → `ClearStateOnReset()` |
 | `WaitForTestCompletionAsync` | `Stop()` → `OnSequenceCompleted` → `HandlePostTestCompletion` → `ClearStateOnReset()` |
 
+## Диалог причины прерывания при SoftReset
+
+Если в момент soft reset был активный тест и включён `UseInterruptReason`, после `AskEnd` открывается диалог `Причина прерывания`.
+
+- Текущий UX: **без** окна `Авторизация администратора`, сразу ввод причины.
+- Маршрут сохранения не меняется:
+  - `UseMes=true` → MES;
+  - `UseMes=false` → локальная БД.
+- Обратимость зафиксирована в коде флагом `bypassAdminAuthInSoftResetInterrupt`:
+  `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.Subscriptions.cs`.
+- Rework-flow (`ReworkDialogService`) не затрагивается и по-прежнему использует отдельную admin-авторизацию.
+
 ## Разница ForceStop vs Reset
 
 | Аспект | ForceStop() | Reset() |

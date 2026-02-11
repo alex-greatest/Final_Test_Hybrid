@@ -184,6 +184,11 @@ public partial class PreExecutionCoordinator
         try
         {
             var useMes = infra.AppSettings.UseMes;
+            // Временный компромисс: для soft reset сразу показываем ввод причины без окна
+            // авторизации администратора. Чтобы вернуть старое поведение (Auth -> Reason),
+            // достаточно поставить false.
+            const bool bypassAdminAuthInSoftResetInterrupt = true;
+            var requireAdminAuth = useMes && !bypassAdminAuthInSoftResetInterrupt;
             var operatorUsername = state.OperatorState.Username ?? "Unknown";
 
             var result = await coordinators.DialogCoordinator.ShowInterruptReasonDialogAsync(
@@ -191,6 +196,7 @@ public partial class PreExecutionCoordinator
                 (admin, reason, token) => infra.InterruptReasonRouter.SaveAsync(
                     serialNumber, admin, reason, useMes, token),
                 useMes,
+                requireAdminAuth,
                 operatorUsername,
                 ct);
 

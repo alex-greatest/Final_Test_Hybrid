@@ -1,6 +1,5 @@
 @using Final_Test_Hybrid.Components.Errors
 @using Final_Test_Hybrid.Components.Main.Modals
-@using Final_Test_Hybrid.Components.Main.Modals.Rework
 @using Final_Test_Hybrid.Models.Steps
 @using Final_Test_Hybrid.Services.Common.Settings
 @using Final_Test_Hybrid.Services.Main.PlcReset
@@ -340,6 +339,7 @@
         string serialNumber,
         Func<string, string, CancellationToken, Task<SaveResult>> onSave,
         bool useMes,
+        bool requireAdminAuth,
         string operatorUsername,
         CancellationToken ct)
     {
@@ -347,6 +347,7 @@
         {
             return InterruptFlowResult.Cancelled();
         }
+        _ = useMes;
 
         var tcs = new TaskCompletionSource<InterruptFlowResult>();
 
@@ -369,7 +370,7 @@
 
                 var dialogService = new InterruptDialogService(DialogService, UiSafeClose);
                 var executor = new InterruptFlowExecutor();
-                var result = await executor.ExecuteAsync(dialogService, onSave, useMes, operatorUsername, ct);
+                var result = await executor.ExecuteAsync(dialogService, onSave, requireAdminAuth, operatorUsername, ct);
                 tcs.TrySetResult(result);
             });
         }

@@ -50,7 +50,7 @@ public class InterruptedOperationService(
             AdminInterrupted: adminUsername);
 
         var response = await httpClient.PostWithResponseAsync(
-            "/api/station/interrupted/operation/request", request, ct);
+            "/api/operation/interrupt", request, ct);
 
         if (response.IsSuccessStatusCode)
         {
