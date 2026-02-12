@@ -64,7 +64,18 @@
                                             Placeholder="Выберите шаг..."
                                             AllowClear="true"
                                             Style="width: 100%"
-                                            Disabled="@(!_isFileActive)" />
+                                            Disabled="@(!_isFileActive)">
+                                <Template Context="stepItem">
+                                    <span class="step-dropdown-item-text" title="@GetStepTooltip(stepItem)">
+                                        @GetStepDisplayText(stepItem)
+                                    </span>
+                                </Template>
+                                <ValueTemplate Context="selectedStep">
+                                    <span class="step-dropdown-value-text" title="@GetStepTooltip(selectedStep)">
+                                        @GetStepDisplayText(selectedStep)
+                                    </span>
+                                </ValueTemplate>
+                            </RadzenDropDown>
                         </Template>
                     </RadzenDataGridColumn>
                 }

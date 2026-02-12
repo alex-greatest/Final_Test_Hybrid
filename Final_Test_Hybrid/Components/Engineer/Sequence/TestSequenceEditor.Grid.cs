@@ -6,6 +6,17 @@ namespace Final_Test_Hybrid.Components.Engineer.Sequence;
 
 public partial class TestSequenceEditor
 {
+    private static string GetStepDisplayText(object? stepItem)
+    {
+        return stepItem?.ToString() ?? string.Empty;
+    }
+
+    private static string GetStepTooltip(object? stepItem)
+    {
+        var text = GetStepDisplayText(stepItem);
+        return string.IsNullOrEmpty(text) ? string.Empty : text;
+    }
+
     private Task OnStepSelected(SequenceRow row, int colIndex, object? value)
     {
         if (_disposed)

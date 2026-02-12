@@ -43,9 +43,10 @@ public class ChStartMinHeatoutStepOld(
 
     private readonly DiagnosticSettings _settings = settings.Value;
 
-    public string Id => "coms-ch-start-min-heatout";
-    public string Name => "Coms/CH_Start_Min_Heatout";
+    public string Id => "coms-ch-start-min-heatout-old";
+    public string Name => "Coms/CH_Start_Min_Heatout_OLD";
     public string Description => "Запуск минимального нагрева контура отопления";
+    public bool IsVisibleInEditor => false;
     public string PlcBlockPath => BlockPath;
 
     public IReadOnlyList<string> RequiredPlcTags =>

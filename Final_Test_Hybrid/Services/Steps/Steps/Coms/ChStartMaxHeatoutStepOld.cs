@@ -47,9 +47,10 @@ public class ChStartMaxHeatoutStepOld(
 
     private readonly DiagnosticSettings _settings = settings.Value;
 
-    public string Id => "coms-ch-start-max-heatout";
-    public string Name => "Coms/CH_Start_Max_Heatout";
+    public string Id => "coms-ch-start-max-heatout-old";
+    public string Name => "Coms/CH_Start_Max_Heatout_OLD";
     public string Description => "Запуск максимального нагрева контура отопления";
+    public bool IsVisibleInEditor => false;
     public string PlcBlockPath => BlockPath;
 
     public IReadOnlyList<string> RequiredPlcTags =>

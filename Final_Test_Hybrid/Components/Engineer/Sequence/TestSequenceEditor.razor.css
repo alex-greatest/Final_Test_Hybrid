@@ -283,3 +283,11 @@
     white-space: nowrap;
 }
 
+.editor-layout ::deep .step-dropdown-item-text,
+.editor-layout ::deep .step-dropdown-value-text {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
