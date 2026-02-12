@@ -1,4 +1,3 @@
-using Final_Test_Hybrid.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
@@ -59,7 +58,7 @@ public partial class TestSequenceEditor
         TestSequenceService.CurrentFileName = Path.GetFileNameWithoutExtension(filePath);
         await TestSequenceService.SaveToExcelAsync(filePath, _rows);
         _isFileActive = true;
-        await RefreshGrid();
+        await RefreshStructureAsync();
         await UpdateDialogTitleAsync();
         NotifySuccess("Создано", $"Файл создан: {TestSequenceService.CurrentFileName}");
     }
@@ -100,6 +99,7 @@ public partial class TestSequenceEditor
             return;
         }
         _isLoading = true;
+        await InvokeAsync(StateHasChanged);
         await Task.Yield();
         await LoadFromFile(filePath);
     }
@@ -126,7 +126,7 @@ public partial class TestSequenceEditor
             _rows = await TestSequenceService.LoadFromExcelAsync(filePath, _columnCount);
             _rows = _rows.Count == 0 ? TestSequenceService.InitializeRows(20, _columnCount) : _rows;
             ClearUnknownStepNames();
-            await RefreshGrid();
+            await RefreshStructureAsync();
             NotifySuccessIfNotDisposed();
         }
         catch (Exception ex)
@@ -147,7 +147,7 @@ public partial class TestSequenceEditor
                 {
                     continue;
                 }
-                if (StepRegistry.GetByName(stepName) == null)
+                if (!_visibleStepNames.Contains(stepName))
                 {
                     row.Columns[i] = "";
                 }

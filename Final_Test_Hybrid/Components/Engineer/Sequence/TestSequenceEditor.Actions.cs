@@ -79,7 +79,7 @@ public partial class TestSequenceEditor
             return;
         }
         TestSequenceService.PrepareForDelete(currentRow);
-        await RefreshGrid();
+        await RefreshStructureAsync();
         await DelayAsync(500);
         await RemoveAndRefresh(currentRow);
     }
@@ -91,6 +91,6 @@ public partial class TestSequenceEditor
             return;
         }
         TestSequenceService.RemoveRow(_rows, currentRow);
-        await RefreshGrid();
+        await RefreshStructureAsync();
     }
 }
