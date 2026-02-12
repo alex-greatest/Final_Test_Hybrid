@@ -14,7 +14,7 @@ public class StopTimer2Step(
     private const string TimerKey = "Timer2";
 
     public string Id => "stop-timer-2";
-    public string Name => "StopTimer2";
+    public string Name => "Misc/StopTimer2";
     public string Description => "Остановка таймера 2";
 
     public Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)

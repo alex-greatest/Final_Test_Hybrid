@@ -2,7 +2,7 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
-namespace Final_Test_Hybrid.Services.Steps.Steps.Misc;
+namespace Final_Test_Hybrid.Services.Steps.Steps.Wait;
 
 /// <summary>
 /// Ожидание в течение 3 секунд. Просто ждём три секунды.
@@ -10,7 +10,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Misc;
 public class WaitThreeSecStep(DualLogger<WaitThreeSecStep> logger) : ITestStep
 {
     public string Id => "wait-three-sec";
-    public string Name => "WaitThreeSec";
+    public string Name => "Wait/WaitThreeSec";
     public string Description => "Ожидание в течение 3 секунд. Просто ждём три секунды.";
 
     /// <summary>

@@ -11,7 +11,7 @@ public class StartTimer1Step(
     private const string TimerKey = "Timer1";
 
     public string Id => "start-timer-1";
-    public string Name => "StartTimer1";
+    public string Name => "Misc/StartTimer1";
     public string Description => "Запуск таймера 1";
     public bool IsVisibleInStatusGrid => true;
     public bool IsSkippable => false;

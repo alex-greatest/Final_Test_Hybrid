@@ -2,7 +2,7 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
-namespace Final_Test_Hybrid.Services.Steps.Steps.Misc;
+namespace Final_Test_Hybrid.Services.Steps.Steps.Wait;
 
 /// <summary>
 /// Ожидание в течение 1 секунды.
@@ -10,7 +10,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Misc;
 public class WaitOneSecStep(DualLogger<WaitOneSecStep> logger) : ITestStep
 {
     public string Id => "wait-one-sec";
-    public string Name => "WaitOneSec";
+    public string Name => "Wait/WaitOneSec";
     public string Description => "Ожидание в течение 1 секунды.";
 
     /// <summary>
