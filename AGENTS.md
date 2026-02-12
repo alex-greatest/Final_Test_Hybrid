@@ -9,7 +9,7 @@
 - Сначала факты, потом выводы: гипотезы проверяются кодом и документами, а не “по аналогии”.
 - Сначала проектные документы, потом изменение логики (`Docs/*Guide.md`, `plan-refactor-executor.md`, связанные инциденты).
 - Если документ противоречит гипотезе — корректировать гипотезу, а не продавливать мнение.
-- Выявляй слабую логику и риски прямо, без смягчений и расплывчатости.
+- Выявлять слабую логику и риски прямо, без смягчений и расплывчатости.
 - Запрет: не использовать `ColumnExecutor.IsVisible` как критерий idle/готовности к следующему Map.
 
 ## Что избегать
@@ -21,22 +21,27 @@
 - Бесконечных ожиданий/retry без дедлайнов и fail-safe выхода.
 - Дублирующих путей сохранения параметров и множественных источников списка (ломают согласованность).
 
-## Runtime Do/Don't (выжимка из инцидентов)
+## Runtime-критичные правила (Do/Don't)
 
 Только operational-правила для runtime-критичных веток (без исторических деталей и UI-косметики).
 
 ### Do
 
 - Явно разделять `PLC reset` и `HardReset`; в гонках исполнения приоритет всегда у reset-потока.
-- Перед любыми `Write/Wait` после reconnect обязательно ждать `connectionState.WaitForConnectionAsync(ct)`.
+- Перед любыми `Write/Wait` после reconnect ждать `connectionState.WaitForConnectionAsync(ct)`.
 - Для runtime OPC-подписок использовать только полный rebuild (`new Session + RecreateForSessionAsync`).
-- Применять `bounded retry` только для transient-ошибок; иметь явный лимит и интервал.
+- Использовать bounded retry только для transient-ошибок (обычно 2-3 попытки, 200-500 мс).
+- Ограничивать reset-flow таймаутами из `OpcUa:ResetFlowTimeouts`; без бесконечных ожиданий.
 - Фиксировать fail результата шага в `ColumnExecutor` до `pauseToken.WaitWhilePausedAsync`.
 - Для `Coms/Check_Comms` при `AutoReady = false` завершать шаг `NoDiagnosticConnection` и останавливать `IModbusDispatcher`.
 - Для non-PLC шагов писать `BaseTags.Fault` с bounded retry; при провале — fail-fast `HardReset`.
-- Держать критический cleanup в `finally` (`Release/Dispose/сброс флагов`, включая `PlcHardResetPending`).
+- Перед retry-записью результатов удалять старую запись (`testResultsService.Remove(...)`) и писать заново.
 - Ошибки `SaveAsync` в completion-flow переводить в recoverable save-failure, не роняя main loop.
-- Перед retry-операциями результатов удалять старую запись (`testResultsService.Remove(...)`) и писать заново.
+- Держать критический cleanup в `finally` (`Release/Dispose/сброс флагов`, включая `PlcHardResetPending`).
+- Публичные события в критических путях вызывать через safe-обёртки с логированием исключений.
+- Ошибки `AddTagAsync/ApplyChangesAsync` обрабатывать с rollback runtime-состояния.
+- В `TagWaiter.WaitForFalseAsync` делать первичную cache-проверку через `subscription.GetValue(nodeId) + is bool`.
+- Не-`OperationCanceledException` в фоновом retry переводить в fail-fast `HardReset` + fail-safe `OpenGate()`.
 
 ### Don't
 
@@ -49,62 +54,55 @@
 - Не вводить дубли источников списка/сохранения параметров результата (single source of truth обязателен).
 - Не менять reset/reconnect/error-flow точечно без проверки инвариантов completion и changeover.
 
+## Зафиксированные инварианты (не пересматривать без нового инцидента)
+
+- `PLC reset` (через `Req_Reset`/`PlcResetCoordinator`) и `HardReset` (через `ErrorCoordinator.OnReset`) — разные потоки.
+- В гонке `testCompletion vs reset` приоритет у reset.
+- Soft-reset не должен ломать текущий `AskEnd`-путь очистки UI/Boiler.
+- Логику changeover-таймера не менять правками reset/reconnect.
+- Для runtime OPC-подписок при reconnect использовать только полный rebuild (`новая Session + RecreateForSessionAsync`).
+- Спиннер подписки показывать только при фактическом запуске подписок после готовности соединения.
+- `Coms/Check_Comms` при `AutoReady = false`: шаг завершается `NoDiagnosticConnection`, `IModbusDispatcher` останавливается.
+- Fail результата шага фиксировать в `ColumnExecutor` до `pauseToken.WaitWhilePausedAsync`.
+- Для non-PLC шагов запись `BaseTags.Fault` обязательна с bounded retry; при провале — fail-fast `HardReset`.
+- Для execution runtime-подписок использовать `IRequiresPlcSubscriptions`; `IRequiresPlcTags` оставить базовым/валидационным контрактом.
+- `BaseTags.AskEnd` считать системным preload-тегом.
+- В pre-execution при потере OPC блокировать оба канала barcode (`BoilerInfo`, `BarcodeDebounceHandler`) и ставить scan-таймер на паузу.
+- Для ECU error flow по ping: ошибка поднимается только в lock-контексте (`1005 in {1,2}` + whitelist), вне lock очищается.
+
 ## UI-инварианты (актуально)
 
 - Единый стиль таблиц применять только через opt-in классы `grid-unified-host` + `grid-unified` из `wwwroot/css/app.css`.
 - В родительских вкладках запрещены широкие `::deep .rz-data-grid*` override: shell/layout можно, типографику и геометрию таблицы — нельзя.
 - Исключение зафиксировано: `Components/Main/TestSequenseGrid.razor` использует `main-grid-legacy` (компактный исторический вид главного экрана).
-- Для любого DataGrid-профиля (`grid-unified`, `main-grid-legacy`, `overview-grid-io`, новые профили) использовать отдельный opt-in class в `wwwroot/css/app.css`; новый визуальный режим — новый класс, а не «подкрутка» существующего профиля под все экраны.
-- Заголовки DataGrid (включая anti-clipping) настраивать по устойчивому паттерну: селекторы от `th` + внутренние контейнеры (`.rz-cell-data`, `.rz-column-title-content`, `.rz-sortable-column`, `.rz-column-title`); полагаться только на `.rz-grid-table thead th*` нельзя.
-- В каждом профиле раздельно настраивать header и body/edit: anti-clipping/высота/overflow на уровне шапки, типографика (`font-size`, `font-weight`, `line-height`) — отдельным слоем для данных и редакторов.
-- Новые вкладочные контейнеры обязаны занимать всю высоту родителя (`display:flex`, `flex-direction:column`, `min-height:0`, `height:100%`), ориентир — `RecipesGrid`.
-- `LogViewerTab`: внутренняя структура зафиксирована как две вкладки — `Лог-файл` и `Время шагов`; `StepTimingsGrid` живёт во вкладке `Лог`, не в `Results`.
+- Для любого DataGrid-профиля (`grid-unified`, `main-grid-legacy`, `overview-grid-io`, новые профили) использовать отдельный opt-in class в `wwwroot/css/app.css`; новый режим = новый класс.
+- Заголовки DataGrid (включая anti-clipping) настраивать через `th` + внутренние контейнеры (`.rz-cell-data`, `.rz-column-title-content`, `.rz-sortable-column`, `.rz-column-title`).
+- В каждом профиле раздельно настраивать header и body/edit (overflow/высота/типографика).
+- Новые вкладочные контейнеры должны занимать всю высоту родителя (`display:flex`, `flex-direction:column`, `min-height:0`, `height:100%`), ориентир — `RecipesGrid`.
+- `LogViewerTab` фиксирован: две вкладки (`Лог-файл`, `Время шагов`), `StepTimingsGrid` живёт во вкладке `Лог`.
 
 ## Stack
 
-| Компонент | Технология |
-|-----------|------------|
-| Framework | .NET 10, WinForms + Blazor Hybrid |
-| UI | Radzen Blazor 8.3 |
-| OPC-UA | OPCFoundation 1.5 |
-| Modbus | NModbus 3.0 |
-| Database | PostgreSQL + EF Core 10 |
-| Logging | Serilog + DualLogger |
-| Excel | EPPlus 8.3 |
-
-**Build:** `dotnet build && dotnet run`
-**Обязательная проверка:** минимум `dotnet build`.
+- Framework: .NET 10, WinForms + Blazor Hybrid
+- UI: Radzen Blazor 8.3
+- OPC-UA: OPCFoundation 1.5
+- Modbus: NModbus 3.0
+- Database: PostgreSQL + EF Core 10
+- Logging: Serilog + DualLogger
+- Excel: EPPlus 8.3
+- Build: `dotnet build && dotnet run` (минимальная проверка — `dotnet build`)
 
 ## Архитектурный контур
 
-`Program.cs -> Form1.cs (DI) -> BlazorWebView -> Radzen UI`
-
-`[Barcode] -> PreExecutionCoordinator -> TestExecutionCoordinator -> [OK/NOK]`
-
-`ScanSteps (pre-exec)` + `4 x ColumnExecutor`.
+`Program.cs -> Form1.cs (DI) -> BlazorWebView -> Radzen UI`; pipeline: `[Barcode] -> PreExecutionCoordinator -> TestExecutionCoordinator -> [OK/NOK]`; исполнение: `ScanSteps (pre-exec)` + `4 x ColumnExecutor`.
 
 ## Ключевые паттерны
 
-### DualLogger
-
-```csharp
-public class MyService(DualLogger<MyService> logger)
-{
-    logger.LogInformation("msg"); // файл + UI теста
-}
-```
-
-### Pausable decorators
-
+- `DualLogger`: `logger.LogInformation("msg")` пишет одновременно в файл и UI теста.
 - В тестовых шагах использовать pausable-сервисы (`PausableOpcUaTagService`, `PausableTagWaiter`, `PausableRegisterReader/Writer`).
 - Системные операции — через не-pausable сервисы (`OpcUaTagService`, `RegisterReader/Writer`).
 - В шагах использовать `context.DelayAsync()`, `context.DiagReader/Writer`.
-
-### Primary constructors
-
-```csharp
-public class MyStep(DualLogger<MyStep> logger, IOpcUaTagService tags) : ITestStep
-```
+- Primary constructors — стандарт: `public class MyStep(DualLogger<MyStep> logger, IOpcUaTagService tags) : ITestStep`.
 
 ## Правила кодирования
 
@@ -124,34 +122,6 @@ public class MyStep(DualLogger<MyStep> logger, IOpcUaTagService tags) : ITestSte
 - Метаданные (`isRanged`, единицы, границы) задавать по контракту каждого параметра отдельно; не копировать “по соседству”.
 - Для групповых операций использовать единый источник списка (single source of truth), дубли вне списка удалять.
 - Для retry перед повторной записью удалять старый результат (`testResultsService.Remove(...)`).
-
-## Практики устойчивого кода
-
-- Раздел дополняет `Runtime Do/Don't`: общие runtime-правила (retry/reconnect/cleanup/save-flow) задаются там и не дублируются здесь.
-- Публичные события в критических путях вызывать через safe-обёртки с логированием исключений.
-- Reset-flow не должен ждать бесконечно: ограничивать таймаутами из `OpcUa:ResetFlowTimeouts`.
-- Ошибки записи критичных PLC-тегов (`Reset`, `AskRepeat`, `End`) не проглатывать.
-- При rebind/reset подписок инвалидировать runtime-кэш и не сохранять Bad-quality значения.
-- Ошибки `AddTagAsync/ApplyChangesAsync` — с rollback runtime-состояния.
-- В `TagWaiter.WaitForFalseAsync` первичная cache-проверка через `subscription.GetValue(nodeId) + is bool`.
-- Не-`OperationCanceledException` в фоновом retry — fail-fast в `HardReset` + fail-safe `OpenGate()`.
-- Для `PlcResetCoordinator.PlcHardResetPending` сброс в `0` обязателен в `finally` вокруг `_errorCoordinator.Reset()`.
-
-## Зафиксированные инварианты (не пересматривать без нового инцидента)
-
-- `PLC reset` (через `Req_Reset`/`PlcResetCoordinator`) и `HardReset` (через `ErrorCoordinator.OnReset`) — разные потоки.
-- В гонке `testCompletion vs reset` приоритет у reset.
-- Soft-reset не должен ломать текущий `AskEnd`-путь очистки UI/Boiler.
-- Логику changeover-таймера не менять правками reset/reconnect.
-- Для runtime OPC-подписок при reconnect использовать только полный rebuild (`новая Session + RecreateForSessionAsync`).
-- Спиннер подписки показывать только при фактическом запуске подписок после готовности соединения.
-- `Coms/Check_Comms` при `AutoReady = false`: шаг завершается `NoDiagnosticConnection`, `IModbusDispatcher` останавливается.
-- Fail результата шага фиксировать в `ColumnExecutor` до `pauseToken.WaitWhilePausedAsync`.
-- Для non-PLC шагов запись `BaseTags.Fault` обязательна с bounded retry; при провале — fail-fast `HardReset`.
-- Для execution runtime-подписок использовать `IRequiresPlcSubscriptions`; `IRequiresPlcTags` оставить базовым/валидационным контрактом.
-- `BaseTags.AskEnd` считать системным preload-тегом.
-- В pre-execution при потере OPC блокировать оба канала barcode (`BoilerInfo`, `BarcodeDebounceHandler`) и ставить scan-таймер на паузу.
-- Для ECU error flow по ping: ошибка поднимается только в lock-контексте (`1005 in {1,2}` + whitelist), вне lock очищается.
 
 ## Язык и кодировка
 
@@ -189,19 +159,7 @@ public class MyStep(DualLogger<MyStep> logger, IOpcUaTagService tags) : ITestSte
   1. `dotnet build Final_Test_Hybrid.slnx`
   2. `dotnet format analyzers --verify-no-changes`
   3. `dotnet format style --verify-no-changes`
-
-Пример точечного `inspectcode`:
-
-```powershell
-$changedCs = git diff --name-only --diff-filter=ACMR HEAD -- '*.cs'
-if ($changedCs.Count -gt 0)
-{
-    $include = ($changedCs | ForEach-Object { $_.Replace('\\', '/') }) -join ';'
-    $reportPath = Join-Path $env:TEMP 'jb-inspectcode.txt'
-    jb inspectcode Final_Test_Hybrid.slnx "--include=$include" --no-build --format=Text "--output=$reportPath" -e=WARNING
-    Write-Host "InspectCode report: $reportPath"
-}
-```
+- Точечный `inspectcode`: `jb inspectcode Final_Test_Hybrid.slnx "--include=<changed.cs;...>" --no-build --format=Text "--output=<path>" -e=WARNING`.
 
 ## Временные компромиссы
 
