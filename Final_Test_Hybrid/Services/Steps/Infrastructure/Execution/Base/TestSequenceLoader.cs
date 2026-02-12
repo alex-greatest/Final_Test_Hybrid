@@ -69,11 +69,46 @@ public class TestSequenceLoader(
 
     private List<string?[]> ParseWorksheet(ExcelWorksheet worksheet)
     {
-        var rowCount = worksheet.Dimension?.Rows ?? 0;
+        var rawRowCount = worksheet.Dimension?.Rows ?? 0;
+        var effectiveRowCount = FindLastNonEmptyRow(worksheet, rawRowCount);
+        logger.LogInformation(
+            "Нормализация runtime-последовательности: rawRowCount={RawRowCount}, effectiveRowCount={EffectiveRowCount}",
+            rawRowCount,
+            effectiveRowCount);
+        if (effectiveRowCount == 0)
+        {
+            return [];
+        }
+
         return Enumerable
-            .Range(1, rowCount)
+            .Range(1, effectiveRowCount)
             .Select(row => ReadRow(worksheet, row))
             .ToList();
+    }
+
+    private static int FindLastNonEmptyRow(ExcelWorksheet worksheet, int rawRowCount)
+    {
+        for (var rowIndex = rawRowCount; rowIndex >= 1; rowIndex--)
+        {
+            if (!IsRowEmpty(worksheet, rowIndex))
+            {
+                return rowIndex;
+            }
+        }
+        return 0;
+    }
+
+    private static bool IsRowEmpty(ExcelWorksheet worksheet, int rowIndex)
+    {
+        for (var columnIndex = 1; columnIndex <= ColumnCount; columnIndex++)
+        {
+            var value = worksheet.Cells[rowIndex, columnIndex].Value?.ToString();
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     private string?[] ReadRow(ExcelWorksheet worksheet, int rowIndex) =>

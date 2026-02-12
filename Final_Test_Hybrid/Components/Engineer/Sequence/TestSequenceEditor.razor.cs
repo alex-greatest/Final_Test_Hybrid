@@ -17,7 +17,7 @@ public partial class TestSequenceEditor : IAsyncDisposable
     public required ITestStepRegistry StepRegistry { get; set; }
     private RadzenDataGrid<SequenceRow>? _grid;
     private List<SequenceRow> _rows = [];
-    private IReadOnlyList<ITestStep> _steps = [];
+    private IReadOnlyList<string> _stepNames = [];
     private HashSet<string> _visibleStepNames = [];
     private readonly CancellationTokenSource _cts = new();
     private readonly int _columnCount = 4;
@@ -28,8 +28,11 @@ public partial class TestSequenceEditor : IAsyncDisposable
     protected override async Task OnInitializedAsync()
     {
         await Task.Yield();
-        _steps = StepRegistry.VisibleSteps;
-        _visibleStepNames = _steps.Select(static step => step.Name).ToHashSet(StringComparer.Ordinal);
+        var stepNames = StepRegistry.VisibleSteps
+            .Select(static step => step.Name)
+            .ToList();
+        _stepNames = stepNames;
+        _visibleStepNames = stepNames.ToHashSet(StringComparer.Ordinal);
         _rows = TestSequenceService.InitializeRows(20, _columnCount);
         _isFileActive = !string.IsNullOrEmpty(TestSequenceService.CurrentFilePath);
         _isLoading = false;

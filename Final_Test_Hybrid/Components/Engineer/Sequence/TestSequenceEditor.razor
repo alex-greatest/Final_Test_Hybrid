@@ -40,6 +40,7 @@
                         Style="height: 100%; width: 100%; border: none;"
                         GridLines="DataGridGridLines.Both"
                         Density="Density.Compact"
+                        AllowVirtualization="true"
                         AllowColumnResize="true"
                         AllowAlternatingRows="false"
                         RowRender="@OnRowRender"
@@ -54,31 +55,16 @@
                         </HeaderTemplate>
                         <Template Context="data">
                             <RadzenDropDown TValue="string"
-                                            Data="@_steps"
-                                            TextProperty="Name"
-                                            ValueProperty="Name"
+                                            Data="@_stepNames"
                                             @bind-Value="data.Columns[index]"
                                             Change="@(args => OnStepSelected(data, index, args))"
                                             AllowFiltering="true"
+                                            AllowVirtualization="true"
                                             FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
                                             Placeholder="Выберите шаг..."
                                             AllowClear="true"
                                             Style="width: 100%"
-                                            Disabled="@(!_isFileActive)">
-                                <Template Context="step">
-                                    <span title="@step.Name">
-                                        @step.Name
-                                    </span>
-                                </Template>
-                                <ValueTemplate Context="step">
-                                    @if (step != null)
-                                    {
-                                        <span title="@step.Name">
-                                            @step.Name
-                                        </span>
-                                    }
-                                </ValueTemplate>
-                            </RadzenDropDown>
+                                            Disabled="@(!_isFileActive)" />
                         </Template>
                     </RadzenDataGridColumn>
                 }

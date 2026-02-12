@@ -123,8 +123,12 @@ public partial class TestSequenceEditor
     {
         try
         {
-            _rows = await TestSequenceService.LoadFromExcelAsync(filePath, _columnCount);
-            _rows = _rows.Count == 0 ? TestSequenceService.InitializeRows(20, _columnCount) : _rows;
+            var loadedRows = await TestSequenceService.LoadFromExcelAsync(filePath, _columnCount);
+            Logger.LogInformation(
+                "Загрузка последовательности из {FilePath}: rows={Rows}",
+                filePath,
+                loadedRows.Count);
+            _rows = loadedRows.Count == 0 ? TestSequenceService.InitializeRows(20, _columnCount) : loadedRows;
             ClearUnknownStepNames();
             await RefreshStructureAsync();
             NotifySuccessIfNotDisposed();

@@ -104,10 +104,46 @@ public class SequenceExcelService(ILogger<SequenceExcelService> logger) : ISeque
 
     private List<SequenceRow> ParseWorksheet(ExcelWorksheet worksheet, int columnCount)
     {
-        var rowCount = worksheet.Dimension?.Rows ?? 0;
-        return Enumerable.Range(1, rowCount)
+        var rawRowCount = worksheet.Dimension?.Rows ?? 0;
+        var safeColumnCount = Math.Clamp(columnCount, 1, MaxColumns);
+        var effectiveRowCount = FindLastNonEmptyRow(worksheet, rawRowCount, safeColumnCount);
+        logger.LogInformation(
+            "Нормализация строк последовательности: rawRowCount={RawRowCount}, effectiveRowCount={EffectiveRowCount}",
+            rawRowCount,
+            effectiveRowCount);
+        if (effectiveRowCount == 0)
+        {
+            return [];
+        }
+
+        return Enumerable.Range(1, effectiveRowCount)
             .Select(rowIndex => ParseRow(worksheet, rowIndex, columnCount))
             .ToList();
+    }
+
+    private static int FindLastNonEmptyRow(ExcelWorksheet worksheet, int rawRowCount, int columnCount)
+    {
+        for (var rowIndex = rawRowCount; rowIndex >= 1; rowIndex--)
+        {
+            if (!IsRowEmpty(worksheet, rowIndex, columnCount))
+            {
+                return rowIndex;
+            }
+        }
+        return 0;
+    }
+
+    private static bool IsRowEmpty(ExcelWorksheet worksheet, int rowIndex, int columnCount)
+    {
+        for (var columnIndex = 1; columnIndex <= columnCount; columnIndex++)
+        {
+            var value = worksheet.Cells[rowIndex, columnIndex].Value?.ToString();
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     private SequenceRow ParseRow(ExcelWorksheet worksheet, int rowIndex, int columnCount)
