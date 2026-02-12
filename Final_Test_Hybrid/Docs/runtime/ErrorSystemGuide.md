@@ -90,7 +90,7 @@ public static IReadOnlyList<ErrorDefinition> All => [
 | Step Error | Диалог Retry/Skip показывается **СРАЗУ** (Channel-based signaling) |
 | Complete | `ClearActiveApplicationErrors()` |
 
-**Примечание:** Ошибки шагов обрабатываются через `Channel<bool>` сигнал — диалог появляется немедленно, другие колонки продолжают работу. См. `StateManagementGuide.md` секция "Channel-based Error Handling".
+**Примечание:** Ошибки шагов обрабатываются через `Channel<bool>` сигнал — диалог появляется немедленно, другие колонки продолжают работу. См. `../execution/StateManagementGuide.md` секция "Channel-based Error Handling".
 
 ### PreExecutionCoordinator
 

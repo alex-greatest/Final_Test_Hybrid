@@ -21,14 +21,41 @@
 - Бесконечных ожиданий/retry без дедлайнов и fail-safe выхода.
 - Дублирующих путей сохранения параметров и множественных источников списка (ломают согласованность).
 
+## Runtime Do/Don't (выжимка из инцидентов)
+
+Только operational-правила для runtime-критичных веток (без исторических деталей и UI-косметики).
+
+### Do
+
+- Явно разделять `PLC reset` и `HardReset`; в гонках исполнения приоритет всегда у reset-потока.
+- Перед любыми `Write/Wait` после reconnect обязательно ждать `connectionState.WaitForConnectionAsync(ct)`.
+- Для runtime OPC-подписок использовать только полный rebuild (`new Session + RecreateForSessionAsync`).
+- Применять `bounded retry` только для transient-ошибок; иметь явный лимит и интервал.
+- Фиксировать fail результата шага в `ColumnExecutor` до `pauseToken.WaitWhilePausedAsync`.
+- Для `Coms/Check_Comms` при `AutoReady = false` завершать шаг `NoDiagnosticConnection` и останавливать `IModbusDispatcher`.
+- Для non-PLC шагов писать `BaseTags.Fault` с bounded retry; при провале — fail-fast `HardReset`.
+- Держать критический cleanup в `finally` (`Release/Dispose/сброс флагов`, включая `PlcHardResetPending`).
+- Ошибки `SaveAsync` в completion-flow переводить в recoverable save-failure, не роняя main loop.
+- Перед retry-операциями результатов удалять старую запись (`testResultsService.Remove(...)`) и писать заново.
+
+### Don't
+
+- Не использовать `ColumnExecutor.IsVisible`/`Status != null` как критерий idle/готовности новой карты.
+- Не оставлять бесконечные ожидания без дедлайна и fail-safe выхода.
+- Не проглатывать ошибки записи критичных PLC-тегов (`Reset`, `AskRepeat`, `End`).
+- Не сохранять Bad-quality значения в runtime-кэш после rebind/reset.
+- Не делать UI-блокировку без соответствующего runtime-gating в pipeline.
+- Не включать авто-действия диагностики в ручных сценариях без явного контекста оператора.
+- Не вводить дубли источников списка/сохранения параметров результата (single source of truth обязателен).
+- Не менять reset/reconnect/error-flow точечно без проверки инвариантов completion и changeover.
+
 ## UI-инварианты (актуально)
 
 - Единый стиль таблиц применять только через opt-in классы `grid-unified-host` + `grid-unified` из `wwwroot/css/app.css`.
 - В родительских вкладках запрещены широкие `::deep .rz-data-grid*` override: shell/layout можно, типографику и геометрию таблицы — нельзя.
 - Исключение зафиксировано: `Components/Main/TestSequenseGrid.razor` использует `main-grid-legacy` (компактный исторический вид главного экрана).
-- Для обрезания заголовков DataGrid править не только `th`, но и внутренние контейнеры (`.rz-cell-data`, `.rz-column-title-content`, `.rz-sortable-column`, `.rz-column-title`).
 - Для любого DataGrid-профиля (`grid-unified`, `main-grid-legacy`, `overview-grid-io`, новые профили) использовать отдельный opt-in class в `wwwroot/css/app.css`; новый визуальный режим — новый класс, а не «подкрутка» существующего профиля под все экраны.
-- Заголовки DataGrid настраивать по устойчивому паттерну: селекторы от `th` + внутренние контейнеры (`.rz-cell-data`, `.rz-column-title-content`, `.rz-sortable-column`, `.rz-column-title`); полагаться только на `.rz-grid-table thead th*` нельзя.
+- Заголовки DataGrid (включая anti-clipping) настраивать по устойчивому паттерну: селекторы от `th` + внутренние контейнеры (`.rz-cell-data`, `.rz-column-title-content`, `.rz-sortable-column`, `.rz-column-title`); полагаться только на `.rz-grid-table thead th*` нельзя.
 - В каждом профиле раздельно настраивать header и body/edit: anti-clipping/высота/overflow на уровне шапки, типографика (`font-size`, `font-weight`, `line-height`) — отдельным слоем для данных и редакторов.
 - Новые вкладочные контейнеры обязаны занимать всю высоту родителя (`display:flex`, `flex-direction:column`, `min-height:0`, `height:100%`), ориентир — `RecipesGrid`.
 - `LogViewerTab`: внутренняя структура зафиксирована как две вкладки — `Лог-файл` и `Время шагов`; `StepTimingsGrid` живёт во вкладке `Лог`, не в `Results`.
@@ -100,17 +127,14 @@ public class MyStep(DualLogger<MyStep> logger, IOpcUaTagService tags) : ITestSte
 
 ## Практики устойчивого кода
 
-- Критический cleanup (`Release/Dispose/сброс флагов`) — в `finally`.
+- Раздел дополняет `Runtime Do/Don't`: общие runtime-правила (retry/reconnect/cleanup/save-flow) задаются там и не дублируются здесь.
 - Публичные события в критических путях вызывать через safe-обёртки с логированием исключений.
-- Reconnect: bounded retry (2-3 попытки, 200-500 ms), только для transient OPC ошибок.
-- После reconnect перед `Write/Wait` по PLC-тегам ждать `connectionState.WaitForConnectionAsync(ct)`.
 - Reset-flow не должен ждать бесконечно: ограничивать таймаутами из `OpcUa:ResetFlowTimeouts`.
 - Ошибки записи критичных PLC-тегов (`Reset`, `AskRepeat`, `End`) не проглатывать.
 - При rebind/reset подписок инвалидировать runtime-кэш и не сохранять Bad-quality значения.
 - Ошибки `AddTagAsync/ApplyChangesAsync` — с rollback runtime-состояния.
 - В `TagWaiter.WaitForFalseAsync` первичная cache-проверка через `subscription.GetValue(nodeId) + is bool`.
 - Не-`OperationCanceledException` в фоновом retry — fail-fast в `HardReset` + fail-safe `OpenGate()`.
-- Ошибка `SaveAsync` в completion-flow не должна ронять main loop: переводить в recoverable save-failure.
 - Для `PlcResetCoordinator.PlcHardResetPending` сброс в `0` обязателен в `finally` вокруг `_errorCoordinator.Reset()`.
 
 ## Зафиксированные инварианты (не пересматривать без нового инцидента)
@@ -140,32 +164,22 @@ public class MyStep(DualLogger<MyStep> logger, IOpcUaTagService tags) : ITestSte
 
 | Тема | Файл |
 |------|------|
-| State Management | `Final_Test_Hybrid/Docs/StateManagementGuide.md` |
-| Error Handling | `Final_Test_Hybrid/Docs/ErrorCoordinatorGuide.md` |
-| PLC Reset | `Final_Test_Hybrid/Docs/PlcResetGuide.md` |
-| Steps | `Final_Test_Hybrid/Docs/StepsGuide.md` |
-| Cancellation | `Final_Test_Hybrid/Docs/CancellationGuide.md` |
-| Modbus | `Final_Test_Hybrid/Docs/DiagnosticGuide.md` |
-| TagWaiter | `Final_Test_Hybrid/Docs/TagWaiterGuide.md` |
-| Scanner | `Final_Test_Hybrid/Docs/ScannerGuide.md` |
+| State Management | `Final_Test_Hybrid/Docs/execution/StateManagementGuide.md` |
+| Error Handling | `Final_Test_Hybrid/Docs/runtime/ErrorCoordinatorGuide.md` |
+| PLC Reset | `Final_Test_Hybrid/Docs/runtime/PlcResetGuide.md` |
+| Steps | `Final_Test_Hybrid/Docs/execution/StepsGuide.md` |
+| Cancellation | `Final_Test_Hybrid/Docs/execution/CancellationGuide.md` |
+| Modbus | `Final_Test_Hybrid/Docs/diagnostics/DiagnosticGuide.md` |
+| TagWaiter | `Final_Test_Hybrid/Docs/runtime/TagWaiterGuide.md` |
+| Scanner | `Final_Test_Hybrid/Docs/diagnostics/ScannerGuide.md` |
+| UI Index | `Final_Test_Hybrid/Docs/ui/README.md` |
+| UI Principles | `Final_Test_Hybrid/Docs/ui/UiPrinciplesGuide.md` |
+| UI Grids | `Final_Test_Hybrid/Docs/ui/GridProfilesGuide.md` |
+| UI Buttons | `Final_Test_Hybrid/Docs/ui/ButtonPatternsGuide.md` |
+| Main Screen UI | `Final_Test_Hybrid/Docs/ui/MainScreenGuide.md` |
+| Settings Blocking UI | `Final_Test_Hybrid/Docs/ui/SettingsBlockingGuide.md` |
 
 Детальная документация: `Final_Test_Hybrid/CLAUDE.md`.
-
-## LEARNING LOG (обязательно)
-
-- После каждого значимого изменения фиксировать: `Что изменили`, `Почему`, `Риск/урок`, `Ссылки`.
-- `Final_Test_Hybrid/LEARNING_LOG.md` держать коротким (активный индекс): последние 30 дней или максимум 40 записей.
-- Старые записи переносить в `Final_Test_Hybrid/LEARNING_LOG_ARCHIVE.md` без потери фактов.
-
-Шаблон записи:
-
-```md
-### YYYY-MM-DD (тема)
-- Что изменили:
-- Почему:
-- Риск/урок:
-- Ссылки: `path1`, `path2`
-```
 
 ## Периодичность и quality-gates
 

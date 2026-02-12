@@ -24,7 +24,7 @@
 > Skip шага определяется так:
 > - **Шаг с PLC-блоком:** `Block.End=true` и `Block.Error=true`
 > - **Шаг без PLC-блока:** `EndStep=true` (`BaseTags.TestEndStep`)
-> Подробно: `Final_Test_Hybrid/Docs/RetrySkipGuide.md`.
+> Подробно: `Final_Test_Hybrid/Docs/execution/RetrySkipGuide.md`.
 
 ### 1.2 Определения в коде
 
@@ -587,7 +587,7 @@ private async Task<CompletionResult> HandleNokRepeatAsync(CancellationToken ct)
 
 ## 8. Связанная документация
 
-- [PlcResetGuide.md](Final_Test_Hybrid/Docs/PlcResetGuide.md) — Детали логики сброса
-- [CycleExitGuide.md](Final_Test_Hybrid/Docs/CycleExitGuide.md) — Управление состояниями выхода
-- [RetrySkipGuide.md](Final_Test_Hybrid/Docs/RetrySkipGuide.md) — Повтор и пропуск шагов
-- [ErrorCoordinatorGuide.md](Final_Test_Hybrid/Docs/ErrorCoordinatorGuide.md) — Координатор прерываний
+- [PlcResetGuide.md](Final_Test_Hybrid/Docs/runtime/PlcResetGuide.md) — Детали логики сброса
+- [CycleExitGuide.md](Final_Test_Hybrid/Docs/execution/CycleExitGuide.md) — Управление состояниями выхода
+- [RetrySkipGuide.md](Final_Test_Hybrid/Docs/execution/RetrySkipGuide.md) — Повтор и пропуск шагов
+- [ErrorCoordinatorGuide.md](Final_Test_Hybrid/Docs/runtime/ErrorCoordinatorGuide.md) — Координатор прерываний

@@ -2,7 +2,7 @@
 
 Инструкция по созданию шагов (Steps) в проекте Final_Test_Hybrid.
 
-> **См. также:** [CLAUDE.md](../CLAUDE.md), [ErrorSystemGuide.md](ErrorSystemGuide.md), [DiagnosticGuide.md](DiagnosticGuide.md)
+> **См. также:** [CLAUDE.md](../../CLAUDE.md), [ErrorSystemGuide.md](../runtime/ErrorSystemGuide.md), [DiagnosticGuide.md](../diagnostics/DiagnosticGuide.md)
 
 ---
 
@@ -15,8 +15,10 @@
 
 ```
 PRE-EXECUTION STEPS (последовательно)
-├─ ScanBarcodeStep → ValidateRecipesStep → BlockBoilerAdapterStep
-└─ ... → StartTestExecution()
+├─ ScanBarcodeStep / ScanBarcodeMesStep (выбор по UseMes)
+├─ StartTimer1Step
+├─ BlockBoilerAdapterStep
+└─ StartTestExecution()
 
 TEST STEPS (из Excel карт, 4 колонки параллельно)
 ├─ Шаг 1..N из TestMap
@@ -59,8 +61,9 @@ PreExecutionResult.FailRetryable(error, canSkip: false, userMessage: "...", erro
 
 ### 1.3 Регистрация
 
-1. DI: `services.AddSingleton<IPreExecutionStep, MyStep>();` в `StepsServiceExtensions.cs`
-2. Порядок: добавить ID в `PreExecutionStepRegistry.cs` → `NonMesStepOrder` / `MesStepOrder`
+1. DI: зарегистрировать шаг в `StepsServiceExtensions.cs` (обычно `services.AddSingleton<MyStep>();`)
+2. Порядок: добавить шаг в `PreExecutionStepAdapter.GetOrderedSteps()` (`IPreExecutionStepRegistry`)
+3. Если шаг зависит от MES/Non-MES ветки, выбрать его в `GetOrderedSteps()` через `AppSettingsService.UseMes`
 
 ---
 
@@ -238,7 +241,7 @@ var value = await context.OpcUa.ReadAsync<float>(ValueTag, ct);
 
 ## Часть 5: Работа с Modbus (Диагностика)
 
-> **Подробно:** [DiagnosticGuide.md](DiagnosticGuide.md) — архитектура, чтение/запись регистров, обработка ошибок.
+> **Подробно:** [DiagnosticGuide.md](../diagnostics/DiagnosticGuide.md) — архитектура, чтение/запись регистров, обработка ошибок.
 
 **Краткая справка:**
 
@@ -325,15 +328,15 @@ public async Task<TestStepResult> ExecuteAsync(...)
 
 ### Pre-Execution Step
 
-- [ ] Файл `Services/Steps/Steps/MyStep.cs`
+- [ ] Файл в папке шагов `Services/Steps/Steps/`
 - [ ] Реализовать `IPreExecutionStep`
 - [ ] `IHasPlcBlockPath` / `IRequiresPlcTags` если нужно
 - [ ] Регистрация в `StepsServiceExtensions.cs`
-- [ ] Порядок в `PreExecutionStepRegistry.cs`
+- [ ] Порядок в `PreExecutionStepAdapter.cs` (`GetOrderedSteps`)
 
 ### Test Step
 
-- [ ] Файл `Services/Steps/Steps/Category/MyStep.cs`
+- [ ] Файл в папке шагов `Services/Steps/Steps/`
 - [ ] Реализовать `ITestStep`
 - [ ] `IProvideLimits` / `IRequiresRecipes` / `INonSkippable` если нужно
 - [ ] Автоматическая регистрация через рефлексию
@@ -353,7 +356,7 @@ public async Task<TestStepResult> ExecuteAsync(...)
 
 | Ошибка | Решение |
 |--------|---------|
-| Шаг не выполняется | Проверить `StepsServiceExtensions.cs` и `PreExecutionStepRegistry.cs` |
+| Шаг не выполняется | Проверить `StepsServiceExtensions.cs`, `PreExecutionStepAdapter.cs` (pre-exec) и `TestStepRegistry.cs` (test steps) |
 | Неправильный тег | Формат: `ns=3;s="DB_VI"."Block"."Start"` |
 | Блокирующий вызов | Использовать `await`, не `.Result` |
 | Сообщение висит после успеха | `messageState.Clear()` |
@@ -369,7 +372,7 @@ public async Task<TestStepResult> ExecuteAsync(...)
 | IPreExecutionStep | `Services/Steps/Infrastructure/Interfaces/PreExecution/` |
 | ITestStep | `Services/Steps/Infrastructure/Interfaces/Test/` |
 | TestStepContext | `Services/Steps/Infrastructure/Registrator/` |
-| PreExecutionStepRegistry | `Services/Steps/Infrastructure/Execution/PreExecution/` |
+| PreExecutionStepAdapter | `Services/Steps/Infrastructure/Execution/PreExecution/` |
 | TagWaiter | `Services/OpcUa/` |
 | DiagnosticSettings | `Services/Diagnostic/Connection/` |
 | StepsServiceExtensions | `Services/DependencyInjection/` |

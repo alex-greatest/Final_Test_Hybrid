@@ -2,7 +2,7 @@
 
 Подробное руководство по системе прерывания и отмены в Final_Test_Hybrid.
 
-> **См. также:** [CLAUDE.md](../CLAUDE.md), [StepsGuide.md](StepsGuide.md), [PlcResetGuide.md](PlcResetGuide.md)
+> **См. также:** [CLAUDE.md](../../CLAUDE.md), [StepsGuide.md](StepsGuide.md), [PlcResetGuide.md](../runtime/PlcResetGuide.md)
 
 ---
 
@@ -412,6 +412,6 @@ private async Task TryResetStartTagAsync(TestStepContext context)
 ## Ссылки
 
 - [StepsGuide.md](StepsGuide.md) — создание шагов, контракт CancellationToken
-- [PlcResetGuide.md](PlcResetGuide.md) — Soft/Hard Reset от PLC
+- [PlcResetGuide.md](../runtime/PlcResetGuide.md) — Soft/Hard Reset от PLC
 - [RetrySkipGuide.md](RetrySkipGuide.md) — механизм повтора и пропуска
 - [StateManagementGuide.md](StateManagementGuide.md) — управление состоянием

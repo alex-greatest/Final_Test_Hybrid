@@ -111,16 +111,16 @@
 4) Удалить исходный файл:
    - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Coordinator/TestExecutionCoordinator.ErrorHandling.cs`
 5) Обновить документацию (убрать ссылки на старый файл/строки):
-   - `Final_Test_Hybrid/Docs/StateManagementGuide.md`:
+   - `Final_Test_Hybrid/Docs/execution/StateManagementGuide.md`:
      - В секции **TestExecutionCoordinator: Channel-based Error Handling** заменить список **Файлы** на новый:
        - `.../TestExecutionCoordinator.ErrorSignals.cs`
        - `.../TestExecutionCoordinator.ErrorQueue.cs`
        - `.../TestExecutionCoordinator.ErrorResolution.cs`
        - `.../TestExecutionCoordinator.PlcErrorSignals.cs`
        - `.../TestExecutionCoordinator.Execution.cs`
-   - `Final_Test_Hybrid/Docs/StepsGuide.md`:
+   - `Final_Test_Hybrid/Docs/execution/StepsGuide.md`:
      - заменить `TestExecutionCoordinator.ErrorHandling.cs:369 — ProcessSkipAsync` на `TestExecutionCoordinator.ErrorResolution.cs — ProcessSkipAsync` (без line-number).
-   - `Final_Test_Hybrid/Docs/RetrySkipGuide.md`:
+   - `Final_Test_Hybrid/Docs/execution/RetrySkipGuide.md`:
      - в таблице **Ключевые файлы** заменить `TestExecutionCoordinator.ErrorHandling.cs | ProcessRetryAsync, ExecuteRetryInBackgroundAsync` на `TestExecutionCoordinator.ErrorResolution.cs | ProcessRetryAsync, ExecuteRetryInBackgroundAsync`.
    - `Final_Test_Hybrid/RefactoringPlan-SkipWithError.md`:
      - заменить упоминания `.../TestExecutionCoordinator.ErrorHandling.cs` на новый файл по смыслу (обычно `...ErrorResolution.cs` или `...PlcErrorSignals.cs`).

@@ -1,4 +1,4 @@
-﻿# Change: Refactor Test Execution Flow (Behavior-Preserving)
+# Change: Refactor Test Execution Flow (Behavior-Preserving)
 
 ## Why
 Исполнение тестов сложно понимать и поддерживать из-за смешения UI-статуса и execution-логики, разрозненных ожиданий и неравномерных логов. Есть подтвержденные hang-сценарии при Retry/Skip и переходе между картами. Нужна более прозрачная структура выполнения и единый формат диагностики при сохранении текущего поведения.
@@ -20,9 +20,9 @@
   - `Services/Steps/Infrastructure/Execution/ErrorCoordinator/*`
   - `Services/OpcUa/TagWaiter.cs`
 - Affected docs:
-  - `Docs/StateManagementGuide.md`
-  - `Docs/RetrySkipGuide.md`
-  - `Docs/CancellationGuide.md`
+  - `Docs/execution/StateManagementGuide.md`
+  - `Docs/execution/RetrySkipGuide.md`
+  - `Docs/execution/CancellationGuide.md`
 
 ## Notes on Existing Changes
 - Есть активные изменения `update-skip-hang-guard` и `refactor-execution-state-machine`. Данный change затрагивает `TestExecutionCoordinator` и `ColumnExecutor`, поэтому возможны merge-конфликты. При реализации избегаем изменения областей, заявленных вне scope у `refactor-execution-state-machine`.

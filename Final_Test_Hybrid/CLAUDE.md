@@ -106,14 +106,20 @@ public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestS
 
 | Тема | Файл |
 |------|------|
-| State Management | [Docs/StateManagementGuide.md](Final_Test_Hybrid/Docs/StateManagementGuide.md) |
-| Error Handling | [Docs/ErrorCoordinatorGuide.md](Final_Test_Hybrid/Docs/ErrorCoordinatorGuide.md) |
-| PLC Reset | [Docs/PlcResetGuide.md](Final_Test_Hybrid/Docs/PlcResetGuide.md) |
-| Steps | [Docs/StepsGuide.md](Final_Test_Hybrid/Docs/StepsGuide.md) |
-| Cancellation | [Docs/CancellationGuide.md](Final_Test_Hybrid/Docs/CancellationGuide.md) |
-| Modbus | [Docs/DiagnosticGuide.md](Final_Test_Hybrid/Docs/DiagnosticGuide.md) |
-| TagWaiter | [Docs/TagWaiterGuide.md](Final_Test_Hybrid/Docs/TagWaiterGuide.md) |
-| Scanner | [Docs/ScannerGuide.md](Final_Test_Hybrid/Docs/ScannerGuide.md) |
+| State Management | [Docs/execution/StateManagementGuide.md](Final_Test_Hybrid/Docs/execution/StateManagementGuide.md) |
+| Error Handling | [Docs/runtime/ErrorCoordinatorGuide.md](Final_Test_Hybrid/Docs/runtime/ErrorCoordinatorGuide.md) |
+| PLC Reset | [Docs/runtime/PlcResetGuide.md](Final_Test_Hybrid/Docs/runtime/PlcResetGuide.md) |
+| Steps | [Docs/execution/StepsGuide.md](Final_Test_Hybrid/Docs/execution/StepsGuide.md) |
+| Cancellation | [Docs/execution/CancellationGuide.md](Final_Test_Hybrid/Docs/execution/CancellationGuide.md) |
+| Modbus | [Docs/diagnostics/DiagnosticGuide.md](Final_Test_Hybrid/Docs/diagnostics/DiagnosticGuide.md) |
+| TagWaiter | [Docs/runtime/TagWaiterGuide.md](Final_Test_Hybrid/Docs/runtime/TagWaiterGuide.md) |
+| Scanner | [Docs/diagnostics/ScannerGuide.md](Final_Test_Hybrid/Docs/diagnostics/ScannerGuide.md) |
+| UI Index | [Docs/ui/README.md](Final_Test_Hybrid/Docs/ui/README.md) |
+| UI Principles | [Docs/ui/UiPrinciplesGuide.md](Final_Test_Hybrid/Docs/ui/UiPrinciplesGuide.md) |
+| UI Grids | [Docs/ui/GridProfilesGuide.md](Final_Test_Hybrid/Docs/ui/GridProfilesGuide.md) |
+| UI Buttons | [Docs/ui/ButtonPatternsGuide.md](Final_Test_Hybrid/Docs/ui/ButtonPatternsGuide.md) |
+| Main Screen UI | [Docs/ui/MainScreenGuide.md](Final_Test_Hybrid/Docs/ui/MainScreenGuide.md) |
+| Settings Blocking UI | [Docs/ui/SettingsBlockingGuide.md](Final_Test_Hybrid/Docs/ui/SettingsBlockingGuide.md) |
 
 **Детальная документация:** [Final_Test_Hybrid/CLAUDE.md](Final_Test_Hybrid/CLAUDE.md)
 

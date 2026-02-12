@@ -8,9 +8,9 @@
 
 | Компонент | Файл | Что переключает |
 |-----------|------|-----------------|
-| SwitchMes | `Engineer/SwitchMes.razor.cs` | Режим MES |
-| OperatorAuthorizationQr | `Engineer/OperatorAuthorizationQr.razor.cs` | QR авторизация оператора |
-| AdminAuthorizationQr | `Engineer/AdminAuthorizationQr.razor.cs` | QR авторизация админа |
+| SwitchMes | `Components/Engineer/SwitchMes.razor.cs` | Режим MES |
+| OperatorAuthorizationQr | `Components/Engineer/OperatorAuthorizationQr.razor.cs` | QR авторизация оператора |
+| AdminAuthorizationQr | `Components/Engineer/AdminAuthorizationQr.razor.cs` | QR авторизация админа |
 
 ## Условия блокировки
 

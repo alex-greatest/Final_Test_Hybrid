@@ -47,7 +47,7 @@ Ping continues periodically (keep-alive)
   - `Services/Diagnostic/Protocol/CommandQueue/ModbusDispatcherOptions.cs` — добавить `PingIntervalMs`
   - `Services/Diagnostic/RegisterReader.cs` — обернуть InvalidOperationException в DiagnosticReadResult.Fail
   - `Form1.cs` — явный вызов `StartAsync()` при инициализации, подписка на PLC reset события
-  - `Docs/DiagnosticGuide.md` — обновить документацию
+  - `Docs/diagnostics/DiagnosticGuide.md` — обновить документацию
 
 ## Integration with PLC Reset
 

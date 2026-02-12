@@ -100,7 +100,7 @@ public class MessageService
 4. Поднимается `OnInterruptChanged`.
 5. `MessageService` пересчитывает правила, и правило 125 перестаёт срабатывать.
 
-Подробная логика с условиями `1005==1/2` и `1153=0`: `Docs/BoilerLockGuide.md`.
+Подробная логика с условиями `1005==1/2` и `1153=0`: `Docs/diagnostics/BoilerLockGuide.md`.
 
 ---
 
@@ -209,6 +209,6 @@ private void SubscribeToChanges()
 ## См. также
 
 - [CLAUDE.md](CLAUDE.md) — общие правила и паттерны проекта
-- [ErrorCoordinatorGuide.md](ErrorCoordinatorGuide.md) — обработка прерываний
-- [PlcResetGuide.md](PlcResetGuide.md) — логика сброса PLC
-- [Docs/BoilerLockGuide.md](Docs/BoilerLockGuide.md) — runtime-логика блокировок котла
+- [ErrorCoordinatorGuide.md](Docs/runtime/ErrorCoordinatorGuide.md) — обработка прерываний
+- [PlcResetGuide.md](Docs/runtime/PlcResetGuide.md) — логика сброса PLC
+- [Docs/diagnostics/BoilerLockGuide.md](Docs/diagnostics/BoilerLockGuide.md) — runtime-логика блокировок котла

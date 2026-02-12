@@ -77,9 +77,9 @@ Therefore Phase 2 requires extending lifecycle modeling so the "source of truth"
   - reset start/complete paths (soft/hard meaning)
   - `OnStateChanged` expectations
 - Source docs to align with:
-  - `Final_Test_Hybrid/Docs/ScanModeControllerGuide.md`
-  - `Final_Test_Hybrid/Docs/StateManagementGuide.md`
-  - `Final_Test_Hybrid/Docs/PlcResetGuide.md`
+  - `Final_Test_Hybrid/Docs/runtime/ScanModeControllerGuide.md`
+  - `Final_Test_Hybrid/Docs/execution/StateManagementGuide.md`
+  - `Final_Test_Hybrid/Docs/runtime/PlcResetGuide.md`
 
 #### Scenario Matrix (Characterization Contract)
 

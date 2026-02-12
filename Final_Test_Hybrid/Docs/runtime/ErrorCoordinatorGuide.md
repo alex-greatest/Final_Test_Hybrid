@@ -207,7 +207,7 @@ public interface IInterruptContext
 - **Задержка:** нет
 - **Действие:** Pause
 - **Ошибка:** не поднимается через `AssociatedError` (null)
-- **Источник:** runtime-ветка по `1005` и `LastErrorId` (см. `BoilerLockGuide.md`)
+- **Источник:** runtime-ветка по `1005` и `LastErrorId` (см. `../diagnostics/BoilerLockGuide.md`)
 
 ## Best Practices
 

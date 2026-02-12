@@ -1,6 +1,6 @@
 # ExecutionActivityTrackerGuide.md — Отслеживание фаз выполнения
 
-> Подробнее о системе выполнения: [CLAUDE.md → Step Execution System](CLAUDE.md#step-execution-system--полный-flow)
+> Подробнее о системе выполнения: [CLAUDE.md → Step Execution System](../../CLAUDE.md#step-execution-system--полный-flow)
 
 ## Обзор
 

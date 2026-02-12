@@ -77,12 +77,12 @@ public class MyStep(DualLogger<MyStep> _logger, IOpcUaTagService _tags) : ITestS
 
 | Тема | Файл |
 |------|------|
-| State Management | [Docs/StateManagementGuide.md](Final_Test_Hybrid/Docs/StateManagementGuide.md) |
-| Error Handling | [Docs/ErrorCoordinatorGuide.md](Final_Test_Hybrid/Docs/ErrorCoordinatorGuide.md) |
-| PLC Reset | [Docs/PlcResetGuide.md](Final_Test_Hybrid/Docs/PlcResetGuide.md) |
-| Steps | [Docs/StepsGuide.md](Final_Test_Hybrid/Docs/StepsGuide.md) |
-| Cancellation | [Docs/CancellationGuide.md](Final_Test_Hybrid/Docs/CancellationGuide.md) |
-| Modbus | [Docs/DiagnosticGuide.md](Final_Test_Hybrid/Docs/DiagnosticGuide.md) |
-| TagWaiter | [Docs/TagWaiterGuide.md](Final_Test_Hybrid/Docs/TagWaiterGuide.md) |
+| State Management | [Docs/execution/StateManagementGuide.md](Final_Test_Hybrid/Docs/execution/StateManagementGuide.md) |
+| Error Handling | [Docs/runtime/ErrorCoordinatorGuide.md](Final_Test_Hybrid/Docs/runtime/ErrorCoordinatorGuide.md) |
+| PLC Reset | [Docs/runtime/PlcResetGuide.md](Final_Test_Hybrid/Docs/runtime/PlcResetGuide.md) |
+| Steps | [Docs/execution/StepsGuide.md](Final_Test_Hybrid/Docs/execution/StepsGuide.md) |
+| Cancellation | [Docs/execution/CancellationGuide.md](Final_Test_Hybrid/Docs/execution/CancellationGuide.md) |
+| Modbus | [Docs/diagnostics/DiagnosticGuide.md](Final_Test_Hybrid/Docs/diagnostics/DiagnosticGuide.md) |
+| TagWaiter | [Docs/runtime/TagWaiterGuide.md](Final_Test_Hybrid/Docs/runtime/TagWaiterGuide.md) |
 
 **Детальная документация:** [Final_Test_Hybrid/CLAUDE.md](Final_Test_Hybrid/CLAUDE.md)

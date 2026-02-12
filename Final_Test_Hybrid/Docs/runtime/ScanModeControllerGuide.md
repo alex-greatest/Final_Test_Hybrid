@@ -174,5 +174,5 @@ private void HandleResetCompleted()
 ## Связанные Guide
 
 - [PlcResetGuide.md](PlcResetGuide.md) — логика сброса PLC
-- [StateManagementGuide.md](StateManagementGuide.md) — общее управление состоянием
-- [ExecutionActivityTrackerGuide.md](ExecutionActivityTrackerGuide.md) — отслеживание активности
+- [StateManagementGuide.md](../execution/StateManagementGuide.md) — общее управление состоянием
+- [ExecutionActivityTrackerGuide.md](../execution/ExecutionActivityTrackerGuide.md) — отслеживание активности
