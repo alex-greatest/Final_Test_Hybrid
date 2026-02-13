@@ -28,6 +28,7 @@ public partial class TestSequenceEditor : IAsyncDisposable
     private bool _isLoading = true;
     private bool _isFileActive;
     private bool _shouldScrollGridToTop;
+    private bool _isDropdownPopupFixRegistered;
 
     protected override async Task OnInitializedAsync()
     {
@@ -44,7 +45,17 @@ public partial class TestSequenceEditor : IAsyncDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_disposed || !_shouldScrollGridToTop)
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (firstRender)
+        {
+            await RegisterDropdownPopupFixAsync();
+        }
+
+        if (!_shouldScrollGridToTop)
         {
             return;
         }
@@ -68,9 +79,57 @@ public partial class TestSequenceEditor : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         _disposed = true;
+        await UnregisterDropdownPopupFixAsync();
         await _cts.CancelAsync();
         _cts.Dispose();
         ResetServiceState();
+    }
+
+    private async Task RegisterDropdownPopupFixAsync()
+    {
+        if (_isDropdownPopupFixRegistered)
+        {
+            return;
+        }
+
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("testSequenceEditorPopupFix.register", GridContainerId);
+            _isDropdownPopupFixRegistered = true;
+        }
+        catch (JSDisconnectedException ex)
+        {
+            Logger.LogWarning(ex, "Регистрация popup-fix пропущена: JS runtime отключен");
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning(ex, "Не удалось зарегистрировать popup-fix для dropdown");
+        }
+    }
+
+    private async Task UnregisterDropdownPopupFixAsync()
+    {
+        if (!_isDropdownPopupFixRegistered)
+        {
+            return;
+        }
+
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("testSequenceEditorPopupFix.unregister", GridContainerId);
+        }
+        catch (JSDisconnectedException ex)
+        {
+            Logger.LogWarning(ex, "Снятие popup-fix пропущено: JS runtime отключен");
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning(ex, "Не удалось снять popup-fix для dropdown");
+        }
+        finally
+        {
+            _isDropdownPopupFixRegistered = false;
+        }
     }
 
     private void ResetServiceState()
