@@ -58,7 +58,9 @@ public partial class TestSequenceEditor
         TestSequenceService.CurrentFileName = Path.GetFileNameWithoutExtension(filePath);
         await TestSequenceService.SaveToExcelAsync(filePath, _rows);
         _isFileActive = true;
+        _shouldScrollGridToTop = true;
         await RefreshStructureAsync();
+        await InvokeAsync(StateHasChanged);
         await UpdateDialogTitleAsync();
         NotifySuccess("Создано", $"Файл создан: {TestSequenceService.CurrentFileName}");
     }
@@ -130,7 +132,9 @@ public partial class TestSequenceEditor
                 loadedRows.Count);
             _rows = loadedRows.Count == 0 ? TestSequenceService.InitializeRows(20, _columnCount) : loadedRows;
             ClearUnknownStepNames();
+            _shouldScrollGridToTop = true;
             await RefreshStructureAsync();
+            await InvokeAsync(StateHasChanged);
             NotifySuccessIfNotDisposed();
         }
         catch (Exception ex)

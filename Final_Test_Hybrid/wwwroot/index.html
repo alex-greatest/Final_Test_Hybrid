@@ -63,6 +63,15 @@
             }
         };
 
+        window.scrollGridToTop = (containerId) => {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const scrollArea = container.querySelector('.rz-data-grid-data');
+            if (scrollArea) {
+                scrollArea.scrollTop = 0;
+            }
+        };
+
         window.floatingPanel = {
             _dragState: null,
             _dragDistanceThresholdPx: 5,
