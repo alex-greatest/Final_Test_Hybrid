@@ -36,12 +36,12 @@ public partial class PreExecutionCoordinator(
     private TaskCompletionSource? _askEndSignal;
     private CancellationTokenSource _resetCts = new();
     private int _resetSequence;
+    private int _resetCleanupDone;
     private bool _skipNextScan;
     private bool _executeFullPreparation;
     private PreExecutionContext? _lastSuccessfulContext;
 
     // === Отслеживание источника reset ===
-    private const int ResetOriginNone = 0;
     private const int ResetOriginPlc = 1;
     private const int ResetOriginNonPlc = 2;
     private int _lastHardResetOrigin;
@@ -168,11 +168,25 @@ public partial class PreExecutionCoordinator(
 
     public ScanStepBase GetScanStep() => steps.GetScanStep();
 
+    private void BeginResetCycle(int origin, bool ensureAskEndWindow)
+    {
+        var resetSequence = Interlocked.Increment(ref _resetSequence);
+        ArmResetCleanupGuard();
+        infra.Logger.LogDebug(
+            "Старт reset-цикла: seq={ResetSequence}, source={ResetSource}, cleanupArmed={CleanupArmed}",
+            resetSequence,
+            DescribeResetOrigin(origin),
+            true);
+        if (ensureAskEndWindow)
+        {
+            EnsureAskEndSignal();
+            CancelResetToken();
+        }
+    }
+
     private void BeginPlcReset()
     {
-        Interlocked.Increment(ref _resetSequence);
-        EnsureAskEndSignal();
-        CancelResetToken();
+        BeginResetCycle(ResetOriginPlc, ensureAskEndWindow: true);
     }
 
     private void CompletePlcReset()
@@ -203,6 +217,16 @@ public partial class PreExecutionCoordinator(
     private bool DidResetOccur(int sequenceSnapshot) =>
         sequenceSnapshot != Volatile.Read(ref _resetSequence);
 
+    private static string DescribeResetOrigin(int origin)
+    {
+        return origin switch
+        {
+            ResetOriginPlc => "PLC",
+            ResetOriginNonPlc => "NonPlc",
+            _ => "Unknown"
+        };
+    }
+
     private void EnsureAskEndSignal()
     {
         if (_askEndSignal == null || _askEndSignal.Task.IsCompleted)
@@ -229,5 +253,15 @@ public partial class PreExecutionCoordinator(
     private void SignalReset(CycleExitReason reason)
     {
         _resetSignal?.TrySetResult(reason);
+    }
+
+    private void ArmResetCleanupGuard()
+    {
+        Interlocked.Exchange(ref _resetCleanupDone, 0);
+    }
+
+    private bool TryRunResetCleanupOnce()
+    {
+        return Interlocked.CompareExchange(ref _resetCleanupDone, 1, 0) == 0;
     }
 }

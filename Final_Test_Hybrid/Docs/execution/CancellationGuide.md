@@ -129,10 +129,10 @@ await context.DelayAsync(TimeSpan.FromSeconds(5), ct);  // Pause-aware delay
 | Тип | Условие | Метод | Поведение |
 |-----|---------|-------|-----------|
 | **Soft** | `wasInScanPhase=true` | `ForceStop()` | Resume → OnForceStop |
-| **Hard** | `wasInScanPhase=false` | `Reset()` | Resume → OnReset → ClearStateOnReset |
+| **Hard** | `wasInScanPhase=false` | `Reset()` | Resume → OnReset → новый reset-cycle (`_resetSequence`) и one-shot очистка (`OnAskEndReceived` или `HandleHardResetExit`) |
 
 **Soft Reset:** тест в фазе сканирования, минимальная очистка.
-**Hard Reset:** тест не начался или уже завершён, полная очистка.
+**Hard Reset:** тест не начался или уже завершён, полная очистка через защищённый one-shot путь.
 
 ---
 

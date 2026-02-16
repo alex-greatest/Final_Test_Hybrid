@@ -82,8 +82,35 @@ public partial class PreExecutionCoordinator
 
     private async Task ExecuteGridClearAsync()
     {
-        var context = CaptureAndClearState();
+        var resetSequence = GetResetSequenceSnapshot();
+        if (_askEndSignal == null)
+        {
+            infra.Logger.LogDebug(
+                "Пропуск reset-cleanup: path={CleanupPath}, reason={SkipReason}, seq={ResetSequence}",
+                "AskEnd",
+                "stale_no_active_window",
+                resetSequence);
+            return;
+        }
+
         RecordAskEndSequence();
+        resetSequence = GetResetSequenceSnapshot();
+        if (!TryRunResetCleanupOnce())
+        {
+            infra.Logger.LogDebug(
+                "Пропуск reset-cleanup: path={CleanupPath}, reason={SkipReason}, seq={ResetSequence}",
+                "AskEnd",
+                "already_done",
+                resetSequence);
+            CompletePlcReset();
+            return;
+        }
+        infra.Logger.LogDebug(
+            "Выполнение reset-cleanup: path={CleanupPath}, seq={ResetSequence}",
+            "AskEnd",
+            resetSequence);
+
+        var context = CaptureAndClearState();
         if (!ShouldShowInterruptDialog(context))
         {
             CompletePlcReset();
@@ -231,8 +258,11 @@ public partial class PreExecutionCoordinator
         var isPending = Interlocked.Exchange(ref coordinators.PlcResetCoordinator.PlcHardResetPending, 0);
         var origin = isPending == 1 ? ResetOriginPlc : ResetOriginNonPlc;
         Volatile.Write(ref _lastHardResetOrigin, origin);
+        if (origin == ResetOriginNonPlc)
+        {
+            BeginResetCycle(ResetOriginNonPlc, ensureAskEndWindow: false);
+        }
         HandleStopSignal(PreExecutionResolution.HardReset);
-        infra.StatusReporter.ClearAllExceptScan();
     }
 
     private void SignalResolution(PreExecutionResolution resolution)

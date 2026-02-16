@@ -54,7 +54,7 @@
 | Термин | Значение |
 |--------|----------|
 | **Soft reset** | Сброс по Req_Reset когда `wasInScanPhase=true`. Вызывает `ForceStop()`. **До AskEnd** данные сохраняются, **после AskEnd** очищаются через `ClearStateOnReset()`. |
-| **Hard reset** | Сброс по Req_Reset когда `wasInScanPhase=false`. Очистка состояния через `HandleGridClear()` по `OnAskEndReceived`. `Reset()` → `OnReset` только устанавливает stop-reason и чистит UI. |
+| **Hard reset** | Сброс по Req_Reset когда `wasInScanPhase=false`. Очистка состояния идёт через общий one-shot guard: основной путь по `OnAskEndReceived` (`HandleGridClear()`), fallback — в `HandleHardResetExit()`, без повторной очистки. |
 | **ForceStop** | Метод `ErrorCoordinator.ForceStop()`. Resume + ClearInterrupt. НЕ вызывает OnReset. |
 | **Reset** | Метод `ErrorCoordinator.Reset()`. Resume + ClearInterrupt + OnReset event. |
 | **Soft deactivation** | `ScanModeController.PerformSoftDeactivation()`. Отпускает сессию сканера, но `_isActivated=true`. |
@@ -231,7 +231,7 @@ public bool IsInScanningPhase
 
 Используется `PlcResetCoordinator` для определения типа сброса:
 - `true` → **Soft reset** (ForceStop) — данные очищаются по OnAskEndReceived через HandleGridClear()
-- `false` → **Hard reset** (Reset) — данные также очищаются по OnAskEndReceived; OnReset только устанавливает stop-reason
+- `false` → **Hard reset** (Reset) — основной cleanup по AskEnd, fallback в `HandleHardResetExit()`; оба пути используют `TryRunResetCleanupOnce()`
 
 ### Диаграмма состояний
 
@@ -627,7 +627,7 @@ private bool ShouldUseSoftDeactivation()
 | `OnActiveChanged` | `Action` | Изменение IsActive |
 | `OnForceStop` | `Action` | Сигнал остановки (до AskEnd) |
 | `OnResetStarting` | `Func<bool>` | Возвращает wasInScanPhase |
-| `OnAskEndReceived` | `Action` | AskEnd получен — очистка Grid |
+| `OnAskEndReceived` | `Action` | AskEnd получен — запуск cleanup reset-состояния (с one-shot guard) |
 | `OnResetCompleted` | `Action` | Reset завершён или отменён в runtime (кроме disposal) |
 | `CancelCurrentReset()` | `void` | Отмена текущего reset |
 
@@ -636,12 +636,13 @@ private bool ShouldUseSoftDeactivation()
 | Тип | Условие | Метод | Очистка состояния |
 |-----|---------|-------|-------------------|
 | **Soft** | `wasInScanPhase = true` | `ForceStop()` | По `OnAskEndReceived` → `HandleGridClear()` → `ClearStateOnReset()` |
-| **Hard** | `wasInScanPhase = false` | `Reset()` | По `OnAskEndReceived` → `HandleGridClear()` → `ClearStateOnReset()` |
+| **Hard** | `wasInScanPhase = false` | `Reset()` | По `OnAskEndReceived` **или** fallback в `HandleHardResetExit()`; один раз через `TryRunResetCleanupOnce()` |
 
 **Важно:**
-- Оба типа очищают состояние через `OnAskEndReceived`
-- `OnReset` (только hard) → устанавливает stop-reason через `HandleHardReset()`
-- **Timeout:** если AskEnd не приходит, очистка через `HandleCycleExit(HardReset)`
+- Очистка reset-состояния защищена общим one-shot guard (`TryRunResetCleanupOnce()`)
+- `OnReset` (hard) запускает путь `HandleHardReset()` и может завершить cleanup без AskEnd через `HandleHardResetExit()`
+- Любой новый reset-cycle (PLC и non-PLC) повышает `_resetSequence`; это канонический идентификатор для sequence-guard.
+- `OnAskEndReceived` фильтрует stale-сигналы по reset-окну (`_askEndSignal == null`).
 
 ### Диаграмма (полная)
 
@@ -675,8 +676,9 @@ WaitForAskEnd(AskEndTimeoutSec) ──► Ожидание Ask_End от PLC
        │
        ▼ (успех)
 OnAskEndReceived() ──► PreExecutionCoordinator.HandleGridClear()
-       │                → ClearStateOnReset()
-       │                → StatusReporter.ClearAllExceptScan()
+       │                → ExecuteGridClearAsync()
+       │                → TryRunResetCleanupOnce()
+       │                → ClearStateOnReset() + ClearAllExceptScan()
        ▼
 ExecuteSmartReset(wasInScanPhase)
        │
@@ -685,9 +687,10 @@ ExecuteSmartReset(wasInScanPhase)
        │                     (Grid НЕ очищается — уже очищен в OnAskEndReceived)
        │
        └── wasInScanPhase=false:
-               Reset() → Resume + ClearInterrupt + OnReset event
-                         ├─► PreExecutionCoordinator.HandleHardReset()
-                         └─► TestExecutionCoordinator.HandleReset() → ClearErrors()
+                Reset() → Resume + ClearInterrupt + OnReset event
+                          ├─► PreExecutionCoordinator.HandleHardReset()
+                          └─► TestExecutionCoordinator.HandleReset() → ClearErrors()
+                          (если AskEnd cleanup не выполнен — fallback в HandleHardResetExit)
        │
        ▼
 OnResetCompleted() ──► ScanModeController.HandleResetCompleted()
@@ -744,7 +747,7 @@ private async Task HandleResetExceptionAsync(Exception ex)
 - ClearCurrentInterrupt (очистка текущего прерывания)
 
 **Очистка данных** происходит через **event subscribers**:
-- Grid, BoilerState → `PreExecutionCoordinator` (OnForceStop, OnAskEndReceived, OnReset)
+- Grid, BoilerState → `PreExecutionCoordinator` (основной путь `OnAskEndReceived`, fallback в `HandleHardResetExit`)
 - Errors → `TestExecutionCoordinator` (OnForceStop, OnReset) через `ClearErrors()`
 
 ### Сравнение методов
@@ -784,14 +787,20 @@ public void Reset()
 ### Кто подписан на OnReset
 
 ```csharp
-// PreExecutionCoordinator.Retry.cs
+// PreExecutionCoordinator.Subscriptions.cs
 coordinators.ErrorCoordinator.OnReset += HandleHardReset;
 
 private void HandleHardReset()
 {
     TryCompletePlcReset();
+    var isPending = Interlocked.Exchange(ref coordinators.PlcResetCoordinator.PlcHardResetPending, 0);
+    var origin = isPending == 1 ? ResetOriginPlc : ResetOriginNonPlc;
+    Volatile.Write(ref _lastHardResetOrigin, origin);
+    if (origin == ResetOriginNonPlc)
+    {
+        BeginResetCycle(ResetOriginNonPlc, ensureAskEndWindow: false);
+    }
     HandleStopSignal(PreExecutionResolution.HardReset);
-    infra.StatusReporter.ClearAllExceptScan();  // ← Очистка Grid
 }
 ```
 
@@ -806,8 +815,8 @@ private void HandleHardReset()
 |---------|-----------|-------------|-------|
 | **OnForceStop** | PreExecutionCoordinator | Отмена операции, RequestStop | `HandleSoftStop()` |
 | **OnForceStop** | TestExecutionCoordinator | Errors, StopAsFailure | `HandleForceStop()` → `ClearErrors()` |
-| **OnAskEndReceived** | PreExecutionCoordinator | Grid, состояние, BoilerState | `HandleGridClear()` → `ClearStateOnReset()` |
-| **OnReset** | PreExecutionCoordinator | Stop-reason, статус UI | `HandleHardReset()` → `ClearAllExceptScan()` (только UI) |
+| **OnAskEndReceived** | PreExecutionCoordinator | Основной cleanup reset-состояния | `HandleGridClear()` → `ExecuteGridClearAsync()` → `TryRunResetCleanupOnce()` |
+| **OnReset** | PreExecutionCoordinator | Stop-reason, запуск hard-reset path | `HandleHardReset()` → `HandleStopSignal(HardReset)` |
 | **OnReset** | TestExecutionCoordinator | Errors, StopAsFailure | `HandleReset()` → `ClearErrors()` |
 | **Test completion** | PreExecutionCoordinator | Результаты, финализация | `HandleTestCompletionAsync()` |
 | **ClearStop** | ExecutionFlowState | StopReason, StopAsFailure | Координаторы |
@@ -825,21 +834,46 @@ private void HandleSoftStop()
 }
 
 // OnAskEndReceived → HandleGridClear()
-private void HandleGridClear()
+private async void HandleGridClear()
 {
+    try { await ExecuteGridClearAsync(); }
+    catch { CompletePlcReset(); }
+}
+
+private async Task ExecuteGridClearAsync()
+{
+    if (_askEndSignal == null)
+    {
+        return; // stale AskEnd
+    }
+
+    RecordAskEndSequence();
+    if (!TryRunResetCleanupOnce())
+    {
+        CompletePlcReset();
+        return;
+    }
+
+    CaptureAndClearState();  // ClearStateOnReset() + ClearAllExceptScan()
     CompletePlcReset();
-    ClearStateOnReset();                    // ← Очистка состояния
-    infra.StatusReporter.ClearAllExceptScan();  // ← Очистка Grid
 }
 
 // OnReset → HandleHardReset()
 private void HandleHardReset()
 {
     TryCompletePlcReset();
+    var isPending = Interlocked.Exchange(ref coordinators.PlcResetCoordinator.PlcHardResetPending, 0);
+    var origin = isPending == 1 ? ResetOriginPlc : ResetOriginNonPlc;
+    Volatile.Write(ref _lastHardResetOrigin, origin);
+    if (origin == ResetOriginNonPlc)
+    {
+        BeginResetCycle(ResetOriginNonPlc, ensureAskEndWindow: false);
+    }
     HandleStopSignal(PreExecutionResolution.HardReset);
     // → RequestStop(PlcHardReset, true)
     // → CycleExitReason.HardReset
-    infra.StatusReporter.ClearAllExceptScan();  // ← Очистка Grid
+    // fallback cleanup (если AskEnd не выполнил cleanup):
+    // HandleHardResetExit() -> TryRunResetCleanupOnce()
 }
 ```
 

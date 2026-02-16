@@ -23,6 +23,14 @@
 - Сброс маркера выполняется в `finally`, даже если `_errorCoordinator.Reset()` выбросит исключение.
 - Это обязательная гарантия: маркер не должен оставаться в значении `1` после аварийного выхода из reset-flow.
 
+### Инвариант reset-cycle в PreExecutionCoordinator
+
+- Любой новый reset-cycle (PLC и non-PLC) обязан увеличивать `_resetSequence`.
+- Старт reset-cycle выполняется через `BeginResetCycle(origin, ensureAskEndWindow)`:
+  - PLC-путь: `BeginResetCycle(ResetOriginPlc, true)` — `seq++`, повторное вооружение one-shot cleanup, открытие AskEnd-окна.
+  - non-PLC HardReset-путь: `BeginResetCycle(ResetOriginNonPlc, false)` — `seq++`, повторное вооружение one-shot cleanup, **без** открытия AskEnd-окна.
+- Лог `Старт reset-цикла: seq=..., source=..., cleanupArmed=true` формируется только в `BeginResetCycle(...)`.
+
 ### wasInScanPhase — определение
 
 ```csharp
@@ -50,31 +58,43 @@ wasInScanPhase ? ForceStop() : Reset()
 OnResetCompleted.Invoke()
 ```
 
-## HandleStopSignal — очистка состояния
+## HandleStopSignal — постановка stop-reason и маршрут очистки
 
 ```csharp
 private void HandleStopSignal(PreExecutionResolution resolution)
 {
-    if (TryCancelActiveOperation())
+    var exitReason = resolution == PreExecutionResolution.SoftStop
+        ? CycleExitReason.SoftReset
+        : CycleExitReason.HardReset;
+    var stopReason = resolution == PreExecutionResolution.SoftStop
+        ? ExecutionStopReason.PlcSoftReset
+        : ExecutionStopReason.PlcHardReset;
+
+    state.FlowState.RequestStop(stopReason, stopAsFailure: true);
+    SignalReset(exitReason);
+    if (TryCancelActiveOperation(exitReason))
     {
-        // Очистка произойдёт позже
+        // Очистка произойдёт после отмены активной операции через HandleCycleExit()
     }
     else
     {
-        // Нет активной операции — очищаем сразу
-        ClearStateOnReset();
+        // Нет активной операции — обработка выхода сразу
+        HandleCycleExit(exitReason);
     }
     SignalResolution(resolution);
 }
 ```
 
+- Rearm one-shot guard и `seq++` выполняются только при старте нового reset-cycle:
+  - PLC reset через `BeginPlcReset()` → `BeginResetCycle(ResetOriginPlc, true)`;
+  - non-PLC hard reset через `HandleHardReset()` → `BeginResetCycle(ResetOriginNonPlc, false)`.
+
 ### TryCancelActiveOperation()
 
 | Условие | Действие | Где очистка |
 |---------|----------|-------------|
-| `TestCoordinator.IsRunning` | `_resetRequested = true` | `HandlePostTestCompletion()` |
-| `IsPreExecutionActive` | `_resetRequested = true`, `Cancel()` | catch блок в MainLoop |
-| Иначе | — | Сразу в `HandleStopSignal` |
+| `TestCoordinator.IsRunning` или `IsPreExecutionActive` | `_pendingExitReason = exitReason`, `_currentCts.Cancel()` | В `HandleCycleExit()` после выхода из активной операции |
+| Иначе | — | Сразу через `HandleCycleExit(exitReason)` |
 
 ### ClearStateOnReset()
 
@@ -84,6 +104,9 @@ private void ClearStateOnReset()
     state.BoilerState.Clear();
     state.PhaseState.Clear();
     ClearBarcode();
+    infra.ErrorService.IsHistoryEnabled = false;
+    infra.StepTimingService.Clear();
+    infra.RecipeProvider.Clear();
 }
 ```
 
@@ -94,7 +117,8 @@ PreExecutionCoordinator:
 - ждёт AskEnd перед стартом нового цикла;
 - отменяет ожидание штрихкода при reset;
 - для PLC-reset пути продолжает цикл только после AskEnd.
-- для HardReset пути выходит немедленно, без ожидания AskEnd.
+- для HardReset допускает fallback-очистку в `HandleHardResetExit`, если AskEnd путь не завершил cleanup.
+- stale `AskEnd` игнорируется в `ExecuteGridClearAsync()`, если нет активного reset-окна (`_askEndSignal == null`).
 
 ### Таймауты reset-flow (конфигурируемые)
 
@@ -122,11 +146,11 @@ RunSingleCycleAsync:
      ExecutePreExecutionPipelineAsync()
      if (TestStarted) {
        WaitForTestCompletionAsync() // TestCoordinator.IsRunning = true
-       HandlePostTestCompletion()
      }
    }
    catch (OperationCanceledException) when (reset signaled) {
-     ClearStateOnReset()
+     // exitReason = _pendingExitReason (Soft/Hard reset)
+     // cleanup выполняется в HandleCycleExit(exitReason)
    }
 ```
 
@@ -134,9 +158,11 @@ RunSingleCycleAsync:
 
 | Состояние при сбросе | Путь очистки |
 |---------------------|--------------|
-| `WaitForBarcodeAsync` | `HandleStopSignal` → `ClearStateOnReset()` сразу |
-| `ExecutePreExecutionPipelineAsync` | `Cancel()` → catch → `ClearStateOnReset()` |
-| `WaitForTestCompletionAsync` | `Stop()` → `OnSequenceCompleted` → `HandlePostTestCompletion` → `ClearStateOnReset()` |
+| `WaitForBarcodeAsync` | `HandleCycleExit(Soft/HardReset)` (сразу) + общий one-shot guard |
+| `ExecutePreExecutionPipelineAsync` | `Cancel()` → `HandleCycleExit(Soft/HardReset)` |
+| `WaitForTestCompletionAsync` | reset-сигнал → выход из ожидания → `HandleCycleExit(Soft/HardReset)` |
+| `AskEnd` пришёл после cleanup | `TryRunResetCleanupOnce()` блокирует повторную очистку |
+| `AskEnd` не пришёл для HardReset | cleanup в `HandleHardResetExit` (fallback, без дубля) |
 
 ## Диалог причины прерывания при SoftReset
 

@@ -26,6 +26,8 @@ public enum CycleExitReason
     TestCompleted,      // Тест завершился нормально
     SoftReset,          // Мягкий сброс (wasInScanPhase = true)
     HardReset,          // Жёсткий сброс
+    RepeatRequested,    // OK повтор теста
+    NokRepeatRequested, // NOK повтор с подготовкой
 }
 ```
 
@@ -41,11 +43,14 @@ ExecuteCycleAsync:
    │    ├─ Cancelled → PipelineCancelled
    │    └─ иначе → PipelineFailed
    │
-   └─ Ждём завершения теста
-        │
-        ├─ _pendingExitReason != null? → return _pendingExitReason
-        │
-        └─ TestCompleted
+    └─ Ждём завершения теста
+         │
+         ├─ _pendingExitReason != null? → return _pendingExitReason
+         │
+         └─ HandleTestCompletionAsync()
+              ├─ RepeatRequested
+              ├─ NokRepeatRequested
+              └─ TestCompleted
 ```
 
 ## Обработка состояний
@@ -56,16 +61,25 @@ private void HandleCycleExit(CycleExitReason reason)
     switch (reason)
     {
         case CycleExitReason.TestCompleted:
-            HandleTestCompleted();  // Устанавливаем результат теста
+            HandleTestCompletedExit();
             break;
 
         case CycleExitReason.SoftReset:
-            // Ничего - очистка произойдёт по AskEnd в HandleGridClear
+            // Очистка по AskEnd в ExecuteGridClearAsync()
+            HandleSoftResetExit();
             break;
 
         case CycleExitReason.HardReset:
-            ClearStateOnReset();
-            infra.StatusReporter.ClearAllExceptScan();
+            // Fallback-очистка, если AskEnd-путь не успел выполнить cleanup
+            HandleHardResetExit();
+            break;
+
+        case CycleExitReason.RepeatRequested:
+            HandleRepeatRequestedExit();
+            break;
+
+        case CycleExitReason.NokRepeatRequested:
+            HandleNokRepeatRequestedExit();
             break;
 
         case CycleExitReason.PipelineFailed:
@@ -78,40 +92,82 @@ private void HandleCycleExit(CycleExitReason reason)
 
 ## Очистка по AskEnd (HandleGridClear)
 
-При soft reset очистка состояния и грида происходит **одновременно** по сигналу `OnAskEndReceived`:
+`OnAskEndReceived` обрабатывается через `HandleGridClear()` → `ExecuteGridClearAsync()`.
+Очистка выполняется только один раз на reset-цикл и защищена от stale-сигналов
+через проверку активного reset-окна (`_askEndSignal == null`):
 
 ```csharp
-private void HandleGridClear()
+private async Task ExecuteGridClearAsync()
 {
-    ClearStateOnReset();  // Очищает серийный номер, BoilerState, CurrentBarcode
-    infra.StatusReporter.ClearAllExceptScan();  // Очищает грид
+    var resetSequence = GetResetSequenceSnapshot();
+    if (_askEndSignal == null)
+    {
+        infra.Logger.LogDebug(
+            "Пропуск reset-cleanup: path={CleanupPath}, reason={SkipReason}, seq={ResetSequence}",
+            "AskEnd",
+            "stale_no_active_window",
+            resetSequence);
+        return;
+    }
+
+    RecordAskEndSequence();
+    resetSequence = GetResetSequenceSnapshot();
+    if (!TryRunResetCleanupOnce())
+    {
+        infra.Logger.LogDebug(
+            "Пропуск reset-cleanup: path={CleanupPath}, reason={SkipReason}, seq={ResetSequence}",
+            "AskEnd",
+            "already_done",
+            resetSequence);
+        CompletePlcReset();
+        return;
+    }
+
+    infra.Logger.LogDebug(
+        "Выполнение reset-cleanup: path={CleanupPath}, seq={ResetSequence}",
+        "AskEnd",
+        resetSequence);
+    CaptureAndClearState(); // ClearStateOnReset() + ClearAllExceptScan()
+    CompletePlcReset();
 }
 ```
 
-**Почему так:** Визуальная синхронизация — серийный номер и грид очищаются одновременно.
+`TryRunResetCleanupOnce()` общий для AskEnd и HardResetExit, поэтому повторная очистка не выполняется.
 
 ## Как сигналы устанавливают состояние
 
 ### Soft Reset (PlcResetCoordinator.OnForceStop)
 
 ```csharp
-private void HandleSoftStop() => HandleStopSignal(PreExecutionResolution.SoftStop);
+private void HandleSoftStop()
+{
+    BeginPlcReset();
+    HandleStopSignal(PreExecutionResolution.SoftStop);
+}
 
 private void HandleStopSignal(PreExecutionResolution resolution)
 {
+    infra.StepTimingService.PauseAllColumnsTiming();
     var exitReason = resolution == PreExecutionResolution.SoftStop
         ? CycleExitReason.SoftReset
         : CycleExitReason.HardReset;
+    var stopReason = resolution == PreExecutionResolution.SoftStop
+        ? ExecutionStopReason.PlcSoftReset
+        : ExecutionStopReason.PlcHardReset;
 
+    state.FlowState.RequestStop(stopReason, stopAsFailure: true);
+    SignalReset(exitReason);
+    StopChangeoverTimerForReset(GetChangeoverResetMode());
     if (TryCancelActiveOperation(exitReason))
     {
-        // _pendingExitReason установлен, очистка в HandleCycleExit (для HardReset)
-        // или в HandleGridClear (для SoftReset)
+        // Очистка произойдёт в HandleCycleExit
     }
     else
     {
+        // Нет активной операции — очищаем сразу
         HandleCycleExit(exitReason);
     }
+    SignalResolution(resolution);
 }
 ```
 
@@ -120,18 +176,29 @@ private void HandleStopSignal(PreExecutionResolution resolution)
 ```csharp
 private void HandleHardReset()
 {
+    TryCompletePlcReset();
+    var isPending = Interlocked.Exchange(ref coordinators.PlcResetCoordinator.PlcHardResetPending, 0);
+    var origin = isPending == 1 ? ResetOriginPlc : ResetOriginNonPlc;
+    Volatile.Write(ref _lastHardResetOrigin, origin);
+    if (origin == ResetOriginNonPlc)
+    {
+        BeginResetCycle(ResetOriginNonPlc, ensureAskEndWindow: false);
+    }
     HandleStopSignal(PreExecutionResolution.HardReset);
-    infra.StatusReporter.ClearAllExceptScan();
 }
 ```
+
+Старт reset-cycle выполняется только через `BeginResetCycle(origin, ensureAskEndWindow)`:
+- PLC-путь: `BeginPlcReset()` → `BeginResetCycle(ResetOriginPlc, true)` (`seq++`, rearm one-shot cleanup, открытие AskEnd-окна).
+- non-PLC hard reset: `HandleHardReset()` → `BeginResetCycle(ResetOriginNonPlc, false)` (`seq++`, rearm one-shot cleanup, без AskEnd-окна).
 
 ## Сравнение SoftReset vs HardReset
 
 | Аспект | SoftReset | HardReset |
 |--------|-----------|-----------|
-| Когда очистка | По AskEnd (HandleGridClear) | Сразу в HandleCycleExit |
-| Что очищается | Всё одновременно | Всё сразу |
-| Визуально | Синхронно с гридом | Мгновенно |
+| Когда очистка | По AskEnd (`ExecuteGridClearAsync`) | В `HandleHardResetExit` как fallback, если AskEnd ещё не очистил |
+| One-shot защита | `TryRunResetCleanupOnce()` | Тот же guard, повторной очистки нет |
+| Визуально | Синхронно с гридом | UI очищается сразу, данные — один раз по общему guard |
 
 ## Добавление нового состояния
 
@@ -161,18 +228,18 @@ private void HandleCycleExit(CycleExitReason reason)
         // ... существующие case ...
 
         case CycleExitReason.NewReason:
-            // Логика очистки для нового состояния
-            ClearStateOnReset();
-            // Дополнительные действия если нужно
+            HandleNewReasonExit(); // Выделенный handler вместо inline-логики
             break;
     }
 }
 ```
 
+Если новое состояние относится к reset-flow, очистку нужно проводить через общий one-shot guard (`TryRunResetCleanupOnce()`), а не прямым вызовом `ClearStateOnReset()` без guard.
+
 ### Шаг 3: Добавить источник сигнала
 
 ```csharp
-// PreExecutionCoordinator.Retry.cs — подписка на событие
+// PreExecutionCoordinator.Subscriptions.cs — подписка на событие
 private void SubscribeToStopSignals()
 {
     coordinators.PlcResetCoordinator.OnForceStop += HandleSoftStop;
@@ -198,19 +265,21 @@ private void HandleNewSignal()
 
 | Файл | Содержимое |
 |------|------------|
-| `PreExecutionCoordinator.cs` | Enum `CycleExitReason`, поле `_pendingExitReason` |
-| `PreExecutionCoordinator.MainLoop.cs` | `ExecuteCycleAsync`, `HandleCycleExit`, `HandleTestCompleted` |
-| `PreExecutionCoordinator.Retry.cs` | `HandleStopSignal`, `TryCancelActiveOperation`, `HandleGridClear` |
+| `PreExecutionCoordinator.cs` | Enum `CycleExitReason`, one-shot guard (`ArmResetCleanupGuard`, `TryRunResetCleanupOnce`) |
+| `PreExecutionCoordinator.MainLoop.cs` | `ExecuteCycleAsync`, `HandleCycleExit`, выходы по reset/test completion |
+| `PreExecutionCoordinator.Subscriptions.cs` | `HandleStopSignal`, `HandleGridClear`, stale AskEnd filter |
+| `PreExecutionCoordinator.CycleExit.cs` | `HandleSoftResetExit`, `HandleHardResetExit` (fallback cleanup) |
 
 ## Гарантии очистки
 
 | Сценарий | Путь очистки |
 |----------|--------------|
-| **SoftReset** во время ожидания баркода | `HandleGridClear` (по AskEnd) |
-| **SoftReset** во время pipeline | `HandleGridClear` (по AskEnd) |
-| **SoftReset** во время теста | `HandleGridClear` (по AskEnd) |
-| **HardReset** в любой момент | `HandleCycleExit` сразу |
-| Нормальное завершение теста | `HandleCycleExit` → `HandleTestCompleted` |
+| **SoftReset** во время ожидания баркода | `HandleGridClear` (по AskEnd) + `TryRunResetCleanupOnce()` |
+| **SoftReset** во время pipeline | `HandleGridClear` (по AskEnd) + `TryRunResetCleanupOnce()` |
+| **SoftReset** во время теста | `HandleGridClear` (по AskEnd) + `TryRunResetCleanupOnce()` |
+| **HardReset** без AskEnd cleanup | `HandleHardResetExit` выполняет fallback cleanup через тот же guard |
+| **Дублированный/устаревший AskEnd** | Игнорируется (`_askEndSignal == null` + one-shot guard) |
+| Нормальное завершение теста | `HandleCycleExit` → `HandleTestCompletedExit` |
 
 ## Отладка
 

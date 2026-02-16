@@ -22,8 +22,24 @@ public partial class PreExecutionCoordinator
     {
         // ВАЖНО: snapshot changeoverMode ДО очистки состояния
         var changeoverMode = GetChangeoverResetMode();
-        ClearStateOnReset();
-        infra.StatusReporter.ClearAllExceptScan();
+        var resetSequence = GetResetSequenceSnapshot();
+        if (TryRunResetCleanupOnce())
+        {
+            infra.Logger.LogDebug(
+                "Выполнение reset-cleanup: path={CleanupPath}, seq={ResetSequence}",
+                "HardResetExit",
+                resetSequence);
+            ClearStateOnReset();
+            infra.StatusReporter.ClearAllExceptScan();
+        }
+        else
+        {
+            infra.Logger.LogDebug(
+                "Пропуск reset-cleanup: path={CleanupPath}, reason={SkipReason}, seq={ResetSequence}",
+                "HardResetExit",
+                "already_done",
+                resetSequence);
+        }
         HandleChangeoverAfterReset(changeoverMode);
         TrySendSyntheticChangeoverSignals(changeoverMode);
     }

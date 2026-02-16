@@ -198,6 +198,7 @@ public partial class PreExecutionCoordinator
 
     /// <summary>
     /// Guard: не перезапускать pending для того же seq.
+    /// Dedup привязан к resetSequence; каждый новый reset-cycle обязан заранее увеличить _resetSequence.
     /// </summary>
     private void TryArmChangeoverPending(int trigger)
     {
