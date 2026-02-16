@@ -62,6 +62,7 @@
 @code {
     private RadzenDataGrid<TestSequenseData>? _grid;
     private IEnumerable<TestSequenseData> _data = [];
+    private bool _pendingScrollToBottom = true;
 
     private static string GetCellClass(TestSequenseData data)
     {
@@ -80,6 +81,17 @@
         TestSequenseService.OnDataChanged += HandleDataChanged;
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_pendingScrollToBottom)
+        {
+            return;
+        }
+
+        _pendingScrollToBottom = false;
+        await ScrollToBottom();
+    }
+
     private async void HandleDataChanged()
     {
         try
@@ -87,11 +99,11 @@
             await InvokeAsync(async () =>
             {
                 _data = TestSequenseService.Data;
+                _pendingScrollToBottom = true;
                 StateHasChanged();
                 if (_grid != null)
                 {
                     await _grid.Reload();
-                    await ScrollToBottom();
                 }
             });
         }

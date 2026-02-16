@@ -94,7 +94,7 @@ public class ConnectEarthClipStep(
         if (completedTask == timeoutTask && timeoutTask.Status == TaskStatus.RanToCompletion)
         {
             errorRaised = true;
-            errorService.RaiseInStep(ErrorDefinitions.EarthClipNotConnected, Id, Name);
+            errorService.RaisePlc(ErrorDefinitions.EarthClipNotConnected, Id, Name);
             logger.LogWarning("Таймаут {Timeout} сек — клипса заземление не подключена", ReadyTimeout.TotalSeconds);
         }
         else if (completedTask == waitTask)
@@ -120,7 +120,7 @@ public class ConnectEarthClipStep(
             // Снимаем ошибку если была поднята (гарантированно, даже при исключении)
             if (errorRaised)
             {
-                errorService.Clear(ErrorDefinitions.EarthClipNotConnected.Code);
+                errorService.ClearPlc(ErrorDefinitions.EarthClipNotConnected.Code);
             }
         }
     }

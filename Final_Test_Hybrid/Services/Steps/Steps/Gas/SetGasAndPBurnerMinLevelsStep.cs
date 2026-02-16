@@ -45,9 +45,9 @@ public class SetGasAndPBurnerMinLevelsStep(
     private const string FlowMinUpTolRecipe = "ns=3;s=\"DB_Recipe\".\"Gas\".\"FlowMin\".\"UpTol\"";
 
     // Рецепты для результата Blr_Gas_Pres_Min (SuppPressMin)
-    private const string SuppPressMinSetValueRecipe = "ns=3;s=\"DB_Recipe\".\"Gas\".\"SuppPressMin\".\"SetValue\"";
-    private const string SuppPressMinDownTolRecipe = "ns=3;s=\"DB_Recipe\".\"Gas\".\"SuppPressMin\".\"DownTol\"";
-    private const string SuppPressMinUpTolRecipe = "ns=3;s=\"DB_Recipe\".\"Gas\".\"SuppPressMin\".\"UpTol\"";
+    private const string SuppPressMinSetValueRecipe = "ns=3;s=\"DB_Recipe\".\"Gas\".\"SuppPress\".\"SetValue\"";
+    private const string SuppPressMinDownTolRecipe = "ns=3;s=\"DB_Recipe\".\"Gas\".\"SuppPress\".\"DownTol\"";
+    private const string SuppPressMinUpTolRecipe = "ns=3;s=\"DB_Recipe\".\"Gas\".\"SuppPress\".\"UpTol\"";
 
     // Индексы слайдеров (используем 0 и 1 для одновременного показа двух слайдеров)
     private const int PressureSliderIndex = 0;

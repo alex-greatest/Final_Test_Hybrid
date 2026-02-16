@@ -73,7 +73,7 @@ public class ConnectPowerCableStep(
         if (completedTask == timeoutTask && timeoutTask.Status == TaskStatus.RanToCompletion)
         {
             errorRaised = true;
-            errorService.RaiseInStep(ErrorDefinitions.PowerCableNotConnected, Id, Name);
+            errorService.RaisePlc(ErrorDefinitions.PowerCableNotConnected, Id, Name);
             logger.LogWarning("Таймаут {Timeout} сек — силовой кабель не подключен", ReadyTimeout.TotalSeconds);
         }
         else if (completedTask == waitTask)
@@ -99,7 +99,7 @@ public class ConnectPowerCableStep(
             // Снимаем ошибку если была поднята (гарантированно, даже при исключении)
             if (errorRaised)
             {
-                errorService.Clear(ErrorDefinitions.PowerCableNotConnected.Code);
+                errorService.ClearPlc(ErrorDefinitions.PowerCableNotConnected.Code);
             }
         }
     }

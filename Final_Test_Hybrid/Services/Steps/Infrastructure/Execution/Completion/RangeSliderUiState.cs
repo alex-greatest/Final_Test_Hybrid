@@ -228,8 +228,19 @@ public class RangeSliderUiState
     /// </summary>
     private async Task<double> ReadInitialValueAsync(string valueTag, double defaultValue, CancellationToken ct)
     {
-        var result = await _opcUaTagService.ReadAsync<double>(valueTag, ct).ConfigureAwait(false);
-        return result.Success ? result.Value : defaultValue;
+        var cachedValue = _opcUaSubscription.GetValue(valueTag);
+        if (TryConvertToDouble(cachedValue, out var cachedDouble))
+        {
+            return cachedDouble;
+        }
+
+        var result = await _opcUaTagService.ReadAsync<object>(valueTag, ct).ConfigureAwait(false);
+        if (!result.Success || !TryConvertToDouble(result.Value, out var currentValue))
+        {
+            return defaultValue;
+        }
+
+        return currentValue;
     }
 
     private Task HandleValueChanged(int columnIndex, int sessionId, object? value)
@@ -250,18 +261,28 @@ public class RangeSliderUiState
 
     private static double ConvertToDouble(object? value)
     {
+        return TryConvertToDouble(value, out var convertedValue)
+            ? convertedValue
+            : 0;
+    }
+
+    private static bool TryConvertToDouble(object? value, out double convertedValue)
+    {
         if (value == null)
         {
-            return 0;
+            convertedValue = 0;
+            return false;
         }
 
         try
         {
-            return Convert.ToDouble(value);
+            convertedValue = Convert.ToDouble(value);
+            return true;
         }
         catch
         {
-            return 0;
+            convertedValue = 0;
+            return false;
         }
     }
 
