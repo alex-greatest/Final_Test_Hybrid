@@ -29,6 +29,7 @@
 
 - Явно разделять `PLC reset` и `HardReset`; в гонках исполнения приоритет всегда у reset-потока.
 - Перед любыми `Write/Wait` после reconnect ждать `connectionState.WaitForConnectionAsync(ct)`.
+- Для execution retry-flow ожидание connection-ready через `WaitForConnectionAsync(ct)` выполняется без локального timeout: система рассчитана на внешнее прерывание от PLC (`PlcConnectionLost -> Reset -> Stop/Cancel`). В этом контексте отдельный timeout не требуется.
 - Для runtime OPC-подписок использовать только полный rebuild (`new Session + RecreateForSessionAsync`).
 - Использовать bounded retry только для transient-ошибок (обычно 2-3 попытки, 200-500 мс).
 - Ограничивать reset-flow таймаутами из `OpcUa:ResetFlowTimeouts`; без бесконечных ожиданий.
@@ -46,7 +47,7 @@
 ### Don't
 
 - Не использовать `ColumnExecutor.IsVisible`/`Status != null` как критерий idle/готовности новой карты.
-- Не оставлять бесконечные ожидания без дедлайна и fail-safe выхода.
+- Не оставлять бесконечные ожидания без дедлайна и fail-safe выхода (исключение: execution retry-flow с `WaitForConnectionAsync(ct)`, где fail-safe обеспечен внешним PLC interrupt каскадом `PlcConnectionLost -> Reset -> Stop/Cancel`).
 - Не проглатывать ошибки записи критичных PLC-тегов (`Reset`, `AskRepeat`, `End`).
 - Не сохранять Bad-quality значения в runtime-кэш после rebind/reset.
 - Не делать UI-блокировку без соответствующего runtime-gating в pipeline.
@@ -67,6 +68,7 @@
 - Для non-PLC шагов запись `BaseTags.Fault` обязательна с bounded retry; при провале — fail-fast `HardReset`.
 - Для execution runtime-подписок использовать `IRequiresPlcSubscriptions`; `IRequiresPlcTags` оставить базовым/валидационным контрактом.
 - `BaseTags.AskEnd` считать системным preload-тегом.
+- В execution retry-flow ожидание `WaitForConnectionAsync(ct)` не требует локального timeout: безопасность обеспечивается внешним каскадом `PlcConnectionLost -> Reset -> Stop/Cancel`.
 - В pre-execution при потере OPC блокировать оба канала barcode (`BoilerInfo`, `BarcodeDebounceHandler`) и ставить scan-таймер на паузу.
 - Для ECU error flow по ping: ошибка поднимается только в lock-контексте (`1005 in {1,2}` + whitelist), вне lock очищается.
 
@@ -108,11 +110,12 @@
 
 - Простота и читаемость важнее “умности”.
 - Без overengineering и лишнего defense programming внутри внутреннего кода.
-- Один основной управляющий блок на метод (`if/for/while/switch/try`), guard clauses допустимы.
-- Метод около 50 строк; разрастание — сразу вынос в private helper-методы того же partial.
+- КРИТИЧНО (не ослаблять): один основной управляющий блок на метод (`if/for/while/switch/try`), guard clauses допустимы.
+- КРИТИЧНО (не ослаблять): метод около 50 строк; разрастание — сразу вынос в private helper-методы того же partial.
 - `var` по умолчанию, `{}` обязательны.
-- Сервисы до ~300 строк, дальше дробить на partial.
+- КРИТИЧНО (не ослаблять): сервисы до ~300 строк; при росте декомпозировать через `partial`, helper-классы и/или отдельные сервисы по ответственности.
 - Именование: `PascalCase` для типов/методов, `camelCase` для локальных/параметров.
+- Лимиты структуры (`~50 строк`, `1 основной управляющий блок`, `~300 строк на сервис`) обязательны для runtime-критичных веток и не пересматриваются без отдельного инцидента и обновления `AGENTS.md`.
 
 ## Контракт параметров результатов (обязательно)
 
