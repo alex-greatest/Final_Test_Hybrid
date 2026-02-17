@@ -197,14 +197,7 @@ public partial class TestExecutionCoordinator
 
         try
         {
-            var blockErrorTag = GetBlockErrorTag(error.FailedStep);
-            await _errorCoordinator.SendAskRepeatAsync(blockErrorTag, ct);
-        }
-        catch (TimeoutException)
-        {
-            _logger.LogError("Block.Error не сброшен за 60 сек - жёсткий стоп");
-            await HandleTagTimeoutAsync("Block.Error не сброшен", ct);
-            return;
+            await _errorCoordinator.SendAskRepeatAsync(ct);
         }
         catch (Exception ex)
         {

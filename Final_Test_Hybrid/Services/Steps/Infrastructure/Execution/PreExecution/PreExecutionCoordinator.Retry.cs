@@ -52,19 +52,7 @@ public partial class PreExecutionCoordinator
         async Task<PreExecutionResult> ExecuteRetryAsync()
         {
             infra.Logger.LogInformation("Отправляем SendAskRepeatAsync...");
-            var errorTag = GetBlockErrorTag(step);
-            try
-            {
-                await coordinators.ErrorCoordinator.SendAskRepeatAsync(errorTag, ct);
-            }
-            catch (TimeoutException)
-            {
-                infra.Logger.LogError("Block.Error не сброшен за 5 сек — жёсткий стоп pre-execution");
-                coordinators.DialogCoordinator.CloseBlockErrorDialog();
-                await coordinators.ErrorCoordinator.HandleInterruptAsync(
-                    ErrorCoordinator.InterruptReason.TagTimeout, ct);
-                return PreExecutionResult.Fail("Таймаут ожидания Block.Error");
-            }
+            await coordinators.ErrorCoordinator.SendAskRepeatAsync(ct);
             coordinators.DialogCoordinator.CloseBlockErrorDialog();
             infra.Logger.LogInformation("SendAskRepeatAsync отправлен, повторяем шаг");
             errorScope.Clear();

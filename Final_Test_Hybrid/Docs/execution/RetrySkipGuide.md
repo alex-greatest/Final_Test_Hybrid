@@ -32,8 +32,7 @@
                 ↓
 [4] Сигнал готовности
     PC → PLC: AskRepeat = true
-    PLC:      Block.Error = false
-    PC ждёт:  Block.Error = false
+    PC:       Переход к ожиданию сброса Req_Repeat
                 ↓
 [5] Фоновый retry (tracked task)
     PC: InvokeRetryStartedSafely() → панель закрывается
@@ -134,7 +133,7 @@ public async Task RetryLastFailedStepAsync(CancellationToken ct)
 |----------|-------|------|
 | **Условие** | `Req_Repeat = true` | `End=true (AND Block.Error)` |
 | **AskRepeat** | Да | Нет |
-| **Ждёт PLC** | `Block.Error = false` + `Req_Repeat = false` | Сброс сигналов Skip (60 сек) |
+| **Ждёт PLC** | `Req_Repeat = false` | Сброс сигналов Skip (60 сек) |
 | **Шаг выполняется** | Заново | Нет |
 | **Gate** | `OpenGate()` после успеха | `Set()` сразу |
 | **Статус UI** | OK или NOK | NOK |
@@ -147,7 +146,7 @@ public async Task RetryLastFailedStepAsync(CancellationToken ct)
 [00:00] Col 0 + Col 1: ошибки → в очередь
 [00:01] Диалог Col 0
 [00:10] Оператор: "Повтор"
-[00:11] SendAskRepeatAsync → Block.Error=false
+[00:11] SendAskRepeatAsync → AskRepeat=true
 [00:12] InvokeRetryStartedSafely → панель закрывается
 [00:13] WaitForRetrySignalResetAsync → Req_Repeat=false
 [00:14] DequeueError
@@ -178,12 +177,7 @@ private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, C
 {
     try
     {
-        await _errorCoordinator.SendAskRepeatAsync(blockErrorTag, ct);
-    }
-    catch (TimeoutException)  // Block.Error не сброшен за 60 сек
-    {
-        await HandleTagTimeoutAsync("Block.Error не сброшен", ct);
-        return;
+        await _errorCoordinator.SendAskRepeatAsync(ct);
     }
     catch (Exception ex)
     {
@@ -284,7 +278,7 @@ private async Task ExecuteRetryInBackgroundAsync(StepError error, ColumnExecutor
 Запись `Fault=true/false` выполняется с ограниченным retry (до 3 попыток, пауза 250 мс).
 Если все попытки записи Fault неуспешны, выполняется fail-fast в `HardReset` (`_errorCoordinator.Reset()` + отмена текущего прогона).
 
-### Таймаут Block.Error/Req_Repeat (60 сек)
+### Таймаут Req_Repeat (60 сек)
 
 Если PLC не сбросит сигнал за 60 секунд → `HandleTagTimeoutAsync()` → жёсткий стоп теста.
 Это защита от залипших сигналов, которые могут вызвать автоматический Retry/Skip для другой колонки.

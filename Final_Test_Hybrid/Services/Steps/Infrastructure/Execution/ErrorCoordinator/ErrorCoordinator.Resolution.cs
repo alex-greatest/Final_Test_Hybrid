@@ -79,16 +79,15 @@ public sealed partial class ErrorCoordinator
     public Task SendAskRepeatAsync(CancellationToken ct) => SendAskRepeatAsync(null, ct);
 
     /// <summary>
-    /// Отправляет сигнал AskRepeat в PLC и ожидает сброса Block.Error.
+    /// Отправляет сигнал AskRepeat в PLC.
     /// </summary>
-    /// <param name="blockErrorTag">Тег Block.Error для ожидания сброса (null для шагов без блока).</param>
+    /// <param name="blockErrorTag">Параметр совместимости. В runtime не используется.</param>
     /// <param name="ct">Токен отмены.</param>
-    /// <exception cref="TimeoutException">Block.Error не сброшен за 60 секунд.</exception>
     public async Task SendAskRepeatAsync(string? blockErrorTag, CancellationToken ct)
     {
+        _ = blockErrorTag;
         _logger.LogInformation("Отправка AskRepeat в PLC");
         await EnsureAskRepeatWrittenAsync(ct);
-        await WaitBlockErrorResetIfNeededAsync(blockErrorTag, ct);
     }
 
     private async Task EnsureAskRepeatWrittenAsync(CancellationToken ct)
@@ -99,18 +98,6 @@ public sealed partial class ErrorCoordinator
             return;
         }
         throw new InvalidOperationException($"Критичная ошибка записи AskRepeat в PLC: {result.Error}");
-    }
-
-    private async Task WaitBlockErrorResetIfNeededAsync(string? blockErrorTag, CancellationToken ct)
-    {
-        if (blockErrorTag == null)
-        {
-            return;
-        }
-
-        _logger.LogDebug("Ожидание сброса Error блока: {Tag}", blockErrorTag);
-        await _resolution.TagWaiter.WaitForFalseAsync(blockErrorTag, timeout: TimeSpan.FromSeconds(60), ct);
-        _logger.LogDebug("Error блока сброшен");
     }
 
     /// <summary>

@@ -113,12 +113,20 @@ _errorCoordinator.OnInterruptChanged -= HandleInterruptChanged;
 | `Reset()` | Полный сброс — Resume + вызов OnReset |
 | `ForceStop()` | Мягкий сброс — только Resume (без OnReset) |
 | `WaitForResolutionAsync(options)` | Ожидание решения оператора (Retry/Skip/Timeout) |
+| `SendAskRepeatAsync(ct)` | Пишет `AskRepeat=true` для handshake повтора |
+| `SendAskRepeatAsync(blockErrorTag, ct)` | Совместимая перегрузка; `blockErrorTag` не используется в runtime |
+| `WaitForRetrySignalResetAsync(ct)` | Ожидает `Req_Repeat=false` (таймаут 60 сек) |
 
 ### Дополнительно: аварийный retry-flow
 
 - `Reset()` используется не только из interrupt-behavior, но и как fail-fast путь при критической ошибке фонового retry шага.
 - В этом сценарии система должна переходить в HardReset, а не повторно открывать диалог Retry/Skip.
 
+### Retry Handshake
+
+- `SendAskRepeatAsync(...)` отвечает только за запись `AskRepeat=true`.
+- Ожидание `Block.Error=false` в retry-flow не используется.
+- Контроль зависшего handshake выполняется через `WaitForRetrySignalResetAsync(...)` по `Req_Repeat=false` (60 секунд).
 ## WaitForResolutionAsync API
 
 ### Сигнатура

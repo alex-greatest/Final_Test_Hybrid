@@ -23,7 +23,7 @@ public class SetGasAndPBurnerMaxLevelsStep(
     private const string EndTag = "ns=3;s=\"DB_VI\".\"Gas\".\"Set_Gas_and_P_Burner_Max_Levels\".\"End\"";
     private const string ErrorTag = "ns=3;s=\"DB_VI\".\"Gas\".\"Set_Gas_and_P_Burner_Max_Levels\".\"Error\"";
     private const string Ready1Tag = "ns=3;s=\"DB_VI\".\"Gas\".\"Set_Gas_and_P_Burner_Max_Levels\".\"Ready_1\"";
-    private const string Continue1Tag = "ns=3;s=\"DB_VI\".\"Gas\".\"Set_Gas_and_P_Burner_Max_Levels\".\"Continue_1\"";
+    private const string Continue1Tag = "ns=3;s=\"DB_VI\".\"Gas\".\"Set_Gas_and_P_Burner_Max_Levels\".\"Сontinua_1\"";
 
     // Теги для слайдеров (привязка стрелки)
     private const string GasPgbTag = "ns=3;s=\"DB_Measure\".\"Sensor\".\"Gas_PGB\"";
