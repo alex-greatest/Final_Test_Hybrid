@@ -10,7 +10,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Wait;
 public class WaitThreeSecStep(DualLogger<WaitThreeSecStep> logger) : ITestStep
 {
     public string Id => "wait-three-sec";
-    public string Name => "Wait/WaitThreeSec";
+    public string Name => "WaitTime/WaitThreeSec";
     public string Description => "Ожидание в течение 3 секунд";
 
     /// <summary>

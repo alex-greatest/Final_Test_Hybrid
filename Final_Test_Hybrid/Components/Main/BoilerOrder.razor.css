@@ -1,0 +1,29 @@
+.boiler-order-manual-row {
+    grid-column: span 2;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+}
+
+.boiler-order-success-field {
+    flex: 0 0 calc((100% - 13px) / 2);
+    max-width: calc((100% - 13px) / 2);
+    min-width: 0;
+}
+
+.boiler-order-actions {
+    display: flex;
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 10px;
+}
+
+.boiler-order-actions ::deep .boiler-order-action-btn.rz-button {
+    flex: 1 1 0;
+    min-width: 0;
+    justify-content: center;
+    font-size: 1.3rem;
+    font-weight: 700;
+    padding: 10px 12px;
+}

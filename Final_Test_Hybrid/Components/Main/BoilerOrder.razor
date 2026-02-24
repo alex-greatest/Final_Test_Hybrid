@@ -33,21 +33,23 @@
 }
 else
 {
-    <div style="grid-column: span 2; display: flex; align-items: center; gap: 16px;">
-        <div class="field-row" style="flex: 0 0 calc((100% - 13px) / 2); max-width: calc((100% - 13px) / 2); min-width: 0;">
+    <div class="boiler-order-manual-row">
+        <div class="field-row boiler-order-success-field">
             <RadzenLabel Text="Успеш. тестов"/>
             <RadzenTextBox Style="width:100%"
                            Value="@SuccessCountText"
                            ReadOnly="true"/>
         </div>
-        <RadzenButton Text="Изменить"
-                      Style="font-size: 1.3rem; font-weight: 700; padding: 10px 12px;"
-                      ButtonStyle="ButtonStyle.Secondary"
-                      Click="@OpenEditDialogWithPassword"/>
-        <RadzenButton Text="Сброс"
-                      Style="font-size: 1.3rem; font-weight: 700; padding: 10px 12px;"
-                      ButtonStyle="ButtonStyle.Danger"
-                      Click="@ResetCountWithPassword"/>
+        <div class="boiler-order-actions">
+            <RadzenButton Text="Изменить"
+                          class="boiler-order-action-btn"
+                          ButtonStyle="ButtonStyle.Secondary"
+                          Click="@OpenEditDialogWithPassword"/>
+            <RadzenButton Text="Сброс"
+                          class="boiler-order-action-btn"
+                          ButtonStyle="ButtonStyle.Danger"
+                          Click="@ResetCountWithPassword"/>
+        </div>
     </div>
 }
 
