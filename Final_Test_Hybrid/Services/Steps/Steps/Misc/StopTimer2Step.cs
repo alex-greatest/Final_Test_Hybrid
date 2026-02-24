@@ -29,6 +29,7 @@ public class StopTimer2Step(
         var seconds = elapsed.Value.TotalSeconds;
         logger.LogInformation("Таймер 2 остановлен: {Seconds:F2} сек", seconds);
 
+        testResultsService.Remove("Timer_2");
         testResultsService.Add("Timer_2", $"{seconds:F2}", "", "", 1, false, "сек");
 
         return Task.FromResult(TestStepResult.Pass($"{seconds:F2} сек"));

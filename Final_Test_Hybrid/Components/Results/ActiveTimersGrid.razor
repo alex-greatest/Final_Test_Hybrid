@@ -123,9 +123,14 @@
     private sealed record TimerDisplayItem(string Key, TimeSpan Elapsed)
     {
         /// <summary>
-        /// Форматированное время в формате total_minutes:ss.d.
+        /// Форматированное время в формате HH:mm:ss (часы без верхнего ограничения).
         /// </summary>
-        public string ElapsedFormatted =>
-            $"{(int)Elapsed.TotalMinutes}:{Elapsed.Seconds:D2}.{Elapsed.Milliseconds / 100}";
+        public string ElapsedFormatted => FormatElapsed(Elapsed);
+
+        private static string FormatElapsed(TimeSpan elapsed)
+        {
+            var hours = (long)elapsed.TotalHours;
+            return $"{hours:D2}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}";
+        }
     }
 }

@@ -6,7 +6,7 @@
 @implements IAsyncDisposable
 
 <div class="errors-grid-wrapper grid-unified-host">
-    <RadzenDataGrid Data="@_activeErrors" TItem="ActiveError" class="grid-unified"
+    <RadzenDataGrid Data="@_activeErrors" TItem="ActiveErrorGridRow" class="grid-unified"
                 AllowFiltering="true" AllowSorting="true"
                 FilterText="@DataGridRu.Filter"
                 ApplyFilterText="@DataGridRu.ApplyFilter"
@@ -29,8 +29,8 @@
                 OrOperatorText="@DataGridRu.Or"
                 EmptyText="Нет данных">
     <Columns>
-        <RadzenDataGridColumn TItem="ActiveError" Property="Code" Title="Код" Width="80px" />
-        <RadzenDataGridColumn TItem="ActiveError" Property="Severity" Title="Тип" Width="120px">
+        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="Code" Title="Код" Width="80px" />
+        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="Severity" Title="Тип" Width="120px">
             <Template Context="item">
                 @switch (item.Severity)
                 {
@@ -46,20 +46,20 @@
                 }
             </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="ActiveError" Property="Time" Title="Время" Width="100px">
+        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="Time" Title="Время" Width="100px">
             <Template Context="item">
                 @item.Time.ToString("HH:mm:ss")
             </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="ActiveError" Property="StepName" Title="Шаг" Width="200px">
+        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="StepName" Title="Шаг" Width="200px">
             <Template Context="item">
                 @(item.StepName ?? "-")
             </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="ActiveError" Property="Description" Title="Описание"/>
-        <RadzenDataGridColumn TItem="ActiveError" Property="Source" Title="Источник" Width="100px">
+        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="Description" Title="Описание"/>
+        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="SourceLabel" Title="Источник" Width="100px">
             <Template Context="item">
-                @(item.Source == ErrorSource.Plc ? "PLC" : "Котёл")
+                @item.SourceLabel
             </Template>
         </RadzenDataGridColumn>
         </Columns>
@@ -68,12 +68,40 @@
 
 @code {
     private bool _disposed;
-    private IReadOnlyList<ActiveError> _activeErrors = [];
+    private IReadOnlyList<ActiveErrorGridRow> _activeErrors = [];
+
+    private sealed record ActiveErrorGridRow(ActiveError Error, string SourceLabel)
+    {
+        public string Code => Error.Code;
+        public ErrorSeverity Severity => Error.Severity;
+        public DateTime Time => Error.Time;
+        public string? StepName => Error.StepName;
+        public string Description => Error.Description;
+    }
+
+    private static string GetSourceLabel(ActiveError item)
+    {
+        if (item.Source == ErrorSource.Plc
+            || item.Code == ErrorDefinitions.OpcConnectionLost.Code
+            || item.Code == ErrorDefinitions.TagReadTimeout.Code)
+        {
+            return "PLC";
+        }
+
+        return "Котёл";
+    }
+
+    private static IReadOnlyList<ActiveErrorGridRow> BuildGridRows(IReadOnlyList<ActiveError> activeErrors)
+    {
+        return activeErrors
+            .Select(error => new ActiveErrorGridRow(error, GetSourceLabel(error)))
+            .ToList();
+    }
 
     protected override void OnInitialized()
     {
         ErrorService.OnActiveErrorsChanged += OnErrorsChanged;
-        _activeErrors = ErrorService.GetActiveErrors();
+        _activeErrors = BuildGridRows(ErrorService.GetActiveErrors());
     }
 
     private void OnErrorsChanged()
@@ -84,7 +112,7 @@
             {
                 return;
             }
-            _activeErrors = ErrorService.GetActiveErrors();
+            _activeErrors = BuildGridRows(ErrorService.GetActiveErrors());
             StateHasChanged();
         });
     }

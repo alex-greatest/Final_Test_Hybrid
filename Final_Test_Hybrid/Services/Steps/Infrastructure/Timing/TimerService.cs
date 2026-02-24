@@ -28,24 +28,32 @@ public class TimerService : ITimerService
     public TimeSpan? Stop(string key)
     {
         TimeSpan? elapsed;
+        var changed = false;
         lock (_lock)
         {
             if (_timers.TryGetValue(key, out var startTime))
             {
-                elapsed = DateTime.UtcNow - startTime;
+                var currentElapsed = DateTime.UtcNow - startTime;
+                elapsed = currentElapsed;
                 _timers.Remove(key);
+                _frozenTimers[key] = currentElapsed;
+                changed = true;
             }
             else if (_frozenTimers.TryGetValue(key, out var frozen))
             {
                 elapsed = frozen;
-                _frozenTimers.Remove(key);
             }
             else
             {
                 return null;
             }
         }
-        OnChanged?.Invoke();
+
+        if (changed)
+        {
+            OnChanged?.Invoke();
+        }
+
         return elapsed;
     }
 
