@@ -83,7 +83,8 @@ public partial class ReadSoftCodePlugStep
             max: "",
             status: isMatch ? 1 : 2,
             isRanged: false,
-            unit: action.Unit);
+            unit: action.Unit,
+            test: Name);
 
         var statusMessage = CreateFormattedMessage(action.StatusLogTemplate, actualValue, expectedValue, ToStatusText(isMatch));
         logger.LogInformation(statusMessage);
@@ -127,7 +128,8 @@ public partial class ReadSoftCodePlugStep
             max: maxValue.ToString(),
             status: isMatch ? 1 : 2,
             isRanged: true,
-            unit: action.Unit);
+            unit: action.Unit,
+            test: Name);
 
         var statusMessage = CreateFormattedMessage(action.StatusLogTemplate, actualValue, expectedValue, ToStatusText(isMatch));
         logger.LogInformation(statusMessage);
@@ -171,7 +173,8 @@ public partial class ReadSoftCodePlugStep
             max: maxValue.ToString(action.ResultFormat),
             status: isMatch ? 1 : 2,
             isRanged: true,
-            unit: action.Unit);
+            unit: action.Unit,
+            test: Name);
 
         var statusMessage = CreateFormattedMessage(action.StatusLogTemplate, actualValue, expectedValue, ToStatusText(isMatch));
         logger.LogInformation(statusMessage);
@@ -208,7 +211,8 @@ public partial class ReadSoftCodePlugStep
             max: "",
             status: 1,
             isRanged: false,
-            unit: action.Unit);
+            unit: action.Unit,
+            test: Name);
 
         var valueMessage = CreateFormattedMessage(action.ValueLogTemplate, read.Value);
         logger.LogInformation(valueMessage);
@@ -242,7 +246,8 @@ public partial class ReadSoftCodePlugStep
             max: action.Max,
             status: 1,
             isRanged: true,
-            unit: action.Unit);
+            unit: action.Unit,
+            test: Name);
 
         var valueMessage = CreateFormattedMessage(action.ValueLogTemplate, read.Value);
         logger.LogInformation(valueMessage);
@@ -358,7 +363,8 @@ public partial class ReadSoftCodePlugStep
             max: "",
             status: 1,
             isRanged: false,
-            unit: "");
+            unit: "",
+            test: Name);
 
         logger.LogInformation("Soft_Code_Plug сохранён: {Article}", article);
         return TestStepResult.Pass();

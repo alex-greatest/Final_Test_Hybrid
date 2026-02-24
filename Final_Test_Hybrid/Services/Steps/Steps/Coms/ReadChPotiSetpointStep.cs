@@ -65,7 +65,8 @@ public class ReadChPotiSetpointStep(
             max: MaxTemp.ToString(),
             status: isInRange ? 1 : 2,
             isRanged: true,
-            unit: "°C");
+            unit: "°C",
+            test: Name);
 
         logger.LogInformation("Установленная температура CH: {Value} °C, диапазон: [{Min}..{Max}], статус: {Status}",
             value, MinTemp, MaxTemp, isInRange ? "OK" : "NOK");

@@ -7,7 +7,6 @@ using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.OpcUa;
-using Final_Test_Hybrid.Services.Results;
 using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
@@ -31,7 +30,6 @@ public abstract class ScanStepBase(
     BoilerState boilerState,
     PausableOpcUaTagService opcUa,
     IRecipeProvider recipeProvider,
-    ITestResultsService testResultsService,
     ExecutionPhaseState phaseState)
     : IPreExecutionStep, IRequiresPlcTags
 {
@@ -43,15 +41,10 @@ public abstract class ScanStepBase(
     protected readonly BoilerState BoilerState = boilerState;
     protected readonly PausableOpcUaTagService OpcUa = opcUa;
     protected readonly IRecipeProvider RecipeProvider = recipeProvider;
-    protected readonly ITestResultsService TestResultsService = testResultsService;
     protected readonly ExecutionPhaseState PhaseState = phaseState;
 
+    private const string AppVersionRecipe = "App_Version";
     private const string PlantIdRecipe = "Plant_ID";
-    private const string PlantIdResult = "Plant_ID";
-    private const string ShiftNoResult = "Shift_No";
-    private const string TesterNoResult = "Tester_No";
-    private const string PresAtmosphResult = "Pres_atmosph.";
-    private const string PresInGasResult = "Pres_in_gas";
     private const string UnknownOperator = "Unknown";
 
     public abstract string Id { get; }
@@ -382,45 +375,45 @@ public abstract class ScanStepBase(
         Logger.LogInformation("Рецепты загружены в провайдер: {Count}", recipes.Count);
     }
 
-    protected void SaveScanMetadata(string testerNumber, int? shiftNumber)
+    protected void CaptureScanServiceContext(PreExecutionContext context, string testerNumber, int? shiftNumber)
     {
+        var appVersion = RecipeProvider.GetStringValue(AppVersionRecipe) ?? string.Empty;
         var plantId = RecipeProvider.GetStringValue(PlantIdRecipe) ?? string.Empty;
         var shiftNo = shiftNumber?.ToString(CultureInfo.InvariantCulture) ?? "0";
         var testerNo = string.IsNullOrWhiteSpace(testerNumber) ? UnknownOperator : testerNumber;
 
-        TestResultsService.Remove(PlantIdResult);
-        TestResultsService.Remove(ShiftNoResult);
-        TestResultsService.Remove(TesterNoResult);
+        context.ScanServiceContext = new ScanServiceContext
+        {
+            AppVersion = appVersion,
+            PlantId = plantId,
+            ShiftNo = shiftNo,
+            TesterNo = testerNo
+        };
 
-        TestResultsService.Add(PlantIdResult, plantId, "", "", 1, false, "");
-        TestResultsService.Add(ShiftNoResult, shiftNo, "", "", 1, false, "");
-        TestResultsService.Add(TesterNoResult, testerNo, "", "", 1, false, "");
-
-        Logger.LogInformation("Сохранены метаданные ScanBarcode: Plant_ID={PlantId}, Shift_No={ShiftNo}, Tester_No={TesterNo}",
-            plantId, shiftNo, testerNo);
+        Logger.LogInformation(
+            "Собран scan-контекст: App_Version={AppVersion}, Plant_ID={PlantId}, Shift_No={ShiftNo}, Tester_No={TesterNo}",
+            appVersion,
+            plantId,
+            shiftNo,
+            testerNo);
     }
 
-    protected async Task<PreExecutionResult?> ReadAndSavePressuresAsync(CancellationToken ct)
+    public async Task<(bool Success, float GasPa, float GasP, PreExecutionResult? Error)> ReadPressuresAsync(CancellationToken ct)
     {
         var gasPa = await TryReadPressureAsync(SensorScreenTags.GasPa, "Gas_Pa", ct);
         if (!gasPa.Success)
         {
-            return gasPa.Error;
+            return (false, 0, 0, gasPa.Error);
         }
 
-        return await ReadGasPAndSaveAsync(gasPa.Value, ct);
-    }
-
-    private async Task<PreExecutionResult?> ReadGasPAndSaveAsync(float gasPa, CancellationToken ct)
-    {
         var gasP = await TryReadPressureAsync(SensorScreenTags.GasP, "Gas_P", ct);
         if (!gasP.Success)
         {
-            return gasP.Error;
+            return (false, 0, 0, gasP.Error);
         }
 
-        SavePressureResults(gasPa, gasP.Value);
-        return null;
+        Logger.LogInformation("Считаны давления ScanBarcode: Pres_atmosph.={GasPa}, Pres_in_gas={GasP}", gasPa.Value, gasP.Value);
+        return (true, gasPa.Value, gasP.Value, null);
     }
 
     private async Task<(bool Success, float Value, PreExecutionResult? Error)> TryReadPressureAsync(
@@ -435,32 +428,6 @@ public abstract class ScanStepBase(
         }
 
         return (false, 0, PreExecutionResult.Fail($"Ошибка чтения {tagName}: {error}"));
-    }
-
-    private void SavePressureResults(float gasPa, float gasP)
-    {
-        TestResultsService.Remove(PresAtmosphResult);
-        TestResultsService.Remove(PresInGasResult);
-
-        TestResultsService.Add(
-            PresAtmosphResult,
-            gasPa.ToString(CultureInfo.InvariantCulture),
-            "",
-            "",
-            1,
-            false,
-            "бар");
-
-        TestResultsService.Add(
-            PresInGasResult,
-            gasP.ToString(CultureInfo.InvariantCulture),
-            "",
-            "",
-            1,
-            false,
-            "мбар");
-
-        Logger.LogInformation("Сохранены давления ScanBarcode: Pres_atmosph.={GasPa}, Pres_in_gas={GasP}", gasPa, gasP);
     }
 
     #endregion

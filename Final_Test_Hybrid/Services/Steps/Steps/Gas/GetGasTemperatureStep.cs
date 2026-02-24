@@ -46,7 +46,8 @@ public class GetGasTemperatureStep(
             max: "",
             status: 1,
             isRanged: false,
-            unit: "°C");
+            unit: "°C",
+            test: Name);
 
         logger.LogInformation("Температура газа: {GasTemp:F3}°C", gasTemp);
         return TestStepResult.Pass($"{gasTemp:F3}°C");

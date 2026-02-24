@@ -143,7 +143,8 @@ public class CheckFlowTemperatureRiseStep(
             max: "",
             status: status,
             isRanged: false,
-            unit: "");
+            unit: "",
+            test: Name);
 
         testResultsService.Add(
             parameterName: "DHW_Flow_NTC_Temp_Rise",
@@ -152,7 +153,8 @@ public class CheckFlowTemperatureRiseStep(
             max: $"{tempRiseMax:F3}",
             status: status,
             isRanged: true,
-            unit: "");
+            unit: "",
+            test: Name);
 
         testResultsService.Add(
             parameterName: "DHW_Flow_Hot_Rate",
@@ -161,7 +163,8 @@ public class CheckFlowTemperatureRiseStep(
             max: $"{flowHotRateMax:F3}",
             status: status,
             isRanged: true,
-            unit: "л/мин");
+            unit: "л/мин",
+            test: Name);
 
         var msg = $"Температура: Разница: {flwTempHot:F3} {flowNtcTempRise:F3}, Расход: {dhwFlowHotRate:F3}";
 

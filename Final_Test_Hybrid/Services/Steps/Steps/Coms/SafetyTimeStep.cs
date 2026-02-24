@@ -195,7 +195,8 @@ public class SafetyTimeStep(
             max: $"{max:F2}",
             status: status,
             isRanged: true,
-            unit: "сек");
+            unit: "сек",
+            test: Name);
 
         logger.LogInformation("Safety time: {SafetyTime:F2} сек, пределы: [{Min:F2} .. {Max:F2}], статус: {Status}",
             safetyTime, min, max, isInRange ? "OK" : "NOK");

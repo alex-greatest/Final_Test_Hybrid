@@ -97,7 +97,8 @@ public class CheckWaterFlowWhenInDhwModeStep(
             max: $"{max:F3}",
             status: status,
             isRanged: true,
-            unit: "");
+            unit: "",
+            test: Name);
 
         logger.LogInformation("CH_Flow_In_DHW_Mode: {Value:F3}, пределы: [{Min:F3} .. {Max:F3}], статус: {Status}",
             flowValue, MinConstant, max, status == 1 ? "OK" : "NOK");

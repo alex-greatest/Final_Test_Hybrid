@@ -137,8 +137,24 @@ public partial class TestCompletionCoordinator
         deps.TestResultsService.Remove(FinalResultName);
         deps.TestResultsService.Remove(TestingDateName);
 
-        deps.TestResultsService.Add(FinalResultName, finalResultValue, "", "", status, false, "");
-        deps.TestResultsService.Add(TestingDateName, testingDateValue, "", "", 1, false, "");
+        deps.TestResultsService.Add(
+            parameterName: FinalResultName,
+            value: finalResultValue,
+            min: "",
+            max: "",
+            status: status,
+            isRanged: false,
+            unit: "",
+            test: "Test Completion");
+        deps.TestResultsService.Add(
+            parameterName: TestingDateName,
+            value: testingDateValue,
+            min: "",
+            max: "",
+            status: 1,
+            isRanged: false,
+            unit: "",
+            test: "Test Completion");
     }
 
     private async Task<bool> ShowSaveErrorDialogAsync(string? errorMessage)

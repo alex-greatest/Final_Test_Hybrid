@@ -17,13 +17,14 @@ public sealed class TestResultsService : ITestResultsService
         }
     }
 
-    public void Add(string parameterName, string value, string min, string max, int status, bool isRanged, string unit)
+    public void Add(string parameterName, string value, string min, string max, int status, bool isRanged, string unit, string test)
     {
         lock (_lock)
         {
             var item = new TestResultItem
             {
                 Time = DateTime.Now,
+                Test = test,
                 ParameterName = parameterName,
                 Value = value,
                 Min = min,

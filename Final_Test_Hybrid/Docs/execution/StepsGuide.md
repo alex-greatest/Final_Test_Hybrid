@@ -51,6 +51,7 @@ context.Barcode          // Отсканированный баркод
 context.BoilerState      // Состояние котла
 context.OpcUa            // PausableOpcUaTagService
 context.TestStepLogger   // Логирование в UI
+context.ScanServiceContext // Кэш scan-служебных полей (App_Version, Plant_ID, Shift_No, Tester_No)
 
 // PreExecutionResult — фабричные методы
 PreExecutionResult.Continue();                    // Успех
@@ -64,6 +65,24 @@ PreExecutionResult.FailRetryable(error, canSkip: false, userMessage: "...", erro
 1. DI: зарегистрировать шаг в `StepsServiceExtensions.cs` (обычно `services.AddSingleton<MyStep>();`)
 2. Порядок: добавить шаг в `PreExecutionStepAdapter.GetOrderedSteps()` (`IPreExecutionStepRegistry`)
 3. Если шаг зависит от MES/Non-MES ветки, выбрать его в `GetOrderedSteps()` через `AppSettingsService.UseMes`
+
+### 1.4 Scan-служебные результаты (контракт)
+
+`ScanStepBase` в scan-фазе только собирает кэшируемый scan-контекст.
+Прямая запись scan-служебных результатов из scan-step в `ITestResultsService` не используется.
+
+Фактическая запись выполняется централизованно в `PreExecutionCoordinator.InitializeTestRunningAsync()` сразу после `ClearForNewTestStart()`:
+
+1. Кэшируемые поля берутся из `context.ScanServiceContext`:
+   - `App_Version`
+   - `Plant_ID`
+   - `Shift_No`
+   - `Tester_No`
+2. Давления читаются из OPC каждый старт теста (включая repeat):
+   - `Pres_atmosph.`
+   - `Pres_in_gas`
+
+Если чтение давлений из OPC неуспешно, старт pipeline завершается ошибкой (fail-fast, без ослабления safety).
 
 ---
 
@@ -167,6 +186,41 @@ return TestStepResult.Fail(msg, errors: [ErrorDefinitions.AlNoWaterFlowCh]);
 ### 2.5 Регистрация
 
 Test steps регистрируются **автоматически** через рефлексию — достаточно создать класс с `ITestStep`.
+
+### 2.6 Контракт записи runtime-результатов (обязательно)
+
+Сигнатура сервиса результатов:
+
+```csharp
+void Add(string parameterName, string value, string min, string max, int status, bool isRanged, string unit, string test);
+```
+
+`test` обязателен для всех runtime-записей и пробрасывается в MES как есть.
+Запись с пустым `test` считается нарушением контракта.
+
+Правила заполнения `test`:
+
+| Категория записи | Значение `test` |
+|------------------|-----------------|
+| Результат обычного `ITestStep` | `step.Name` |
+| Scan-служебные результаты | `"ScanBarcode"` |
+| Тайминги (`Test_Time`, `Change_Over_Time`, `Complete_Time`) | `"Test Time"` |
+| Completion (`Final_result`, `Testing_date`) | `"Test Completion"` |
+
+Рекомендуемый шаблон вызова:
+
+```csharp
+testResultsService.Remove(parameterName);
+testResultsService.Add(
+    parameterName: parameterName,
+    value: value,
+    min: "",
+    max: "",
+    status: 1,
+    isRanged: false,
+    unit: unit,
+    test: Name);
+```
 
 ---
 
@@ -340,6 +394,7 @@ public async Task<TestStepResult> ExecuteAsync(...)
 - [ ] Реализовать `ITestStep`
 - [ ] `IProvideLimits` / `IRequiresRecipes` / `INonSkippable` если нужно
 - [ ] Автоматическая регистрация через рефлексию
+- [ ] Все `testResultsService.Add(...)` вызываются с именованным `test: ...`
 
 ### Code Review (CancellationToken)
 
@@ -361,6 +416,7 @@ public async Task<TestStepResult> ExecuteAsync(...)
 | Блокирующий вызов | Использовать `await`, не `.Result` |
 | Сообщение висит после успеха | `messageState.Clear()` |
 | Дубликаты результатов при Retry | `testResultsService.Remove()` перед `Add()` |
+| Потерян `test` в результате | Использовать `Add(..., test: ...)` по контракту категории (`Name` / `ScanBarcode` / `Test Time` / `Test Completion`) |
 | IO в `GetLimits` | Только `RecipeProvider` (in-memory) |
 
 ---

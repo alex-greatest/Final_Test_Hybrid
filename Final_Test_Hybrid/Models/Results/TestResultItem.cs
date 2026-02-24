@@ -4,6 +4,7 @@ public record TestResultItem
 {
     public Guid Id { get; init; } = Guid.NewGuid();
     public DateTime Time { get; init; }
+    public string Test { get; init; } = string.Empty;
     public string ParameterName { get; init; } = string.Empty;
     public string Value { get; init; } = string.Empty;
     public string Min { get; init; } = string.Empty;

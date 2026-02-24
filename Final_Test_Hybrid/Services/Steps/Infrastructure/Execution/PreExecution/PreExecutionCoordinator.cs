@@ -40,6 +40,13 @@ public partial class PreExecutionCoordinator(
     private bool _skipNextScan;
     private bool _executeFullPreparation;
     private PreExecutionContext? _lastSuccessfulContext;
+    private const string ScanBarcodeTestName = "ScanBarcode";
+    private const string AppVersionResult = "App_Version";
+    private const string PlantIdResult = "Plant_ID";
+    private const string ShiftNoResult = "Shift_No";
+    private const string TesterNoResult = "Tester_No";
+    private const string PresAtmosphResult = "Pres_atmosph.";
+    private const string PresInGasResult = "Pres_in_gas";
 
     // === Отслеживание источника reset ===
     private const int ResetOriginPlc = 1;
@@ -82,6 +89,7 @@ public partial class PreExecutionCoordinator(
         state.BoilerState.Clear();
         ClearBarcode();
         infra.ErrorService.IsHistoryEnabled = false;
+        _lastSuccessfulContext = null;
 
         infra.Logger.LogInformation("Состояние очищено после завершения теста");
     }
@@ -99,19 +107,6 @@ public partial class PreExecutionCoordinator(
         state.BoilerState.ClearLastTestInfo();
 
         infra.Logger.LogInformation("История и результаты очищены для нового теста");
-    }
-
-    /// <summary>
-    /// Добавляет версию приложения в результаты теста.
-    /// </summary>
-    private void AddAppVersionToResults()
-    {
-        infra.TestResultsService.Remove("App_Version");
-        var appVersion = infra.RecipeProvider.GetStringValue("App_Version");
-        if (!string.IsNullOrEmpty(appVersion))
-        {
-            infra.TestResultsService.Add("App_Version", appVersion, "", "", 1, false, "");
-        }
     }
 
     private void ClearForRepeat()
@@ -263,5 +258,45 @@ public partial class PreExecutionCoordinator(
     private bool TryRunResetCleanupOnce()
     {
         return Interlocked.CompareExchange(ref _resetCleanupDone, 1, 0) == 0;
+    }
+
+    private async Task<PreExecutionResult?> WriteScanServiceResultsAsync(PreExecutionContext context, CancellationToken ct)
+    {
+        var scanContext = context.ScanServiceContext;
+        if (scanContext == null)
+        {
+            infra.Logger.LogError("Scan-контекст отсутствует: barcode={Barcode}", context.Barcode);
+            return PreExecutionResult.Fail("Отсутствуют scan-данные для старта теста");
+        }
+
+        SaveScanServiceResult(AppVersionResult, scanContext.AppVersion, "");
+        SaveScanServiceResult(PlantIdResult, scanContext.PlantId, "");
+        SaveScanServiceResult(ShiftNoResult, scanContext.ShiftNo, "");
+        SaveScanServiceResult(TesterNoResult, scanContext.TesterNo, "");
+
+        var pressures = await steps.GetScanStep().ReadPressuresAsync(ct);
+        if (!pressures.Success)
+        {
+            return pressures.Error;
+        }
+
+        SaveScanServiceResult(PresAtmosphResult, pressures.GasPa.ToString(System.Globalization.CultureInfo.InvariantCulture), "бар");
+        SaveScanServiceResult(PresInGasResult, pressures.GasP.ToString(System.Globalization.CultureInfo.InvariantCulture), "мбар");
+
+        return null;
+    }
+
+    private void SaveScanServiceResult(string parameterName, string value, string unit)
+    {
+        infra.TestResultsService.Remove(parameterName);
+        infra.TestResultsService.Add(
+            parameterName: parameterName,
+            value: value,
+            min: "",
+            max: "",
+            status: 1,
+            isRanged: false,
+            unit: unit,
+            test: ScanBarcodeTestName);
     }
 }

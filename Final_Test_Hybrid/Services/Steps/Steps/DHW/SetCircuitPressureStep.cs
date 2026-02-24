@@ -97,7 +97,8 @@ public class SetCircuitPressureStep(
             max: $"{MaxValue:F3}",
             status: status,
             isRanged: true,
-            unit: "");
+            unit: "",
+            test: Name);
 
         logger.LogInformation("DHW_In_Pres: {Value:F3}, пределы: [{Min:F3} .. {Max:F3}], статус: {Status}",
             inPress, min, MaxValue, status == 1 ? "OK" : "NOK");

@@ -11,15 +11,20 @@ public partial class PreExecutionCoordinator
         return result;
     }
 
-    private void InitializeTestRunning()
+    private async Task<PreExecutionResult?> InitializeTestRunningAsync(PreExecutionContext context, CancellationToken ct)
     {
         ClearForNewTestStart();
         state.BoilerState.SaveLastSerialNumber();
-        AddAppVersionToResults();
+        var scanResultsError = await WriteScanServiceResultsAsync(context, ct);
+        if (scanResultsError != null)
+        {
+            return scanResultsError;
+        }
         infra.ErrorService.IsHistoryEnabled = true;
         state.BoilerState.SetTestRunning(true);
         state.BoilerState.StartTestTimer();
         StopChangeoverAndAllowRestart();
+        return null;
     }
 
     private void ReportBlockStepResult(Guid stepId, PreExecutionResult result)

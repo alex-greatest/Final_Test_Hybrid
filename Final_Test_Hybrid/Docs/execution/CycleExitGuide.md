@@ -48,10 +48,48 @@ ExecuteCycleAsync:
          ├─ _pendingExitReason != null? → return _pendingExitReason
          │
          └─ HandleTestCompletionAsync()
-              ├─ RepeatRequested
-              ├─ NokRepeatRequested
-              └─ TestCompleted
+               ├─ RepeatRequested
+               ├─ NokRepeatRequested
+               └─ TestCompleted
 ```
+
+## Repeat-flow и scan-контекст
+
+### Что переиспользуется на repeat
+
+- После успешного `ScanStep` сохраняется `_lastSuccessfulContext`.
+- Для `CycleExitReason.RepeatRequested` выполняется `HandleRepeatRequestedExit()`:
+  - `_skipNextScan = true`
+  - scan-step пропускается на следующем цикле.
+- На старте repeat используется сохранённый контекст (`ExecuteRepeatPipelineAsync`), без повторного scan-step.
+
+### Что читается заново
+
+При любом старте теста (включая repeat) `InitializeTestRunningAsync()` вызывает
+`WriteScanServiceResultsAsync()` сразу после `ClearForNewTestStart()`:
+
+- Из `ScanServiceContext` (кэш): `App_Version`, `Plant_ID`, `Shift_No`, `Tester_No`.
+- Из OPC (reread каждый старт): `Pres_atmosph.`, `Pres_in_gas`.
+
+### Что происходит при ошибке OPC на repeat
+
+- Ошибка чтения давлений возвращает `PreExecutionResult.Fail(...)`.
+- Цикл получает `CycleExitReason.PipelineFailed`.
+- `HandleCycleExit(PipelineFailed)` не ставит повтор повторно.
+- Следующий цикл ждёт новый barcode (полный старт pre-execution).
+
+Это поведение intentional: повтор не продолжает выполнение с частично невалидными scan-данными.
+
+### Жизненный цикл `_lastSuccessfulContext`
+
+`_lastSuccessfulContext`:
+- перезаписывается после каждого успешного `ScanStep`;
+- очищается при `ClearStateOnReset()`;
+- очищается при `ClearForNokRepeat()`;
+- очищается при `ClearForTestCompletion()`.
+
+Если контекст для repeat отсутствует, `ExecuteRepeatPipelineAsync()` завершится ошибкой
+`"Нет данных для повтора"` (fail-fast вместо использования устаревших данных).
 
 ## Обработка состояний
 
@@ -266,7 +304,9 @@ private void HandleNewSignal()
 | Файл | Содержимое |
 |------|------------|
 | `PreExecutionCoordinator.cs` | Enum `CycleExitReason`, one-shot guard (`ArmResetCleanupGuard`, `TryRunResetCleanupOnce`) |
-| `PreExecutionCoordinator.MainLoop.cs` | `ExecuteCycleAsync`, `HandleCycleExit`, выходы по reset/test completion |
+| `PreExecutionCoordinator.MainLoop.cs` | `ExecuteCycleAsync`, `HandleCycleExit`, repeat/scan переключение, выходы по reset/test completion |
+| `PreExecutionCoordinator.Pipeline.cs` | `ExecutePreExecutionPipelineAsync`, `ExecuteRepeatPipelineAsync`, `ExecuteNokRepeatPipelineAsync` |
+| `PreExecutionCoordinator.Pipeline.Helpers.cs` | `InitializeTestRunningAsync` (централизованный старт + запись scan-служебных результатов) |
 | `PreExecutionCoordinator.Subscriptions.cs` | `HandleStopSignal`, `HandleGridClear`, stale AskEnd filter |
 | `PreExecutionCoordinator.CycleExit.cs` | `HandleSoftResetExit`, `HandleHardResetExit` (fallback cleanup) |
 

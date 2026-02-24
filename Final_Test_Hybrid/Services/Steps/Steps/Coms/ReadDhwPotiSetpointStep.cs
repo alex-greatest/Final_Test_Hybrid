@@ -64,7 +64,8 @@ public class ReadDhwPotiSetpointStep(
             max: MaxValue.ToString(),
             status: isInRange ? 1 : 2,
             isRanged: true,
-            unit: Unit);
+            unit: Unit,
+            test: Name);
 
         logger.LogInformation("Установленная температура ГВС: {Actual} {Unit}, диапазон: [{Min}..{Max}], статус: {Status}",
             actualValue, Unit, MinValue, MaxValue, isInRange ? "OK" : "NOK");

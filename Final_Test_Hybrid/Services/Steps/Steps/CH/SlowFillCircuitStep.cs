@@ -100,7 +100,8 @@ public class SlowFillCircuitStep(
             max: $"{FlowPressMaxLimit:F3}",
             status: status,
             isRanged: true,
-            unit: "");
+            unit: "",
+            test: Name);
 
         logger.LogInformation("Давление потока: {FlowPress:F3}, порог: {Threshold:F3}, статус: {Status}",
             flowPress, pressTestValue, status == 1 ? "OK" : "NOK");

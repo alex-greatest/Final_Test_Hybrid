@@ -99,7 +99,8 @@ public class CheckFlowRateStep(
             max: $"{max:F3}",
             status: status,
             isRanged: true,
-            unit: "");
+            unit: "",
+            test: Name);
 
         logger.LogInformation("DHW_Flow_Rate: {Value:F3}, пределы: [{Min:F3} .. {Max:F3}], статус: {Status}",
             flowRate, min, max, status == 1 ? "OK" : "NOK");

@@ -124,7 +124,8 @@ public class CheckFlowTemperatureRiseStep(
             max: "",
             status: status,
             isRanged: false,
-            unit: "");
+            unit: "",
+            test: Name);
 
         testResultsService.Add(
             parameterName: "CH_Flow_NTC_Temp_Rise",
@@ -133,7 +134,8 @@ public class CheckFlowTemperatureRiseStep(
             max: $"{max:F3}",
             status: status,
             isRanged: true,
-            unit: "");
+            unit: "",
+            test: Name);
 
         var msg = $"Температура: Разница: {flwTempHot:F3} {flowNtcTempRise:F3}";
 

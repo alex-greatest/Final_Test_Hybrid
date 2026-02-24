@@ -99,7 +99,8 @@ public class CheckTankModeStep(
             max: $"{max:F3}",
             status: status,
             isRanged: true,
-            unit: "");
+            unit: "",
+            test: Name);
 
         logger.LogInformation("Tank_DHW_Press: {Value:F3}, пределы: [{Min:F3} .. {Max:F3}], статус: {Status}",
             tankPress, min, max, status == 1 ? "OK" : "NOK");

@@ -94,7 +94,8 @@ public class GetChwFlowNtcColdStep(
             max: "",
             status: status,
             isRanged: false,
-            unit: "");
+            unit: "",
+            test: Name);
 
         logger.LogInformation("Температура холодной воды: {FlwTempCold:F3}, статус: {Status}",
             flwTempCold, status == 1 ? "OK" : "NOK");

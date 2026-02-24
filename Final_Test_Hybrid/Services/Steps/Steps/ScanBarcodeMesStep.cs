@@ -4,7 +4,6 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.OpcUa;
-using Final_Test_Hybrid.Services.Results;
 using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.SpringBoot.Operation;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
@@ -31,7 +30,6 @@ public class ScanBarcodeMesStep(
     BoilerState boilerState,
     PausableOpcUaTagService opcUa,
     IRecipeProvider recipeProvider,
-    ITestResultsService testResultsService,
     ExecutionPhaseState phaseState,
     OperationStartService operationStartService,
     OperatorState operatorState,
@@ -40,7 +38,7 @@ public class ScanBarcodeMesStep(
     ILogger<ScanBarcodeMesStep> logger,
     ITestStepLogger testStepLogger)
     : ScanStepBase(barcodeScanService, sequenceLoader, mapBuilder, mapResolver,
-        recipeValidator, boilerState, opcUa, recipeProvider, testResultsService, phaseState)
+        recipeValidator, boilerState, opcUa, recipeProvider, phaseState)
 {
     private readonly DualLogger<ScanBarcodeMesStep> _logger = new(logger, testStepLogger);
 
@@ -100,13 +98,7 @@ public class ScanBarcodeMesStep(
 
         // 10. Инициализация провайдера рецептов
         InitializeRecipeProvider();
-        SaveScanMetadata(CurrentOperatorName, shiftState.ShiftNumber);
-
-        var pressureError = await ReadAndSavePressuresAsync(ct);
-        if (pressureError != null)
-        {
-            return pressureError;
-        }
+        CaptureScanServiceContext(context, CurrentOperatorName, shiftState.ShiftNumber);
 
         _logger.LogStepEnd(Name);
         return PreExecutionResult.Continue(context.Barcode);

@@ -97,7 +97,8 @@ public class SetTankModeStep(
             max: $"{TankModeMaxLimit:F3}",
             status: status,
             isRanged: true,
-            unit: "");
+            unit: "",
+            test: Name);
 
         logger.LogInformation("Tank_Mode: {TankMode:F3}, порог: {Threshold:F3}, статус: {Status}",
             tankMode, tankModeLimit, status == 1 ? "OK" : "NOK");

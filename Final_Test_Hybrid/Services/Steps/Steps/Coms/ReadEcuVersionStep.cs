@@ -85,7 +85,8 @@ public class ReadEcuVersionStep(
             max: versionMaxStr,
             status: isInRange ? 1 : 2,
             isRanged: true,
-            unit: "");
+            unit: "",
+            test: Name);
 
         logger.LogInformation("Версия ПО ЭБУ: {Actual}, диапазон: [{Min}..{Max}], статус: {Status}",
             actualVersion, versionMinStr, versionMaxStr, isInRange ? "OK" : "NOK");

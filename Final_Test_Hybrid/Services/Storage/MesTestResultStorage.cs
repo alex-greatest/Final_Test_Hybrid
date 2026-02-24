@@ -73,7 +73,7 @@ public class MesTestResultStorage(
                 Name = r.ParameterName,
                 Value = r.Value,
                 Status = r.Status.ToString(),
-                Test = string.Empty,
+                Test = r.Test,
                 ValueType = "real"
             })
             .ToList();
@@ -87,7 +87,7 @@ public class MesTestResultStorage(
                 Min = r.Min,
                 Max = r.Max,
                 Status = r.Status.ToString(),
-                Test = string.Empty,
+                Test = r.Test,
                 ValueType = "real"
             })
             .ToList();

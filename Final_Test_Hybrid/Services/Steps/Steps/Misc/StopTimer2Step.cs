@@ -30,7 +30,15 @@ public class StopTimer2Step(
         logger.LogInformation("Таймер 2 остановлен: {Seconds:F2} сек", seconds);
 
         testResultsService.Remove("Timer_2");
-        testResultsService.Add("Timer_2", $"{seconds:F2}", "", "", 1, false, "сек");
+        testResultsService.Add(
+            parameterName: "Timer_2",
+            value: $"{seconds:F2}",
+            min: "",
+            max: "",
+            status: 1,
+            isRanged: false,
+            unit: "сек",
+            test: Name);
 
         return Task.FromResult(TestStepResult.Pass($"{seconds:F2} сек"));
     }

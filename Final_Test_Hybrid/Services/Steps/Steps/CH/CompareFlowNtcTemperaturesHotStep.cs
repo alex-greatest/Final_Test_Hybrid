@@ -190,7 +190,8 @@ public class CompareFlowNtcTemperaturesHotStep(
                 max: $"{measurement.MaxDelta:F3}",
                 status: status,
                 isRanged: true,
-                unit: "");
+                unit: "",
+                test: Name);
 
             logger.LogInformation(
                 "Результат: Дельта={Delta:F3}, TMR={ChTmr:F3}, котёл={ModbusTemp}, статус={Status}",

@@ -26,16 +26,24 @@ public partial class PreExecutionCoordinator
                     return scanResult;
             }
 
-            infra.StatusReporter.UpdateScanStepStatus(
-                TestStepStatus.Success,
-                scanResult.SuccessMessage ?? "",
-                scanResult.Limits);
-
             // Сохраняем context после успешного ScanStep (для повтора)
             _lastSuccessfulContext = context;
 
             // Общий старт теста (очистка, история, флаги, changeover)
-            InitializeTestRunning();
+            var initializeError = await InitializeTestRunningAsync(context, ct);
+            if (initializeError != null)
+            {
+                infra.StatusReporter.UpdateScanStepStatus(
+                    TestStepStatus.Error,
+                    initializeError.ErrorMessage ?? "Ошибка",
+                    initializeError.Limits);
+                return initializeError;
+            }
+
+            infra.StatusReporter.UpdateScanStepStatus(
+                TestStepStatus.Success,
+                scanResult.SuccessMessage ?? "",
+                scanResult.Limits);
 
             ct.ThrowIfCancellationRequested();
 
@@ -72,7 +80,15 @@ public partial class PreExecutionCoordinator
 
             // Пропускаем ScanStep - данные уже загружены
             // Общий старт теста (очистка, история, флаги, changeover)
-            InitializeTestRunning();
+            var initializeError = await InitializeTestRunningAsync(context, ct);
+            if (initializeError != null)
+            {
+                infra.StatusReporter.UpdateScanStepStatus(
+                    TestStepStatus.Error,
+                    initializeError.ErrorMessage ?? "Ошибка",
+                    initializeError.Limits);
+                return initializeError;
+            }
 
             ct.ThrowIfCancellationRequested();
 

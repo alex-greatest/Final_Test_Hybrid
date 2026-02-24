@@ -99,7 +99,8 @@ public class HighPressureTestStep(
             max: $"{max:F3}",
             status: status,
             isRanged: true,
-            unit: "");
+            unit: "",
+            test: Name);
 
         logger.LogInformation("DHW_High_Pressure: {Value:F3}, пределы: [{Min:F3} .. {Max:F3}], статус: {Status}",
             highPressure, min, max, status == 1 ? "OK" : "NOK");

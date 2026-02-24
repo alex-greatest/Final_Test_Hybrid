@@ -309,7 +309,8 @@ public class SetGasAndPBurnerMinLevelsStep(
             max: $"{max:F3}",
             status: status,
             isRanged: true,
-            unit: "мбар");
+            unit: "мбар",
+            test: Name);
     }
 
     /// <summary>
@@ -331,7 +332,8 @@ public class SetGasAndPBurnerMinLevelsStep(
             max: $"{max:F3}",
             status: status,
             isRanged: true,
-            unit: "л/мин");
+            unit: "л/мин",
+            test: Name);
     }
 
     /// <summary>
@@ -353,7 +355,8 @@ public class SetGasAndPBurnerMinLevelsStep(
             max: $"{max:F3}",
             status: status,
             isRanged: true,
-            unit: "мбар");
+            unit: "мбар",
+            test: Name);
     }
 
     /// <summary>

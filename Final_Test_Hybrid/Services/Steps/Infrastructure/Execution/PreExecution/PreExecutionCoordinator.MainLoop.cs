@@ -279,9 +279,33 @@ public partial class PreExecutionCoordinator
         var message = $"Время теста: {testFormatted}  Время переналадки: {changeoverFormatted}  Общее время: {totalFormatted}";
         infra.StatusReporter.ReportSuccess(stepId, message);
 
-        infra.TestResultsService.Add("Test_Time", testFormatted, "", "", 1, false, "");
-        infra.TestResultsService.Add("Change_Over_Time", changeoverFormatted, "", "", 1, false, "");
-        infra.TestResultsService.Add("Complete_Time", totalFormatted, "", "", 1, false, "");
+        infra.TestResultsService.Add(
+            parameterName: "Test_Time",
+            value: testFormatted,
+            min: "",
+            max: "",
+            status: 1,
+            isRanged: false,
+            unit: "",
+            test: "Test Time");
+        infra.TestResultsService.Add(
+            parameterName: "Change_Over_Time",
+            value: changeoverFormatted,
+            min: "",
+            max: "",
+            status: 1,
+            isRanged: false,
+            unit: "",
+            test: "Test Time");
+        infra.TestResultsService.Add(
+            parameterName: "Complete_Time",
+            value: totalFormatted,
+            min: "",
+            max: "",
+            status: 1,
+            isRanged: false,
+            unit: "",
+            test: "Test Time");
     }
 
     /// <summary>

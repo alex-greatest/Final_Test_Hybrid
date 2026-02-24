@@ -2,7 +2,6 @@ using Final_Test_Hybrid.Models;
 using Final_Test_Hybrid.Models.Database;
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common.Logging;
-using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.SpringBoot.Recipe;
@@ -25,4 +24,13 @@ public class PreExecutionContext
     public BoilerTypeCycle? BoilerTypeCycle { get; set; }
     public IReadOnlyList<RecipeResponseDto>? Recipes { get; set; }
     public List<string?[]>? RawSequenceData { get; set; }
+    public ScanServiceContext? ScanServiceContext { get; set; }
+}
+
+public sealed class ScanServiceContext
+{
+    public string AppVersion { get; init; } = string.Empty;
+    public string PlantId { get; init; } = string.Empty;
+    public string ShiftNo { get; init; } = string.Empty;
+    public string TesterNo { get; init; } = string.Empty;
 }

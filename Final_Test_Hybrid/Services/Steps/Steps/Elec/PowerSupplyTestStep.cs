@@ -99,7 +99,8 @@ public class PowerSupplyTestStep(
             max: $"{max:F1}",
             status: status,
             isRanged: true,
-            unit: "V");
+            unit: "V",
+            test: Name);
 
         logger.LogInformation("Напряжение: {Supply:F1} V, пределы: {Min:F1} - {Max:F1}, статус: {Status}",
             supply, min, max, status == 1 ? "OK" : "NOK");
