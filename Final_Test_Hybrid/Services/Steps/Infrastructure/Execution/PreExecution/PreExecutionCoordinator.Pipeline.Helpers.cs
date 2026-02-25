@@ -14,6 +14,9 @@ public partial class PreExecutionCoordinator
     private async Task<PreExecutionResult?> InitializeTestRunningAsync(PreExecutionContext context, CancellationToken ct)
     {
         ClearForNewTestStart();
+        Interlocked.Exchange(ref _interruptReasonUsedInCurrentResetSeries, 0);
+        Volatile.Write(ref _interruptDialogAllowedSequence, 0);
+        Volatile.Write(ref _interruptReasonDialogSequence, 0);
         state.BoilerState.SaveLastSerialNumber();
         var scanResultsError = await WriteScanServiceResultsAsync(context, ct);
         if (scanResultsError != null)

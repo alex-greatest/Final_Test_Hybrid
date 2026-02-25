@@ -27,9 +27,11 @@
 
 - Любой новый reset-cycle (PLC и non-PLC) обязан увеличивать `_resetSequence`.
 - Старт reset-cycle выполняется через `BeginResetCycle(origin, ensureAskEndWindow)`:
-  - PLC-путь: `BeginResetCycle(ResetOriginPlc, true)` — `seq++`, повторное вооружение one-shot cleanup, открытие AskEnd-окна.
+  - PLC-путь: `BeginResetCycle(ResetOriginPlc, true)` — `seq++`, повторное вооружение one-shot cleanup, открытие нового `ResetAskEndWindow(seq)`.
   - non-PLC HardReset-путь: `BeginResetCycle(ResetOriginNonPlc, false)` — `seq++`, повторное вооружение one-shot cleanup, **без** открытия AskEnd-окна.
 - Лог `Старт reset-цикла: seq=..., source=..., cleanupArmed=true` формируется только в `BeginResetCycle(...)`.
+- AskEnd-window хранится в `_currentAskEndWindow` и всегда привязан к конкретному `seq`.
+- `CompletePlcReset(seq)` завершает только окно того же `seq`; stale-окна не завершают текущий цикл.
 
 ### wasInScanPhase — определение
 
@@ -118,7 +120,7 @@ PreExecutionCoordinator:
 - отменяет ожидание штрихкода при reset;
 - для PLC-reset пути продолжает цикл только после AskEnd.
 - для HardReset допускает fallback-очистку в `HandleHardResetExit`, если AskEnd путь не завершил cleanup.
-- stale `AskEnd` игнорируется в `ExecuteGridClearAsync()`, если нет активного reset-окна (`_askEndSignal == null`).
+- stale `AskEnd` игнорируется в `ExecuteGridClearAsync()` при отсутствии окна или несовпадении `window.Sequence != currentSeq`.
 
 ### Таймауты reset-flow (конфигурируемые)
 
@@ -168,6 +170,13 @@ RunSingleCycleAsync:
 
 Если в момент soft reset был активный тест и включён `UseInterruptReason`, после `AskEnd` открывается диалог `Причина прерывания`.
 
+- На одну серию reset разрешён максимум один показ диалога.
+- Серийный latch ставится на первом `SoftReset` серии независимо от фактического показа диалога.
+- Серия reset завершается только при запуске нового pre-exec pipeline (`InitializeTestRunningAsync`).
+- Любой новый reset (Soft/Hard) немедленно закрывает активный диалог (`CancelActiveDialog`).
+- На время активного диалога принудительно замораживаются step timers (`PauseAllColumnsTiming`), включая Scan.
+- Попытка restart scan-таймера из `OnResetCompleted` в этом окне блокируется (`ScanTimingRestartBlockedByInterruptDialog`).
+
 - Текущий UX: **без** окна `Авторизация администратора`, сразу ввод причины.
 - Маршрут сохранения не меняется:
   - `UseMes=true` → MES;
@@ -175,6 +184,20 @@ RunSingleCycleAsync:
 - Обратимость зафиксирована в коде флагом `bypassAdminAuthInSoftResetInterrupt`:
   `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.Subscriptions.cs`.
 - Rework-flow (`ReworkDialogService`) не затрагивается и по-прежнему использует отдельную admin-авторизацию.
+
+## Changeover ownership в reset-сценариях
+
+- `ChangeoverStartGate` больше не слушает `OnAskEndReceived` и не делает deferred-старт.
+- `ChangeoverStartGate` только принимает `RequestStartFromAutoReady()` и публикует `OnAutoReadyRequested`.
+- Для защиты от late-subscribe в `ChangeoverStartGate` используется one-shot pending/replay:
+  - при `RequestStartFromAutoReady()` выставляется pending-флаг;
+  - при подписке `PreExecutionCoordinator` вызывает `TryConsumePendingAutoReadyRequest()` и, если нужно, выполняет catch-up (`AutoReadyReplayConsumed`).
+- Источник сигнала для этого пути — `AutoReadySubscription.OnFirstAutoReceived` (one-shot): влияние `AutoReady` на старт changeover ограничено первым запуском.
+- Единственный owner финального старта changeover в reset-сценариях — `PreExecutionCoordinator` (sequence-aware проверка).
+- Дополнительные sequence-aware диагностики:
+  - `ChangeoverStartDeferredBySeq` — AskEnd текущего seq ещё не получен, старт отложен;
+  - `ChangeoverStartRejectedAsStale` — pending/AskEnd относятся к старому seq;
+  - `ChangeoverStartSkippedDuplicateSeq` — защита от повторного старта для того же seq.
 
 ## Разница ForceStop vs Reset
 
@@ -257,7 +280,10 @@ private void TransitionToReadyInternal()
         PerformInitialActivation();  // Catch-up если активация была заблокирована
         return;
     }
-    _stepTimingService.ResetScanTiming();
+    if (!_preExecutionCoordinator.IsInterruptReasonDialogActive())
+    {
+        _stepTimingService.ResetScanTiming();
+    }
     _sessionManager.AcquireSession(HandleBarcodeScanned);
 }
 ```

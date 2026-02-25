@@ -132,41 +132,37 @@ private void HandleCycleExit(CycleExitReason reason)
 
 `OnAskEndReceived` обрабатывается через `HandleGridClear()` → `ExecuteGridClearAsync()`.
 Очистка выполняется только один раз на reset-цикл и защищена от stale-сигналов
-через проверку активного reset-окна (`_askEndSignal == null`):
+через sequence-aware reset-окно (`_currentAskEndWindow`):
 
 ```csharp
 private async Task ExecuteGridClearAsync()
 {
+    var window = Volatile.Read(ref _currentAskEndWindow);
     var resetSequence = GetResetSequenceSnapshot();
-    if (_askEndSignal == null)
+    if (window == null || window.Sequence != resetSequence)
     {
-        infra.Logger.LogDebug(
-            "Пропуск reset-cleanup: path={CleanupPath}, reason={SkipReason}, seq={ResetSequence}",
-            "AskEnd",
-            "stale_no_active_window",
+        infra.Logger.LogInformation(
+            "AskEndIgnoredAsStale: windowSeq={WindowSequence}, currentSeq={CurrentSequence}",
+            window?.Sequence ?? 0,
             resetSequence);
         return;
     }
 
-    RecordAskEndSequence();
-    resetSequence = GetResetSequenceSnapshot();
+    RecordAskEndSequence(window.Sequence);
     if (!TryRunResetCleanupOnce())
     {
-        infra.Logger.LogDebug(
-            "Пропуск reset-cleanup: path={CleanupPath}, reason={SkipReason}, seq={ResetSequence}",
-            "AskEnd",
-            "already_done",
-            resetSequence);
-        CompletePlcReset();
+        CompletePlcReset(window.Sequence);
         return;
     }
 
-    infra.Logger.LogDebug(
-        "Выполнение reset-cleanup: path={CleanupPath}, seq={ResetSequence}",
-        "AskEnd",
-        resetSequence);
-    CaptureAndClearState(); // ClearStateOnReset() + ClearAllExceptScan()
-    CompletePlcReset();
+    var context = CaptureAndClearState(); // ClearStateOnReset() + ClearAllExceptScan()
+    var allowDialog = ShouldShowInterruptDialog(context)
+        && Volatile.Read(ref _interruptDialogAllowedSequence) == window.Sequence;
+    if (allowDialog)
+    {
+        await TryShowInterruptDialogAsync(context.SerialNumber!);
+    }
+    CompletePlcReset(window.Sequence);
 }
 ```
 
@@ -318,7 +314,7 @@ private void HandleNewSignal()
 | **SoftReset** во время pipeline | `HandleGridClear` (по AskEnd) + `TryRunResetCleanupOnce()` |
 | **SoftReset** во время теста | `HandleGridClear` (по AskEnd) + `TryRunResetCleanupOnce()` |
 | **HardReset** без AskEnd cleanup | `HandleHardResetExit` выполняет fallback cleanup через тот же guard |
-| **Дублированный/устаревший AskEnd** | Игнорируется (`_askEndSignal == null` + one-shot guard) |
+| **Дублированный/устаревший AskEnd** | Игнорируется (`_currentAskEndWindow` отсутствует или `window.Sequence != currentSeq`) |
 | Нормальное завершение теста | `HandleCycleExit` → `HandleTestCompletedExit` |
 
 ## Отладка

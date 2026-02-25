@@ -28,15 +28,30 @@ public partial class PreExecutionCoordinator(
     PreExecutionCoordinators coordinators,
     PreExecutionState state)
 {
+    private sealed class ResetAskEndWindow
+    {
+        public ResetAskEndWindow(int sequence)
+        {
+            Sequence = sequence;
+            Signal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        public int Sequence { get; }
+        public TaskCompletionSource Signal { get; }
+    }
+
     // === Состояние ввода ===
     private TaskCompletionSource<string>? _barcodeSource;
     private CancellationTokenSource? _currentCts;
     private CycleExitReason? _pendingExitReason;
     private TaskCompletionSource<CycleExitReason>? _resetSignal;
-    private TaskCompletionSource? _askEndSignal;
+    private ResetAskEndWindow? _currentAskEndWindow;
     private CancellationTokenSource _resetCts = new();
     private int _resetSequence;
     private int _resetCleanupDone;
+    private int _interruptReasonUsedInCurrentResetSeries;
+    private int _interruptDialogAllowedSequence;
+    private int _interruptReasonDialogSequence;
     private bool _skipNextScan;
     private bool _executeFullPreparation;
     private PreExecutionContext? _lastSuccessfulContext;
@@ -163,7 +178,7 @@ public partial class PreExecutionCoordinator(
 
     public ScanStepBase GetScanStep() => steps.GetScanStep();
 
-    private void BeginResetCycle(int origin, bool ensureAskEndWindow)
+    private int BeginResetCycle(int origin, bool ensureAskEndWindow)
     {
         var resetSequence = Interlocked.Increment(ref _resetSequence);
         ArmResetCleanupGuard();
@@ -174,39 +189,64 @@ public partial class PreExecutionCoordinator(
             true);
         if (ensureAskEndWindow)
         {
-            EnsureAskEndSignal();
+            EnsureAskEndWindow(resetSequence);
             CancelResetToken();
         }
+        return resetSequence;
     }
 
-    private void BeginPlcReset()
+    private int BeginPlcReset()
     {
-        BeginResetCycle(ResetOriginPlc, ensureAskEndWindow: true);
+        return BeginResetCycle(ResetOriginPlc, ensureAskEndWindow: true);
     }
 
-    private void CompletePlcReset()
+    private bool CompletePlcReset(int expectedSequence)
     {
-        var previousCts = Interlocked.Exchange(ref _resetCts, new CancellationTokenSource());
-        previousCts.Dispose();
-        var signal = Interlocked.Exchange(ref _askEndSignal, null);
-        signal?.TrySetResult();
+        if (!TryTakeAskEndWindow(expectedSequence, out var window) || window == null)
+        {
+            return false;
+        }
+        ReplaceResetToken();
+        window.Signal.TrySetResult();
+        return true;
     }
 
     private void TryCompletePlcReset()
     {
-        var signal = Interlocked.Exchange(ref _askEndSignal, null);
-        if (signal == null) return;
-        // Swap CTS to signal reset; disposal may trigger ODE in waiters and is expected.
-        Interlocked.Exchange(ref _resetCts, new CancellationTokenSource()).Dispose();
-        signal.TrySetResult();
+        var window = Interlocked.Exchange(ref _currentAskEndWindow, null);
+        if (window == null)
+        {
+            return;
+        }
+        ReplaceResetToken();
+        window.Signal.TrySetResult();
     }
 
-    private Task WaitForAskEndIfNeededAsync(CancellationToken ct)
+    private async Task WaitForAskEndIfNeededAsync(CancellationToken ct)
     {
-        var signal = _askEndSignal;
-        return signal == null
-            ? Task.CompletedTask
-            : signal.Task.WaitAsync(ct);
+        while (!ct.IsCancellationRequested)
+        {
+            var window = Volatile.Read(ref _currentAskEndWindow);
+            if (window == null)
+            {
+                return;
+            }
+            try
+            {
+                await window.Signal.Task.WaitAsync(ct);
+                if (ReferenceEquals(window, Volatile.Read(ref _currentAskEndWindow)))
+                {
+                    return;
+                }
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                if (ReferenceEquals(window, Volatile.Read(ref _currentAskEndWindow)))
+                {
+                    return;
+                }
+            }
+        }
     }
 
     private bool DidResetOccur(int sequenceSnapshot) =>
@@ -222,12 +262,34 @@ public partial class PreExecutionCoordinator(
         };
     }
 
-    private void EnsureAskEndSignal()
+    private void EnsureAskEndWindow(int resetSequence)
     {
-        if (_askEndSignal == null || _askEndSignal.Task.IsCompleted)
+        var nextWindow = new ResetAskEndWindow(resetSequence);
+        var previousWindow = Interlocked.Exchange(ref _currentAskEndWindow, nextWindow);
+        previousWindow?.Signal.TrySetCanceled();
+    }
+
+    private void ReplaceResetToken()
+    {
+        var previousCts = Interlocked.Exchange(ref _resetCts, new CancellationTokenSource());
+        previousCts.Dispose();
+    }
+
+    private bool TryTakeAskEndWindow(int expectedSequence, out ResetAskEndWindow? window)
+    {
+        var currentWindow = Volatile.Read(ref _currentAskEndWindow);
+        if (currentWindow == null || currentWindow.Sequence != expectedSequence)
         {
-            _askEndSignal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            window = null;
+            return false;
         }
+        if (Interlocked.CompareExchange(ref _currentAskEndWindow, null, currentWindow) != currentWindow)
+        {
+            window = null;
+            return false;
+        }
+        window = currentWindow;
+        return true;
     }
 
     private void CancelResetToken()

@@ -37,7 +37,7 @@ public class ScanModeController : IDisposable
     /// </summary>
     private bool _isResetting;
     private bool _disposed;
-    private bool _scanPausedByConnectionLoss;
+    private bool _scanPausedByInputReadiness;
     /// <summary>
     /// Кэшированное состояние AutoReady. Обновляется только под _stateLock.
     /// Используется для внутренних решений чтобы избежать race condition.
@@ -139,7 +139,7 @@ public class ScanModeController : IDisposable
         {
             var wasInScanPhase = IsInScanningPhaseUnsafe;
             _isResetting = true;
-            _scanPausedByConnectionLoss = false;
+            _scanPausedByInputReadiness = false;
             _stepTimingService.PauseAllColumnsTiming();
             _sessionManager.ReleaseSession();
             return wasInScanPhase;
@@ -181,7 +181,7 @@ public class ScanModeController : IDisposable
                 TryDeactivateScanMode();
             }
 
-            SyncScanTimingForConnectionUnsafe();
+            SyncScanTimingForInputReadinessUnsafe();
         }
         OnStateChanged?.Invoke();
     }
@@ -329,20 +329,27 @@ public class ScanModeController : IDisposable
         {
             _loopCts?.Cancel();
             _isActivated = false;
-            _scanPausedByConnectionLoss = false;
+            _scanPausedByInputReadiness = false;
             _stepTimingService.PauseAllColumnsTiming();
             return;
         }
         if (!_isActivated)
         {
-            _scanPausedByConnectionLoss = false;
+            _scanPausedByInputReadiness = false;
             PerformInitialActivation();
-            SyncScanTimingForConnectionUnsafe();
+            SyncScanTimingForInputReadinessUnsafe();
             return;
         }
-        _stepTimingService.ResetScanTiming();
+        if (ShouldKeepScanPausedForInputUnsafe())
+        {
+            LogScanTimingRestartBlockedByInterruptDialog();
+        }
+        else
+        {
+            _stepTimingService.ResetScanTiming();
+        }
         _sessionManager.AcquireSession(HandleBarcodeScanned);
-        SyncScanTimingForConnectionUnsafe();
+        SyncScanTimingForInputReadinessUnsafe();
     }
 
     private void HandleConnectionStateChanged(bool _)
@@ -353,7 +360,7 @@ public class ScanModeController : IDisposable
             {
                 return;
             }
-            SyncScanTimingForConnectionUnsafe();
+            SyncScanTimingForInputReadinessUnsafe();
         }
     }
 
@@ -365,60 +372,76 @@ public class ScanModeController : IDisposable
             {
                 return;
             }
-            SyncScanTimingForConnectionUnsafe();
+            SyncScanTimingForInputReadinessUnsafe();
         }
     }
 
     private void ResumeTimingWhenAllowedUnsafe()
     {
-        if (ShouldKeepScanPausedForConnectionUnsafe())
+        if (ShouldKeepScanPausedForInputUnsafe())
         {
             return;
         }
         _stepTimingService.ResumeAllColumnsTiming();
-        _scanPausedByConnectionLoss = false;
+        _scanPausedByInputReadiness = false;
     }
 
-    private bool ShouldKeepScanPausedForConnectionUnsafe()
+    private bool ShouldKeepScanPausedForInputUnsafe()
     {
-        return _preExecutionCoordinator.IsAcceptingInput && !_connectionState.IsConnected;
-    }
-
-    private void SyncScanTimingForConnectionUnsafe()
-    {
+        if (_preExecutionCoordinator.IsInterruptReasonDialogActive())
+        {
+            return true;
+        }
         if (!_preExecutionCoordinator.IsAcceptingInput)
         {
-            _scanPausedByConnectionLoss = false;
-            return;
+            return false;
         }
-
-        if (_connectionState.IsConnected)
-        {
-            TryResumeScanTimingAfterReconnectUnsafe();
-            return;
-        }
-
-        TryPauseScanTimingOnConnectionLossUnsafe();
+        return !_connectionState.IsConnected || !IsScanModeEnabledCached;
     }
 
-    private void TryPauseScanTimingOnConnectionLossUnsafe()
+    private void SyncScanTimingForInputReadinessUnsafe()
     {
-        if (_scanPausedByConnectionLoss)
+        if (ShouldKeepScanPausedForInputUnsafe())
+        {
+            TryPauseScanTimingForInputReadinessUnsafe();
+            return;
+        }
+
+        if (!_preExecutionCoordinator.IsAcceptingInput)
+        {
+            _scanPausedByInputReadiness = false;
+            return;
+        }
+
+        TryResumeScanTimingAfterInputReadyUnsafe();
+    }
+
+    private void TryPauseScanTimingForInputReadinessUnsafe()
+    {
+        if (_scanPausedByInputReadiness)
         {
             return;
         }
         _stepTimingService.PauseAllColumnsTiming();
-        _scanPausedByConnectionLoss = true;
+        _scanPausedByInputReadiness = true;
     }
 
-    private void TryResumeScanTimingAfterReconnectUnsafe()
+    private void TryResumeScanTimingAfterInputReadyUnsafe()
     {
-        if (!_scanPausedByConnectionLoss || !IsScanModeEnabledCached || _isResetting || !_isActivated)
+        if (!_scanPausedByInputReadiness || !IsScanModeEnabledCached || !_connectionState.IsConnected || _isResetting || !_isActivated || ShouldKeepScanPausedForInputUnsafe())
         {
             return;
         }
         _stepTimingService.ResumeAllColumnsTiming();
-        _scanPausedByConnectionLoss = false;
+        _scanPausedByInputReadiness = false;
+    }
+
+    private void LogScanTimingRestartBlockedByInterruptDialog()
+    {
+        _logger.LogInformation(
+            "ScanTimingRestartBlockedByInterruptDialog: currentSeq={CurrentSequence}, dialogSeq={DialogSequence}",
+            _preExecutionCoordinator.GetCurrentResetSequenceSnapshot(),
+            _preExecutionCoordinator.GetInterruptReasonDialogSequenceSnapshot());
     }
 
     /// <summary>

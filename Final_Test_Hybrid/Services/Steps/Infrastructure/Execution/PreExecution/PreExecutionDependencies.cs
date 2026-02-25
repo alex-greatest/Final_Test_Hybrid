@@ -78,6 +78,7 @@ public class PreExecutionCoordinators(
     IErrorCoordinator errorCoordinator,
     PlcResetCoordinator plcResetCoordinator,
     ScanDialogCoordinator dialogCoordinator,
+    IChangeoverStartGate changeoverStartGate,
     TestCompletionCoordinator completionCoordinator,
     TestCompletionUiState completionUiState)
 {
@@ -85,6 +86,7 @@ public class PreExecutionCoordinators(
     public IErrorCoordinator ErrorCoordinator => errorCoordinator;
     public PlcResetCoordinator PlcResetCoordinator => plcResetCoordinator;
     public ScanDialogCoordinator DialogCoordinator => dialogCoordinator;
+    public IChangeoverStartGate ChangeoverStartGate => changeoverStartGate;
     public TestCompletionCoordinator CompletionCoordinator => completionCoordinator;
     public TestCompletionUiState CompletionUiState => completionUiState;
 }

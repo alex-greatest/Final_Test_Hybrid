@@ -211,7 +211,8 @@ canAcceptBarcode = PreExecutionCoordinator.IsAcceptingInput
 Следствия:
 - При `IsConnected = false` ручной ввод в `BoilerInfo` блокируется (read-only).
 - При `IsConnected = false` аппаратный скан игнорируется в `BarcodeDebounceHandler`.
-- При `IsConnected = false` во время ожидания barcode (`IsAcceptingInput = true`) Scan-таймер ставится на паузу; после reconnect возобновляется только при активном scan-mode и вне reset-фазы.
+- Во время ожидания barcode (`IsAcceptingInput = true`) Scan-таймер ставится на паузу при любой неготовности входа: `IsConnected = false` или `IsScanModeEnabled = false` (например, `AskAuto = false`); возобновляется только при восстановлении обоих условий и вне reset-фазы.
+- При активном окне причины прерывания (`PreExecutionCoordinator.IsInterruptReasonDialogActive() = true`) Scan/step timers остаются на паузе независимо от `IsAcceptingInput`.
 - Изменение только `ScanModeController` без этого гейтинга считается неполным фиксом.
 
 ### IsInScanningPhase
@@ -362,7 +363,10 @@ private void TransitionToReadyInternal()
         PerformInitialActivation();
         return;
     }
-    _stepTimingService.ResetScanTiming();
+    if (!_preExecutionCoordinator.IsInterruptReasonDialogActive())
+    {
+        _stepTimingService.ResetScanTiming();
+    }
     _sessionManager.AcquireSession(HandleBarcodeScanned);
 }
 ```
@@ -642,7 +646,13 @@ private bool ShouldUseSoftDeactivation()
 - Очистка reset-состояния защищена общим one-shot guard (`TryRunResetCleanupOnce()`)
 - `OnReset` (hard) запускает путь `HandleHardReset()` и может завершить cleanup без AskEnd через `HandleHardResetExit()`
 - Любой новый reset-cycle (PLC и non-PLC) повышает `_resetSequence`; это канонический идентификатор для sequence-guard.
-- `OnAskEndReceived` фильтрует stale-сигналы по reset-окну (`_askEndSignal == null`).
+- `OnAskEndReceived` фильтрует stale-сигналы по reset-окну (`_currentAskEndWindow == null` или `window.Sequence != currentSeq`).
+- `ChangeoverStartGate` в reset-сценариях не стартует таймер самостоятельно: он публикует только `OnAutoReadyRequested`, запуск выполняет `PreExecutionCoordinator`.
+- `ChangeoverStartGate` держит one-shot pending-сигнал `AutoReady` для late-subscribe:
+  - ранний `RequestStartFromAutoReady()` не теряется;
+  - при `EnsureSubscribed()` координатор выполняет `TryConsumePendingAutoReadyRequest()` и логирует `AutoReadyReplayConsumed`.
+- `AutoReady`-влияние на старт changeover в этом маршруте ограничено первым сигналом `OnFirstAutoReceived`; последующие переключения `AutoReady` не должны перезапускать changeover.
+- В `PreExecutionCoordinator.StartChangeoverTimerImmediate()` действует dedup по seq (`ChangeoverStartSkippedDuplicateSeq`) и stale-защита (`ChangeoverStartRejectedAsStale`).
 
 ### Диаграмма (полная)
 
@@ -837,30 +847,39 @@ private void HandleSoftStop()
 private async void HandleGridClear()
 {
     try { await ExecuteGridClearAsync(); }
-    catch { CompletePlcReset(); }
+    catch { TryCompletePlcReset(); }
 }
 
 private async Task ExecuteGridClearAsync()
 {
-    if (_askEndSignal == null)
+    var window = Volatile.Read(ref _currentAskEndWindow);
+    var currentSeq = GetResetSequenceSnapshot();
+    if (window == null || window.Sequence != currentSeq)
     {
         return; // stale AskEnd
     }
 
-    RecordAskEndSequence();
+    RecordAskEndSequence(window.Sequence);
     if (!TryRunResetCleanupOnce())
     {
-        CompletePlcReset();
+        CompletePlcReset(window.Sequence);
         return;
     }
 
-    CaptureAndClearState();  // ClearStateOnReset() + ClearAllExceptScan()
-    CompletePlcReset();
+    var context = CaptureAndClearState();
+    var allowDialog = ShouldShowInterruptDialog(context)
+        && Volatile.Read(ref _interruptDialogAllowedSequence) == window.Sequence;
+    if (allowDialog)
+    {
+        await TryShowInterruptDialogAsync(context.SerialNumber!);
+    }
+    CompletePlcReset(window.Sequence);
 }
 
 // OnReset → HandleHardReset()
 private void HandleHardReset()
 {
+    CancelActiveDialog();
     TryCompletePlcReset();
     var isPending = Interlocked.Exchange(ref coordinators.PlcResetCoordinator.PlcHardResetPending, 0);
     var origin = isPending == 1 ? ResetOriginPlc : ResetOriginNonPlc;
@@ -914,7 +933,7 @@ State machine для фаз жизненного цикла системы:
 |---------------|-------|--------------|------------------|
 | `_isActivated` | ScanModeController | `IsInScanningPhase`, `TryActivate/Deactivate` | `PerformInitialActivation`, `PerformFullDeactivation`, `TransitionToReadyInternal` |
 | `_isResetting` | ScanModeController | `IsInScanningPhase`, `TryActivate/Deactivate` | `HandleResetStarting`, `TransitionToReadyInternal` |
-| `_scanPausedByConnectionLoss` | ScanModeController | `SyncScanTimingForConnectionUnsafe` | `TryPauseScanTimingOnConnectionLossUnsafe`, `TryResumeScanTimingAfterReconnectUnsafe`, reset/deactivate ветки |
+| `_scanPausedByInputReadiness` | ScanModeController | `SyncScanTimingForInputReadinessUnsafe` | `TryPauseScanTimingForInputReadinessUnsafe`, `TryResumeScanTimingAfterInputReadyUnsafe`, reset/deactivate ветки |
 | `StopReason` | ExecutionFlowState | TestExecutionCoordinator (GetSnapshot), PreExecutionCoordinator (TryGetStopExitReason) | `RequestStop`, `ClearStop` |
 | `StopAsFailure` | ExecutionFlowState | TestExecutionCoordinator (GetSnapshot) | `RequestStop` (OnForceStop/OnReset handlers), `ClearStop` |
 | `State` | ExecutionStateManager | UI (OnStateChanged), координаторы | `TransitionTo` |

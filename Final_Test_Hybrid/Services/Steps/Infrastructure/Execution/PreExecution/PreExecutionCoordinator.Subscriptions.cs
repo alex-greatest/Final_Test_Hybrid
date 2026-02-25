@@ -21,6 +21,7 @@ public partial class PreExecutionCoordinator
         }
         _subscribed = true;
         SubscribeToStopSignals();
+        ReplayPendingAutoReadyRequestIfAny();
     }
 
     private void SubscribeToStopSignals()
@@ -28,6 +29,17 @@ public partial class PreExecutionCoordinator
         coordinators.PlcResetCoordinator.OnForceStop += HandleSoftStop;
         coordinators.PlcResetCoordinator.OnAskEndReceived += HandleGridClear;
         coordinators.ErrorCoordinator.OnReset += HandleHardReset;
+        coordinators.ChangeoverStartGate.OnAutoReadyRequested += HandleAutoReadyRequested;
+    }
+
+    private void ReplayPendingAutoReadyRequestIfAny()
+    {
+        if (!coordinators.ChangeoverStartGate.TryConsumePendingAutoReadyRequest())
+        {
+            return;
+        }
+        infra.Logger.LogInformation("AutoReadyReplayConsumed");
+        HandleAutoReadyRequested();
     }
 
     private void HandleStopSignal(PreExecutionResolution resolution)
@@ -76,25 +88,27 @@ public partial class PreExecutionCoordinator
         {
             infra.Logger.LogError(ex, "Ошибка в HandleGridClear");
             ResetInterruptState();
-            CompletePlcReset();
+            TryCompletePlcReset();
         }
     }
 
     private async Task ExecuteGridClearAsync()
     {
+        var window = Volatile.Read(ref _currentAskEndWindow);
         var resetSequence = GetResetSequenceSnapshot();
-        if (_askEndSignal == null)
+        if (window == null)
         {
-            infra.Logger.LogDebug(
-                "Пропуск reset-cleanup: path={CleanupPath}, reason={SkipReason}, seq={ResetSequence}",
-                "AskEnd",
-                "stale_no_active_window",
-                resetSequence);
+            LogAskEndIgnoredAsStale(0, resetSequence);
+            LogInterruptDialogSuppressed("stale_seq", resetSequence, Volatile.Read(ref _interruptDialogAllowedSequence));
             return;
         }
-
-        RecordAskEndSequence();
-        resetSequence = GetResetSequenceSnapshot();
+        if (window.Sequence != resetSequence)
+        {
+            LogAskEndIgnoredAsStale(window.Sequence, resetSequence);
+            LogInterruptDialogSuppressed("stale_seq", resetSequence, Volatile.Read(ref _interruptDialogAllowedSequence));
+            return;
+        }
+        RecordAskEndSequence(window.Sequence);
         if (!TryRunResetCleanupOnce())
         {
             infra.Logger.LogDebug(
@@ -102,7 +116,14 @@ public partial class PreExecutionCoordinator
                 "AskEnd",
                 "already_done",
                 resetSequence);
-            CompletePlcReset();
+            CompletePlcResetOrLogStale(window.Sequence);
+            return;
+        }
+        if (GetResetSequenceSnapshot() != window.Sequence)
+        {
+            Interlocked.Exchange(ref _resetCleanupDone, 0);
+            LogAskEndIgnoredAsStale(window.Sequence, GetResetSequenceSnapshot());
+            CompletePlcResetOrLogStale(window.Sequence);
             return;
         }
         infra.Logger.LogDebug(
@@ -113,11 +134,18 @@ public partial class PreExecutionCoordinator
         var context = CaptureAndClearState();
         if (!ShouldShowInterruptDialog(context))
         {
-            CompletePlcReset();
+            LogInterruptDialogSuppressed("conditions_not_met", window.Sequence, Volatile.Read(ref _interruptDialogAllowedSequence));
+            CompletePlcResetOrLogStale(window.Sequence);
             return;
         }
-        await TryShowInterruptDialogAsync(context.SerialNumber!);
-        CompletePlcReset();
+        if (Volatile.Read(ref _interruptDialogAllowedSequence) != window.Sequence)
+        {
+            LogInterruptDialogSuppressed("series_latch", window.Sequence, Volatile.Read(ref _interruptDialogAllowedSequence));
+            CompletePlcResetOrLogStale(window.Sequence);
+            return;
+        }
+        await TryShowInterruptDialogAsync(context.SerialNumber!, window.Sequence);
+        CompletePlcResetOrLogStale(window.Sequence);
     }
 
     private (bool WasTestRunning, string? SerialNumber) CaptureAndClearState()
@@ -138,7 +166,7 @@ public partial class PreExecutionCoordinator
             && infra.AppSettings.UseInterruptReason;
     }
 
-    private async Task TryShowInterruptDialogAsync(string serialNumber)
+    private async Task TryShowInterruptDialogAsync(string serialNumber, int resetSequence)
     {
         if (!TryAcquireDialogLock())
         {
@@ -148,6 +176,7 @@ public partial class PreExecutionCoordinator
         var cts = new CancellationTokenSource();
         var oldCts = Interlocked.Exchange(ref _interruptDialogCts, cts);
         DisposeOldCts(oldCts);
+        MarkInterruptDialogActive(resetSequence);
 
         try
         {
@@ -169,6 +198,17 @@ public partial class PreExecutionCoordinator
         oldCts?.Dispose();
     }
 
+    private void MarkInterruptDialogActive(int resetSequence)
+    {
+        Volatile.Write(ref _interruptReasonDialogSequence, resetSequence);
+        infra.StepTimingService.PauseAllColumnsTiming();
+        infra.Logger.LogInformation(
+            "InterruptDialogTimingFreezeApplied: seq={ResetSequence}, scanAndColumnsPaused={TimersPaused}",
+            resetSequence,
+            true);
+        OnStateChanged?.Invoke();
+    }
+
     private void CancelActiveDialog()
     {
         var currentCts = Volatile.Read(ref _interruptDialogCts);
@@ -177,14 +217,18 @@ public partial class PreExecutionCoordinator
 
     private void ReleaseDialogLock(CancellationTokenSource cts)
     {
+        Volatile.Write(ref _interruptReasonDialogSequence, 0);
         Interlocked.Exchange(ref _interruptDialogActive, 0);
         Interlocked.CompareExchange(ref _interruptDialogCts, null, cts);
+        OnStateChanged?.Invoke();
         cts.Dispose();
     }
 
     private void ResetInterruptState()
     {
+        Volatile.Write(ref _interruptReasonDialogSequence, 0);
         Interlocked.Exchange(ref _interruptDialogActive, 0);
+        OnStateChanged?.Invoke();
     }
 
     private static void SafeCancel(CancellationTokenSource? cts)
@@ -247,12 +291,21 @@ public partial class PreExecutionCoordinator
 
     private void HandleSoftStop()
     {
-        BeginPlcReset();
+        CancelActiveDialog();
+        var resetSequence = BeginPlcReset();
+        var isFirstSoftResetInSeries = Interlocked.CompareExchange(
+            ref _interruptReasonUsedInCurrentResetSeries,
+            1,
+            0) == 0;
+        var allowedSequence = isFirstSoftResetInSeries ? resetSequence : 0;
+        Volatile.Write(ref _interruptDialogAllowedSequence, allowedSequence);
+        LogInterruptReasonSeriesLatchSet(resetSequence, isFirstSoftResetInSeries);
         HandleStopSignal(PreExecutionResolution.SoftStop);
     }
 
     private void HandleHardReset()
     {
+        CancelActiveDialog();
         TryCompletePlcReset();
         // Атомарно читаем и сбрасываем - определяем источник
         var isPending = Interlocked.Exchange(ref coordinators.PlcResetCoordinator.PlcHardResetPending, 0);
@@ -263,6 +316,62 @@ public partial class PreExecutionCoordinator
             BeginResetCycle(ResetOriginNonPlc, ensureAskEndWindow: false);
         }
         HandleStopSignal(PreExecutionResolution.HardReset);
+    }
+
+    private void HandleAutoReadyRequested()
+    {
+        try
+        {
+            StartChangeoverTimerImmediate();
+        }
+        catch (Exception ex)
+        {
+            infra.Logger.LogError(ex, "Ошибка запуска changeover по сигналу AutoReady");
+        }
+    }
+
+    private void CompletePlcResetOrLogStale(int expectedSequence)
+    {
+        if (CompletePlcReset(expectedSequence))
+        {
+            return;
+        }
+        LogAskEndIgnoredAsStale(expectedSequence, GetResetSequenceSnapshot());
+    }
+
+    private void LogInterruptReasonSeriesLatchSet(int resetSequence, bool isFirst)
+    {
+        infra.Logger.LogInformation(
+            "InterruptReasonSeriesLatchSet: seq={ResetSequence}, isFirst={IsFirst}",
+            resetSequence,
+            isFirst);
+    }
+
+    private void LogInterruptDialogSuppressed(string reason, int resetSequence, int allowedSequence)
+    {
+        infra.Logger.LogInformation(
+            "InterruptReasonDialogSuppressed: reason={Reason}, seq={ResetSequence}, allowedSeq={AllowedSequence}",
+            reason,
+            resetSequence,
+            allowedSequence);
+    }
+
+    private void LogAskEndIgnoredAsStale(int windowSequence, int currentSequence)
+    {
+        infra.Logger.LogInformation(
+            "AskEndIgnoredAsStale: windowSeq={WindowSequence}, currentSeq={CurrentSequence}",
+            windowSequence,
+            currentSequence);
+    }
+
+    internal bool IsInterruptReasonDialogActive()
+    {
+        return Volatile.Read(ref _interruptDialogActive) == 1;
+    }
+
+    internal int GetInterruptReasonDialogSequenceSnapshot()
+    {
+        return Volatile.Read(ref _interruptReasonDialogSequence);
     }
 
     private void SignalResolution(PreExecutionResolution resolution)

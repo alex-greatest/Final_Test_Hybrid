@@ -160,11 +160,13 @@
 - После каждого значимого изменения в логике (reset/reconnect/error-flow) — минимум `dotnet build`.
 - После изменений в коде обязательно проверять ошибки и предупреждения через `jetbrains_rider` MCP (`get_file_problems` по изменённым файлам; при необходимости `build_project`).
 - `jb inspectcode` запускать по изменённым `*.cs` после завершения логического блока (не после каждой косметики).
+- Для runtime-критичных изменений дополнительно запускать `jb inspectcode` с `-e=HINT` по изменённым `*.cs` и разбирать подсказки уровня suggestion/hint (например, неполный `switch` по `enum`: `Some values of the enum are not processed...`).
 - Перед сдачей изменений обязательный чек-лист:
   1. `dotnet build Final_Test_Hybrid.slnx`
   2. `dotnet format analyzers --verify-no-changes`
   3. `dotnet format style --verify-no-changes`
-- Точечный `inspectcode`: `jb inspectcode Final_Test_Hybrid.slnx "--include=<changed.cs;...>" --no-build --format=Text "--output=<path>" -e=WARNING`.
+- Точечный `inspectcode` (warning): `jb inspectcode Final_Test_Hybrid.slnx "--include=<changed.cs;...>" --no-build --format=Text "--output=<path>" -e=WARNING`.
+- Точечный `inspectcode` (hint, обязательно для runtime-критичных изменений): `jb inspectcode Final_Test_Hybrid.slnx "--include=<changed.cs;...>" --no-build --format=Text "--output=<path>" -e=HINT`.
 
 ## Временные компромиссы
 

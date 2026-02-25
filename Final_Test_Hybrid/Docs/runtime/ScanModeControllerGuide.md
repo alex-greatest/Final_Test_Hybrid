@@ -2,7 +2,7 @@
 
 ## Назначение
 
-`ScanModeController` управляет режимом сканирования: активация/деактивация на основе состояния оператора и автомата. Координирует управление сессией сканера, синхронизирует Scan-таймер с PLC-связью в фазе ожидания barcode и уведомляет подписчиков об изменении состояния.
+`ScanModeController` управляет режимом сканирования: активация/деактивация на основе состояния оператора и автомата. Координирует управление сессией сканера, синхронизирует Scan-таймер с входной готовностью (AutoReady + PLC-связь) в фазе ожидания barcode и уведомляет подписчиков об изменении состояния.
 
 ## Условия активации
 
@@ -14,13 +14,21 @@
 IsScanModeEnabled = IsAuthenticated && IsReady
 ```
 
+## Граница ответственности AutoReady для changeover
+
+- `ScanModeController` использует `AutoReadySubscription.IsReady` только для управления scan-режимом (активация/деактивация, сессия сканера, Scan-таймер).
+- Старт таймера переналадки выполняет `PreExecutionCoordinator`; `ScanModeController` не владеет этой логикой.
+- Для старта changeover используется one-shot источник `AutoReadySubscription.OnFirstAutoReceived` через `ChangeoverStartGate`.
+- В `ChangeoverStartGate` есть pending/replay для поздней подписки `PreExecutionCoordinator`, чтобы первый сигнал не терялся (`AutoReadyReplayConsumed`).
+- После первого запуска последующие изменения `AutoReady` не должны перезапускать переналадку и не должны влиять на changeover во время теста.
+
 ## Состояния
 
 | Флаг | Описание |
 |------|----------|
 | `_isActivated` | Режим сканирования активирован |
 | `_isResetting` | Выполняется сброс PLC |
-| `_scanPausedByConnectionLoss` | Scan-таймер поставлен на паузу из-за потери PLC-связи во время ожидания barcode |
+| `_scanPausedByInputReadiness` | Scan-таймер поставлен на паузу из-за неготовности входа (нет AutoReady или нет PLC-связи) во время ожидания barcode |
 
 ### IsInScanningPhase
 
@@ -108,15 +116,17 @@ private void HandleResetCompleted()
 1. `_isResetting = false`
 2. Если `!IsScanModeEnabled` → полная остановка
 3. Если `!_isActivated` → первичная активация
-4. Иначе → `ResetScanTiming()` + `AcquireSession()` + синхронизация Scan-таймера с текущим состоянием PLC-связи
-
-## Синхронизация Scan-таймера по PLC-связи
+4. Иначе:
+   - если активен `InterruptReasonDialog` в `PreExecutionCoordinator`, restart scan-таймера блокируется (`ScanTimingRestartBlockedByInterruptDialog`);
+   - если диалог не активен — `ResetScanTiming()` + `AcquireSession()` + синхронизация Scan-таймера с текущей входной готовностью.
+## Синхронизация Scan-таймера по входной готовности
 
 `ScanModeController` синхронизирует тик Scan-таймера только для сценария ожидания barcode:
 
-- При `IsAcceptingInput = true` и `IsConnected = false` — Scan-таймер ставится на паузу.
-- При восстановлении связи — таймер возобновляется только если scan-mode активен (`IsScanModeEnabled = true`), reset не активен и контроллер уже активирован.
-- Если система не находится в фазе ожидания barcode (`IsAcceptingInput = false`), флаг паузы по connection-loss сбрасывается.
+- При `IsAcceptingInput = true` и (`IsConnected = false` **или** `IsScanModeEnabled = false`) — Scan-таймер ставится на паузу.
+- При активном `InterruptReasonDialog` Scan-таймер также принудительно остаётся на паузе, даже если `IsAcceptingInput = false`.
+- Возобновление допускается только если одновременно выполнены условия: `IsConnected = true`, `IsScanModeEnabled = true`, reset не активен и контроллер уже активирован.
+- Если система не находится в фазе ожидания barcode (`IsAcceptingInput = false`), внутренний флаг паузы для входной готовности сбрасывается.
 
 ## Диаграмма состояний
 
@@ -168,6 +178,7 @@ private void HandleResetCompleted()
 | Событие | Когда |
 |---------|-------|
 | `OnStateChanged` | Изменение состояния режима сканирования |
+| `AutoReadySubscription.OnStateChanged` | Изменение AutoReady — пересинхронизация Scan-таймера в ожидании barcode |
 | `OpcUaConnectionState.ConnectionStateChanged` | Потеря/восстановление PLC-связи — пересинхронизация Scan-таймера |
 | `PreExecutionCoordinator.OnStateChanged` | Вход/выход из ожидания barcode — пересинхронизация Scan-таймера |
 

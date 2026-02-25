@@ -69,15 +69,30 @@ public void ResetScanTiming()
 | Успех scan step | false | Reset | Таймер сбрасывается |
 | После Clear | false | Start | Новый таймер |
 
-## Пауза Scan при потере PLC в ожидании ввода
+## Пауза Scan при неготовности входа в ожидании ввода
 
 Если в pre-execution одновременно:
 - `PreExecutionCoordinator.IsAcceptingInput = true`
-- `OpcUaConnectionState.IsConnected = false`
+- `OpcUaConnectionState.IsConnected = false` **или** `ScanModeController.IsScanModeEnabled = false` (например, `AskAuto = false`)
 
-то Scan-таймер должен быть на паузе до восстановления связи.
+то Scan-таймер должен быть на паузе до восстановления входной готовности.
 
-После reconnect таймер возобновляется только при сохранении условий активного scan-mode (оператор авторизован, AutoReady включён, reset не активен).
+Возобновление допускается только когда одновременно восстановлены:
+- PLC-связь (`IsConnected = true`)
+- scan-mode (`IsScanModeEnabled = true`)
+- контроллер не в reset и уже активирован
+
+## Пауза таймеров на диалоге причины прерывания
+
+Во время активного `InterruptReasonDialog` (после `AskEnd` в reset-сценарии):
+- Scan и column timers принудительно остаются на паузе.
+- Любая попытка restart scan timing из `OnResetCompleted` блокируется.
+- В логах фиксируется `InterruptDialogTimingFreezeApplied` и `ScanTimingRestartBlockedByInterruptDialog`.
+
+После закрытия актуального окна:
+- pre-execution возвращается в ожидание barcode;
+- при `SetAcceptingInput(true)` выполняется `ResetScanTiming()` (сброс и старт scan-таймера с нуля);
+- stale reset-seq не должен запускать таймер.
 
 ## Глобальная пауза
 

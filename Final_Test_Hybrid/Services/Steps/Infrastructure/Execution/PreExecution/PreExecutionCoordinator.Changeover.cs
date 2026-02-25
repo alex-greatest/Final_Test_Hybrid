@@ -55,6 +55,11 @@ public partial class PreExecutionCoordinator
         return Volatile.Read(ref _resetSequence);
     }
 
+    internal int GetCurrentResetSequenceSnapshot()
+    {
+        return GetResetSequenceSnapshot();
+    }
+
     private void ArmChangeoverPendingForReset(int resetSequence, int defaultTrigger)
     {
         var startState = Interlocked.CompareExchange(ref _changeoverStartState, ChangeoverStartPending, ChangeoverStartNone);
@@ -77,9 +82,8 @@ public partial class PreExecutionCoordinator
         Volatile.Write(ref _changeoverReasonSaved, 0);
     }
 
-    private void RecordAskEndSequence()
+    private void RecordAskEndSequence(int resetSequence)
     {
-        var resetSequence = GetResetSequenceSnapshot();
         Volatile.Write(ref _changeoverAskEndSequence, resetSequence);
         TryStartChangeoverAfterAskEnd();
     }
@@ -128,6 +132,17 @@ public partial class PreExecutionCoordinator
 
     private void StartChangeoverTimerFromPending()
     {
+        var pendingSequence = Volatile.Read(ref _changeoverPendingSequence);
+        var currentSequence = GetResetSequenceSnapshot();
+        if (pendingSequence != currentSequence)
+        {
+            LogChangeoverStartRejectedAsStale(
+                currentSequence,
+                Volatile.Read(ref _changeoverAskEndSequence),
+                pendingSequence);
+            ClearChangeoverPendingState();
+            return;
+        }
         if (Interlocked.CompareExchange(
             ref _changeoverStartState,
             ChangeoverStartNone,
@@ -155,12 +170,21 @@ public partial class PreExecutionCoordinator
 
     private void StartChangeoverTimerImmediate()
     {
-        // Запомнить seq для которого стартуем (защита от повторного запуска)
         var currentSeq = GetResetSequenceSnapshot();
+        if (currentSeq == Volatile.Read(ref _changeoverStartedSequence))
+        {
+            LogChangeoverStartSkippedDuplicateSeq(currentSeq);
+            return;
+        }
+        var askEndSequence = Volatile.Read(ref _changeoverAskEndSequence);
         var stopReason = state.FlowState.StopReason;
         if (stopReason is ExecutionStopReason.PlcSoftReset or ExecutionStopReason.PlcHardReset or ExecutionStopReason.PlcForceStop
-            && Volatile.Read(ref _changeoverAskEndSequence) != currentSeq)
+            && askEndSequence != currentSeq)
         {
+            infra.Logger.LogInformation(
+                "ChangeoverStartDeferredBySeq: seq={ResetSequence}, askEndSeq={AskEndSequence}",
+                currentSeq,
+                askEndSequence);
             var trigger = ShouldDelayChangeoverStart()
                 ? ChangeoverTriggerReasonSaved
                 : ChangeoverTriggerAskEndOnly;
@@ -192,6 +216,9 @@ public partial class PreExecutionCoordinator
                 break;
             case ChangeoverResetMode.WaitForAskEndOnly:
                 TryArmChangeoverPending(ChangeoverTriggerAskEndOnly);
+                break;
+            default:
+                infra.Logger.LogWarning("Неизвестный режим старта changeover после reset: {Mode}", mode);
                 break;
         }
     }
@@ -243,15 +270,37 @@ public partial class PreExecutionCoordinator
 
     private void SendSyntheticChangeoverSignals(ChangeoverResetMode mode)
     {
+        var resetSequence = GetResetSequenceSnapshot();
         switch (mode)
         {
+            case ChangeoverResetMode.Immediate:
+                break;
             case ChangeoverResetMode.WaitForReason:
                 MarkChangeoverReasonSaved();
-                RecordAskEndSequence();
+                RecordAskEndSequence(resetSequence);
                 break;
             case ChangeoverResetMode.WaitForAskEndOnly:
-                RecordAskEndSequence();
+                RecordAskEndSequence(resetSequence);
+                break;
+            default:
+                infra.Logger.LogWarning("Неизвестный режим synthetic changeover-сигналов: {Mode}", mode);
                 break;
         }
+    }
+
+    private void LogChangeoverStartSkippedDuplicateSeq(int currentSequence)
+    {
+        infra.Logger.LogInformation(
+            "ChangeoverStartSkippedDuplicateSeq: seq={CurrentSequence}",
+            currentSequence);
+    }
+
+    private void LogChangeoverStartRejectedAsStale(int currentSequence, int askEndSequence, int pendingSequence)
+    {
+        infra.Logger.LogInformation(
+            "ChangeoverStartRejectedAsStale: seq={CurrentSequence}, askEndSeq={AskEndSequence}, pendingSeq={PendingSequence}",
+            currentSequence,
+            askEndSequence,
+            pendingSequence);
     }
 }

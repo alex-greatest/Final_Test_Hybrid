@@ -134,6 +134,11 @@ await context.DelayAsync(TimeSpan.FromSeconds(5), ct);  // Pause-aware delay
 **Soft Reset:** тест в фазе сканирования, минимальная очистка.
 **Hard Reset:** тест не начался или уже завершён, полная очистка через защищённый one-shot путь.
 
+Дополнительно для текущей реализации:
+- AskEnd обрабатывается только для актуального `ResetAskEndWindow(seq)`; stale AskEnd игнорируется.
+- Диалог причины прерывания разрешён не более одного раза на reset-серию (series-latch).
+- Любой новый reset немедленно закрывает активный диалог причины (`CancelActiveDialog`).
+
 ---
 
 ## Accepted Patterns
