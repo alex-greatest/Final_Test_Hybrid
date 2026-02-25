@@ -10,6 +10,9 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 /// </summary>
 public class TestCompletionUiState
 {
+    private const string OkImagePath = "images/green_smiley_clean.png";
+    private const string NokImagePath = "images/red_smile.jpg";
+
     private readonly Lock _lock = new();
     private readonly PlcResetCoordinator _plcResetCoordinator;
     private readonly IErrorCoordinator _errorCoordinator;
@@ -46,9 +49,24 @@ public class TestCompletionUiState
     }
 
     /// <summary>
-    /// Путь к изображению результата.
+    /// Путь к изображению результата:
+    /// 1 = OK (зелёная), 2 = NOK (красная),
+    /// и fallback на NOK для невалидных значений.
     /// </summary>
-    public string ImagePath => "images/green_smiley_clean.png";
+    public string ImagePath
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _testResult switch
+                {
+                    1 => OkImagePath,
+                    _ => NokImagePath
+                };
+            }
+        }
+    }
 
     /// <summary>
     /// Текст инструкции для оператора.

@@ -34,6 +34,7 @@ public class OperationDetailsService(
                 .OrderBy(r => r.ResultSettingHistory!.ParameterName)
                 .Select(r => new ArchiveResultItem
                 {
+                    TestName = r.StepFinalTestHistory != null ? r.StepFinalTestHistory.Name : null,
                     ParameterName = r.ResultSettingHistory!.ParameterName,
                     Value = r.Value,
                     Min = r.Min,

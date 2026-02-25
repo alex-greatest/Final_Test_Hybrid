@@ -207,6 +207,18 @@ void Add(string parameterName, string value, string min, string max, int status,
 | Тайминги (`Test_Time`, `Change_Over_Time`, `Complete_Time`) | `"Test Time"` |
 | Completion (`Final_result`, `Testing_date`) | `"Test Completion"` |
 
+#### 2.6.1 Контракт сохранения в `TB_RESULT`
+
+Сохранение runtime-результатов в `TB_RESULT` выполняется через сопоставление:
+`TestResultItem.Test` -> активный `StepFinalTestHistory.Name` (точное строковое сравнение).
+
+Правила:
+1. Если шаг найден, `Result` сохраняется с `StepFinalTestHistoryId`.
+2. Если шаг не найден, запись `Result` пропускается (`continue`), пишется warning (`StepHistoryNotFound`), общий `SaveAsync` продолжается.
+3. Это штатное поведение и не считается падением операции сохранения.
+
+Источник решения: `plan-result-step-testname.md`.
+
 Рекомендуемый шаблон вызова:
 
 ```csharp
@@ -416,7 +428,7 @@ public async Task<TestStepResult> ExecuteAsync(...)
 | Блокирующий вызов | Использовать `await`, не `.Result` |
 | Сообщение висит после успеха | `messageState.Clear()` |
 | Дубликаты результатов при Retry | `testResultsService.Remove()` перед `Add()` |
-| Потерян `test` в результате | Использовать `Add(..., test: ...)` по контракту категории (`Name` / `ScanBarcode` / `Test Time` / `Test Completion`) |
+| Запись не попала в `TB_RESULT` при непустом `test` | Проверить warning `StepHistoryNotFound` и сопоставление `test -> активный StepFinalTestHistory.Name` (при нерезолве действует штатный `warning + skip`) |
 | IO в `GetLimits` | Только `RecipeProvider` (in-memory) |
 
 ---

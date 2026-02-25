@@ -5,6 +5,11 @@
                 AllowFiltering="false" AllowSorting="true"
                 EmptyText="Нет данных">
     <Columns>
+        <RadzenDataGridColumn TItem="ArchiveResultItem" Property="TestName" Title="Название теста">
+            <Template Context="item">
+                @(string.IsNullOrWhiteSpace(item.TestName) ? "-" : item.TestName)
+            </Template>
+        </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ArchiveResultItem" Property="ParameterName" Title="Параметр" />
         <RadzenDataGridColumn TItem="ArchiveResultItem" Property="Value" Title="Значение" />
         @if (ShowRange)

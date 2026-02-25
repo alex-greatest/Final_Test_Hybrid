@@ -321,6 +321,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasColumnName("RESULT_SETTING_HISTORY_ID")
                 .IsRequired();
 
+            entity.Property(e => e.StepFinalTestHistoryId)
+                .HasColumnName("STEP_FINAL_TEST_HISTORY_ID");
+
             entity.HasOne(e => e.Operation)
                 .WithMany()
                 .HasForeignKey(e => e.OperationId)
@@ -331,11 +334,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(e => e.ResultSettingHistoryId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            entity.HasOne(e => e.StepFinalTestHistory)
+                .WithMany()
+                .HasForeignKey(e => e.StepFinalTestHistoryId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             entity.HasIndex(e => e.OperationId)
                 .HasDatabaseName("IDX_TB_RESULT_OPERATION");
 
             entity.HasIndex(e => e.ResultSettingHistoryId)
                 .HasDatabaseName("IDX_TB_RESULT_RESULT_SETTING_HISTORY");
+
+            entity.HasIndex(e => e.StepFinalTestHistoryId)
+                .HasDatabaseName("IDX_TB_RESULT_STEP_FINAL_TEST_HISTORY");
         });
     }
 

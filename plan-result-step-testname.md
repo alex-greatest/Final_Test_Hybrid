@@ -24,6 +24,8 @@
 
 ## Фаза 1. Схема БД и доменная модель
 
+Статус: ✅ Выполнено (2026-02-25)
+
 1. Обновить `Final_Test_Hybrid/Models/Database/Result.cs`:
 - добавить FK/navigation свойства
 
@@ -41,6 +43,8 @@
 - старые записи `TB_RESULT` читаются как раньше
 
 ## Фаза 2. Сохранение Result с привязкой к шагу
+
+Статус: ✅ Выполнено (2026-02-25)
 
 1. Обновить `Final_Test_Hybrid/Services/Storage/ResultStorageService.cs`:
 - дополнительно загружать словарь активных `StepFinalTestHistory` по `Name`
@@ -62,6 +66,8 @@
 
 ## Фаза 3. Чтение и UI архива
 
+Статус: ✅ Выполнено (2026-02-25)
+
 1. Обновить `Final_Test_Hybrid/Models/Archive/ArchiveResultItem.cs`:
 - добавить `TestName`
 
@@ -78,6 +84,8 @@
 - для старых/непривязанных строк отображается `-`
 
 ## Фаза 4. Экспорт архива в Excel
+
+Статус: ✅ Выполнено (2026-02-25)
 
 1. Обновить `Final_Test_Hybrid/Services/Archive/ArchiveExcelExportService.cs` (`AddResultsSheet`):
 - добавить колонку **Название теста** в результаты (перед `Параметр`)

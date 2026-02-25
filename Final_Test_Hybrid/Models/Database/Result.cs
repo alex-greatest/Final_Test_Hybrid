@@ -25,4 +25,7 @@ public class Result
     [Required]
     public long ResultSettingHistoryId { get; set; }
     public ResultSettingHistory? ResultSettingHistory { get; set; }
+
+    public long? StepFinalTestHistoryId { get; set; }
+    public StepFinalTestHistory? StepFinalTestHistory { get; set; }
 }

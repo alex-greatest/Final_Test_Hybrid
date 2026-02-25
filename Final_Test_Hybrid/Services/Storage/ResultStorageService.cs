@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Database;
+using Final_Test_Hybrid.Models.Results;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Database.Config;
 using Final_Test_Hybrid.Services.Results;
@@ -14,6 +15,15 @@ public class ResultStorageService(
     ITestResultsService testResultsService,
     DualLogger<ResultStorageService> logger) : IResultStorageService
 {
+    private const string TestMissingOrEmptyLogTemplate =
+        "TestMissingOrEmpty: OperationId={OperationId}, ParameterName={ParameterName}, Test={Test}";
+
+    private const string StepHistoryNotFoundLogTemplate =
+        "StepHistoryNotFound: OperationId={OperationId}, ParameterName={ParameterName}, Test={Test}";
+
+    private const string DuplicateStepHistoryNameResolvedLogTemplate =
+        "DuplicateStepHistoryNameResolved: OperationId={OperationId}, Name={Name}, CandidateIds={CandidateIds}, SelectedId={SelectedId}";
+
     /// <summary>
     /// Создает список Result для batch insert.
     /// </summary>
@@ -43,7 +53,8 @@ public class ResultStorageService(
         }
 
         var settingsDict = await LoadSettingsAsync(context, boilerTypeId.Value, ct);
-        var results = CreateResultEntities(testResults, operation, settingsDict);
+        var stepHistoryMap = await LoadActiveStepHistoryMapAsync(context, operation.Id, testResults, ct);
+        var results = CreateResultEntities(testResults, operation, settingsDict, stepHistoryMap);
 
         logger.LogInformation(
             "Подготовлено {Count} результатов измерений для сохранения",
@@ -82,12 +93,103 @@ public class ResultStorageService(
     }
 
     /// <summary>
+    /// Загружает активные шаги по именам из testResults и строит карту для точного сопоставления.
+    /// </summary>
+    private async Task<Dictionary<string, StepFinalTestHistory>> LoadActiveStepHistoryMapAsync(
+        AppDbContext context,
+        long operationId,
+        IReadOnlyList<TestResultItem> testResults,
+        CancellationToken ct)
+    {
+        var requestedNames = testResults
+            .Select(item => item.Test)
+            .Where(static testName => !string.IsNullOrEmpty(testName))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        if (requestedNames.Count == 0)
+        {
+            return new Dictionary<string, StepFinalTestHistory>(StringComparer.Ordinal);
+        }
+
+        var histories = await context.StepFinalTestHistories
+            .Where(history => history.IsActive && requestedNames.Contains(history.Name))
+            .ToListAsync(ct);
+
+        return BuildStepHistoryMap(operationId, histories);
+    }
+
+    /// <summary>
+    /// Строит карту Name -> StepFinalTestHistory c детерминированным разрешением дублей по минимальному Id.
+    /// </summary>
+    private Dictionary<string, StepFinalTestHistory> BuildStepHistoryMap(
+        long operationId,
+        IReadOnlyList<StepFinalTestHistory> histories)
+    {
+        var map = new Dictionary<string, StepFinalTestHistory>(StringComparer.Ordinal);
+
+        foreach (var groupedHistories in histories.GroupBy(history => history.Name, StringComparer.Ordinal))
+        {
+            var orderedHistories = groupedHistories.OrderBy(history => history.Id).ToList();
+            if (orderedHistories.Count > 1)
+            {
+                logger.LogWarning(
+                    DuplicateStepHistoryNameResolvedLogTemplate,
+                    operationId,
+                    groupedHistories.Key,
+                    string.Join(", ", orderedHistories.Select(history => history.Id)),
+                    orderedHistories[0].Id);
+            }
+
+            map[groupedHistories.Key] = orderedHistories[0];
+        }
+
+        return map;
+    }
+
+    /// <summary>
+    /// Пытается разрешить StepFinalTestHistoryId для результата; при ошибке пишет warning и возвращает false.
+    /// </summary>
+    private bool TryResolveStepHistoryId(
+        long operationId,
+        TestResultItem item,
+        IReadOnlyDictionary<string, StepFinalTestHistory> stepHistoryMap,
+        out long stepHistoryId)
+    {
+        stepHistoryId = default;
+
+        if (string.IsNullOrEmpty(item.Test))
+        {
+            logger.LogWarning(
+                TestMissingOrEmptyLogTemplate,
+                operationId,
+                item.ParameterName,
+                item.Test);
+            return false;
+        }
+
+        if (stepHistoryMap.TryGetValue(item.Test, out var stepHistory))
+        {
+            stepHistoryId = stepHistory.Id;
+            return true;
+        }
+
+        logger.LogWarning(
+            StepHistoryNotFoundLogTemplate,
+            operationId,
+            item.ParameterName,
+            item.Test);
+        return false;
+    }
+
+    /// <summary>
     /// Создает Result entities из результатов теста.
     /// </summary>
     private List<Result> CreateResultEntities(
-        IReadOnlyList<Models.Results.TestResultItem> testResults,
+        IReadOnlyList<TestResultItem> testResults,
         Operation operation,
-        Dictionary<string, ResultSettingHistory> settingsDict)
+        IReadOnlyDictionary<string, ResultSettingHistory> settingsDict,
+        IReadOnlyDictionary<string, StepFinalTestHistory> stepHistoryMap)
     {
         var results = new List<Result>(testResults.Count);
 
@@ -101,10 +203,16 @@ public class ResultStorageService(
                 continue;
             }
 
+            if (!TryResolveStepHistoryId(operation.Id, item, stepHistoryMap, out var stepHistoryId))
+            {
+                continue;
+            }
+
             results.Add(new Result
             {
                 OperationId = operation.Id,
                 ResultSettingHistoryId = settingHistory.Id,
+                StepFinalTestHistoryId = stepHistoryId,
                 Value = item.Value,
                 Min = string.IsNullOrEmpty(item.Min) ? null : item.Min,
                 Max = string.IsNullOrEmpty(item.Max) ? null : item.Max,

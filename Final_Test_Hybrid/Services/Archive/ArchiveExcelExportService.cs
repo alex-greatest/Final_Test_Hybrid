@@ -66,9 +66,10 @@ public class ArchiveExcelExportService(IConfiguration configuration)
         AddHeader(ws, data);
 
         var row = 5;
-        ws.Cells[row, 1].Value = "Параметр";
-        ws.Cells[row, 2].Value = "Значение";
-        var col = 3;
+        ws.Cells[row, 1].Value = "Название теста";
+        ws.Cells[row, 2].Value = "Параметр";
+        ws.Cells[row, 3].Value = "Значение";
+        var col = 4;
         if (showRange)
         {
             ws.Cells[row, col++].Value = "Мин";
@@ -80,9 +81,10 @@ public class ArchiveExcelExportService(IConfiguration configuration)
         foreach (var item in items)
         {
             row++;
-            ws.Cells[row, 1].Value = SafeValue(item.ParameterName);
-            ws.Cells[row, 2].Value = SafeValue(item.Value);
-            col = 3;
+            ws.Cells[row, 1].Value = SafeValue(item.TestName);
+            ws.Cells[row, 2].Value = SafeValue(item.ParameterName);
+            ws.Cells[row, 3].Value = SafeValue(item.Value);
+            col = 4;
             if (showRange)
             {
                 ws.Cells[row, col++].Value = SafeValue(item.Min);

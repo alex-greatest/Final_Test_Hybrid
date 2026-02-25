@@ -5,6 +5,7 @@ namespace Final_Test_Hybrid.Models.Archive;
 /// </summary>
 public record ArchiveResultItem
 {
+    public string? TestName { get; init; }
     public string ParameterName { get; init; } = string.Empty;
     public string Value { get; init; } = string.Empty;
     public string? Min { get; init; }
