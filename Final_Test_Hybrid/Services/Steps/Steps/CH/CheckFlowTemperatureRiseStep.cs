@@ -137,7 +137,7 @@ public class CheckFlowTemperatureRiseStep(
             unit: "",
             test: Name);
 
-        var msg = $"Температура: Разница: {flwTempHot:F3} {flowNtcTempRise:F3}";
+        var msg = $"Температура: {flwTempHot:F3} Разница: {flowNtcTempRise:F3}";
 
         logger.LogInformation(
             "Flw_Temp_Hot: {FlwTempHot:F3}, Flow_NTC_Temp_Rise: {FlowNtcTempRise:F3}, пределы: [{Min:F3} .. {Max:F3}], статус: {Status}",

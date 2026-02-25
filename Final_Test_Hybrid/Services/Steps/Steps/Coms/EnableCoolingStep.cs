@@ -3,7 +3,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
-namespace Final_Test_Hybrid.Services.Steps.Steps.CH;
+namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
 
 /// <summary>
 /// Тестовый шаг включения охлаждения контура отопления.
@@ -17,7 +17,7 @@ public class EnableCoolingStep(
     private const string ErrorTag = "ns=3;s=\"DB_VI\".\"CH\".\"Enable_Cooling\".\"Error\"";
 
     public string Id => "ch-enable-cooling";
-    public string Name => "CH/Enable_Cooling";
+    public string Name => "Coms/Enable_Cooling";
     public string Description => "Включение охлаждение контура Отопления";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag];
