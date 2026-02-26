@@ -22,6 +22,17 @@ public partial class PreExecutionCoordinator
     {
         // ВАЖНО: snapshot changeoverMode ДО очистки состояния
         var changeoverMode = GetChangeoverResetMode();
+        if (coordinators.PlcResetCoordinator.IsActive)
+        {
+            infra.Logger.LogDebug(
+                "Отложен reset-cleanup: path={CleanupPath}, seq={ResetSequence}",
+                "HardResetExit->OnResetCompleted",
+                GetResetSequenceSnapshot());
+            HandleChangeoverAfterReset(changeoverMode);
+            TrySendSyntheticChangeoverSignals(changeoverMode);
+            return;
+        }
+
         var resetSequence = GetResetSequenceSnapshot();
         if (TryRunResetCleanupOnce())
         {

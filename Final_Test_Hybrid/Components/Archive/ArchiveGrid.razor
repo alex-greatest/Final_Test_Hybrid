@@ -26,7 +26,7 @@
         <span class="record-count">Записей: @_operations.Count</span>
     </div>
 
-    <RadzenDataGrid Data="@_operations" TItem="Operation" class="grid-unified"
+    <RadzenDataGrid Data="@_operations" TItem="Operation" KeyProperty="Id" class="grid-unified"
                     AllowFiltering="true" AllowSorting="true"
                     AllowColumnReorder="true"
                     AllowPaging="true"
@@ -241,6 +241,7 @@
 
         try
         {
+            var exportedAt = DateTime.Now;
             var numericWithRange = await OperationDetailsService.GetResultsAsync(
                 operation.Id, AuditType.NumericWithRange);
             var simpleStatus = await OperationDetailsService.GetResultsAsync(
@@ -253,6 +254,8 @@
             var data = new ArchiveExportData
             {
                 DateStart = operation.DateStart,
+                DateEnd = operation.DateEnd,
+                ExportedAt = exportedAt,
                 SerialNumber = operation.Boiler?.SerialNumber ?? "-",
                 NumericWithRange = numericWithRange,
                 SimpleStatus = simpleStatus,

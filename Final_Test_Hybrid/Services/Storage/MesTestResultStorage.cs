@@ -100,13 +100,13 @@ public class MesTestResultStorage(
             })
             .ToList();
 
+        // Для трассируемости отправляем историю ошибок как есть: с повторами и в исходном порядке.
         var errors = history
             .Select(e => e.Code)
-            .Distinct()
             .ToList();
 
         logger.LogDebug(
-            "Собрано результатов: Items={ItemsCount}, ItemsLimited={ItemsLimitedCount}, Times={TimesCount}, Errors={ErrorsCount}",
+            "Собрано результатов: Items={ItemsCount}, ItemsLimited={ItemsLimitedCount}, Times={TimesCount}, ErrorHistoryRecords={ErrorsCount}",
             items.Count,
             itemsLimited.Count,
             times.Count,

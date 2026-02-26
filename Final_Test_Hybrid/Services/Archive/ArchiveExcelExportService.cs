@@ -48,9 +48,19 @@ public class ArchiveExcelExportService(IConfiguration configuration)
     /// </summary>
     private static void AddHeader(ExcelWorksheet ws, ArchiveExportData data)
     {
-        ws.Cells[1, 1].Value = $"Дата и время теста: {data.DateStart:dd.MM.yyyy HH:mm:ss}";
-        ws.Cells[2, 1].Value = $"Серийный номер: {data.SerialNumber}";
+        var testCompletedAt = data.DateEnd ?? data.DateStart;
+        ws.Cells[1, 1].Value = $"Дата и время выгрузки: {data.ExportedAt:dd.MM.yyyy HH:mm:ss}";
+        ws.Cells[2, 1].Value = $"Дата и время теста: {FormatUtcToLocal(testCompletedAt)}";
+        ws.Cells[3, 1].Value = $"Серийный номер: {data.SerialNumber}";
     }
+
+    /// <summary>
+    /// Конвертирует UTC DateTime (с Kind=Unspecified от Npgsql) в строку локального времени.
+    /// </summary>
+    private static string FormatUtcToLocal(DateTime utcDateTime) =>
+        DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc)
+            .ToLocalTime()
+            .ToString("dd.MM.yyyy HH:mm:ss");
 
     /// <summary>
     /// Добавляет лист с результатами измерений.

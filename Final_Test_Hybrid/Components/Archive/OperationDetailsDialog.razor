@@ -156,9 +156,12 @@
 
         try
         {
+            var exportedAt = DateTime.Now;
             var data = new ArchiveExportData
             {
                 DateStart = Operation.DateStart,
+                DateEnd = Operation.DateEnd,
+                ExportedAt = exportedAt,
                 SerialNumber = Operation.Boiler?.SerialNumber ?? "-",
                 NumericWithRange = _numericWithRangeResults,
                 SimpleStatus = _simpleStatusResults,
@@ -168,7 +171,7 @@
             };
 
             var serialNumber = SanitizeFileName(Operation.Boiler?.SerialNumber ?? "Unknown");
-            var fileName = $"{serialNumber}_Выгрузка от {DateTime.Now:dd.MM.yyyy HH-mm-ss}.xlsx";
+            var fileName = $"{serialNumber}_Выгрузка от {exportedAt:dd.MM.yyyy HH-mm-ss}.xlsx";
             await Task.Run(() => ExcelExportService.Export(data, fileName));
             NotificationService.Notify(NotificationSeverity.Success, "Готово", $"Файл сохранён");
         }

@@ -5,6 +5,12 @@ namespace Final_Test_Hybrid.Models.Archive;
 /// </summary>
 public record ArchiveResultItem
 {
+    /// <summary>
+    /// Уникальный идентификатор записи результата.
+    /// </summary>
+    // ReSharper disable once UnusedAutoPropertyAccessor
+    public long Id { get; init; }
+
     public string? TestName { get; init; }
     public string ParameterName { get; init; } = string.Empty;
     public string Value { get; init; } = string.Empty;

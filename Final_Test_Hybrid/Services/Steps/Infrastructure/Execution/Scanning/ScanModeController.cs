@@ -313,7 +313,7 @@ public class ScanModeController : IDisposable
         _loopCts?.Cancel();
         _isActivated = false;
         _sessionManager.ReleaseSession();
-        if (!_operatorState.IsAuthenticated)
+        if (!_operatorState.IsAuthenticated && !_plcResetCoordinator.IsActive)
         {
             _statusReporter.ClearAllExceptScan();
         }

@@ -34,6 +34,7 @@ public class OperationDetailsService(
                 .OrderBy(r => r.ResultSettingHistory!.ParameterName)
                 .Select(r => new ArchiveResultItem
                 {
+                    Id = r.Id,
                     TestName = r.StepFinalTestHistory != null ? r.StepFinalTestHistory.Name : null,
                     ParameterName = r.ResultSettingHistory!.ParameterName,
                     Value = r.Value,
@@ -70,6 +71,7 @@ public class OperationDetailsService(
                 .OrderBy(e => e.ErrorSettingsHistory!.AddressError)
                 .Select(e => new ArchiveErrorItem
                 {
+                    Id = e.Id,
                     Code = e.ErrorSettingsHistory!.AddressError,
                     Description = e.ErrorSettingsHistory.Description ?? string.Empty
                 })

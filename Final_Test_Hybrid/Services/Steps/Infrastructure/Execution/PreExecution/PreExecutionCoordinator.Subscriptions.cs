@@ -28,6 +28,7 @@ public partial class PreExecutionCoordinator
     {
         coordinators.PlcResetCoordinator.OnForceStop += HandleSoftStop;
         coordinators.PlcResetCoordinator.OnAskEndReceived += HandleGridClear;
+        coordinators.PlcResetCoordinator.OnResetCompleted += HandlePlcResetCompleted;
         coordinators.ErrorCoordinator.OnReset += HandleHardReset;
         coordinators.ChangeoverStartGate.OnAutoReadyRequested += HandleAutoReadyRequested;
     }
@@ -61,7 +62,7 @@ public partial class PreExecutionCoordinator
         }
         else
         {
-            // Нет активной операции — очищаем сразу
+            // Нет активной операции — обрабатываем выход сразу
             HandleCycleExit(exitReason);
         }
         SignalResolution(resolution);
@@ -90,6 +91,27 @@ public partial class PreExecutionCoordinator
             ResetInterruptState();
             TryCompletePlcReset();
         }
+    }
+
+    private void HandlePlcResetCompleted()
+    {
+        var resetSequence = GetResetSequenceSnapshot();
+        if (!TryRunResetCleanupOnce())
+        {
+            infra.Logger.LogDebug(
+                "Пропуск reset-cleanup: path={CleanupPath}, reason={SkipReason}, seq={ResetSequence}",
+                "OnResetCompleted",
+                "already_done",
+                resetSequence);
+            return;
+        }
+
+        infra.Logger.LogDebug(
+            "Выполнение reset-cleanup: path={CleanupPath}, seq={ResetSequence}",
+            "OnResetCompleted",
+            resetSequence);
+        ClearStateOnReset();
+        infra.StatusReporter.ClearAllExceptScan();
     }
 
     private async Task ExecuteGridClearAsync()
