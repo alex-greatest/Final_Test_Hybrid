@@ -125,6 +125,7 @@ public sealed partial class ErrorCoordinator
     {
         _logger.LogInformation("=== ПОЛНЫЙ СБРОС ===");
         _pauseToken.Resume();
+        _resolution.ErrorService.Clear(ErrorDefinitions.TagReadTimeout.Code);
         ClearCurrentInterrupt();
         InvokeEventSafe(OnReset, "OnReset");
     }

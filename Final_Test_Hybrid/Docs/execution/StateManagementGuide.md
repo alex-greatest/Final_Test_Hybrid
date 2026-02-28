@@ -56,7 +56,7 @@
 | **Soft reset** | Сброс по Req_Reset когда `wasInScanPhase=true`. Вызывает `ForceStop()`. **До AskEnd** данные сохраняются, **после AskEnd** очищаются через `ClearStateOnReset()`. |
 | **Hard reset** | Сброс по Req_Reset когда `wasInScanPhase=false`. Очистка состояния идёт через общий one-shot guard: основной путь по `OnAskEndReceived` (`HandleGridClear()`), fallback — в `HandleHardResetExit()`, без повторной очистки. |
 | **ForceStop** | Метод `ErrorCoordinator.ForceStop()`. Resume + ClearInterrupt. НЕ вызывает OnReset. |
-| **Reset** | Метод `ErrorCoordinator.Reset()`. Resume + ClearInterrupt + OnReset event. |
+| **Reset** | Метод `ErrorCoordinator.Reset()`. Resume + `Clear(TagReadTimeout)` + ClearInterrupt + OnReset event. |
 | **Soft deactivation** | `ScanModeController.PerformSoftDeactivation()`. Отпускает сессию сканера, но `_isActivated=true`. |
 | **Full deactivation** | `ScanModeController.PerformFullDeactivation()`. Отменяет loop, `_isActivated=false`. |
 | **Scan phase** | Режим сканирования активен и не в процессе reset (`_isActivated && !_isResetting`). |
@@ -697,7 +697,7 @@ ExecuteSmartReset(wasInScanPhase)
        │                     (Grid НЕ очищается — уже очищен в OnAskEndReceived)
        │
        └── wasInScanPhase=false:
-                Reset() → Resume + ClearInterrupt + OnReset event
+                Reset() → Resume + Clear(TagReadTimeout) + ClearInterrupt + OnReset event
                           ├─► PreExecutionCoordinator.HandleHardReset()
                           └─► TestExecutionCoordinator.HandleReset() → ClearErrors()
                           (если AskEnd cleanup не выполнен — fallback в HandleHardResetExit)
@@ -789,6 +789,7 @@ public void Reset()
 {
     _logger.LogInformation("=== ПОЛНЫЙ СБРОС ===");
     _pauseToken.Resume();
+    _resolution.ErrorService.Clear(ErrorDefinitions.TagReadTimeout.Code);
     ClearCurrentInterrupt();
     InvokeEventSafe(OnReset, "OnReset");  // → PreExecutionCoordinator.HandleHardReset()
 }

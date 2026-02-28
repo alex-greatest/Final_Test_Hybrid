@@ -110,8 +110,8 @@ _errorCoordinator.OnInterruptChanged -= HandleInterruptChanged;
 | Метод | Описание |
 |-------|----------|
 | `HandleInterruptAsync(reason)` | Основная точка входа — делегирует обработку соответствующему behavior |
-| `Reset()` | Полный сброс — Resume + вызов OnReset |
-| `ForceStop()` | Мягкий сброс — только Resume (без OnReset) |
+| `Reset()` | Полный сброс — Resume + `Clear(TagReadTimeout)` + вызов `OnReset` |
+| `ForceStop()` | Мягкий сброс — Resume + `ClearCurrentInterrupt` (без `OnReset`) |
 | `WaitForResolutionAsync(options)` | Ожидание решения оператора (Retry/Skip/Timeout) |
 | `SendAskRepeatAsync(ct)` | Пишет `AskRepeat=true` для handshake повтора |
 | `SendAskRepeatAsync(blockErrorTag, ct)` | Совместимая перегрузка; `blockErrorTag` не используется в runtime |

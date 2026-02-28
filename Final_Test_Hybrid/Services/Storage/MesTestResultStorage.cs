@@ -74,7 +74,7 @@ public class MesTestResultStorage(
                 Value = r.Value,
                 Status = r.Status.ToString(),
                 Test = r.Test,
-                ValueType = "real"
+                ValueType = ResolveValueType(r.ParameterName)
             })
             .ToList();
 
@@ -88,7 +88,7 @@ public class MesTestResultStorage(
                 Max = r.Max,
                 Status = r.Status.ToString(),
                 Test = r.Test,
-                ValueType = "real"
+                ValueType = ResolveValueType(r.ParameterName)
             })
             .ToList();
 
@@ -123,5 +123,10 @@ public class MesTestResultStorage(
             Errors = errors,
             Result = testResult
         };
+    }
+
+    private static string ResolveValueType(string parameterName)
+    {
+        return parameterName is "Timer_1" or "Timer_2" ? "string" : "real";
     }
 }

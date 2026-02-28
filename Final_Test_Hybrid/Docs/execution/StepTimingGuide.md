@@ -11,6 +11,14 @@
 | **Scan** | Время ожидания сканирования штрихкода | Колонка "Scan" |
 | **Columns** | Время выполнения шагов по колонкам | Колонки 1-4 |
 
+## Форматы времени (важно)
+
+| Контур | Формат | Примечание |
+|--------|--------|------------|
+| `ActiveTimersGrid` (`TimerService`) | `HH:mm:ss` | UI-отображение активных таймеров |
+| Runtime-результаты `Timer_1` / `Timer_2` | `HH:mm:ss` | Уходит в `TB_RESULT` и MES `Items` |
+| `StepTimingService` (`StepTimingRecord.Duration`) | `mm.ss` | Используется для MES `time[]` и `TB_STEP_TIME.DURATION` |
+
 ## TimingState
 
 Каждый таймер использует `TimingState` с тремя состояниями:

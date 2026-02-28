@@ -7,3 +7,5 @@ node_modules/
 
 # Build outputs
 %TEMP%/build_test/
+/.tmp_build_out/
+/artifacts/inspect-*.txt

@@ -413,7 +413,22 @@ public class ScanModeController : IDisposable
             return;
         }
 
+        if (!CanEnsureScanTimingForInputReadinessUnsafe())
+        {
+            return;
+        }
+
         TryResumeScanTimingAfterInputReadyUnsafe();
+        _stepTimingService.ResetScanTiming();
+    }
+
+    private bool CanEnsureScanTimingForInputReadinessUnsafe()
+    {
+        if (!IsScanModeEnabledCached || !_connectionState.IsConnected || _isResetting || !_isActivated)
+        {
+            return false;
+        }
+        return !_preExecutionCoordinator.IsInterruptReasonDialogActive();
     }
 
     private void TryPauseScanTimingForInputReadinessUnsafe()

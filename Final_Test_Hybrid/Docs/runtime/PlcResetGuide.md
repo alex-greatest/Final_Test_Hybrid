@@ -205,6 +205,7 @@ RunSingleCycleAsync:
 |--------|-------------|---------|
 | PauseToken.Resume() | ✓ | ✓ |
 | ClearCurrentInterrupt() | ✓ | ✓ |
+| Clear(TagReadTimeout) | ✗ | ✓ |
 | OnReset event | ✗ | ✓ |
 | Используется | Мягкий сброс | Жёсткий сброс |
 

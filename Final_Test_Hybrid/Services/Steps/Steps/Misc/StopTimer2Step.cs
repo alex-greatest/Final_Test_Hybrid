@@ -26,13 +26,14 @@ public class StopTimer2Step(
             return Task.FromResult(TestStepResult.Pass("Таймер не был запущен"));
         }
 
+        var formattedDuration = DurationFormatter.ToHoursMinutesSeconds(elapsed.Value);
         var seconds = elapsed.Value.TotalSeconds;
-        logger.LogInformation("Таймер 2 остановлен: {Seconds:F2} сек", seconds);
+        logger.LogInformation("Таймер 2 остановлен: {Duration} ({Seconds:F2} сек)", formattedDuration, seconds);
 
         testResultsService.Remove("Timer_2");
         testResultsService.Add(
             parameterName: "Timer_2",
-            value: $"{seconds:F2}",
+            value: formattedDuration,
             min: "",
             max: "",
             status: 1,
@@ -40,6 +41,6 @@ public class StopTimer2Step(
             unit: "сек",
             test: Name);
 
-        return Task.FromResult(TestStepResult.Pass($"{seconds:F2} сек"));
+        return Task.FromResult(TestStepResult.Pass(formattedDuration));
     }
 }

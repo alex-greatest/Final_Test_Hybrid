@@ -83,11 +83,11 @@ public partial class PreExecutionCoordinator(
     {
         state.BoilerState.Clear();
         state.PhaseState.Clear();
-        ClearBarcode();
         infra.ErrorService.IsHistoryEnabled = false;
         infra.StepTimingService.Clear();
         infra.RecipeProvider.Clear();
         _lastSuccessfulContext = null;
+        ClearBarcode();
 
         infra.Logger.LogInformation("Состояние очищено при сбросе");
     }

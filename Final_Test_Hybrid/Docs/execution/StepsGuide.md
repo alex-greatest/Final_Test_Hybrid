@@ -207,6 +207,12 @@ void Add(string parameterName, string value, string min, string max, int status,
 | Тайминги (`Test_Time`, `Change_Over_Time`, `Complete_Time`) | `"Test Time"` |
 | Completion (`Final_result`, `Testing_date`) | `"Test Completion"` |
 
+#### 2.6.0 Формат времени для `Timer_1` / `Timer_2`
+
+- Параметры `Timer_1` и `Timer_2` записываются в `value` только в формате `HH:mm:ss`.
+- Формат секунд с дробной частью (`123.45`) для этих параметров не используется.
+- В MES для `Timer_1` и `Timer_2` используется `valueType = "string"`.
+
 #### 2.6.1 Контракт сохранения в `TB_RESULT`
 
 Сохранение runtime-результатов в `TB_RESULT` выполняется через сопоставление:

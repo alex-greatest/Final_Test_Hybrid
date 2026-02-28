@@ -40,4 +40,11 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="artifacts\obj\Debug\net10.0-windows\Final_Test_Hybrid.sourcelink.json" />
+    <_ContentIncludedByDefault Remove="artifacts\obj\Debug\net10.0-windows\rpswa.dswa.cache.json" />
+    <_ContentIncludedByDefault Remove="artifacts\obj\Final_Test_Hybrid.csproj.nuget.dgspec.json" />
+    <_ContentIncludedByDefault Remove="artifacts\obj\project.assets.json" />
+  </ItemGroup>
+
 </Project>

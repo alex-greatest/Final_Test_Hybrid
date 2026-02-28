@@ -81,7 +81,11 @@ public static IReadOnlyList<ErrorDefinition> All => [
 | PlcConnectionLost | `Raise(OpcConnectionLost)` |
 | TagTimeout | `Raise(TagReadTimeout)` |
 | Recovery (Auto restored) | `Clear(OpcConnectionLost)`, `Clear(TagReadTimeout)` |
-| Reset / ForceStop | `ClearActiveApplicationErrors()` |
+| Reset | `Clear(TagReadTimeout)` + `OnReset` |
+| ForceStop | Снимает interrupt (`ClearCurrentInterrupt`), без прямого `ClearActiveApplicationErrors()` |
+
+`ClearActiveApplicationErrors()` в reset-путях выполняется в координаторах выполнения
+(`PreExecutionCoordinator`, `TestExecutionCoordinator`) в их обработчиках остановки/завершения.
 
 ### TestExecutionCoordinator
 
@@ -96,8 +100,8 @@ public static IReadOnlyList<ErrorDefinition> All => [
 
 | Событие | Действие |
 |---------|----------|
-| SoftStop | `ClearActiveApplicationErrors()` |
-| HardReset | `ClearActiveApplicationErrors()` |
+| SoftStop | `ClearActiveApplicationErrors()` (через `SignalResolution`, при активных подписках `PreExecution`) |
+| HardReset | `ClearActiveApplicationErrors()` (через `SignalResolution`, при активных подписках `PreExecution`) |
 
 ## UI Компоненты
 
