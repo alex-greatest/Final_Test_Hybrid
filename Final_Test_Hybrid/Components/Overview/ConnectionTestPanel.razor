@@ -8,6 +8,7 @@
 @using Final_Test_Hybrid.Services.Diagnostic.Services
 @using Microsoft.Extensions.Options
 @inject IModbusDispatcher Dispatcher
+@inject DialogService DialogService
 @inject RegisterReader Reader
 @inject RegisterWriter Writer
 @inject IOptions<DiagnosticSettings> Settings
@@ -105,7 +106,7 @@
             <div class="row-item">
                 <span class="field-label">Тип:</span>
                 <RadzenDropDown TValue="string"
-                                Data="@DataTypes"
+                                Data="@NumericDataTypes"
                                 @bind-Value="_selectedReadType"
                                 class="scada-dropdown" />
             </div>
@@ -148,12 +149,29 @@
                                 class="scada-dropdown" />
             </div>
 
-            @if (_selectedWritePreset?.Address == 0)
+            @if (IsManualWritePreset() && !IsStringWriteMode())
             {
                 <div class="row-item">
                     <span class="field-label">Адрес:</span>
                     <RadzenNumeric TValue="ushort"
-                                   @bind-Value="_writeAddress"
+                                   @bind-Value="WriteAddress"
+                                   class="scada-input" />
+                </div>
+            }
+
+            @if (IsStringWriteMode())
+            {
+                <div class="row-item">
+                    <span class="field-label">От:</span>
+                    <RadzenNumeric TValue="ushort"
+                                   @bind-Value="WriteRangeStart"
+                                   class="scada-input" />
+                </div>
+
+                <div class="row-item">
+                    <span class="field-label">До:</span>
+                    <RadzenNumeric TValue="ushort"
+                                   @bind-Value="WriteRangeEnd"
                                    class="scada-input" />
                 </div>
             }
@@ -161,14 +179,15 @@
             <div class="row-item">
                 <span class="field-label">Тип:</span>
                 <RadzenDropDown TValue="string"
-                                Data="@DataTypes"
+                                Data="@GetWriteDataTypes()"
                                 @bind-Value="_selectedWriteType"
+                                Change="@OnWriteTypeChanged"
                                 class="scada-dropdown" />
             </div>
 
             <div class="row-item">
                 <span class="field-label">Значение:</span>
-                <RadzenTextBox @bind-Value="_writeValue" class="scada-input" />
+                <RadzenTextBox @bind-Value="WriteValue" class="scada-input" />
             </div>
 
             <div class="row-item">
@@ -183,11 +202,20 @@
                 {
                     <span class="error-text">Ошибка: @_writeError</span>
                 }
+                else if (!string.IsNullOrEmpty(_writeResult))
+                {
+                    <span class="result-text">@_writeResult</span>
+                }
                 else if (_writeSuccess)
                 {
                     <span class="result-text">Результат: OK</span>
                 }
             </div>
+
+            @if (!string.IsNullOrEmpty(GetStringWriteHint()))
+            {
+                <div class="description-text">@GetStringWriteHint()</div>
+            }
 
             @if (_selectedWritePreset != null && !string.IsNullOrEmpty(_selectedWritePreset.Description))
             {
@@ -233,6 +261,14 @@
         new("Вручную...", 0, "UInt16", "Ввести адрес вручную"),
     ];
 
+    private static readonly StringWriteRange[] StringWriteRanges =
+    [
+        new("Дата производства", 1133, 1136, 8, true),
+        new("Артикул изделия", 1139, 1145, 14, true),
+        new("Артикул котла", 1175, 1181, 14, false),
+        new("Артикул изделия (ИТЭЛМА)", 1182, 1188, 14, true),
+    ];
+
     private static readonly BoilerModePreset[] BoilerModePresets =
     [
         new("Стенд", BoilerMode.Stand, "ModeKey 0xD7F8DB56 (1000/1001)"),
@@ -240,7 +276,8 @@
         new("Обычный", BoilerMode.Normal, "Сброс в обычный режим (ключ != стенд/инженер)"),
     ];
 
-    private static readonly string[] DataTypes = ["UInt16", "Int16", "UInt32", "Float"];
+    private static readonly string[] NumericDataTypes = ["UInt16", "Int16", "UInt32", "Float"];
+    private static readonly string[] ManualWriteDataTypes = ["UInt16", "Int16", "UInt32", "Float", "String"];
 
     // Status (reactive from events)
     private bool _isStarted;
@@ -261,8 +298,11 @@
     // Write state
     private RegisterPreset? _selectedWritePreset = WritePresets[0];
     private ushort _writeAddress = DisplayBrightnessAddress;
+    private ushort _writeRangeStart = 1175;
+    private ushort _writeRangeEnd = 1181;
     private string _selectedWriteType = "UInt16";
     private string _writeValue = "";
+    private string _writeResult = "";
     private string? _writeError;
     private bool _writeSuccess;
     private bool _isWriting;
@@ -401,8 +441,19 @@
             _writeAddress = _selectedWritePreset.Address;
             _selectedWriteType = _selectedWritePreset.Type;
         }
-        _writeError = null;
-        _writeSuccess = false;
+        else if (!Array.Exists(ManualWriteDataTypes, type => type == _selectedWriteType))
+        {
+            _selectedWriteType = ManualWriteDataTypes[0];
+        }
+        ResetWriteFeedback();
+    }
+
+    /// <summary>
+    /// Обработчик изменения типа записи.
+    /// </summary>
+    private void OnWriteTypeChanged()
+    {
+        ResetWriteFeedback();
     }
 
     /// <summary>
@@ -501,65 +552,17 @@
     private async Task WriteRegisterAsync()
     {
         _isWriting = true;
-        _writeError = null;
-        _writeSuccess = false;
+        ResetWriteFeedback();
 
         try
         {
-            var docAddress = _selectedWritePreset?.Address > 0 ? _selectedWritePreset.Address : _writeAddress;
-            var address = (ushort)(docAddress - Settings.Value.BaseAddressOffset);
-            if (!TryValidateWriteValue(docAddress, _selectedWriteType, _writeValue, out var validationError))
+            if (IsStringWriteMode())
             {
-                _writeError = validationError;
+                await WriteStringRegisterAsync();
                 return;
             }
 
-            switch (_selectedWriteType)
-            {
-                case "UInt16":
-                    if (!ushort.TryParse(_writeValue, out var u16Value))
-                    {
-                        _writeError = "Неверный формат UInt16";
-                        return;
-                    }
-                    var resultU16 = await Writer.WriteUInt16Async(address, u16Value);
-                    _writeSuccess = resultU16.Success;
-                    _writeError = resultU16.Error;
-                    break;
-
-                case "Int16":
-                    if (!short.TryParse(_writeValue, out var i16Value))
-                    {
-                        _writeError = "Неверный формат Int16";
-                        return;
-                    }
-                    var resultI16 = await Writer.WriteInt16Async(address, i16Value);
-                    _writeSuccess = resultI16.Success;
-                    _writeError = resultI16.Error;
-                    break;
-
-                case "UInt32":
-                    if (!TryParseUInt32Value(_writeValue, out var u32Value))
-                    {
-                        _writeError = "Неверный формат UInt32 (dec или 0xHEX)";
-                        return;
-                    }
-                    var resultU32 = await Writer.WriteUInt32Async(address, u32Value);
-                    _writeSuccess = resultU32.Success;
-                    _writeError = resultU32.Error;
-                    break;
-
-                case "Float":
-                    if (!float.TryParse(_writeValue, out var floatValue))
-                    {
-                        _writeError = "Неверный формат Float";
-                        return;
-                    }
-                    var resultFloat = await Writer.WriteFloatAsync(address, floatValue);
-                    _writeSuccess = resultFloat.Success;
-                    _writeError = resultFloat.Error;
-                    break;
-            }
+            await WriteNumericRegisterAsync();
         }
         catch (Exception ex)
         {
@@ -569,6 +572,112 @@
         {
             _isWriting = false;
         }
+    }
+
+    /// <summary>
+    /// Записывает число в регистр по выбранному типу.
+    /// </summary>
+    private async Task WriteNumericRegisterAsync()
+    {
+        var docAddress = _selectedWritePreset?.Address > 0 ? _selectedWritePreset.Address : _writeAddress;
+        var address = (ushort)(docAddress - Settings.Value.BaseAddressOffset);
+        if (!TryValidateWriteValue(docAddress, _selectedWriteType, _writeValue, out var validationError))
+        {
+            _writeError = validationError;
+            return;
+        }
+
+        switch (_selectedWriteType)
+        {
+            case "UInt16":
+                if (!ushort.TryParse(_writeValue, out var u16Value))
+                {
+                    _writeError = "Неверный формат UInt16";
+                    return;
+                }
+                var resultU16 = await Writer.WriteUInt16Async(address, u16Value);
+                _writeSuccess = resultU16.Success;
+                _writeError = resultU16.Error;
+                break;
+
+            case "Int16":
+                if (!short.TryParse(_writeValue, out var i16Value))
+                {
+                    _writeError = "Неверный формат Int16";
+                    return;
+                }
+                var resultI16 = await Writer.WriteInt16Async(address, i16Value);
+                _writeSuccess = resultI16.Success;
+                _writeError = resultI16.Error;
+                break;
+
+            case "UInt32":
+                if (!TryParseUInt32Value(_writeValue, out var u32Value))
+                {
+                    _writeError = "Неверный формат UInt32 (dec или 0xHEX)";
+                    return;
+                }
+                var resultU32 = await Writer.WriteUInt32Async(address, u32Value);
+                _writeSuccess = resultU32.Success;
+                _writeError = resultU32.Error;
+                break;
+
+            case "Float":
+                if (!float.TryParse(_writeValue, out var floatValue))
+                {
+                    _writeError = "Неверный формат Float";
+                    return;
+                }
+                var resultFloat = await Writer.WriteFloatAsync(address, floatValue);
+                _writeSuccess = resultFloat.Success;
+                _writeError = resultFloat.Error;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Записывает строку в whitelisted диапазон и подтверждает результат чтением назад.
+    /// </summary>
+    private async Task WriteStringRegisterAsync()
+    {
+        if (!TryCreateStringWriteRequest(out var request, out var validationError))
+        {
+            _writeError = validationError;
+            return;
+        }
+
+        var confirmed = await DialogService.Confirm(
+            BuildStringWriteConfirmationMessage(request),
+            "Подтверждение записи",
+            new ConfirmOptions { OkButtonText = "Записать", CancelButtonText = "Отмена" });
+        if (confirmed != true)
+        {
+            _writeResult = "Запись отменена оператором.";
+            return;
+        }
+
+        var startAddress = (ushort)(request.Range.StartDocAddress - Settings.Value.BaseAddressOffset);
+        var writeResult = await Writer.WriteStringAsync(startAddress, request.Value, request.Range.MaxLength);
+        if (!writeResult.Success)
+        {
+            _writeError = writeResult.Error;
+            return;
+        }
+
+        var readBack = await Reader.ReadStringAsync(startAddress, request.Range.MaxLength);
+        if (!readBack.Success)
+        {
+            _writeError = $"Строка записана, но проверка чтением не удалась: {readBack.Error}";
+            return;
+        }
+        if (!string.Equals(readBack.Value, request.Value, StringComparison.Ordinal))
+        {
+            _writeError = $"Проверка не пройдена: ожидалось \"{request.Value}\", прочитано \"{readBack.Value}\".";
+            return;
+        }
+
+        _writeSuccess = true;
+        _writeResult = $"Подтверждено: {request.Range.Name} ({request.Range.StartDocAddress}..{request.Range.EndDocAddress}) = \"{readBack.Value}\".";
     }
 
     /// <summary>
@@ -989,6 +1098,203 @@
     }
 
     /// <summary>
+    /// Возвращает доступные типы записи для текущего preset.
+    /// </summary>
+    private IReadOnlyList<string> GetWriteDataTypes()
+    {
+        return IsManualWritePreset() ? ManualWriteDataTypes : NumericDataTypes;
+    }
+
+    /// <summary>
+    /// Возвращает true, если выбран ручной preset записи.
+    /// </summary>
+    private bool IsManualWritePreset()
+    {
+        return _selectedWritePreset?.Address == 0;
+    }
+
+    /// <summary>
+    /// Возвращает true, если включён строковый режим записи.
+    /// </summary>
+    private bool IsStringWriteMode()
+    {
+        return IsManualWritePreset() && _selectedWriteType == "String";
+    }
+
+    /// <summary>
+    /// Подсказка для строкового режима записи.
+    /// </summary>
+    private string? GetStringWriteHint()
+    {
+        if (!IsStringWriteMode())
+        {
+            return null;
+        }
+
+        var range = FindStringWriteRange(_writeRangeStart, _writeRangeEnd);
+        if (range == null)
+        {
+            return "Разрешены только диапазоны: 1133..1136, 1139..1145, 1175..1181, 1182..1188.";
+        }
+
+        var hint = $"Поле: {range.Name}. ASCII, максимум {range.MaxLength} символов. " +
+                   $"Диапазон: {range.StartDocAddress}..{range.EndDocAddress}.";
+        if (!range.IsSessionLimited)
+        {
+            return hint;
+        }
+
+        return $"{hint} RW1: первая запись и последующие записи разрешены только в рамках текущей сессии ЭБУ.";
+    }
+
+    /// <summary>
+    /// Сбрасывает статус последней записи.
+    /// </summary>
+    private void ResetWriteFeedback()
+    {
+        _writeError = null;
+        _writeSuccess = false;
+        _writeResult = "";
+    }
+
+    /// <summary>
+    /// Находит whitelisted строковый диапазон по документным адресам.
+    /// </summary>
+    private static StringWriteRange? FindStringWriteRange(ushort startDocAddress, ushort endDocAddress)
+    {
+        foreach (var range in StringWriteRanges)
+        {
+            if (range.StartDocAddress == startDocAddress && range.EndDocAddress == endDocAddress)
+            {
+                return range;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Валидирует ввод и формирует запрос строковой записи.
+    /// </summary>
+    private bool TryCreateStringWriteRequest(out StringWriteRequest request, out string? error)
+    {
+        request = default;
+        if (_writeRangeStart == 0 || _writeRangeEnd == 0)
+        {
+            error = "Для строковой записи укажите диапазон \"От\" и \"До\".";
+            return false;
+        }
+        if (_writeRangeStart > _writeRangeEnd)
+        {
+            error = "Некорректный диапазон: значение \"От\" не может быть больше \"До\".";
+            return false;
+        }
+
+        var range = FindStringWriteRange(_writeRangeStart, _writeRangeEnd);
+        if (range == null)
+        {
+            error = "Строковая запись разрешена только для диапазонов 1133..1136, 1139..1145, 1175..1181 и 1182..1188.";
+            return false;
+        }
+        if (string.IsNullOrEmpty(_writeValue))
+        {
+            error = "Строка не задана.";
+            return false;
+        }
+        if (_writeValue.Any(c => c > 127))
+        {
+            error = "Допустимы только ASCII символы.";
+            return false;
+        }
+        if (_writeValue.Length > range.MaxLength)
+        {
+            error = $"Для диапазона {range.StartDocAddress}..{range.EndDocAddress} допустимо не более {range.MaxLength} символов.";
+            return false;
+        }
+
+        request = new StringWriteRequest(range, _writeValue);
+        error = null;
+        return true;
+    }
+
+    /// <summary>
+    /// Формирует текст подтверждения перед строковой записью.
+    /// </summary>
+    private static string BuildStringWriteConfirmationMessage(StringWriteRequest request)
+    {
+        var message = $"Записать значение \"{request.Value}\" в поле \"{request.Range.Name}\" " +
+                      $"({request.Range.StartDocAddress}..{request.Range.EndDocAddress})?";
+        if (!request.Range.IsSessionLimited)
+        {
+            return message;
+        }
+
+        return $"{message}{Environment.NewLine}{Environment.NewLine}" +
+               "Протокол помечает это поле как RW1: первая запись и последующие записи разрешены " +
+               "только в рамках текущей сессии ЭБУ.";
+    }
+
+    private ushort WriteAddress
+    {
+        get => _writeAddress;
+        set
+        {
+            if (_writeAddress == value)
+            {
+                return;
+            }
+
+            _writeAddress = value;
+            ResetWriteFeedback();
+        }
+    }
+
+    private ushort WriteRangeStart
+    {
+        get => _writeRangeStart;
+        set
+        {
+            if (_writeRangeStart == value)
+            {
+                return;
+            }
+
+            _writeRangeStart = value;
+            ResetWriteFeedback();
+        }
+    }
+
+    private ushort WriteRangeEnd
+    {
+        get => _writeRangeEnd;
+        set
+        {
+            if (_writeRangeEnd == value)
+            {
+                return;
+            }
+
+            _writeRangeEnd = value;
+            ResetWriteFeedback();
+        }
+    }
+
+    private string WriteValue
+    {
+        get => _writeValue;
+        set
+        {
+            if (_writeValue == value)
+            {
+                return;
+            }
+
+            _writeValue = value;
+            ResetWriteFeedback();
+        }
+    }
+
+    /// <summary>
     /// Форматирует ModeKey для отображения.
     /// </summary>
     private static string FormatModeKey(uint? modeKey)
@@ -1030,6 +1336,16 @@
     /// Предустановка регистра для выбора.
     /// </summary>
     private record RegisterPreset(string Name, ushort Address, string Type, string Description, RegisterPresetKind Kind = RegisterPresetKind.Raw);
+
+    /// <summary>
+    /// Whitelisted диапазон строковой записи.
+    /// </summary>
+    private record StringWriteRange(string Name, ushort StartDocAddress, ushort EndDocAddress, int MaxLength, bool IsSessionLimited);
+
+    /// <summary>
+    /// Запрос на строковую запись в whitelisted диапазон.
+    /// </summary>
+    private readonly record struct StringWriteRequest(StringWriteRange Range, string Value);
 
     /// <summary>
     /// Категория preset чтения.

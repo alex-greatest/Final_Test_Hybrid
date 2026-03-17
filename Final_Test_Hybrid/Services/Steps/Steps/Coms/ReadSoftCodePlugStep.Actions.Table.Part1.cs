@@ -22,15 +22,15 @@ public partial class ReadSoftCodePlugStep
         return CreateVerifyStringAction(
             stepNo: 2,
             title: "Проверка артикула",
-            startRegister: RegisterNomenclatureNumber,
+            startRegister: RegisterBoilerArticle,
             registerCount: 7,
             maxLength: NomenclatureMaxLength,
             usesBoilerArticle: true,
             expectedRecipeKey: null,
             resultName: ArticleResultName,
             mismatchError: ErrorDefinitions.EcuArticleMismatch,
-            readLogMessage: $"Чтение артикула из регистров {RegisterNomenclatureNumber}-{RegisterNomenclatureNumber + 6}",
-            readErrorPrefix: $"Ошибка при чтении артикула из регистров {RegisterNomenclatureNumber}-{RegisterNomenclatureNumber + 6}. ",
+            readLogMessage: $"Чтение артикула из регистров {RegisterBoilerArticle}-{RegisterBoilerArticle + 6}",
+            readErrorPrefix: $"Ошибка при чтении артикула из регистров {RegisterBoilerArticle}-{RegisterBoilerArticle + 6}. ",
             statusLogTemplate: "Артикул: {0}, ожидался: {1}, статус: {2}",
             mismatchTemplate: "Артикул в ЭБУ ({0}) не совпадает с ожидаемым ({1})");
     }

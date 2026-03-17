@@ -20,7 +20,7 @@ public partial class ReadSoftCodePlugStep(
 {
     // Регистры для чтения (адреса из документации)
     private const ushort RegisterConnectionType = 1054;
-    private const ushort RegisterNomenclatureNumber = 1139;
+    private const ushort RegisterBoilerArticle = 1175;
     private const ushort RegisterBoilerPowerType = 1002;
     private const ushort RegisterPumpType = 1003;
     private const ushort RegisterPressureDeviceType = 1004;
