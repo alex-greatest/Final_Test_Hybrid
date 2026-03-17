@@ -1,10 +1,16 @@
 .floating-error-badge {
+    --floating-error-badge-width: 84px;
+    --floating-error-badge-height: 84px;
+    --floating-error-badge-icon-size: 78px;
+    --floating-error-badge-counter-min-width: 24px;
+    --floating-error-badge-counter-height: 24px;
+    --floating-error-badge-counter-font-size: 13px;
     position: fixed;
     right: 24px;
     top: 24px;
     bottom: auto;
-    width: 84px;
-    height: 84px;
+    width: var(--floating-error-badge-width);
+    height: var(--floating-error-badge-height);
     background: rgba(17, 24, 39, 0.92);
     border: 2px solid #374151;
     border-radius: 12px;
@@ -21,7 +27,7 @@
 
 /* RadzenIcon рендерится дочерним компонентом, поэтому стиль задаём через ::deep */
 .floating-error-badge ::deep .floating-error-badge-icon {
-    font-size: 78px !important;
+    font-size: var(--floating-error-badge-icon-size) !important;
     color: #ffde00 !important;
     line-height: 1;
     text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
@@ -31,16 +37,16 @@
     position: absolute;
     top: -6px;
     right: -10px;
-    min-width: 24px;
-    height: 24px;
+    min-width: var(--floating-error-badge-counter-min-width);
+    height: var(--floating-error-badge-counter-height);
     padding: 0 6px;
     border-radius: 999px;
     border: 2px solid #ffffff;
     background: #111827;
     color: #ffffff;
-    font-size: 13px;
+    font-size: var(--floating-error-badge-counter-font-size);
     font-weight: 700;
-    line-height: 20px;
+    line-height: calc(var(--floating-error-badge-counter-height) - 4px);
     text-align: center;
 }
 

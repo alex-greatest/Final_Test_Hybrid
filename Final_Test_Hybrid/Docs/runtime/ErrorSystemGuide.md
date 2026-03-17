@@ -120,6 +120,8 @@ public static IReadOnlyList<ErrorDefinition> All => [
 ```
 - Плавающий жёлтый треугольник показывается, когда есть ошибки с `ActivatesResetButton = true` и включён `UseFloatingErrorBadge`.
 - При переходе из состояния `нет сбрасываемых ошибок` в состояние `есть сбрасываемые ошибки` бейдж должен начать мерцать сразу после появления.
+- Геометрия бейджа читается из `Settings:FloatingErrorBadge` в `appsettings.json` при старте приложения; текущие значения по умолчанию повторяют исторический вид (`84x84`, иконка `78`, bubble `24x24`, шрифт `13`).
+- Изменение размеров через `appsettings.json` применяется только после перезапуска приложения; hot-reload конфигурации для floating badge не используется.
 
 ### ActiveErrorsGrid / ErrorHistoryGrid
 

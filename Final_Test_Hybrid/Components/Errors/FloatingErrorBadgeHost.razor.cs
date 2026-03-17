@@ -22,6 +22,13 @@ public partial class FloatingErrorBadgeHost : ComponentBase, IAsyncDisposable
 
     private bool ShouldShowBadge => AppSettingsService.UseFloatingErrorBadge && _resettableErrorsCount > 0;
     private bool ShouldShowPanel => ShouldShowBadge && _isPanelOpen;
+    private string BadgeCssVariables =>
+        $"--floating-error-badge-width: {AppSettingsService.FloatingErrorBadge.WidthPx}px;" +
+        $" --floating-error-badge-height: {AppSettingsService.FloatingErrorBadge.HeightPx}px;" +
+        $" --floating-error-badge-icon-size: {AppSettingsService.FloatingErrorBadge.IconSizePx}px;" +
+        $" --floating-error-badge-counter-min-width: {AppSettingsService.FloatingErrorBadge.CounterMinWidthPx}px;" +
+        $" --floating-error-badge-counter-height: {AppSettingsService.FloatingErrorBadge.CounterHeightPx}px;" +
+        $" --floating-error-badge-counter-font-size: {AppSettingsService.FloatingErrorBadge.CounterFontSizePx}px;";
 
     protected override void OnInitialized()
     {
