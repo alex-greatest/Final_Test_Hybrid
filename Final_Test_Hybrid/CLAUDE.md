@@ -183,6 +183,7 @@ if ($changedCs.Count -gt 0)
 - `BaseTags.AskEnd` считать системным preload-тегом: добавлять в стартовые системные подписки (`ErrorPlcMonitor.ValidateTagsAsync`), а не оставлять только как on-demand подписку первого reset.
 - Для `PlcResetCoordinator` таймауты reset-flow берутся из `OpcUa:ResetFlowTimeouts`:
   `AskEndTimeoutSec` (ожидание AskEnd), `ReconnectWaitTimeoutSec` (одно ожидание reconnect), `ResetHardTimeoutSec` (общий дедлайн).
+  Repo default: `AskEnd=120`, `ReconnectWait=15`, `Hard=120`.
   `ResetHardTimeoutSec` должен быть `>=` двух остальных; по таймауту — `TagTimeout` + `OnResetCompleted`.
 - В pre-execution `ErrorResolution.ConnectionLost` маппится в `PreExecutionResolution.HardReset` (не в `Timeout`).
 - В execution-flow не-`OperationCanceledException` внутри фонового retry трактуется как критическая ошибка и переводит систему в `HardReset`.

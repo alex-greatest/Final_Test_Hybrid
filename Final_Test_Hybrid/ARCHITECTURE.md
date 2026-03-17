@@ -1226,7 +1226,7 @@ public abstract class MessageStateBase
    ├── SendDataToMesAsync() → отправка данных в MES
    └── SendResetAndWaitAckAsync():
        ├── WriteAsync(BaseTags.Reset, true)
-       └── WaitAnyAsync(AskEnd с таймаутом 60 сек)
+       └── WaitAnyAsync(AskEnd с таймаутом 120 сек)
           │
           ▼
 5. ErrorCoordinator.ForceStop() — мягкий сброс

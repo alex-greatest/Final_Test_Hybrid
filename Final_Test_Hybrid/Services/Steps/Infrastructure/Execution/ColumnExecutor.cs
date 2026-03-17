@@ -347,6 +347,18 @@ public class ColumnExecutor(
         OnStateChanged?.Invoke();
     }
 
+    public void UpdateFailedErrorMessage(string message)
+    {
+        if (!_state.HasFailed)
+        {
+            return;
+        }
+
+        statusReporter.ReportError(_state.UiStepId, message);
+        _state = _state with { ErrorMessage = message };
+        OnStateChanged?.Invoke();
+    }
+
     /// <summary>
     /// Открывает gate для продолжения выполнения после успешного Retry.
     /// Вызывается из координатора после cleanup.

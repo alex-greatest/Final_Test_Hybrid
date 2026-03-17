@@ -718,6 +718,7 @@ OnResetCompleted() ──► ScanModeController.HandleResetCompleted()
   - `AskEndTimeoutSec` — лимит ожидания `AskEnd`;
   - `ReconnectWaitTimeoutSec` — лимит одного ожидания reconnect;
   - `ResetHardTimeoutSec` — общий дедлайн reset-flow.
+- Значения repo default в `appsettings.json`: `AskEnd=120`, `ReconnectWait=15`, `Hard=120` секунд.
 - Ожидание reconnect (`connectionState.WaitForConnectionAsync`) ограничивается `min(ReconnectWaitTimeoutSec, remaining HardTimeout)`.
 - При истечении любого из лимитов выполняется timeout-path: `HandleInterruptAsync(TagTimeout)` и `OnResetCompleted`.
 
@@ -822,6 +823,9 @@ private void HandleHardReset()
 
 **Примечание по pre-execution error-resolution:**  
 `ErrorResolution.ConnectionLost` для pre-execution нормализуется в `PreExecutionResolution.HardReset`, а не в `Timeout`.
+
+`BlockBoilerAdapterStep` в pre-execution retry перед повторным запуском дополнительно пишет `Start=false`.
+Если запись `Start=false` не удалась, это остаётся retryable step error `PLC не сбросил Start перед повтором`, а не переводится в `HardReset`.
 
 ---
 

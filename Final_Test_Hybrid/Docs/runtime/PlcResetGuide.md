@@ -129,7 +129,7 @@ PreExecutionCoordinator:
   - `ReconnectWaitTimeoutSec` — параметр конфигурации reset-flow (сохранён для совместимости);
   - `ResetHardTimeoutSec` — общий дедлайн reset-flow.
 - `ResetHardTimeoutSec` должен быть `>= AskEndTimeoutSec` и `>= ReconnectWaitTimeoutSec` (валидация в `ResetFlowTimeoutsSettings`).
-- Значения по умолчанию в `appsettings.json`: `AskEnd=60`, `ReconnectWait=15`, `Hard=60` секунд.
+- Значения по умолчанию в `appsettings.json`: `AskEnd=120`, `ReconnectWait=15`, `Hard=120` секунд.
 - Если во время ожидания `Ask_End` пропадает связь с PLC, reset-flow срабатывает по fail-fast пути:
   `HandleInterruptAsync(PlcConnectionLost)` + `OnResetCompleted` (без ожидания reconnect до timeout).
 - `HandleInterruptAsync(TagTimeout)` + `OnResetCompleted` используется для сценария, когда связь есть, но `Ask_End` не пришёл до дедлайна.

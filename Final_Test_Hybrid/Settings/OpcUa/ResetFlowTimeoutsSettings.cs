@@ -2,9 +2,9 @@ namespace Final_Test_Hybrid.Settings.OpcUa;
 
 public class ResetFlowTimeoutsSettings
 {
-    public int AskEndTimeoutSec { get; set; } = 60;
+    public int AskEndTimeoutSec { get; set; } = 120;
     public int ReconnectWaitTimeoutSec { get; set; } = 15;
-    public int ResetHardTimeoutSec { get; set; } = 60;
+    public int ResetHardTimeoutSec { get; set; } = 120;
 
     public void Validate()
     {

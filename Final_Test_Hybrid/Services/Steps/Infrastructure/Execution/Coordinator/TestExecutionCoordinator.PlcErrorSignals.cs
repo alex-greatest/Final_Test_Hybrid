@@ -145,6 +145,24 @@ public partial class TestExecutionCoordinator
         await _plcService.WriteAsync(startTag, false, ct);
     }
 
+    private async Task<string?> TryResetBlockStartBeforeRetryAsync(ITestStep? step, CancellationToken ct)
+    {
+        if (step is not IHasPlcBlockPath plcStep)
+        {
+            return null;
+        }
+
+        var startTag = PlcBlockTagHelper.GetStartTag(plcStep);
+        if (startTag == null)
+        {
+            return null;
+        }
+
+        _logger.LogDebug("Сброс Start перед retry для {BlockPath}", plcStep.PlcBlockPath);
+        var result = await _plcService.WriteAsync(startTag, false, ct);
+        return result.Success ? null : result.Error ?? "неизвестная ошибка";
+    }
+
     /// <summary>
     /// Возвращает тег End для PLC-блока.
     /// </summary>

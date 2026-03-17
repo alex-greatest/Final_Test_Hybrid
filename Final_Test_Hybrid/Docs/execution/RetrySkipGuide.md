@@ -34,13 +34,19 @@
     PC → PLC: AskRepeat = true
     PC:       Переход к ожиданию сброса Req_Repeat
                 ↓
-[5] Фоновый retry (tracked task)
+[5] Подготовка к rerun
     PC: InvokeRetryStartedSafely() → панель закрывается
     PC: WaitForRetrySignalResetAsync() → Req_Repeat = false
+    PC: Start = false для PLC-блока
+    Если Start не сброшен:
+        шаг остаётся в обычной ошибке "PLC не сбросил Start перед повтором"
+        очередь НЕ dequeue, оператор снова видит Retry/Skip
+                ↓
+[6] Фоновый retry (tracked task)
     PC: DequeueError() → освобождает очередь
     PC: ExecuteRetryInBackgroundAsync() → фоновой retry (tracked)
                 ↓
-[6] Следующая ошибка (если есть)
+[7] Следующая ошибка (если есть)
     while цикл продолжается → диалог для следующей ошибки
     (не ждёт завершения retry!)
 ```
@@ -134,6 +140,7 @@ public async Task RetryLastFailedStepAsync(CancellationToken ct)
 | **Условие** | `Req_Repeat = true` | `End=true (AND Block.Error)` |
 | **AskRepeat** | Да | Нет |
 | **Ждёт PLC** | `Req_Repeat = false` | Сброс сигналов Skip (60 сек) |
+| **Сброс Start** | Да, перед rerun | Да, при Skip |
 | **Шаг выполняется** | Заново | Нет |
 | **Gate** | `OpenGate()` после успеха | `Set()` сразу |
 | **Статус UI** | OK или NOK | NOK |
@@ -149,10 +156,11 @@ public async Task RetryLastFailedStepAsync(CancellationToken ct)
 [00:11] SendAskRepeatAsync → AskRepeat=true
 [00:12] InvokeRetryStartedSafely → панель закрывается
 [00:13] WaitForRetrySignalResetAsync → Req_Repeat=false
-[00:14] DequeueError
-[00:15] ExecuteRetryInBackgroundAsync (фоновой, tracked)
-[00:16] while → HasPendingErrors = true
-[00:17] Диалог Col 1 ← СРАЗУ!
+[00:14] Start=false для PLC-блока
+[00:15] DequeueError
+[00:16] ExecuteRetryInBackgroundAsync (фоновой, tracked)
+[00:17] while → HasPendingErrors = true
+[00:18] Диалог Col 1 ← СРАЗУ!
 ```
 
 ## Settlement между картами (после Retry/Skip)
@@ -197,6 +205,13 @@ private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, C
         return;
     }
 
+    var startResetError = await TryResetBlockStartBeforeRetryAsync(error.FailedStep, ct);
+    if (startResetError != null)
+    {
+        HandleRetryStartResetFailure(error, executor, startResetError);
+        return;
+    }
+
     _retryState.MarkStarted();
     try
     {
@@ -215,6 +230,9 @@ private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, C
     StateManager.DequeueError();
 }
 ```
+
+`StateManager.DequeueError()` вызывается только после успешного `Start=false`.
+Если `Start=false` не записался, шаг остаётся в `PausedOnError` и повторно проходит обычный Retry/Skip цикл без `HardReset`.
 
 ### ExecuteRetryInBackgroundAsync
 

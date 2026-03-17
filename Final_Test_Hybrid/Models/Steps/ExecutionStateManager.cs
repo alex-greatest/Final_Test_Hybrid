@@ -74,6 +74,29 @@ public class ExecutionStateManager
         return result;
     }
 
+    public bool TryUpdateCurrentError(StepError expectedError, Func<StepError, StepError> update)
+    {
+        lock (_queueLock)
+        {
+            if (_errorQueue.Count == 0)
+            {
+                return false;
+            }
+
+            var errors = _errorQueue.ToArray();
+            if (errors[0] != expectedError)
+            {
+                return false;
+            }
+
+            errors[0] = update(errors[0]);
+            ReplaceQueue(errors);
+        }
+
+        OnStateChanged?.Invoke(State);
+        return true;
+    }
+
     public void ClearErrors()
     {
         lock (_queueLock)
@@ -91,5 +114,14 @@ public class ExecutionStateManager
     public void ResetErrorTracking()
     {
         _hadSkippedError = false;
+    }
+
+    private void ReplaceQueue(IEnumerable<StepError> errors)
+    {
+        _errorQueue.Clear();
+        foreach (var error in errors)
+        {
+            _errorQueue.Enqueue(error);
+        }
     }
 }
