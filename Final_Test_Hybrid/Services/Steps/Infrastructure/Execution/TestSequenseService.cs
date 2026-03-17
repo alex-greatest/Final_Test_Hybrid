@@ -8,7 +8,8 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 public enum SequenceClearMode
 {
     CompletedTest,
-    OperationalReset
+    OperationalReset,
+    ClearOnly
 }
 
 public class TestSequenseService(
@@ -206,10 +207,7 @@ public class TestSequenseService(
 
     public void ClearAllExceptScan(SequenceClearMode mode)
     {
-        if (mode == SequenceClearMode.CompletedTest)
-        {
-            SaveCompletedTestHistory();
-        }
+        SaveHistoryIfNeeded(mode);
 
         lock (_lock)
         {
@@ -228,13 +226,82 @@ public class TestSequenseService(
         NotifyDataChanged();
     }
 
+    private void SaveHistoryIfNeeded(SequenceClearMode mode)
+    {
+        switch (mode)
+        {
+            case SequenceClearMode.CompletedTest:
+                SaveCompletedTestHistory();
+                break;
+            case SequenceClearMode.OperationalReset:
+                SaveResetHistoryIfMeaningful();
+                break;
+            case SequenceClearMode.ClearOnly:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
+        }
+    }
+
     private void SaveCompletedTestHistory()
     {
         boilerState.SaveLastTestInfo();
-        var stepsCopy = GetStepsCopy();
-        var testSequenseDatas = stepsCopy as TestSequenseData[] ?? stepsCopy.ToArray();
+        var testSequenseDatas = CaptureSnapshot();
         stepHistoryService.CaptureSnapshot(testSequenseDatas);
         stepHistoryExcelExporter.ExportIfEnabledAsync(testSequenseDatas);
+    }
+
+    private void SaveResetHistoryIfMeaningful()
+    {
+        var testSequenseDatas = CaptureSnapshotIfMeaningfulReset();
+        if (testSequenseDatas.Length == 0)
+        {
+            return;
+        }
+        stepHistoryService.CaptureSnapshot(testSequenseDatas);
+    }
+
+    private TestSequenseData[] CaptureSnapshotIfMeaningfulReset()
+    {
+        lock (_lock)
+        {
+            if (!HasMeaningfulResetHistoryUnsafe())
+            {
+                return [];
+            }
+            return CaptureSnapshotUnsafe();
+        }
+    }
+
+    private bool HasMeaningfulResetHistoryUnsafe()
+    {
+        return _steps.Any(step => _scanStepId == null || step.Id != _scanStepId.Value);
+    }
+
+    private TestSequenseData[] CaptureSnapshot()
+    {
+        lock (_lock)
+        {
+            return CaptureSnapshotUnsafe();
+        }
+    }
+
+    private TestSequenseData[] CaptureSnapshotUnsafe()
+    {
+        return _steps.Select(static step => new TestSequenseData
+        {
+            Id = step.Id,
+            Module = step.Module,
+            Description = step.Description,
+            Status = step.Status,
+            Result = step.Result,
+            Range = step.Range,
+            StepStatus = step.StepStatus,
+            StartTime = step.StartTime,
+            EndTime = step.EndTime,
+            IsSkipped = step.IsSkipped,
+            ProgressMessage = step.ProgressMessage
+        }).ToArray();
     }
 
     private void ResetScanStepToRunning()

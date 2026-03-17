@@ -81,6 +81,7 @@
 Дополнительно показ оверлея подписки:
 
 - `SubscriptionLoadingOverlay IsVisible="@SubscriptionState.IsInitializing"`
+- `FloatingErrorBadgeHost` живёт как глобальный overlay главного экрана и должен сразу запускать мерцание жёлтого треугольника при первом появлении сбрасываемой ошибки.
 
 ## Границы ответственности
 

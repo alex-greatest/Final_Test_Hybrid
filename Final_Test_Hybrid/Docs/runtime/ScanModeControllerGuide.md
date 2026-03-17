@@ -86,9 +86,9 @@ TryDeactivateScanMode()
 - Отмена main loop
 - `_isActivated = false`
 - Освобождение сканера
-- Очистка grid через `ClearAllExceptScan(SequenceClearMode.OperationalReset)`, если оператор не авторизован и PLC reset не активен
+- Очистка grid через `ClearAllExceptScan(SequenceClearMode.ClearOnly)`, если оператор не авторизован и PLC reset не активен
 
-Эта ветка не создаёт completed test history и не запускает Excel-экспорт. Она только возвращает sequence UI к scan-состоянию при logout/полной деактивации вне reset-цикла PLC.
+Эта ветка не создаёт completed test history, не сохраняет reset-history snapshot и не запускает Excel-экспорт. Она только возвращает sequence UI к scan-состоянию при logout/полной деактивации вне reset-цикла PLC.
 
 ## Обработка сброса PLC
 

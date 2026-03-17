@@ -27,6 +27,9 @@
 - Header во вкладках `StepHistoryGrid`, `TestResultsGrid`, `ActiveTimersGrid` читается из `BoilerState.LastSerialNumber` и `BoilerState.LastTestCompletedAt`.
 - Эти поля отражают последний зафиксированный или очищенный контекст котла. После operational reset header может показывать последний сброшенный прогон; это не является отдельным признаком штатного completion.
 - Содержимое таблиц живёт в отдельных сервисах (`StepHistoryService`, `ITestResultsService`, `ITimerService`) и не обязано означать «штатно завершённый тест» только потому, что header уже обновился.
+- `StepHistoryGrid` после soft/hard reset может показывать snapshot прерванного прогона: `OperationalReset` сохраняет history только в `StepHistoryService`, без перевода reset в completed test.
+- Auto-export Excel остаётся completion-only. Reset не создаёт Excel-файл даже при включённой галочке автосохранения.
+- Ручной export из `StepHistoryGrid` после reset остаётся под guard `StepHistoryExcelExporter.TryValidateContext(...)`; reset-history не должна возвращать имя файла `Unknown`.
 - При старте нового теста `ClearForNewTestStart()` очищает `Last*`-header и соответствующие data-сервисы синхронно.
 
 ## Источники истины в коде

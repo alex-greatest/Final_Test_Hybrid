@@ -53,6 +53,20 @@ window.floatingPanel = {
         el.style.bottom = "auto";
         el.style.transform = "translate(-50%, -50%)";
     },
+    restartAnimation: (elementId) => {
+        const el = document.getElementById(elementId);
+        if (!el) {
+            return;
+        }
+
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            return;
+        }
+
+        el.style.animation = "none";
+        void el.offsetWidth;
+        el.style.removeProperty("animation");
+    },
     _onMouseMove: (e) => {
         const state = window.floatingPanel._dragState;
         if (!state) {

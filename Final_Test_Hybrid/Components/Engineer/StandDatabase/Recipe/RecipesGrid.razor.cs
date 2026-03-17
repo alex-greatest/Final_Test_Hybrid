@@ -1,3 +1,4 @@
+using System.Globalization;
 using Final_Test_Hybrid.Models.Database;
 using Final_Test_Hybrid.Models.Database.Edit;
 using Final_Test_Hybrid.Services.Database;
@@ -197,11 +198,17 @@ public partial class RecipesGrid
     {
         return item.PlcType switch
         {
-            PlcType.REAL => !float.TryParse(item.Value, out _) ? "Значение: введите число" : null,
+            PlcType.REAL => !IsValidRealValue(item.Value) ? "Значение: введите число" : null,
             PlcType.INT16 => !short.TryParse(item.Value, out _) ? "Значение: введите целое число (-32768..32767)" : null,
             PlcType.DINT => !int.TryParse(item.Value, out _) ? "Значение: введите целое число" : null,
             _ => null
         };
+    }
+
+    private static bool IsValidRealValue(string value)
+    {
+        var normalized = value.Replace(',', '.');
+        return float.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
     }
 
     #endregion

@@ -3,7 +3,8 @@ using Final_Test_Hybrid.Models.Steps;
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 
 /// <summary>
-/// Хранит снимок шагов последнего завершённого теста.
+/// Хранит снимок шагов последнего зафиксированного прогона
+/// (штатное завершение или reset-history для UI).
 /// </summary>
 public class StepHistoryService
 {

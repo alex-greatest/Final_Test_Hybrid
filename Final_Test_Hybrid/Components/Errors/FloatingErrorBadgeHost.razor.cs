@@ -16,6 +16,8 @@ public partial class FloatingErrorBadgeHost : ComponentBase, IAsyncDisposable
 
     private bool _disposed;
     private bool _isPanelOpen;
+    private bool _pendingBlinkRestart;
+    private bool _wasBadgeVisible;
     private int _resettableErrorsCount;
 
     private bool ShouldShowBadge => AppSettingsService.UseFloatingErrorBadge && _resettableErrorsCount > 0;
@@ -25,6 +27,17 @@ public partial class FloatingErrorBadgeHost : ComponentBase, IAsyncDisposable
     {
         ErrorService.OnActiveErrorsChanged += OnErrorsChanged;
         RefreshState();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_pendingBlinkRestart || !ShouldShowBadge)
+        {
+            return;
+        }
+
+        _pendingBlinkRestart = false;
+        await JsRuntime.InvokeVoidAsync("floatingPanel.restartAnimation", BadgeElementId);
     }
 
     private void OnErrorsChanged()
@@ -44,6 +57,13 @@ public partial class FloatingErrorBadgeHost : ComponentBase, IAsyncDisposable
     {
         var activeErrors = ErrorService.GetActiveErrors();
         _resettableErrorsCount = activeErrors.Count(error => error.ActivatesResetButton);
+        var shouldShowBadge = ShouldShowBadge;
+        if (!_wasBadgeVisible && shouldShowBadge)
+        {
+            _pendingBlinkRestart = true;
+        }
+
+        _wasBadgeVisible = shouldShowBadge;
         if (_resettableErrorsCount == 0)
         {
             _isPanelOpen = false;

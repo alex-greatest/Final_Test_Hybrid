@@ -58,9 +58,10 @@
 | **ForceStop** | Метод `ErrorCoordinator.ForceStop()`. Resume + ClearInterrupt. НЕ вызывает OnReset. |
 | **Reset** | Метод `ErrorCoordinator.Reset()`. Resume + `Clear(TagReadTimeout)` + ClearInterrupt + OnReset event. |
 | **Soft deactivation** | `ScanModeController.PerformSoftDeactivation()`. Отпускает сессию сканера, но `_isActivated=true`. |
-| **Full deactivation** | `ScanModeController.PerformFullDeactivation()`. Отменяет loop, `_isActivated=false`; при logout вне активного PLC reset очищает scan-grid через `ClearAllExceptScan(SequenceClearMode.OperationalReset)`. |
+| **Full deactivation** | `ScanModeController.PerformFullDeactivation()`. Отменяет loop, `_isActivated=false`; при logout вне активного PLC reset очищает scan-grid через `ClearAllExceptScan(SequenceClearMode.ClearOnly)`. |
 | **SequenceClearMode.CompletedTest** | Режим очистки sequence UI для завершённого прогона. Перед очисткой фиксирует `Last*`-контекст, snapshot шагов и auto-export. |
-| **SequenceClearMode.OperationalReset** | Режим очистки sequence UI для reset/logout. Не создаёт новую completed-history и не запускает auto-export. |
+| **SequenceClearMode.OperationalReset** | Режим очистки sequence UI для soft/hard reset. Сохраняет snapshot шагов только в `StepHistoryService`, не вызывает `SaveLastTestInfo()` и не запускает auto-export. |
+| **SequenceClearMode.ClearOnly** | Режим очистки sequence UI без snapshot и без export. Используется для logout/full deactivation вне активного PLC reset. |
 | **Scan phase** | Режим сканирования активен и не в процессе reset (`_isActivated && !_isResetting`). |
 | **OnForceStop** | Event `PlcResetCoordinator.OnForceStop`. Часть reset-потока, вызывается до AskEnd. |
 | **PlcSoftReset** | `ExecutionStopReason`. Soft reset от PLC (`wasInScanPhase=true`). |
@@ -294,14 +295,14 @@ private void PerformFullDeactivation()
     _sessionManager.ReleaseSession();
     if (!_operatorState.IsAuthenticated && !_plcResetCoordinator.IsActive)
     {
-        _statusReporter.ClearAllExceptScan(SequenceClearMode.OperationalReset);
+        _statusReporter.ClearAllExceptScan(SequenceClearMode.ClearOnly);
     }
 }
 ```
 
 Полная деактивация — отменяет main loop, отпускает сессию.
 
-Если контроллер уходит в полную деактивацию из-за logout оператора и в этот момент нет активного PLC reset, sequence UI возвращается к scan-строке через `SequenceClearMode.OperationalReset`. Этот путь не фиксирует completed test history и не запускает Excel-экспорт.
+Если контроллер уходит в полную деактивацию из-за logout оператора и в этот момент нет активного PLC reset, sequence UI возвращается к scan-строке через `SequenceClearMode.ClearOnly`. Этот путь не создаёт новый snapshot history и не запускает Excel-экспорт.
 
 #### PerformSoftDeactivation()
 
@@ -903,18 +904,21 @@ private void HandleHardReset()
 
 ### SequenceClearMode и `Last*`-контекст
 
-`TestSequenseService.ClearAllExceptScan(mode)` теперь различает два режима очистки sequence UI:
+`TestSequenseService.ClearAllExceptScan(mode)` теперь различает три режима очистки sequence UI:
 
 | Режим | Где используется | Что делает |
 |------|------|------|
 | `SequenceClearMode.CompletedTest` | `ClearForTestCompletion()`, `ClearForRepeat()`, `ClearForNokRepeat()` | Вызывает `SaveCompletedTestHistory()`: `BoilerState.SaveLastTestInfo()`, `StepHistoryService.CaptureSnapshot(...)`, `StepHistoryExcelExporter.ExportIfEnabledAsync(...)`, затем оставляет только scan-строку. |
-| `SequenceClearMode.OperationalReset` | `HandleGridClear()`, `CaptureAndClearState()`, `HandleHardResetExit()`, `ScanModeController.PerformFullDeactivation()` при logout вне PLC reset | Очищает sequence UI до scan-строки без новой completed-history и без auto-export. |
+| `SequenceClearMode.OperationalReset` | `HandleGridClear()`, `CaptureAndClearState()`, `HandleHardResetExit()` | Сохраняет snapshot прерванного прогона только в `StepHistoryService`, если в sequence есть meaningful шаги помимо scan-строки. `BoilerState.SaveLastTestInfo()` и auto-export не вызываются. |
+| `SequenceClearMode.ClearOnly` | `ScanModeController.PerformFullDeactivation()` при logout вне PLC reset | Очищает sequence UI до scan-строки без snapshot и без export. |
 
 Семантика `BoilerState` в этих путях разная:
 
 - `BoilerState.SaveLastTestInfo()` вызывается только из `CompletedTest`-ветки и фиксирует completed-history контекст перед очисткой sequence.
 - `BoilerState.Clear()` вызывается и при штатном completion, и при operational reset. Поэтому `LastSerialNumber` / `LastTestCompletedAt` отражают последний очищенный контекст котла, а не только строгий факт штатного завершения теста.
 - Header во вкладках результатов, истории шагов и таймеров читается из `BoilerState.LastSerialNumber` / `LastTestCompletedAt`; после reset это допустимо может быть контекст последнего сброшенного прогона.
+- При soft/hard reset snapshot остаётся только в UI history. Даже если включена галочка автосохранения Excel, reset-ветка не вызывает `StepHistoryExcelExporter`.
+- Ручной export из `StepHistoryGrid` после reset по-прежнему проходит через guard `StepHistoryExcelExporter.TryValidateContext(...)`; reset-history сам по себе не ослабляет защиту от файла `Unknown`.
 - `BoilerState.ClearLastTestInfo()` вызывается в `ClearForNewTestStart()` и синхронно убирает header-контекст вместе с очисткой `TestResultsService`, `StepHistoryService` и `TimerService`.
 
 ---

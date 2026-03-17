@@ -68,7 +68,7 @@ builder.WaitForAllTrue([tag1, tag2], () => Result.Both, "Both");
 - Runtime monitored items восстанавливаются из runtime-реестра (`_monitoredItems` + callback-слой) с ограниченным retry (`3` попытки, `300 ms`) только для transient OPC ошибок.
 - При неуспешном `AddTagAsync` (ошибка `ApplyChangesAsync`) выполняется rollback runtime-состояния (`_monitoredItems`, `_values`, callbacks), чтобы retry подписки не работал по stale-записи.
 - Гибрид `SessionReconnectHandler + ручной rebind` не используется, чтобы исключить дубли monitored items.
-- UI-индикация на время rebuild: спинер `SubscriptionLoadingOverlay` с текстом `Выполняется подписка...`.
+- UI-индикация на время rebuild: спинер `SubscriptionLoadingOverlay` с текстом `Выполняется настройка...`.
 - `TagWaiter` не продолжает прерванный шаг после потери PLC: цикл сбрасывается в исходное состояние; после успешного reconnect новые ожидания снова подписываются на `End/Error`.
 
 ## Ключевые файлы

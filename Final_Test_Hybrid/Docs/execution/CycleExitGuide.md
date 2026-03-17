@@ -137,13 +137,14 @@ private void HandleCycleExit(CycleExitReason reason)
 | `TestCompleted` | `HandleTestCompletedExit()` → `ClearForTestCompletion()` | `SequenceClearMode.CompletedTest` | Фиксирует `Last*`-контекст, snapshot шагов и auto-export, затем возвращает UI к scan-строке. |
 | `RepeatRequested` | `HandleRepeatRequestedExit()` → `ClearForRepeat()` | `SequenceClearMode.CompletedTest` | Сохраняет completed-history завершённого прогона перед repeat. |
 | `NokRepeatRequested` | `HandleNokRepeatRequestedExit()` → `ClearForNokRepeat()` | `SequenceClearMode.CompletedTest` | Сохраняет completed-history перед NOK repeat с полной подготовкой. |
-| `SoftReset` / `HardReset` | `HandleGridClear()` / `HandleHardResetExit()` | `SequenceClearMode.OperationalReset` | Очищает sequence UI без новой completed-history и без auto-export. |
+| `SoftReset` / `HardReset` | `HandleGridClear()` / `HandleHardResetExit()` | `SequenceClearMode.OperationalReset` | Сохраняет snapshot прерванного прогона в `StepHistoryService`, затем очищает sequence UI. Auto-export не запускается даже при включённой галочке автосохранения. |
 
 Важно:
 
 - reset-cleanup проходит через `ClearStateOnReset()`, внутри которого вызывается `BoilerState.Clear()`;
 - поэтому `LastSerialNumber` / `LastTestCompletedAt` после reset могут обновиться на последний очищенный контекст котла;
-- это нормальное поведение header в result/history/timer вкладках и не означает, что был создан новый completed snapshot.
+- это нормальное поведение header в result/history/timer вкладках и не означает, что был создан новый completed snapshot;
+- logout/full deactivation не являются `CycleExitReason`-веткой и очищают sequence через `SequenceClearMode.ClearOnly`.
 
 ## Очистка по AskEnd (HandleGridClear)
 

@@ -113,6 +113,14 @@ public static IReadOnlyList<ErrorDefinition> All => [
 - Зелёная "Нет ошибок" если `!HasResettableErrors`
 - Красная "Сброс ошибки" если есть ошибки с `ActivatesResetButton = true`
 
+### FloatingErrorBadgeHost
+
+```razor
+<FloatingErrorBadgeHost />
+```
+- Плавающий жёлтый треугольник показывается, когда есть ошибки с `ActivatesResetButton = true` и включён `UseFloatingErrorBadge`.
+- При переходе из состояния `нет сбрасываемых ошибок` в состояние `есть сбрасываемые ошибки` бейдж должен начать мерцать сразу после появления.
+
 ### ActiveErrorsGrid / ErrorHistoryGrid
 
 ```razor

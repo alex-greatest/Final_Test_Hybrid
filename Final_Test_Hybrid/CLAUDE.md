@@ -174,7 +174,7 @@ if ($changedCs.Count -gt 0)
 - Для soft-reset очистка `UI/Boiler` не выполняется заранее: очистка должна идти по текущему `AskEnd`-пути.
 - Логика таймера переналадки не меняется при фиксе reset/reconnect; любые правки reset не должны ломать существующий changeover-flow.
 - Для runtime OPC-подписок при reconnect использовать только полный rebuild (`новая Session + RecreateForSessionAsync`), без гибридного ручного rebind.
-- Спиннер `Выполняется подписка` показывать только при фактическом старте реальных подписок (после готовности соединения), а не на фазе retry/reconnect попыток.
+- Спиннер `Выполняется настройка...` показывать только при фактическом старте реальных подписок (после готовности соединения), а не на фазе retry/reconnect попыток.
 - Для `Coms/Check_Comms` (`CheckCommsStep`) при `AutoReady = false` шаг должен завершаться `NoDiagnosticConnection` (fail-fast по результату шага), а при неуспешном завершении шага `IModbusDispatcher` должен останавливаться (`StopAsync`), чтобы не оставлять reconnect в фоне. Показ диалога резолюции при `AutoReady OFF` может быть отложен до восстановления автомата (`AutoReady = true`) — это допустимое поведение. Пропуск этого шага недопустим (`INonSkippable`); `Retry` имеет смысл только после восстановления `AutoReady`.
 - Fail-результат шага в execution-flow должен фиксироваться в `ColumnExecutor` **до** `pauseToken.WaitWhilePausedAsync`; иначе ошибка может «застрять» до Resume и не попасть вовремя в error-queue.
 - Для non-PLC шагов запись `BaseTags.Fault` (`true/false`) обязательна с bounded retry (до 3 попыток, 250 мс). Если запись Fault не удалась после retry — fail-fast в `HardReset` (`_errorCoordinator.Reset()` + остановка текущего прогона).
