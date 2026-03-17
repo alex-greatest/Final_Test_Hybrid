@@ -99,9 +99,9 @@ public class StepStatusReporter
         _sequenseService.ClearAll();
     }
 
-    public void ClearAllExceptScan()
+    public void ClearAllExceptScan(SequenceClearMode mode)
     {
-        _sequenseService.ClearAllExceptScan();
+        _sequenseService.ClearAllExceptScan(mode);
     }
 
     public void UpdateScanStepStatus(TestStepStatus status, string message, string? limits = null)

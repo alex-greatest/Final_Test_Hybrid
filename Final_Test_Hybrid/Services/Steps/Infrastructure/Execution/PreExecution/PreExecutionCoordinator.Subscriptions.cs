@@ -111,7 +111,7 @@ public partial class PreExecutionCoordinator
             "OnResetCompleted",
             resetSequence);
         ClearStateOnReset();
-        infra.StatusReporter.ClearAllExceptScan();
+        infra.StatusReporter.ClearAllExceptScan(SequenceClearMode.OperationalReset);
     }
 
     private async Task ExecuteGridClearAsync()
@@ -176,7 +176,7 @@ public partial class PreExecutionCoordinator
         var serialNumber = state.BoilerState.SerialNumber;
 
         ClearStateOnReset();
-        infra.StatusReporter.ClearAllExceptScan();
+        infra.StatusReporter.ClearAllExceptScan(SequenceClearMode.OperationalReset);
 
         return (wasTestRunning, serialNumber);
     }

@@ -5,6 +5,12 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 
+public enum SequenceClearMode
+{
+    CompletedTest,
+    OperationalReset
+}
+
 public class TestSequenseService(
     StepHistoryService stepHistoryService,
     StepHistoryExcelExporter stepHistoryExcelExporter,
@@ -198,13 +204,12 @@ public class TestSequenseService(
         NotifyDataChanged();
     }
 
-    public void ClearAllExceptScan()
+    public void ClearAllExceptScan(SequenceClearMode mode)
     {
-        boilerState.SaveLastTestInfo();
-        var stepsCopy = GetStepsCopy();
-        var testSequenseDatas = stepsCopy as TestSequenseData[] ?? stepsCopy.ToArray();
-        stepHistoryService.CaptureSnapshot(testSequenseDatas);
-        stepHistoryExcelExporter.ExportIfEnabledAsync(testSequenseDatas);
+        if (mode == SequenceClearMode.CompletedTest)
+        {
+            SaveCompletedTestHistory();
+        }
 
         lock (_lock)
         {
@@ -221,6 +226,15 @@ public class TestSequenseService(
             }
         }
         NotifyDataChanged();
+    }
+
+    private void SaveCompletedTestHistory()
+    {
+        boilerState.SaveLastTestInfo();
+        var stepsCopy = GetStepsCopy();
+        var testSequenseDatas = stepsCopy as TestSequenseData[] ?? stepsCopy.ToArray();
+        stepHistoryService.CaptureSnapshot(testSequenseDatas);
+        stepHistoryExcelExporter.ExportIfEnabledAsync(testSequenseDatas);
     }
 
     private void ResetScanStepToRunning()

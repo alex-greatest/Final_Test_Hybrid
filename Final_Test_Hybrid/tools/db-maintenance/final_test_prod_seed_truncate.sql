@@ -1,0 +1,22 @@
+﻿\set ON_ERROR_STOP on
+
+\echo Очистка прикладных таблиц final_test_prod_seed и сброс identity/sequence...
+
+TRUNCATE TABLE
+    "TB_BOILER_TYPE",
+    "TB_BOILER_TYPE_CYCLE",
+    "TB_RECIPE",
+    "TB_RESULT_SETTINGS",
+    "TB_RESULT_SETTING_HISTORY",
+    "TB_STEP_FINAL_TEST",
+    "TB_STEP_FINAL_TEST_HISTORY",
+    "TB_ERROR_SETTINGS_TEMPLATE",
+    "TB_ERROR_SETTINGS_HISTORY",
+    "TB_BOILER",
+    "TB_OPERATION",
+    "TB_RESULT",
+    "TB_ERROR",
+    "TB_STEP_TIME",
+    "TB_SUCCESS_COUNT"
+RESTART IDENTITY CASCADE;
+

@@ -58,7 +58,9 @@
 | **ForceStop** | Метод `ErrorCoordinator.ForceStop()`. Resume + ClearInterrupt. НЕ вызывает OnReset. |
 | **Reset** | Метод `ErrorCoordinator.Reset()`. Resume + `Clear(TagReadTimeout)` + ClearInterrupt + OnReset event. |
 | **Soft deactivation** | `ScanModeController.PerformSoftDeactivation()`. Отпускает сессию сканера, но `_isActivated=true`. |
-| **Full deactivation** | `ScanModeController.PerformFullDeactivation()`. Отменяет loop, `_isActivated=false`. |
+| **Full deactivation** | `ScanModeController.PerformFullDeactivation()`. Отменяет loop, `_isActivated=false`; при logout вне активного PLC reset очищает scan-grid через `ClearAllExceptScan(SequenceClearMode.OperationalReset)`. |
+| **SequenceClearMode.CompletedTest** | Режим очистки sequence UI для завершённого прогона. Перед очисткой фиксирует `Last*`-контекст, snapshot шагов и auto-export. |
+| **SequenceClearMode.OperationalReset** | Режим очистки sequence UI для reset/logout. Не создаёт новую completed-history и не запускает auto-export. |
 | **Scan phase** | Режим сканирования активен и не в процессе reset (`_isActivated && !_isResetting`). |
 | **OnForceStop** | Event `PlcResetCoordinator.OnForceStop`. Часть reset-потока, вызывается до AskEnd. |
 | **PlcSoftReset** | `ExecutionStopReason`. Soft reset от PLC (`wasInScanPhase=true`). |
@@ -290,14 +292,16 @@ private void PerformFullDeactivation()
     _loopCts?.Cancel();
     _isActivated = false;
     _sessionManager.ReleaseSession();
-    if (!_operatorState.IsAuthenticated)
+    if (!_operatorState.IsAuthenticated && !_plcResetCoordinator.IsActive)
     {
-        _statusReporter.ClearAllExceptScan();
+        _statusReporter.ClearAllExceptScan(SequenceClearMode.OperationalReset);
     }
 }
 ```
 
 Полная деактивация — отменяет main loop, отпускает сессию.
+
+Если контроллер уходит в полную деактивацию из-за logout оператора и в этот момент нет активного PLC reset, sequence UI возвращается к scan-строке через `SequenceClearMode.OperationalReset`. Этот путь не фиксирует completed test history и не запускает Excel-экспорт.
 
 #### PerformSoftDeactivation()
 
@@ -688,7 +692,7 @@ WaitForAskEnd(AskEndTimeoutSec) ──► Ожидание Ask_End от PLC
 OnAskEndReceived() ──► PreExecutionCoordinator.HandleGridClear()
        │                → ExecuteGridClearAsync()
        │                → TryRunResetCleanupOnce()
-       │                → ClearStateOnReset() + ClearAllExceptScan()
+       │                → ClearStateOnReset() + ClearAllExceptScan(SequenceClearMode.OperationalReset)
        ▼
 ExecuteSmartReset(wasInScanPhase)
        │
@@ -826,10 +830,10 @@ private void HandleHardReset()
 |---------|-----------|-------------|-------|
 | **OnForceStop** | PreExecutionCoordinator | Отмена операции, RequestStop | `HandleSoftStop()` |
 | **OnForceStop** | TestExecutionCoordinator | Errors, StopAsFailure | `HandleForceStop()` → `ClearErrors()` |
-| **OnAskEndReceived** | PreExecutionCoordinator | Основной cleanup reset-состояния | `HandleGridClear()` → `ExecuteGridClearAsync()` → `TryRunResetCleanupOnce()` |
+| **OnAskEndReceived** | PreExecutionCoordinator | Основной cleanup reset-состояния + очистка sequence UI через `OperationalReset` | `HandleGridClear()` → `ExecuteGridClearAsync()` → `TryRunResetCleanupOnce()` |
 | **OnReset** | PreExecutionCoordinator | Stop-reason, запуск hard-reset path | `HandleHardReset()` → `HandleStopSignal(HardReset)` |
 | **OnReset** | TestExecutionCoordinator | Errors, StopAsFailure | `HandleReset()` → `ClearErrors()` |
-| **Test completion** | PreExecutionCoordinator | Результаты, финализация | `HandleTestCompletionAsync()` |
+| **Test completion** | PreExecutionCoordinator | Финализация + completed-history через `CompletedTest` | `HandleTestCompletionAsync()` |
 | **ClearStop** | ExecutionFlowState | StopReason, StopAsFailure | Координаторы |
 
 ### Подробнее о PreExecutionCoordinator handlers
@@ -896,6 +900,22 @@ private void HandleHardReset()
     // HandleHardResetExit() -> TryRunResetCleanupOnce()
 }
 ```
+
+### SequenceClearMode и `Last*`-контекст
+
+`TestSequenseService.ClearAllExceptScan(mode)` теперь различает два режима очистки sequence UI:
+
+| Режим | Где используется | Что делает |
+|------|------|------|
+| `SequenceClearMode.CompletedTest` | `ClearForTestCompletion()`, `ClearForRepeat()`, `ClearForNokRepeat()` | Вызывает `SaveCompletedTestHistory()`: `BoilerState.SaveLastTestInfo()`, `StepHistoryService.CaptureSnapshot(...)`, `StepHistoryExcelExporter.ExportIfEnabledAsync(...)`, затем оставляет только scan-строку. |
+| `SequenceClearMode.OperationalReset` | `HandleGridClear()`, `CaptureAndClearState()`, `HandleHardResetExit()`, `ScanModeController.PerformFullDeactivation()` при logout вне PLC reset | Очищает sequence UI до scan-строки без новой completed-history и без auto-export. |
+
+Семантика `BoilerState` в этих путях разная:
+
+- `BoilerState.SaveLastTestInfo()` вызывается только из `CompletedTest`-ветки и фиксирует completed-history контекст перед очисткой sequence.
+- `BoilerState.Clear()` вызывается и при штатном completion, и при operational reset. Поэтому `LastSerialNumber` / `LastTestCompletedAt` отражают последний очищенный контекст котла, а не только строгий факт штатного завершения теста.
+- Header во вкладках результатов, истории шагов и таймеров читается из `BoilerState.LastSerialNumber` / `LastTestCompletedAt`; после reset это допустимо может быть контекст последнего сброшенного прогона.
+- `BoilerState.ClearLastTestInfo()` вызывается в `ClearForNewTestStart()` и синхронно убирает header-контекст вместе с очисткой `TestResultsService`, `StepHistoryService` и `TimerService`.
 
 ---
 

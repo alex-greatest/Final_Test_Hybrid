@@ -98,7 +98,7 @@ public partial class PreExecutionCoordinator(
     /// </summary>
     private void ClearForTestCompletion()
     {
-        infra.StatusReporter.ClearAllExceptScan();
+        infra.StatusReporter.ClearAllExceptScan(SequenceClearMode.CompletedTest);
         infra.StepTimingService.Clear();
         infra.RecipeProvider.Clear();
         state.BoilerState.Clear();
@@ -129,7 +129,7 @@ public partial class PreExecutionCoordinator(
         infra.ErrorService.IsHistoryEnabled = false;
 
         // Очистка UI
-        infra.StatusReporter.ClearAllExceptScan();
+        infra.StatusReporter.ClearAllExceptScan(SequenceClearMode.CompletedTest);
         infra.StepTimingService.Clear(preserveScanState: true);
 
         // История и результаты чистятся в ClearForNewTestStart при запуске pipeline
@@ -149,7 +149,7 @@ public partial class PreExecutionCoordinator(
         _lastSuccessfulContext = null;
 
         // Очистка UI
-        infra.StatusReporter.ClearAllExceptScan();
+        infra.StatusReporter.ClearAllExceptScan(SequenceClearMode.CompletedTest);
         infra.StepTimingService.Clear(preserveScanState: true);
         infra.RecipeProvider.Clear();
 

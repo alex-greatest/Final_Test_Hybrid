@@ -41,7 +41,7 @@ public partial class PreExecutionCoordinator
                 "HardResetExit",
                 resetSequence);
             ClearStateOnReset();
-            infra.StatusReporter.ClearAllExceptScan();
+            infra.StatusReporter.ClearAllExceptScan(SequenceClearMode.OperationalReset);
         }
         else
         {

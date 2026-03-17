@@ -4,7 +4,6 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.Settings;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
-using System.Drawing;
 
 namespace Final_Test_Hybrid.Services.Export;
 
@@ -33,6 +32,11 @@ public class StepHistoryExcelExporter(
         }
         var stepsCopy = steps.ToList();
         var context = CaptureExportContext();
+        if (!TryValidateContext(context, out var contextError))
+        {
+            logger.LogWarning("Автоэкспорт пропущен: {Reason}", contextError);
+            return;
+        }
         _ = Task.Run(() => ExportSafe(stepsCopy, context));
     }
 
@@ -55,6 +59,10 @@ public class StepHistoryExcelExporter(
                 return (false, "Нет данных для экспорта");
             }
             var context = CaptureExportContext();
+            if (!TryValidateContext(context, out var contextError))
+            {
+                return (false, contextError);
+            }
             ExportCore(stepsList, context);
             return (true, null);
         }
@@ -127,11 +135,22 @@ public class StepHistoryExcelExporter(
     /// </summary>
     private string BuildFilePath(ExportContext context)
     {
-        var serialNumber = SanitizeFileName(context.SerialNumber ?? "Unknown");
-        var testDate = context.TestCompletedAt?.ToString("dd.MM.yyyy HH.mm.ss") ?? "Unknown";
+        var serialNumber = SanitizeFileName(context.SerialNumber!);
+        var testDate = context.TestCompletedAt!.Value.ToString("dd.MM.yyyy HH.mm.ss");
         var exportDate = context.ExportTime.ToString("dd.MM.yyyy HH.mm.ss.fff");
         var fileName = $"{serialNumber}_{testDate}_Выгрузка от {exportDate}.xlsx";
         return Path.Combine(appSettings.ExportPath, fileName);
+    }
+
+    private static bool TryValidateContext(ExportContext context, out string errorMessage)
+    {
+        if (string.IsNullOrWhiteSpace(context.SerialNumber) || !context.TestCompletedAt.HasValue)
+        {
+            errorMessage = "Экспорт недоступен: нет данных завершённого теста";
+            return false;
+        }
+        errorMessage = string.Empty;
+        return true;
     }
 
     /// <summary>

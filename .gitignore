@@ -9,3 +9,4 @@ node_modules/
 %TEMP%/build_test/
 /.tmp_build_out/
 /artifacts/inspect-*.txt
+Final_Test_Hybrid/tools/db-maintenance/out/

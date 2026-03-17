@@ -22,6 +22,13 @@
 | Разобрать структуру главного экрана | [MainScreenGuide.md](MainScreenGuide.md) |
 | Изменить блокировку настроек | [SettingsBlockingGuide.md](SettingsBlockingGuide.md) |
 
+## Контракт result/history/timer вкладок
+
+- Header во вкладках `StepHistoryGrid`, `TestResultsGrid`, `ActiveTimersGrid` читается из `BoilerState.LastSerialNumber` и `BoilerState.LastTestCompletedAt`.
+- Эти поля отражают последний зафиксированный или очищенный контекст котла. После operational reset header может показывать последний сброшенный прогон; это не является отдельным признаком штатного completion.
+- Содержимое таблиц живёт в отдельных сервисах (`StepHistoryService`, `ITestResultsService`, `ITimerService`) и не обязано означать «штатно завершённый тест» только потому, что header уже обновился.
+- При старте нового теста `ClearForNewTestStart()` очищает `Last*`-header и соответствующие data-сервисы синхронно.
+
 ## Источники истины в коде
 
 - `Final_Test_Hybrid/wwwroot/css/app.css`
@@ -32,4 +39,6 @@
 - `Final_Test_Hybrid/Components/Main/OperatorInfo.razor`
 - `Final_Test_Hybrid/Components/Main/BoilerOrder.razor`
 - `Final_Test_Hybrid/Components/Errors/ErrorResetButton.razor`
-
+- `Final_Test_Hybrid/Components/Results/StepHistoryGrid.razor`
+- `Final_Test_Hybrid/Components/Results/TestResultsGrid.razor`
+- `Final_Test_Hybrid/Components/Results/ActiveTimersGrid.razor`

@@ -4,14 +4,29 @@
 
 > **SCADA-система промышленных тестов. От кода зависят жизни — думай дважды, проверяй трижды.**
 
+## Mission
+
+SCADA-система промышленных тестов с критичным execution pipeline: от корректности runtime-логики, reset/reconnect flow, диагностики и UI-gating зависит безопасное выполнение тестов и действия оператора.
+
+## Mandatory Read Order (Before Any Change)
+
+Перед любыми правками читать в таком порядке:
+
+1. Релевантные stable docs из `Final_Test_Hybrid/Docs/*`.
+2. Релевантные `impact` из `Final_Test_Hybrid/Docs/impact/`.
+3. `plan-refactor-executor.md` и связанные планы, если задача продолжает существующий workstream.
+4. Связанные инциденты и change/proposal документы, если задача относится к уже зафиксированному сбою или активному change-set.
+
 ## Рабочий стиль (обязательно)
 
 - ***Важно*** Перед и после правок проверять на соотвествиие "Правила кодирования". Чистоту кода.
 - Сначала факты, потом выводы: гипотезы проверяются кодом и документами, а не “по аналогии”.
-- Сначала проектные документы, потом изменение логики (`Docs/*Guide.md`, `plan-refactor-executor.md`, связанные инциденты).
+- Сначала stable documentation (`Docs/*Guide.md`, `plan-refactor-executor.md`, связанные инциденты), затем релевантные `impact`, затем план и только потом правки.
 - Если документ противоречит гипотезе — корректировать гипотезу, а не продавливать мнение.
 - Выявлять слабую логику и риски прямо, без смягчений и расплывчатости.
 - Запрет: не использовать `ColumnExecutor.IsVisible` как критерий idle/готовности к следующему Map.
+- Для изменений в `PreExecutionCoordinator*`, `TestSequenseService`, `ScanModeController`, `ColumnExecutor` применять `$lada-runtime-guardrails`, но только как источник общих C# guardrails: декомпозиция, лимиты размеров, простота, anti-overengineering, повторная проверка после упрощения.
+- LADA-специфичные пути, команды, completion gate и обязательный sub-agent review из `$lada-runtime-guardrails` не переносить в этот репозиторий без отдельной адаптации под `Final_Test_Hybrid`.
 
 ## Что избегать
 
@@ -134,6 +149,32 @@
 - При работе через CLI явно читать текст как UTF-8 (`Get-Content -Encoding UTF8`).
 - Если появляются строки вида `РџР.../РѕР...` — исправлять в том же изменении и перечитывать файл в UTF-8.
 
+## Impact-история (обязательно)
+
+- `impact` — это история изменений: что, зачем, где и когда меняли. `impact` не заменяет stable documentation и не отменяет обновление source-of-truth документов в том же change-set.
+- Каноническая папка impact-истории: `Final_Test_Hybrid/Docs/impact/`.
+- Обязательный порядок работы: stable docs -> релевантные active impact -> план -> реализация -> проверки -> новый impact.
+- Перед созданием нового плана читать:
+  1. релевантные stable docs;
+  2. последние релевантные active impact по целевому контуру;
+  3. последний релевантный `cross-cutting`, если задача затрагивает несколько контуров или общий workflow.
+- Архив impact читать только если текущая задача продолжает ту же цепочку изменений и active rollup не покрывает нужную историю.
+- Если по контуру impact ещё нет, это фиксируется как отсутствие истории, а не как причина пропустить план.
+- Новый impact обязателен после выполненного плана, если были реальные изменения в repo-tracked файлах или stable docs. Для чистого анализа, ревью или планирования без изменений impact не создаётся.
+- Если задача остаётся в рамках того же активного workstream и текущий active impact всё ещё описывает ту же цепочку, обновлять текущий impact вместо создания второго файла.
+- Один выполненный план = один impact-файл `Final_Test_Hybrid/Docs/impact/<контур>/YYYY-MM-DD-<slug>.md`. Для многоконтурных изменений использовать только `cross-cutting`, без дублирования одной записи по нескольким папкам.
+- Перед созданием нового impact проверять, нет ли в затронутом контуре safe кандидатов на сжатие. Допускается только lossless-compaction через `rollup + archive`: same topic + stale set -> новый rollup в active-папке -> исходники в `archive/`, без потери дат, причин, проверок и ссылок.
+- `impact` считается сохранённым только если сводный файл явно перечисляет, какие записи он свёл, а исходные файлы остаются доступными в `archive/`.
+
+## Change Workflow
+
+1. Прочитать stable docs, релевантные impact, планы и инциденты.
+2. Проверить гипотезу по коду и документам, не меняя runtime-логику по аналогии.
+3. Выполнить минимально достаточные правки без нарушения зафиксированных инвариантов.
+4. Синхронно обновить stable docs, если изменился source-of-truth контур поведения.
+5. Прогнать обязательные проверки.
+6. Создать новый impact после завершённого плана и проверок, если были реальные repo-tracked изменения.
+
 ## Документация
 
 | Тема | Файл |
@@ -152,8 +193,16 @@
 | UI Buttons | `Final_Test_Hybrid/Docs/ui/ButtonPatternsGuide.md` |
 | Main Screen UI | `Final_Test_Hybrid/Docs/ui/MainScreenGuide.md` |
 | Settings Blocking UI | `Final_Test_Hybrid/Docs/ui/SettingsBlockingGuide.md` |
+| Impact History | `Final_Test_Hybrid/Docs/impact/ImpactHistoryGuide.md` |
 
 Детальная документация: `Final_Test_Hybrid/CLAUDE.md`.
+
+## Incident Documentation Rule
+
+- Новый production failure mode нельзя оставлять только в коде или только в impact.
+- Если в ходе задачи найден новый инцидент, его нужно задокументировать в соответствующем incident/change документе в том же change-set и сослаться на него из impact.
+- Если отдельного incident document ещё нет, это нужно явно отметить как блокирующий пробел процесса; закрывать задачу без явной фиксации нового инцидента нельзя.
+- Если новый failure mode не выявлен, в итоговом отчёте и impact писать явное `no new incident`.
 
 ## Периодичность и quality-gates
 
@@ -167,6 +216,22 @@
   3. `dotnet format style --verify-no-changes`
 - Точечный `inspectcode` (warning): `jb inspectcode Final_Test_Hybrid.slnx "--include=<changed.cs;...>" --no-build --format=Text "--output=<path>" -e=WARNING`.
 - Точечный `inspectcode` (hint, обязательно для runtime-критичных изменений): `jb inspectcode Final_Test_Hybrid.slnx "--include=<changed.cs;...>" --no-build --format=Text "--output=<path>" -e=HINT`.
+
+## Verification Checklist (Minimum)
+
+- Для документационных change-set сверить согласованность `AGENTS.md`, guide/template и новых impact-файлов.
+- Для code change выполнить обязательный чек-лист, Rider/inspectcode-проверки и дополнительные runtime-checks по риску.
+- Перед закрытием задачи явно проверить, нужен ли новый impact и есть ли safe кандидаты на rollup.
+- Любые residual risks и непрошедшие проверки фиксировать прямо, без смягчений.
+
+## Done Criteria for Agent Tasks
+
+- Релевантные stable docs и impact были прочитаны до правок.
+- Изменения не нарушают зафиксированные инварианты и ограничения AGENTS.
+- Source-of-truth docs обновлены в том же change-set, если контур поведения менялся.
+- Новый impact создан, если change-set реально изменил repo-tracked состояние; rollup выполнен только по правилам `lossless rollup + archive`.
+- Обязательные проверки выполнены, а их результат отражён в impact и финальном отчёте.
+- Для инцидентов зафиксировано либо конкретное обновление incident documentation, либо явное `no new incident`.
 
 ## Временные компромиссы
 

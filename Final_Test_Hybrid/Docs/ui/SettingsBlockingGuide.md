@@ -45,7 +45,7 @@ State = hasNoTests || isOnScanStep
 
 - Runtime-определение scan шага выполняется через внутренний marker (`scanStepId`) в `TestSequenseService`.
 - Проверка `IsOnActiveScanStep` больше не зависит от текстового `Module` (переименования шага не ломают блокировки).
-- Marker обновляется только в lifecycle scan-строки (`EnsureScanStepExists`, `ClearAll`, `ClearAllExceptScan`).
+- Marker обновляется только в lifecycle scan-строки (`EnsureScanStepExists`, `ClearAll`, `ClearAllExceptScan(SequenceClearMode mode)`).
 
 ## Подписки на события
 

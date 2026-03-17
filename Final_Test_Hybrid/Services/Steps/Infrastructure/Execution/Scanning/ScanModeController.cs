@@ -315,7 +315,7 @@ public class ScanModeController : IDisposable
         _sessionManager.ReleaseSession();
         if (!_operatorState.IsAuthenticated && !_plcResetCoordinator.IsActive)
         {
-            _statusReporter.ClearAllExceptScan();
+            _statusReporter.ClearAllExceptScan(SequenceClearMode.OperationalReset);
         }
     }
 

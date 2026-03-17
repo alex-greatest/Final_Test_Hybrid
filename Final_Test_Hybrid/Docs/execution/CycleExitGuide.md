@@ -128,6 +128,23 @@ private void HandleCycleExit(CycleExitReason reason)
 }
 ```
 
+## Контракт очистки sequence и `Last*`-контекста
+
+`CycleExitReason` влияет не только на остановку цикла, но и на режим очистки sequence UI:
+
+| Exit path | Helper | Режим очистки sequence | Эффект |
+|------|------|------|------|
+| `TestCompleted` | `HandleTestCompletedExit()` → `ClearForTestCompletion()` | `SequenceClearMode.CompletedTest` | Фиксирует `Last*`-контекст, snapshot шагов и auto-export, затем возвращает UI к scan-строке. |
+| `RepeatRequested` | `HandleRepeatRequestedExit()` → `ClearForRepeat()` | `SequenceClearMode.CompletedTest` | Сохраняет completed-history завершённого прогона перед repeat. |
+| `NokRepeatRequested` | `HandleNokRepeatRequestedExit()` → `ClearForNokRepeat()` | `SequenceClearMode.CompletedTest` | Сохраняет completed-history перед NOK repeat с полной подготовкой. |
+| `SoftReset` / `HardReset` | `HandleGridClear()` / `HandleHardResetExit()` | `SequenceClearMode.OperationalReset` | Очищает sequence UI без новой completed-history и без auto-export. |
+
+Важно:
+
+- reset-cleanup проходит через `ClearStateOnReset()`, внутри которого вызывается `BoilerState.Clear()`;
+- поэтому `LastSerialNumber` / `LastTestCompletedAt` после reset могут обновиться на последний очищенный контекст котла;
+- это нормальное поведение header в result/history/timer вкладках и не означает, что был создан новый completed snapshot.
+
 ## Очистка по AskEnd (HandleGridClear)
 
 `OnAskEndReceived` обрабатывается через `HandleGridClear()` → `ExecuteGridClearAsync()`.
@@ -155,7 +172,7 @@ private async Task ExecuteGridClearAsync()
         return;
     }
 
-    var context = CaptureAndClearState(); // ClearStateOnReset() + ClearAllExceptScan()
+    var context = CaptureAndClearState(); // ClearStateOnReset() + ClearAllExceptScan(SequenceClearMode.OperationalReset)
     var allowDialog = ShouldShowInterruptDialog(context)
         && Volatile.Read(ref _interruptDialogAllowedSequence) == window.Sequence;
     if (allowDialog)
@@ -315,7 +332,7 @@ private void HandleNewSignal()
 | **SoftReset** во время теста | `HandleGridClear` (по AskEnd) + `TryRunResetCleanupOnce()` |
 | **HardReset** без AskEnd cleanup | `HandleHardResetExit` выполняет fallback cleanup через тот же guard |
 | **Дублированный/устаревший AskEnd** | Игнорируется (`_currentAskEndWindow` отсутствует или `window.Sequence != currentSeq`) |
-| Нормальное завершение теста | `HandleCycleExit` → `HandleTestCompletedExit` |
+| Нормальное завершение теста | `HandleCycleExit` → `HandleTestCompletedExit` → `ClearForTestCompletion()` → `ClearAllExceptScan(SequenceClearMode.CompletedTest)` |
 
 ## Отладка
 
