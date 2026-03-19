@@ -8,8 +8,8 @@
 
 | Тип | Когда | Метод ErrorCoordinator |
 |-----|-------|------------------------|
-| **Мягкий (SoftStop)** | `wasInScanPhase = true` | `ForceStop()` |
-| **Жёсткий (HardReset)** | `wasInScanPhase = false` | `Reset()` |
+| **Мягкий (SoftStop)** | `soft reset path = true` | `ForceStop()` |
+| **Жёсткий (HardReset)** | `soft reset path = false` | `Reset()` |
 
 ## Важно: PLC reset и HardReset — разные потоки
 
@@ -40,7 +40,35 @@
 var wasInScanPhase = IsInScanningPhase;  // _isActivated && !_isResetting
 ```
 
-**Важно:** НЕ зависит от того, выполняется ли тест. Если ScanMode активирован → `wasInScanPhase = true`.
+**Важно:** literal `IsInScanningPhase` больше не является единственным критерием soft path.
+Во время deferred post-AskEnd окна `_isResetting` ещё может быть `true`, поэтому повторный PLC reset определяется через расширенное условие soft-reset path.
+
+### Маршрут PLC reset: soft path vs full reset
+
+- `PlcResetCoordinator.OnResetStarting` возвращает не literal `InScanPhase`, а признак `soft reset path`.
+- В обычном runtime soft path включается, когда `ScanModeController` реально находится в scan-phase.
+- Дополнительное правило: **до авторизации оператора PLC reset тоже идёт по soft-reset path**.
+  Причина: pre-login reset должен дождаться `AskEnd` и пройти через тот же post-AskEnd flow, а не убивать его через `ErrorCoordinator.Reset()`.
+- Дополнительное правило: **повторный PLC reset во время активного или deferred post-AskEnd flow тоже идёт по soft-reset path**.
+  Причина: в этом окне `ScanModeController` ещё может держать `_isResetting = true`, но новый `Req_Reset` всё равно является продолжением PLC soft-reset сценария и не должен убивать следующее `AskEnd` через `ErrorCoordinator.Reset()`.
+- Следствие:
+  - pre-login `Req_Reset` после `AskEnd` показывает `red_smile`;
+  - далее система ждёт `Req_Repeat` или `AskEnd=false`;
+  - при отсутствии активного теста repeat pipeline не стартует, выполняется обычный cleanup.
+
+### Startup-owner для pre-login PLC reset
+
+- Owner PLC reset-path в `PreExecutionCoordinator` поднимается на startup отдельно от main loop.
+- `EnsureResetSignalsSubscribed()` подписывает только reset-контур:
+  - `PlcResetCoordinator.OnForceStop`;
+  - `PlcResetCoordinator.OnAskEndReceived`;
+  - `PlcResetCoordinator.OnResetCompleted`;
+  - `ErrorCoordinator.OnReset`.
+- `ChangeoverStartGate.OnAutoReadyRequested` и `ReplayPendingAutoReadyRequestIfAny()` **не** поднимаются на startup и остаются lazy через обычный `EnsureSubscribed()`.
+- Порядок старта обязателен:
+  1. `PreExecutionCoordinator.EnsureResetSignalsSubscribed()`;
+  2. `ResetSubscription.SubscribeAsync()`.
+- Причина: источник `Req_Reset` нельзя включать раньше owner нового `AskEnd/post-AskEnd` flow, иначе pre-login reset остаётся race-зависимым и может уйти в старую схему без `red_smile`.
 
 ## Цепочка событий
 
@@ -53,9 +81,9 @@ SignalForceStop() → OnForceStop.Invoke()
 ├─ PreExecutionCoordinator.HandleSoftStop() → HandleStopSignal()
 └─ ReworkDialogService.HandleForceStop() → Close()
   ↓
-ExecuteSmartReset(wasInScanPhase)
+ExecuteSmartReset(softResetPath)
   ↓
-wasInScanPhase ? ForceStop() : Reset()
+softResetPath ? ForceStop() : Reset()
   ↓
 OnResetCompleted.Invoke()
 ```
@@ -175,11 +203,16 @@ RunSingleCycleAsync:
 - если repeat не выбран, открывается диалог `Причина прерывания`, а cleanup выполняется только после штатного завершения диалога.
 
 - На одну серию reset разрешён максимум один показ диалога.
-- Серийный latch ставится на первом `SoftReset` серии независимо от фактического показа диалога.
+- Право на повторный показ расходуется только после пользовательского завершения окна:
+  - `Save`;
+  - `Cancel`.
+- Принудительное закрытие окна новым `Req_Reset` право на показ **не** расходует.
+- Следствие: если диалог был закрыт новым soft reset до `Save/Cancel`, следующий `AskEnd` в той же серии снова может показать окно причины.
 - Серия reset завершается только при запуске нового pre-exec pipeline (`InitializeTestRunningAsync`).
 - Любой новый reset (Soft/Hard) немедленно закрывает активный диалог (`CancelActiveDialog`).
 - На время активного диалога принудительно замораживаются step timers (`PauseAllColumnsTiming`), включая Scan.
 - Попытка restart scan-таймера из `OnResetCompleted` в этом окне блокируется (`ScanTimingRestartBlockedByInterruptDialog`).
+- В UX диалога есть явная кнопка `Отмена`; она завершает серию так же, как и успешное сохранение причины.
 
 - Текущий UX: **без** окна `Авторизация администратора`, сразу ввод причины.
 - Маршрут сохранения не меняется:
@@ -264,11 +297,14 @@ private bool HandleResetStarting()
 {
     lock (_stateLock)
     {
-        var wasInScanPhase = IsInScanningPhaseUnsafe;
+        var shouldUseSoftResetPath = IsInScanningPhaseUnsafe
+            || !_operatorState.IsAuthenticated
+            || _preExecutionCoordinator.IsPostAskEndFlowActive()
+            || _resetReadyTransitionPending;
         _isResetting = true;
         _stepTimingService.PauseAllColumnsTiming();  // Паузим все таймеры
         _sessionManager.ReleaseSession();
-        return wasInScanPhase;
+        return shouldUseSoftResetPath;
     }
 }
 ```
@@ -323,7 +359,7 @@ private void TransitionToReadyInternal()
 |----------|-----------|
 | Reset + AutoReady выключен после | Таймеры на паузе, сессия не захватывается |
 | Reset + AutoReady включён во время | Активация заблокирована, catch-up после завершения |
-| Жёсткий reset (wasInScanPhase=false) | Таймеры паузятся, catch-up активация если нужна |
+| Жёсткий reset (soft path = false) | Таймеры паузятся, catch-up активация если нужна |
 | Runtime-отмена reset (без disposal) | Через `OnResetCompleted` снимается `_isResetting` и выполняется catch-up |
 
 ## Диагностика (Modbus) при PLC Reset

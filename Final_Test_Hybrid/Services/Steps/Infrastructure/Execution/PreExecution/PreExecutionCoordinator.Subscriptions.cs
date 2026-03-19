@@ -8,29 +8,50 @@ public partial class PreExecutionCoordinator
 {
     // === Состояние подписок ===
     private TaskCompletionSource<PreExecutionResolution>? _externalSignal;
-    private bool _subscribed;
+    private bool _resetSubscribed;
+    private bool _autoReadySubscribed;
     private int _interruptDialogActive;
     private CancellationTokenSource? _interruptDialogCts;
 
     #region Subscriptions
 
-    private void EnsureSubscribed()
+    internal void EnsureResetSignalsSubscribed()
     {
-        if (_subscribed)
+        if (_resetSubscribed)
         {
             return;
         }
-        _subscribed = true;
-        SubscribeToStopSignals();
+
+        _resetSubscribed = true;
+        SubscribeToResetSignals();
+    }
+
+    private void EnsureSubscribed()
+    {
+        // Reset-path должен жить даже до старта main loop и логина оператора.
+        EnsureResetSignalsSubscribed();
+
+        // AutoReady replay оставляем lazy, чтобы не вернуть ранний старт changeover.
+        if (_autoReadySubscribed)
+        {
+            return;
+        }
+
+        _autoReadySubscribed = true;
+        SubscribeToAutoReadySignals();
         ReplayPendingAutoReadyRequestIfAny();
     }
 
-    private void SubscribeToStopSignals()
+    private void SubscribeToResetSignals()
     {
         coordinators.PlcResetCoordinator.OnForceStop += HandleSoftStop;
         coordinators.PlcResetCoordinator.OnAskEndReceived += HandleGridClear;
         coordinators.PlcResetCoordinator.OnResetCompleted += HandlePlcResetCompleted;
         coordinators.ErrorCoordinator.OnReset += HandleHardReset;
+    }
+
+    private void SubscribeToAutoReadySignals()
+    {
         coordinators.ChangeoverStartGate.OnAutoReadyRequested += HandleAutoReadyRequested;
     }
 
@@ -272,14 +293,17 @@ public partial class PreExecutionCoordinator
     {
         CancelActiveDialog();
         CancelPostAskEndFlow();
+
         var resetSequence = BeginPlcReset();
-        var isFirstSoftResetInSeries = Interlocked.CompareExchange(
-            ref _interruptReasonUsedInCurrentResetSeries,
-            1,
-            0) == 0;
-        var allowedSequence = isFirstSoftResetInSeries ? resetSequence : 0;
+
+        // Пока пользователь не завершил окно причины через Save/Cancel,
+        // новый soft reset снова разрешает показ окна на следующем AskEnd.
+        var dialogCompletedInSeries =
+            Volatile.Read(ref _interruptDialogCompletedInCurrentResetSeries) == 1;
+        var allowedSequence = dialogCompletedInSeries ? 0 : resetSequence;
         Volatile.Write(ref _interruptDialogAllowedSequence, allowedSequence);
-        LogInterruptReasonSeriesLatchSet(resetSequence, isFirstSoftResetInSeries);
+
+        LogInterruptDialogWindowArmed(resetSequence, dialogCompletedInSeries, allowedSequence);
         HandleStopSignal(PreExecutionResolution.SoftStop);
     }
 
@@ -320,12 +344,16 @@ public partial class PreExecutionCoordinator
         LogAskEndIgnoredAsStale(expectedSequence, GetResetSequenceSnapshot());
     }
 
-    private void LogInterruptReasonSeriesLatchSet(int resetSequence, bool isFirst)
+    private void LogInterruptDialogWindowArmed(
+        int resetSequence,
+        bool dialogCompletedInSeries,
+        int allowedSequence)
     {
         infra.Logger.LogInformation(
-            "InterruptReasonSeriesLatchSet: seq={ResetSequence}, isFirst={IsFirst}",
+            "InterruptReasonDialogWindowArmed: seq={ResetSequence}, completedInSeries={CompletedInSeries}, allowedSeq={AllowedSequence}",
             resetSequence,
-            isFirst);
+            dialogCompletedInSeries,
+            allowedSequence);
     }
 
     private void LogInterruptDialogSuppressed(string reason, int resetSequence, int allowedSequence)

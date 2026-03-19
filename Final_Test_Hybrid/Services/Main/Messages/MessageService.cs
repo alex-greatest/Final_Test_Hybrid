@@ -71,7 +71,7 @@ public class MessageService
               () => "Нет ответа от ПЛК"),
 
         // Сброс
-        (150, () => IsResetUiBusy(),
+        (150, IsResetUiBusy,
               () => "Сброс теста..."),
 
         // Системные
@@ -119,6 +119,7 @@ public class MessageService
         _phaseState.OnChanged += NotifyChanged;
         _errorCoord.OnInterruptChanged += NotifyChanged;
         _resetCoord.OnActiveChanged += NotifyChanged;
+        _preExecutionCoord.OnStateChanged += NotifyChanged;
         _boilerState.OnChanged += NotifyChanged;
     }
 

@@ -15,6 +15,7 @@ using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Final_Test_Hybrid.Services.SpringBoot.Health;
 using Final_Test_Hybrid.Services.SpringBoot.Shift;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.Configuration;
@@ -259,11 +260,16 @@ public partial class Form1 : Form
         var initializer = serviceProvider.GetRequiredService<MessageServiceInitializer>();
         await initializer.InitializeAsync();
 
-        // Initialize reset subscription and coordinator
+        // ВАЖНО:
+        // Сначала поднимаем owner PLC reset-path в PreExecution.
+        // Это создаёт координатор reset и подписывает AskEnd/reset-обработчики
+        // ещё до включения источника Req_Reset.
+        serviceProvider.GetRequiredService<PreExecutionCoordinator>()
+            .EnsureResetSignalsSubscribed();
+
+        // И только после этого включаем источник Req_Reset.
         var resetSubscription = serviceProvider.GetRequiredService<ResetSubscription>();
         await resetSubscription.SubscribeAsync();
-
-        _ = serviceProvider.GetRequiredService<PlcResetCoordinator>();
     }
 
     private void StartSpringBootHealthCheck(ServiceProvider serviceProvider)

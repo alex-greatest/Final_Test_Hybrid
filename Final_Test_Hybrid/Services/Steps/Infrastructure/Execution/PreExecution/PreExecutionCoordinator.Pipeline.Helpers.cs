@@ -14,7 +14,9 @@ public partial class PreExecutionCoordinator
     private async Task<PreExecutionResult?> InitializeTestRunningAsync(PreExecutionContext context, CancellationToken ct)
     {
         ClearForNewTestStart();
-        Interlocked.Exchange(ref _interruptReasonUsedInCurrentResetSeries, 0);
+
+        // Новая серия теста -> старые reset-dialog latch больше не актуальны.
+        Interlocked.Exchange(ref _interruptDialogCompletedInCurrentResetSeries, 0);
         Volatile.Write(ref _interruptDialogAllowedSequence, 0);
         Volatile.Write(ref _interruptReasonDialogSequence, 0);
         state.BoilerState.SaveLastSerialNumber();

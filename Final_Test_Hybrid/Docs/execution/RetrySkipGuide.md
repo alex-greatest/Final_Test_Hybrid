@@ -242,7 +242,6 @@ private async Task ExecuteRetryInBackgroundAsync(StepError error, ColumnExecutor
     try
     {
         await executor.RetryLastFailedStepAsync(ct);
-        await ResetFaultIfNoBlockAsync(error.FailedStep, ct);
         if (!executor.HasFailed)
         {
             executor.OpenGate();
@@ -291,10 +290,11 @@ private async Task ExecuteRetryInBackgroundAsync(StepError error, ColumnExecutor
 
 ### Fault для non-PLC шагов
 
-`ResetFaultIfNoBlockAsync` сбрасывает `Fault=false` только для шагов без PLC-блока.
-При нескольких non-PLC ошибках возможен кратковременный сброс Fault — самовосстанавливается при обработке следующей ошибки.
-Запись `Fault=true/false` выполняется с ограниченным retry (до 3 попыток, пауза 250 мс).
-Если все попытки записи Fault неуспешны, выполняется fail-fast в `HardReset` (`_errorCoordinator.Reset()` + отмена текущего прогона).
+- При входе в error-flow для шага без PLC-блока координатор пишет `Fault=true`.
+- В retry-flow `Fault=false` больше не пишется: повтор шага не должен гасить общий fault-сигнал.
+- `Fault=false` пишется только в skip-flow, когда шаг без блока уже подтверждён PLC через `EndStep=true`.
+- Запись `Fault=true/false` выполняется с ограниченным retry (до 3 попыток, пауза 250 мс).
+- Если все попытки записи Fault неуспешны, выполняется fail-fast в `HardReset` (`_errorCoordinator.Reset()` + отмена текущего прогона).
 
 ### Таймаут Req_Repeat (60 сек)
 

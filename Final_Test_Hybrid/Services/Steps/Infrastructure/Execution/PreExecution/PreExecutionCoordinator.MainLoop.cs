@@ -204,10 +204,13 @@ public partial class PreExecutionCoordinator
         // Показать картинку результата
         coordinators.CompletionUiState.ShowImage(testResult);
 
-        // Связываем с _resetCts чтобы Reset прерывал ожидание End
-        var resetCts = _resetCts;
+        // Completion-flow должен прерываться и PLC reset-токеном, и отменой
+        // текущего цикла, которую hard reset выставляет через _currentCts.Cancel().
         CancellationTokenSource linked;
-        try { linked = CancellationTokenSource.CreateLinkedTokenSource(ct, resetCts.Token); }
+        try
+        {
+            linked = CreateCompletionLinkedTokenSource(ct);
+        }
         catch (ObjectDisposedException)
         {
             // _resetCts disposed → reset уже завершён
@@ -228,7 +231,7 @@ public partial class PreExecutionCoordinator
                 CompletionResult.Finished => CycleExitReason.TestCompleted,
                 CompletionResult.RepeatRequested => CycleExitReason.RepeatRequested,
                 CompletionResult.NokRepeatRequested => CycleExitReason.NokRepeatRequested,
-                _ => TryGetStopExitReason(out var exitReason) ? exitReason : CycleExitReason.SoftReset,
+                _ => TryGetStopExitReason(out var exitReason) ? exitReason : CycleExitReason.SoftReset
             };
         }
         catch (OperationCanceledException)
@@ -242,6 +245,15 @@ public partial class PreExecutionCoordinator
             linked.Dispose();
             coordinators.CompletionUiState.HideImage();
         }
+    }
+
+    private CancellationTokenSource CreateCompletionLinkedTokenSource(CancellationToken ct)
+    {
+        var cycleCts = _currentCts;
+        var resetCts = _resetCts;
+        return cycleCts == null
+            ? CancellationTokenSource.CreateLinkedTokenSource(ct, resetCts.Token)
+            : CancellationTokenSource.CreateLinkedTokenSource(ct, cycleCts.Token, resetCts.Token);
     }
 
     private async Task<string> WaitForBarcodeAsync(CancellationToken ct)

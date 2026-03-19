@@ -129,6 +129,7 @@ public partial class PreExecutionCoordinator
 
         var result = await TryShowInterruptDialogAsync(serialNumber, expectedSequence, ct);
         ct.ThrowIfCancellationRequested();
+        MarkInterruptDialogCompletedInCurrentSeries(result);
         FinalizeResetCleanup(expectedSequence, result);
     }
 
@@ -212,5 +213,24 @@ public partial class PreExecutionCoordinator
         Volatile.Write(ref _postAskEndScanModeDecision, 0);
         Volatile.Write(ref _postAskEndActive, 0);
         OnStateChanged?.Invoke();
+    }
+
+    private void MarkInterruptDialogCompletedInCurrentSeries(InterruptFlowResult result)
+    {
+        // Право на повторный показ тратим только если оператор
+        // реально завершил окно: сохранил причину или нажал Cancel.
+        // Принудительное закрытие новым reset сюда не попадает.
+        if (!result.IsSuccess && !result.IsCancelled)
+        {
+            return;
+        }
+
+        Interlocked.Exchange(ref _interruptDialogCompletedInCurrentResetSeries, 1);
+        Volatile.Write(ref _interruptDialogAllowedSequence, 0);
+
+        infra.Logger.LogInformation(
+            "InterruptReasonDialogSeriesCompleted: success={IsSuccess}, cancelled={IsCancelled}",
+            result.IsSuccess,
+            result.IsCancelled);
     }
 }

@@ -306,13 +306,8 @@ public partial class TestExecutionCoordinator
     {
         try
         {
+            // Retry повторно выполняет шаг, но не сбрасывает Fault для non-PLC сценария.
             await executor.RetryLastFailedStepAsync(ct);
-            var resetFaultError = await ResetFaultIfNoBlockAsync(error.FailedStep, ct);
-            if (resetFaultError != null)
-            {
-                throw new InvalidOperationException($"Не удалось выполнить сброс Fault=false: {resetFaultError}");
-            }
-
             if (!executor.HasFailed)
             {
                 executor.OpenGate();
@@ -405,6 +400,8 @@ public partial class TestExecutionCoordinator
         await _pauseToken.WaitWhilePausedAsync(ct);
 
         await ResetBlockStartAsync(error.FailedStep, ct);
+        // Для шага без PLC-блока сюда попадаем только после Skip-сигнала EndStep=true.
+        // Поэтому Fault=false пишем только в подтверждённой skip-ветке, а затем ждём EndStep=false.
         var resetFaultError = await ResetFaultIfNoBlockAsync(error.FailedStep, ct);
         if (resetFaultError != null)
         {

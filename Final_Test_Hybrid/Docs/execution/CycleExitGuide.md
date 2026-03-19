@@ -146,6 +146,17 @@ private void HandleCycleExit(CycleExitReason reason)
 - это нормальное поведение header в result/history/timer вкладках и не означает, что был создан новый completed snapshot;
 - logout/full deactivation не являются `CycleExitReason`-веткой и очищают sequence через `SequenceClearMode.ClearOnly`.
 
+### Прерывание completion-flow при reset
+
+Во время `HandleTestCompletionAsync()` ожидание PLC handshake (`End=false`) обязано
+прерываться не только PLC reset-токеном, но и отменой текущего cycle CTS.
+
+Причина:
+
+- PLC soft reset отменяет completion через reset-token;
+- non-PLC hard reset (например, `PlcConnectionLost -> ErrorCoordinator.Reset()`) отменяет текущий цикл через `_currentCts.Cancel()`;
+- completion-flow не должен оставаться в бесконечном `WaitForFalseAsync(End)` после hard reset, иначе `HandleHardResetExit()` не дойдёт до cleanup sequence UI.
+
 ## Очистка по AskEnd (HandleGridClear)
 
 `OnAskEndReceived` обрабатывается через `HandleGridClear()` → `ExecuteGridClearAsync()`.

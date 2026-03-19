@@ -15,6 +15,11 @@
     }
 
     <div class="dialog-buttons">
+        <RadzenButton Text="Отмена"
+                      Icon="close"
+                      Click="@OnCancelClick"
+                      ButtonStyle="ButtonStyle.Light"
+                      Disabled="_isSaving" />
         <RadzenButton Text="Сохранить"
                       Icon="save"
                       Click="@OnSaveClick"
@@ -43,6 +48,16 @@
             return;
         }
         await ExecuteSaveAsync();
+    }
+
+    private void OnCancelClick()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        DialogService.Close();
     }
 
     private bool ValidateReason()

@@ -30,7 +30,7 @@ public sealed partial class PlcResetCoordinator : IAsyncDisposable
     private CancellationTokenSource? _currentResetCts;
     private int _isHandlingReset;
     private volatile bool _disposed;
-    private bool _currentResetWasInScanPhase;
+    private bool _currentResetUsesSoftPath;
     private DateTime _currentResetHardDeadlineUtc;
 
     /// <summary>
@@ -110,14 +110,16 @@ public sealed partial class PlcResetCoordinator : IAsyncDisposable
         _logger.LogWarning("╔═══ СБРОС ПО СИГНАЛУ PLC ═══");
         StartResetHardTimeoutWindow();
         LogConfiguredTimeouts();
-        _currentResetWasInScanPhase = InvokeEventSafeWithResult(OnResetStarting) ?? false;
-        _logger.LogInformation("Состояние до сброса: InScanPhase: {InScanPhase}", _currentResetWasInScanPhase);
+        _currentResetUsesSoftPath = InvokeEventSafeWithResult(OnResetStarting) ?? false;
+        _logger.LogInformation(
+            "Маршрут PLC reset до сброса: softPath={UseSoftResetPath}",
+            _currentResetUsesSoftPath);
 
         SignalForceStop();
         await SendDataToMesAsync(ct);
         await SendResetAndWaitAckAsync(ct);
 
-        ExecuteSmartReset(_currentResetWasInScanPhase);
+        ExecuteSmartReset(_currentResetUsesSoftPath);
         _logger.LogInformation("PLC Reset завершён успешно");
     }
 
@@ -329,16 +331,16 @@ public sealed partial class PlcResetCoordinator : IAsyncDisposable
         }
     }
 
-    private void ExecuteSmartReset(bool wasInScanPhase)
+    private void ExecuteSmartReset(bool shouldUseSoftResetPath)
     {
-        if (wasInScanPhase)
+        if (shouldUseSoftResetPath)
         {
-            _logger.LogInformation("Мягкий сброс (был в scan phase) — сохраняем Grid и BoilerState");
+            _logger.LogInformation("Мягкий PLC reset — сохраняем Grid и BoilerState");
             _errorCoordinator.ForceStop();
         }
         else
         {
-            _logger.LogInformation("Полный сброс (тест выполнялся) — очищаем BoilerState");
+            _logger.LogInformation("Полный PLC reset — очищаем BoilerState");
             Volatile.Write(ref PlcHardResetPending, 1);
             try
             {

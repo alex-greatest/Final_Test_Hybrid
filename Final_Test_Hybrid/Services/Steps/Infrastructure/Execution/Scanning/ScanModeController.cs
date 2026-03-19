@@ -128,22 +128,38 @@ public class ScanModeController : IDisposable
         _plcResetCoordinator.OnResetCompleted += HandleResetCompleted;
     }
 
+    private bool ShouldUseSoftResetPathUnsafe()
+    {
+        if (IsInScanningPhaseUnsafe)
+        {
+            return true;
+        }
+
+        if (!_operatorState.IsAuthenticated)
+        {
+            return true;
+        }
+
+        // Повторный PLC reset во время активного/deferred post-AskEnd flow
+        // остаётся продолжением soft-reset сценария.
+        return _preExecutionCoordinator.IsPostAskEndFlowActive()
+               || _resetReadyTransitionPending;
+    }
+
     /// <summary>
-    /// Обрабатывает начало сброса PLC.
-    /// Возвращает true если система была в фазе сканирования (мягкий сброс),
-    /// false если нет (жёсткий сброс). Значение используется PlcResetCoordinator
-    /// для выбора метода сброса: ForceStop vs Reset.
+    /// Обрабатывает начало PLC reset и возвращает,
+    /// должен ли reset идти по soft-reset path.
     /// </summary>
     private bool HandleResetStarting()
     {
         lock (_stateLock)
         {
-            var wasInScanPhase = IsInScanningPhaseUnsafe;
+            var shouldUseSoftResetPath = ShouldUseSoftResetPathUnsafe();
             _isResetting = true;
             _scanPausedByInputReadiness = false;
             _stepTimingService.PauseAllColumnsTiming();
             _sessionManager.ReleaseSession();
-            return wasInScanPhase;
+            return shouldUseSoftResetPath;
         }
     }
 
@@ -385,10 +401,15 @@ public class ScanModeController : IDisposable
             }
             if (TryCompleteDeferredResetTransitionUnsafe())
             {
-                return;
+                // Состояние ScanMode изменилось через deferred reset transition.
             }
-            SyncScanTimingForInputReadinessUnsafe();
+            else
+            {
+                SyncScanTimingForInputReadinessUnsafe();
+            }
         }
+
+        OnStateChanged?.Invoke();
     }
 
     private bool TryCompleteDeferredResetTransitionUnsafe()
