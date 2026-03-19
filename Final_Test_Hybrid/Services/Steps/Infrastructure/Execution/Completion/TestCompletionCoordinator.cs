@@ -4,9 +4,10 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 
 public partial class TestCompletionCoordinator(
     TestCompletionDependencies deps,
-    DualLogger<TestCompletionCoordinator> logger)
+    DualLogger<TestCompletionCoordinator> logger,
+    RuntimeTerminalState runtimeTerminalState)
 {
-    public bool IsWaitingForCompletion { get; private set; }
+    private readonly RuntimeTerminalState _runtimeTerminalState = runtimeTerminalState;
 
     /// <summary>
     /// Событие запроса диалога ошибки сохранения.

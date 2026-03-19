@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="Final_Test_Hybrid/Final_Test_Hybrid.csproj" />
+  <Project Path="Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj" />
 </Solution>

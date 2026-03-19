@@ -95,7 +95,7 @@ public partial class PreExecutionCoordinator
     {
         if (coordinators.TestCoordinator.IsRunning || state.ActivityTracker.IsPreExecutionActive)
         {
-            _pendingExitReason = exitReason;
+            SetPendingExitReason(exitReason);
             _currentCts?.Cancel();
             return true;
         }

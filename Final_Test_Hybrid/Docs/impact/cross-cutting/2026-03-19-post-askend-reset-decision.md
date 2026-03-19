@@ -3,6 +3,7 @@
 ## Контур
 
 - PLC reset / PreExecution / completion UI / changeover
+- ErrorCoordinator / TagWaiter / diagnostic shared dispatcher ownership
 
 ## Что изменено
 
@@ -62,6 +63,36 @@
   - если PLC сбрасывает `End` и `Req_Repeat` не поднят, выполняется обычное завершение теста.
 - Stable doc `CycleExitGuide.md` синхронизирован: completion handshake должен прерываться и PLC reset-токеном, и cycle CTS hard reset-пути.
 
+### Дополнение: runtime terminal race package
+
+- В `OpcUaSubscription` добавлен safe-read контракт `TryGetValue<T>(...)` для decision-loop'ов, где `unknown` нельзя трактовать как `false`.
+- Completion и post-AskEnd больше не принимают PLC decision по пустому/invalid runtime-cache:
+  - `Req_Repeat=true` и `End=false`/`AskEnd=false` учитываются только при known bool;
+  - при `unknown` цикл продолжает ждать реальное PLC-значение, reset или cancel.
+- `TagWaiter.WaitForFalseAsync` больше не может ложно завершиться после `SubscribeAsync()`/`Resume()` на пустом cache:
+  - recheck после subscribe/resume переведён на raw-cache семантику;
+  - generic `WaitGroup/WaitForAllTrue` в этот пакет не расширялись.
+- Добавлен singleton `RuntimeTerminalState`:
+  - `TestCompletionCoordinator` владеет `IsCompletionActive`;
+  - `PreExecutionCoordinator` владеет `IsPostAskEndActive`;
+  - `ErrorCoordinator` использует `HasTerminalHandshake` как owner terminal window.
+- Для ownership interrupt-ов сужена граница `AutoReady`:
+  - `AutoReady OFF` во время completion/post-AskEnd не поднимает `AutoModeDisabled`;
+  - `AutoReady ON` резюмит только `CurrentInterrupt == AutoModeDisabled`;
+  - `BoilerLock`, `PlcConnectionLost`, `TagTimeout` broad-resume не снимаются.
+- `PreExecutionCoordinator` получил hardening `_pendingExitReason` и `_resetSignal`:
+  - `_pendingExitReason` переведён в атомарный sentinel;
+  - `_resetSignal` читается через local snapshot на цикл;
+  - fallback stop-reason теперь идёт через единый resolver перед `PipelineCancelled` / `SoftReset`.
+- `ConnectionTestPanel.DisposeAsync()` больше не гасит shared `IModbusDispatcher`, если панель его не стартовала.
+- Manual screens и write-path'ы (`HandProgram`, `IoEditorDialog`, `AiCallCheck`, `PidRegulatorCheck`, `RtdCalCheck`) этим пакетом не меняются и остаются доступными во время runtime.
+- Добавлен unit-test проект `Final_Test_Hybrid.Tests` с покрытием helper/runtime инвариантов:
+  - `OpcUaSubscription.TryGetValue`;
+  - `TagWaiter.WaitForFalseAsync`;
+  - `RuntimeTerminalState`;
+  - ownership `ErrorCoordinator`.
+- Для change trail создан `openspec/changes/fix-runtime-terminal-race-package/`.
+
 ## Затронутые файлы
 
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionDependencies.cs`
@@ -82,6 +113,24 @@
 - `Final_Test_Hybrid/Docs/runtime/PlcResetGuide.md`
 - `Final_Test_Hybrid/Docs/execution/CycleExitGuide.md`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs`
+- `Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.Callbacks.cs`
+- `Final_Test_Hybrid/Services/OpcUa/TagWaiter.cs`
+- `Final_Test_Hybrid/Services/OpcUa/TagWaiter.WaitGroup.cs`
+- `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/RuntimeTerminalState.cs`
+- `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/ErrorCoordinator/ErrorCoordinator.cs`
+- `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/ErrorCoordinator/ErrorCoordinator.Interrupts.cs`
+- `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/ErrorCoordinator/ErrorCoordinator.Resolution.cs`
+- `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/ErrorCoordinator/ErrorCoordinatorDependencies.cs`
+- `Final_Test_Hybrid/Services/DependencyInjection/StepsServiceExtensions.cs`
+- `Final_Test_Hybrid/Components/Overview/ConnectionTestPanel.razor`
+- `Final_Test_Hybrid/Docs/runtime/ErrorCoordinatorGuide.md`
+- `Final_Test_Hybrid/Docs/execution/StateManagementGuide.md`
+- `Final_Test_Hybrid/Docs/runtime/ScanModeControllerGuide.md`
+- `Final_Test_Hybrid/Docs/diagnostics/DiagnosticGuide.md`
+- `Final_Test_Hybrid/Docs/runtime/TagWaiterGuide.md`
+- `Final_Test_Hybrid.Tests/*`
+- `Final_Test_Hybrid.slnx`
+- `openspec/changes/fix-runtime-terminal-race-package/*`
 
 ## Проверки
 
@@ -96,7 +145,27 @@
 - `dotnet format style --verify-no-changes Final_Test_Hybrid.slnx` после правки completion handshake — успешно.
 - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs" --no-build --format=Text "--output=inspect-warning-completion-repeat-decision.txt" -e=WARNING` — без warning по отчёту.
 - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs" --no-build --format=Text "--output=inspect-hint-completion-repeat-decision.txt" -e=HINT` — без hint по отчёту.
+- `dotnet build Final_Test_Hybrid.slnx` после runtime-terminal пакета — успешно; baseline warning только `MSB3277` по `WindowsBase`.
+- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj` — успешно, 8/8.
+- `dotnet build Final_Test_Hybrid.slnx` после финального cleanup `TestCompletionCoordinator` — успешно; baseline warning только `MSB3277` по `WindowsBase`.
+- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj` после финального cleanup `TestCompletionCoordinator` — успешно, 8/8.
+- `dotnet format analyzers --verify-no-changes Final_Test_Hybrid.slnx` после финального cleanup `TestCompletionCoordinator` — успешно.
+- `dotnet format style --verify-no-changes Final_Test_Hybrid.slnx` после финального cleanup `TestCompletionCoordinator` — успешно.
+- `jb inspectcode Final_Test_Hybrid.slnx` по списку изменённых `*.cs` с `-e=WARNING` — без warning после выноса `EmptyWaitGroupMessage`.
+- `jb inspectcode Final_Test_Hybrid.slnx` по списку изменённых `*.cs` с `-e=HINT` — только неблокирующие structural/style hint в затронутых runtime helper/service файлах; новых warning нет.
+- `openspec validate fix-runtime-terminal-race-package --strict --no-interactive` — успешно.
+- `dotnet build Final_Test_Hybrid.slnx` после rollback UI/runtime gating-среза — успешно; baseline warning только `MSB3277` по `WindowsBase`.
+- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj` после rollback UI/runtime gating-среза — успешно, 8/8.
+- `dotnet format analyzers --verify-no-changes Final_Test_Hybrid.slnx` после rollback UI/runtime gating-среза — успешно.
+- `dotnet format style --verify-no-changes Final_Test_Hybrid.slnx` после rollback UI/runtime gating-среза — успешно.
+- `jb inspectcode Final_Test_Hybrid.slnx` по списку изменённых `*.cs` с `-e=WARNING` после rollback UI/runtime gating-среза — отчёт пуст (`Solution Final_Test_Hybrid.slnx`).
+- `jb inspectcode Final_Test_Hybrid.slnx` по списку изменённых `*.cs` с `-e=HINT` после rollback UI/runtime gating-среза — только неблокирующие structural/style hint; новых warning нет.
+- `openspec validate fix-runtime-terminal-race-package --strict --no-interactive` после rollback UI/runtime gating-среза — успешно.
 
 ## Инциденты
 
-- no new incident
+- Confirmed failure modes, зафиксированные этим пакетом:
+  - stale-cache false-finish / false-cleanup в completion и post-AskEnd;
+  - false-success `TagWaiter.WaitForFalseAsync` после subscribe/resume на пустом cache;
+  - shared dispatcher ownership в `ConnectionTestPanel`.
+- Так как отдельного incident-контура в `Docs` нет, change trail вынесен в `openspec/changes/fix-runtime-terminal-race-package/` и должен поддерживаться вместе с этим impact.

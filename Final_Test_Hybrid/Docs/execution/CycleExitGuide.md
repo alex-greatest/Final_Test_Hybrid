@@ -157,6 +157,15 @@ private void HandleCycleExit(CycleExitReason reason)
 - PLC soft reset отменяет completion через reset-token;
 - non-PLC hard reset (например, `PlcConnectionLost -> ErrorCoordinator.Reset()`) отменяет текущий цикл через `_currentCts.Cancel()`;
 - completion-flow не должен оставаться в ожидании PLC decision после hard reset, иначе `HandleHardResetExit()` не дойдёт до cleanup sequence UI.
+- completion decision-loop читает `Req_Repeat` и `End=false` только через known/unknown контракт `OpcUaSubscription.TryGetValue<bool>(...)`.
+- empty/bad cache не трактуется как `false`: completion ждёт реальное PLC-решение или reset/cancel.
+
+### Детерминированный resolver stop-reason
+
+- `_pendingExitReason` хранится атомарно как `int` sentinel, а не nullable enum.
+- `_resetSignal` читается через local snapshot на весь цикл, чтобы `SignalReset()` не потерял owner в узком окне reset/cancel.
+- `ResolveStopExitReasonOrFallback(...)` обязан использовать единый resolver перед fallback `PipelineCancelled` / `SoftReset`.
+- post-AskEnd decision-loop для `Req_Repeat` / `AskEnd=false` использует тот же known/unknown контракт и не должен завершать cleanup по пустому cache.
 
 ## Очистка по AskEnd (HandleGridClear)
 

@@ -63,13 +63,13 @@ public partial class PreExecutionCoordinator
     {
         while (!ct.IsCancellationRequested)
         {
-            if (infra.OpcSubscription.GetValue<bool>(BaseTags.ErrorRetry))
+            if (infra.OpcSubscription.TryGetValue<bool>(BaseTags.ErrorRetry, out var shouldRepeat) && shouldRepeat)
             {
                 infra.Logger.LogInformation("Post-AskEnd: Req_Repeat = true");
                 return true;
             }
 
-            if (!infra.OpcSubscription.GetValue<bool>(BaseTags.AskEnd))
+            if (infra.OpcSubscription.TryGetValue<bool>(BaseTags.AskEnd, out var askEnd) && !askEnd)
             {
                 infra.Logger.LogInformation("Post-AskEnd: AskEnd сброшен без Req_Repeat");
                 return false;
@@ -173,6 +173,7 @@ public partial class PreExecutionCoordinator
         _postAskEndCts = cts;
         Volatile.Write(ref _postAskEndScanModeDecision, 0);
         Volatile.Write(ref _postAskEndActive, 1);
+        _runtimeTerminalState.SetPostAskEndActive(true);
         OnStateChanged?.Invoke();
     }
 
@@ -188,6 +189,7 @@ public partial class PreExecutionCoordinator
         cts?.Dispose();
 
         Volatile.Write(ref _postAskEndActive, 0);
+        _runtimeTerminalState.SetPostAskEndActive(false);
         OnStateChanged?.Invoke();
     }
 
@@ -212,6 +214,7 @@ public partial class PreExecutionCoordinator
         CancelActiveDialog();
         Volatile.Write(ref _postAskEndScanModeDecision, 0);
         Volatile.Write(ref _postAskEndActive, 0);
+        _runtimeTerminalState.SetPostAskEndActive(false);
         OnStateChanged?.Invoke();
     }
 

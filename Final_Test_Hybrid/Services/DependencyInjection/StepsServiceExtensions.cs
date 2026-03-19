@@ -61,6 +61,7 @@ public static class StepsServiceExtensions
 
         // Execution state
         services.AddSingleton<ExecutionActivityTracker>();
+        services.AddSingleton<RuntimeTerminalState>();
         services.AddSingleton<ExecutionPhaseState>();
         services.AddSingleton<ExecutionFlowState>();
         services.AddSingleton<ResetSubscription>();

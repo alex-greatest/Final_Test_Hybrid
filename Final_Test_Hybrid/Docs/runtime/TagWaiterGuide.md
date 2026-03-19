@@ -50,6 +50,8 @@ builder.WaitForAllTrue([tag1, tag2], () => Result.Both, "Both");
 - Причина: `GetValue<bool>` возвращает `default(false)` при отсутствии значения в cache.
 - Для `WaitForFalseAsync` это давало ложное мгновенное завершение после reconnect до первого реального уведомления от PLC.
 - Текущая проверка: `if (raw is T current && condition(current))`, поэтому ожидание продолжается, пока не придёт реальное значение нужного типа.
+- Для `WaitForFalseAsync` raw-cache семантика обязательна не только на входе, но и в recheck после `SubscribeAsync()`/`Resume()`: используется `subscription.GetValue(nodeId) is bool current && !current`.
+- `WaitGroup/WaitForAllTrue` этим пакетом не меняются: safe-read локализован только в `WaitForFalseAsync` и safety-critical decision-loop'ах completion/post-AskEnd.
 
 ## Pause-Aware поведение
 

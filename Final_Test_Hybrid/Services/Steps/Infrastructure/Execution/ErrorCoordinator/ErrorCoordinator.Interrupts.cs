@@ -64,6 +64,11 @@ public sealed partial class ErrorCoordinator
             _logger.LogInformation("AutoReady восстановлен до обработки прерывания — пропуск");
             return;
         }
+        if (reason == InterruptReason.AutoModeDisabled && _subscriptions.RuntimeTerminalState.HasTerminalHandshake)
+        {
+            _logger.LogInformation("AutoModeDisabled пропущен: terminal handshake владеет окном");
+            return;
+        }
         _logger.LogWarning("Прерывание: {Reason} — {Message}", reason, behavior.Message);
         if (behavior.AssociatedError != null)
         {

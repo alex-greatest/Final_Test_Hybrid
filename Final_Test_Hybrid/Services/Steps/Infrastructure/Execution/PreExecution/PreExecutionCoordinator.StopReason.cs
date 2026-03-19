@@ -8,14 +8,30 @@ public partial class PreExecutionCoordinator
     /// <summary>
     /// Проверяет наличие причины остановки из любого источника.
     /// </summary>
-    private bool TryGetStopExitReason(out CycleExitReason reason)
+    private bool TryGetStopExitReason(
+        out CycleExitReason reason,
+        TaskCompletionSource<CycleExitReason>? resetSignalSnapshot = null)
     {
-        if (TryGetPendingExitReason(out reason)) return true;
-        if (TryGetResetSignalExitReason(out reason)) return true;
+        if (TryGetPendingExitReason(out reason))
+        {
+            return true;
+        }
+
+        if (TryGetResetSignalExitReason(resetSignalSnapshot ?? Volatile.Read(ref _resetSignal), out reason))
+        {
+            return true;
+        }
 
         // ВАЖНО: единый snapshot для защиты от гонок
         var stopReason = state.FlowState.StopReason;
         return TryGetForceStopExitReason(stopReason, out reason) || TryGetMappedStopExitReason(stopReason, out reason);
+    }
+
+    private CycleExitReason ResolveStopExitReasonOrFallback(
+        CycleExitReason fallback,
+        TaskCompletionSource<CycleExitReason>? resetSignalSnapshot = null)
+    {
+        return TryGetStopExitReason(out var reason, resetSignalSnapshot) ? reason : fallback;
     }
 
     /// <summary>
@@ -23,21 +39,24 @@ public partial class PreExecutionCoordinator
     /// </summary>
     private bool TryGetPendingExitReason(out CycleExitReason reason)
     {
-        if (!_pendingExitReason.HasValue)
+        var pendingExitReason = Volatile.Read(ref _pendingExitReason);
+        if (pendingExitReason < 0)
         {
             reason = default;
             return false;
         }
-        reason = _pendingExitReason.Value;
+
+        reason = (CycleExitReason)pendingExitReason;
         return true;
     }
 
     /// <summary>
     /// Проверяет сигнал сброса (_resetSignal).
     /// </summary>
-    private bool TryGetResetSignalExitReason(out CycleExitReason reason)
+    private static bool TryGetResetSignalExitReason(
+        TaskCompletionSource<CycleExitReason>? resetSignal,
+        out CycleExitReason reason)
     {
-        var resetSignal = _resetSignal;
         if (resetSignal?.Task.IsCompletedSuccessfully != true)
         {
             reason = default;
@@ -45,6 +64,16 @@ public partial class PreExecutionCoordinator
         }
         reason = resetSignal.Task.Result;
         return true;
+    }
+
+    private void SetPendingExitReason(CycleExitReason reason)
+    {
+        Volatile.Write(ref _pendingExitReason, (int)reason);
+    }
+
+    private void ClearPendingExitReason()
+    {
+        Volatile.Write(ref _pendingExitReason, -1);
     }
 
     /// <summary>

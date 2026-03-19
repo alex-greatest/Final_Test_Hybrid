@@ -131,6 +131,22 @@ public partial class OpcUaSubscription
 
     public object? GetValue(string nodeId) => _values.GetValueOrDefault(nodeId);
 
+    /// <summary>
+    /// Возвращает типизированное значение из runtime-cache только если оно реально присутствует.
+    /// </summary>
+    public bool TryGetValue<T>(string nodeId, out T value)
+    {
+        var raw = _values.GetValueOrDefault(nodeId);
+        if (raw is T typed)
+        {
+            value = typed;
+            return true;
+        }
+
+        value = default!;
+        return false;
+    }
+
     public T? GetValue<T>(string nodeId) =>
         _values.GetValueOrDefault(nodeId) is T typed ? typed : default;
 

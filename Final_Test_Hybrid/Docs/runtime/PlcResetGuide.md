@@ -150,6 +150,7 @@ PreExecutionCoordinator:
 - защита post-AskEnd flow поднимается синхронно в `HandleGridClear()` до первого `await`, чтобы ранний `OnResetCompleted` не успел выполнить `ClearStateOnReset()` между `AskEnd` и post-AskEnd веткой.
 - для HardReset допускает fallback-очистку в `HandleHardResetExit`, если AskEnd путь не завершил cleanup.
 - stale `AskEnd` игнорируется при отсутствии окна или несовпадении `window.Sequence != currentSeq`.
+- Во время completion/post-AskEnd terminal-owner фиксируется в `RuntimeTerminalState`: пока окно активно, `PlcConnectionLost` должен выигрывать normal finish, а `AutoReady OFF` не должен загрязнять terminal path `AutoModeDisabled`.
 
 ### Таймауты reset-flow (конфигурируемые)
 

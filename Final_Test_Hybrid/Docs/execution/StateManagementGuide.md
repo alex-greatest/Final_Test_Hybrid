@@ -620,6 +620,29 @@ private bool ShouldUseSoftDeactivation()
 }
 ```
 
+## RuntimeTerminalState
+
+**Файл:** `Services/Steps/Infrastructure/Execution/RuntimeTerminalState.cs`
+
+Отдельный singleton для terminal window, которые не являются активной фазой выполнения, но ещё владеют runtime-решением PLC.
+
+### API
+
+| Член | Тип | Описание |
+|------|-----|----------|
+| `IsCompletionActive` | `bool` | Идёт completion-handshake после `End=true` |
+| `IsPostAskEndActive` | `bool` | Идёт post-AskEnd decision flow |
+| `HasTerminalHandshake` | `bool` | Любое terminal окно активно |
+| `SetCompletionActive(bool)` | `void` | Обновить completion-owner |
+| `SetPostAskEndActive(bool)` | `void` | Обновить post-AskEnd owner |
+| `OnChanged` | `Action` | Событие смены terminal state |
+
+### Правила использования
+
+- `TestCompletionCoordinator` и `PreExecutionCoordinator` обязаны обновлять terminal flags в `try/finally`, finish и cancel-path'ах.
+- `ExecutionActivityTracker` остаётся owner только active-phase (`PreExecution`, `TestExecution`) и не расширяется terminal cleanup-окнами.
+- `ErrorCoordinator` использует `HasTerminalHandshake` для ownership `PlcConnectionLost` и фильтрации `AutoModeDisabled`.
+
 ---
 
 ## PlcResetCoordinator
@@ -969,6 +992,7 @@ State machine для фаз жизненного цикла системы:
 | `State` | ExecutionStateManager | UI (OnStateChanged), координаторы | `TransitionTo` |
 | `IsPreExecutionActive` | ExecutionActivityTracker | ScanModeController, ErrorCoordinator (IsAnyActive) | PreExecutionCoordinator |
 | `IsTestExecutionActive` | ExecutionActivityTracker | ScanModeController, ErrorCoordinator (IsAnyActive) | TestExecutionCoordinator |
+| `HasTerminalHandshake` | RuntimeTerminalState | ErrorCoordinator | TestCompletionCoordinator, PreExecutionCoordinator |
 | `HadSkippedError` | ExecutionStateManager | TestExecutionCoordinator | `MarkErrorSkipped()` |
 
 ---

@@ -60,6 +60,7 @@ public partial class PreExecutionCoordinator
         }
 
         _currentCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var resetSignal = CreateResetSignal();
 
         var testCompletionTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         Action onTestCompleted = () => testCompletionTcs.TrySetResult();
@@ -69,16 +70,16 @@ public partial class PreExecutionCoordinator
         try
         {
             state.ActivityTracker.SetPreExecutionActive(true);
-            exitReason = await ExecuteCycleAsync(barcode, testCompletionTcs, ct);
+            exitReason = await ExecuteCycleAsync(barcode, testCompletionTcs, resetSignal, ct);
         }
         catch (OperationCanceledException)
         {
-            exitReason = _pendingExitReason ?? CycleExitReason.PipelineCancelled;
+            exitReason = ResolveStopExitReasonOrFallback(CycleExitReason.PipelineCancelled, resetSignal);
         }
         finally
         {
-            _pendingExitReason = null;
-            _resetSignal = null;
+            ClearPendingExitReason();
+            Interlocked.CompareExchange(ref _resetSignal, null, resetSignal);
             coordinators.TestCoordinator.OnSequenceCompleted -= onTestCompleted;
             state.ActivityTracker.SetPreExecutionActive(false);
             _currentCts?.Dispose();
@@ -91,16 +92,13 @@ public partial class PreExecutionCoordinator
     private async Task<CycleExitReason> ExecuteCycleAsync(
         string barcode,
         TaskCompletionSource testCompletionTcs,
+        TaskCompletionSource<CycleExitReason> resetSignal,
         CancellationToken ct)
     {
         var isRepeat = _skipNextScan;
         var isNokRepeat = _skipNextScan && _executeFullPreparation;
         _skipNextScan = false;
         _executeFullPreparation = false;
-
-        // Создаём сигнал сброса для защиты от race condition
-        var resetSignal = new TaskCompletionSource<CycleExitReason>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _resetSignal = resetSignal;
 
         var result = isNokRepeat
             ? await ExecuteNokRepeatPipelineAsync(_currentCts!.Token)
@@ -109,7 +107,7 @@ public partial class PreExecutionCoordinator
                 : await ExecutePreExecutionPipelineAsync(barcode, _currentCts!.Token);
 
         // Проверяем pending exit reason (сброс мог прийти во время pipeline)
-        if (TryGetStopExitReason(out var stopExitReason))
+        if (TryGetStopExitReason(out var stopExitReason, resetSignal))
         {
             return stopExitReason;
         }
@@ -134,7 +132,7 @@ public partial class PreExecutionCoordinator
         await testCompletionTcs.Task;
 
         // Проверяем pending exit reason после теста
-        if (TryGetStopExitReason(out stopExitReason))
+        if (TryGetStopExitReason(out stopExitReason, resetSignal))
         {
             return stopExitReason;
         }
@@ -160,9 +158,7 @@ public partial class PreExecutionCoordinator
             return resetSignal.Task.Result;
         }
 
-        return TryGetStopExitReason(out var stopExitReason)
-            ? stopExitReason
-            : CycleExitReason.SoftReset;
+        return ResolveStopExitReasonOrFallback(CycleExitReason.SoftReset, resetSignal);
     }
 
     private void HandleCycleExit(CycleExitReason reason)
@@ -217,7 +213,7 @@ public partial class PreExecutionCoordinator
             // Примечание: в узком окне между dispose и SignalReset может вернуться SoftReset
             // вместо HardReset — это допустимо, т.к. состояние очистится по AskEnd
             coordinators.CompletionUiState.HideImage();
-            return TryGetStopExitReason(out var exitReason) ? exitReason : CycleExitReason.SoftReset;
+            return ResolveStopExitReasonOrFallback(CycleExitReason.SoftReset);
         }
 
         try
@@ -231,14 +227,14 @@ public partial class PreExecutionCoordinator
                 CompletionResult.Finished => CycleExitReason.TestCompleted,
                 CompletionResult.RepeatRequested => CycleExitReason.RepeatRequested,
                 CompletionResult.NokRepeatRequested => CycleExitReason.NokRepeatRequested,
-                _ => TryGetStopExitReason(out var exitReason) ? exitReason : CycleExitReason.SoftReset
+                _ => ResolveStopExitReasonOrFallback(CycleExitReason.SoftReset)
             };
         }
         catch (OperationCanceledException)
         {
             // Reset или внешняя отмена прервали ожидание End
             // При shutdown тоже вернётся SoftReset — это допустимо, цикл завершится на следующей итерации
-            return TryGetStopExitReason(out var exitReason) ? exitReason : CycleExitReason.SoftReset;
+            return ResolveStopExitReasonOrFallback(CycleExitReason.SoftReset);
         }
         finally
         {
@@ -274,6 +270,13 @@ public partial class PreExecutionCoordinator
             OnStateChanged?.Invoke();
             return barcode;
         }
+    }
+
+    private TaskCompletionSource<CycleExitReason> CreateResetSignal()
+    {
+        var resetSignal = new TaskCompletionSource<CycleExitReason>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Volatile.Write(ref _resetSignal, resetSignal);
+        return resetSignal;
     }
 
     /// <summary>

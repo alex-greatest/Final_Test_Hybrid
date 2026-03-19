@@ -77,6 +77,7 @@ services.AddSingleton<IInterruptBehavior, NewReasonBehavior>();
 - `ConnectionState` — состояние соединения с ПЛК
 - `AutoReady` — готовность автоматического режима
 - `ActivityTracker` — отслеживание активности тегов
+- `RuntimeTerminalState` — terminal window completion/post-AskEnd вне active phase tracker
 
 ### ErrorResolutionServices
 Сервисы для разрешения ошибок:
@@ -116,6 +117,14 @@ _errorCoordinator.OnInterruptChanged -= HandleInterruptChanged;
 | `SendAskRepeatAsync(ct)` | Пишет `AskRepeat=true` для handshake повтора |
 | `SendAskRepeatAsync(blockErrorTag, ct)` | Совместимая перегрузка; `blockErrorTag` не используется в runtime |
 | `WaitForRetrySignalResetAsync(ct)` | Ожидает `Req_Repeat=false` (таймаут 60 сек) |
+
+## Ownership terminal window
+
+- `HandleConnectionChanged()` считает runtime активным, когда истинно `ActivityTracker.IsAnyActive || RuntimeTerminalState.HasTerminalHandshake`.
+- `completion` и `post-AskEnd` не расширяют `ExecutionActivityTracker`: их owner хранится отдельно в `RuntimeTerminalState`.
+- Во время terminal handshake `AutoReady OFF` не должен поднимать `AutoModeDisabled`.
+- `AutoReady ON` запускает resume-path только если `CurrentInterrupt == AutoModeDisabled`.
+- `BoilerLock`, `PlcConnectionLost`, `TagTimeout` и любой другой non-`AutoModeDisabled` interrupt не снимаются broad-resume от `AutoReady ON`.
 
 ### Дополнительно: аварийный retry-flow
 

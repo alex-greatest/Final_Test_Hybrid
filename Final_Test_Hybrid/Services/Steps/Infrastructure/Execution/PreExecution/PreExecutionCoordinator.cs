@@ -15,7 +15,7 @@ public enum CycleExitReason
     SoftReset,             // Мягкий сброс (wasInScanPhase = true)
     HardReset,             // Жёсткий сброс
     RepeatRequested,       // OK повтор теста
-    NokRepeatRequested,    // NOK повтор с подготовкой
+    NokRepeatRequested     // NOK повтор с подготовкой
 }
 
 /// <summary>
@@ -26,7 +26,8 @@ public partial class PreExecutionCoordinator(
     PreExecutionSteps steps,
     PreExecutionInfrastructure infra,
     PreExecutionCoordinators coordinators,
-    PreExecutionState state)
+    PreExecutionState state,
+    RuntimeTerminalState runtimeTerminalState)
 {
     private sealed class ResetAskEndWindow
     {
@@ -43,7 +44,7 @@ public partial class PreExecutionCoordinator(
     // === Состояние ввода ===
     private TaskCompletionSource<string>? _barcodeSource;
     private CancellationTokenSource? _currentCts;
-    private CycleExitReason? _pendingExitReason;
+    private int _pendingExitReason = -1;
     private TaskCompletionSource<CycleExitReason>? _resetSignal;
     private ResetAskEndWindow? _currentAskEndWindow;
     private CancellationTokenSource _resetCts = new();
@@ -74,6 +75,7 @@ public partial class PreExecutionCoordinator(
     private const int ResetOriginPlc = 1;
     private const int ResetOriginNonPlc = 2;
     private int _lastHardResetOrigin;
+    private readonly RuntimeTerminalState _runtimeTerminalState = runtimeTerminalState;
 
     public bool IsAcceptingInput { get; private set; }
     public bool IsProcessing => !IsAcceptingInput && state.ActivityTracker.IsPreExecutionActive;
@@ -317,7 +319,7 @@ public partial class PreExecutionCoordinator(
     /// </summary>
     private void SignalReset(CycleExitReason reason)
     {
-        _resetSignal?.TrySetResult(reason);
+        Volatile.Read(ref _resetSignal)?.TrySetResult(reason);
     }
 
     private void ArmResetCleanupGuard()

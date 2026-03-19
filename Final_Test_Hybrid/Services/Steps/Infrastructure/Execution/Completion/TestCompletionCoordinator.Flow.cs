@@ -12,7 +12,7 @@ public partial class TestCompletionCoordinator
 
     public async Task<CompletionResult> HandleTestCompletedAsync(int testResult, CancellationToken ct)
     {
-        IsWaitingForCompletion = true;
+        _runtimeTerminalState.SetCompletionActive(true);
         try
         {
             // 1. Записать End = true
@@ -40,7 +40,7 @@ public partial class TestCompletionCoordinator
         }
         finally
         {
-            IsWaitingForCompletion = false;
+            _runtimeTerminalState.SetCompletionActive(false);
         }
     }
 
@@ -48,13 +48,13 @@ public partial class TestCompletionCoordinator
     {
         while (!ct.IsCancellationRequested)
         {
-            if (deps.Subscription.GetValue<bool>(BaseTags.ErrorRetry))
+            if (deps.Subscription.TryGetValue<bool>(BaseTags.ErrorRetry, out var shouldRepeat) && shouldRepeat)
             {
                 logger.LogInformation("Completion: Req_Repeat = true");
                 return true;
             }
 
-            if (!deps.Subscription.GetValue<bool>(BaseTags.ErrorSkip))
+            if (deps.Subscription.TryGetValue<bool>(BaseTags.ErrorSkip, out var endSignal) && !endSignal)
             {
                 logger.LogInformation("Completion: End сброшен без Req_Repeat");
                 return false;

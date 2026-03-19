@@ -673,6 +673,11 @@ public class MyService(RegisterWriter writer)
 - После успешной записи панель **обязательно** читает тот же диапазон через `RegisterReader.ReadStringAsync(...)`.
 - Успех фиксируется только если read-back значение побайтно совпало с введённой строкой.
 
+#### Ownership shared dispatcher в `ConnectionTestPanel`
+
+- `ConnectionTestPanel` хранит `startedByPanel`: в `DisposeAsync()` панель не вызывает `StopAsync()`, если shared dispatcher был запущен не ею.
+- Ручные диагностические и инженерные экраны (`HandProgram`, `IoEditorDialog`, `AiCallCheck`, `PidRegulatorCheck`, `RtdCalCheck`) этим пакетом не блокируются и не меняют поведение во время runtime.
+
 #### Упаковка строки
 
 - Используется ASCII.

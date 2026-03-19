@@ -286,6 +286,7 @@
     private DiagnosticPingData? _pingData;
     private bool _disposed;
     private bool _manualSessionEntered;
+    private bool _startedByPanel;
 
     // Read state
     private RegisterPreset? _selectedReadPreset = ReadPresets[0];
@@ -319,17 +320,42 @@
         ManualSessionState.EnterConnectionTest();
         _manualSessionEntered = true;
 
-        // Subscribe to dispatcher events
+        SubscribeDispatcherEvents();
+
+        _startedByPanel = !Dispatcher.IsStarted;
+        if (_startedByPanel)
+        {
+            await Dispatcher.StartAsync();
+        }
+
+        UpdateStatus();
+    }
+
+    private void SubscribeDispatcherEvents()
+    {
         Dispatcher.Connected += OnConnected;
         Dispatcher.Disconnecting += OnDisconnecting;
         Dispatcher.Stopped += OnStopped;
         Dispatcher.PingDataUpdated += OnPingDataUpdated;
+    }
 
-        // Start dispatcher
-        await Dispatcher.StartAsync();
+    private void UnsubscribeDispatcherEvents()
+    {
+        Dispatcher.Connected -= OnConnected;
+        Dispatcher.Disconnecting -= OnDisconnecting;
+        Dispatcher.Stopped -= OnStopped;
+        Dispatcher.PingDataUpdated -= OnPingDataUpdated;
+    }
 
-        // Update initial state
-        UpdateStatus();
+    private void ExitManualSession()
+    {
+        if (!_manualSessionEntered)
+        {
+            return;
+        }
+
+        ManualSessionState.ExitConnectionTest();
+        _manualSessionEntered = false;
     }
 
     /// <summary>
@@ -1316,20 +1342,13 @@
     public async ValueTask DisposeAsync()
     {
         _disposed = true;
-        if (_manualSessionEntered)
+        ExitManualSession();
+        UnsubscribeDispatcherEvents();
+
+        if (_startedByPanel)
         {
-            ManualSessionState.ExitConnectionTest();
-            _manualSessionEntered = false;
+            await Dispatcher.StopAsync();
         }
-
-        // Unsubscribe from events
-        Dispatcher.Connected -= OnConnected;
-        Dispatcher.Disconnecting -= OnDisconnecting;
-        Dispatcher.Stopped -= OnStopped;
-        Dispatcher.PingDataUpdated -= OnPingDataUpdated;
-
-        // Stop dispatcher
-        await Dispatcher.StopAsync();
     }
 
     /// <summary>
