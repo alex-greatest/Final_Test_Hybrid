@@ -24,6 +24,7 @@ public partial class MainEngineering : IDisposable
     private bool IsMainSettingsDisabled => PreExecution.IsProcessing
         || !SettingsAccessState.CanInteract
         || PlcResetCoordinator.IsActive
+        || PreExecution.IsPostAskEndFlowActive()
         || ErrorCoordinator.CurrentInterrupt != null;
 
     protected override void OnInitialized()

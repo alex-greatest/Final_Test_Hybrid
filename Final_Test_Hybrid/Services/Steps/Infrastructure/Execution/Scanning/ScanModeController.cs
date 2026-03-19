@@ -38,6 +38,7 @@ public class ScanModeController : IDisposable
     private bool _isResetting;
     private bool _disposed;
     private bool _scanPausedByInputReadiness;
+    private bool _resetReadyTransitionPending;
     /// <summary>
     /// Кэшированное состояние AutoReady. Обновляется только под _stateLock.
     /// Используется для внутренних решений чтобы избежать race condition.
@@ -153,7 +154,17 @@ public class ScanModeController : IDisposable
     {
         lock (_stateLock)
         {
+            if (_disposed)
+            {
+                return;
+            }
             _cachedIsAutoReady = _autoReady.IsReady;  // Обновляем снимок перед решениями
+            if (_preExecutionCoordinator.IsPostAskEndFlowActive())
+            {
+                _resetReadyTransitionPending = true;
+                _logger.LogInformation("ScanMode ready transition deferred: post-AskEnd flow ещё активен");
+                return;
+            }
             TransitionToReadyInternal();
         }
     }
@@ -372,8 +383,44 @@ public class ScanModeController : IDisposable
             {
                 return;
             }
+            if (TryCompleteDeferredResetTransitionUnsafe())
+            {
+                return;
+            }
             SyncScanTimingForInputReadinessUnsafe();
         }
+    }
+
+    private bool TryCompleteDeferredResetTransitionUnsafe()
+    {
+        if (!_resetReadyTransitionPending)
+        {
+            return false;
+        }
+
+        if (_preExecutionCoordinator.IsPostAskEndFlowActive())
+        {
+            return false;
+        }
+
+        if (!_preExecutionCoordinator.TryConsumePostAskEndScanModeDecision(out var shouldTransitionToReady))
+        {
+            return false;
+        }
+
+        _cachedIsAutoReady = _autoReady.IsReady;
+        _resetReadyTransitionPending = false;
+        if (!shouldTransitionToReady)
+        {
+            _isResetting = false;
+            _logger.LogInformation(
+                "ScanMode deferred reset transition skipped: post-AskEnd outcome is repeat");
+            return true;
+        }
+
+        _logger.LogInformation("ScanMode ready transition resumed after post-AskEnd full cleanup");
+        TransitionToReadyInternal();
+        return true;
     }
 
     private void ResumeTimingWhenAllowedUnsafe()

@@ -5,6 +5,7 @@ using Messages;
 using OpcUa.Connection;
 using SpringBoot.Operator;
 using Steps.Infrastructure.Execution.ErrorCoordinator;
+using Steps.Infrastructure.Execution.PreExecution;
 using Steps.Infrastructure.Execution.Scanning;
 using PlcReset;
 
@@ -20,6 +21,7 @@ public class MessageService
     private readonly ExecutionPhaseState _phaseState;
     private readonly ErrorCoordinator _errorCoord;
     private readonly PlcResetCoordinator _resetCoord;
+    private readonly PreExecutionCoordinator _preExecutionCoord;
     private readonly BoilerState _boilerState;
 
     public event Action? OnChange;
@@ -32,6 +34,7 @@ public class MessageService
         ExecutionPhaseState phaseState,
         ErrorCoordinator errorCoord,
         PlcResetCoordinator resetCoord,
+        PreExecutionCoordinator preExecutionCoord,
         BoilerState boilerState)
     {
         _operator = operatorState;
@@ -41,6 +44,7 @@ public class MessageService
         _phaseState = phaseState;
         _errorCoord = errorCoord;
         _resetCoord = resetCoord;
+        _preExecutionCoord = preExecutionCoord;
         _boilerState = boilerState;
 
         _rules = BuildRules();
@@ -50,13 +54,13 @@ public class MessageService
     private (int, Func<bool>, Func<string>)[] BuildRules() =>
     [
         // Критичные комбинации (проблема + сброс)
-        (200, () => !_connection.IsConnected && _resetCoord.IsActive,
+        (200, () => !_connection.IsConnected && IsResetUiBusy(),
               () => "Потеря связи с PLC. Выполняется сброс..."),
 
-        (190, () => _errorCoord.CurrentInterrupt == InterruptReason.TagTimeout && _resetCoord.IsActive,
+        (190, () => _errorCoord.CurrentInterrupt == InterruptReason.TagTimeout && IsResetUiBusy(),
               () => "Нет ответа от ПЛК. Выполняется сброс..."),
 
-        (160, () => !_autoReady.IsReady && _resetCoord.IsActive,
+        (160, () => !_autoReady.IsReady && IsResetUiBusy(),
               () => "Нет автомата. Выполняется сброс..."),
 
         // Критичные без сброса
@@ -67,7 +71,7 @@ public class MessageService
               () => "Нет ответа от ПЛК"),
 
         // Сброс
-        (150, () => _resetCoord.IsActive,
+        (150, () => IsResetUiBusy(),
               () => "Сброс теста..."),
 
         // Системные
@@ -100,6 +104,11 @@ public class MessageService
         ExecutionPhase.WaitingForDiagnosticConnection => "Подключите кабель связи с котлом",
         _ => ""
     };
+
+    private bool IsResetUiBusy()
+    {
+        return _resetCoord.IsActive || _preExecutionCoord.IsPostAskEndFlowActive();
+    }
 
     private void SubscribeToChanges()
     {

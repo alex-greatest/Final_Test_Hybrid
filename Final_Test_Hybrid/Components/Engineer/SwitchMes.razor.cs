@@ -32,6 +32,7 @@ public partial class SwitchMes
     private bool IsDisabled => PreExecution.IsProcessing
         || !SettingsAccessState.CanInteract
         || PlcResetCoordinator.IsActive
+        || PreExecution.IsPostAskEndFlowActive()
         || ErrorCoordinator.CurrentInterrupt != null;
 
     protected override void OnInitialized()

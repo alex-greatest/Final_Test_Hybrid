@@ -6,6 +6,7 @@ using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
+using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.Results;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
@@ -41,6 +42,7 @@ public class PreExecutionSteps(
 public class PreExecutionInfrastructure(
     PausableOpcUaTagService opcUa,
     OpcUaTagService plcService,
+    OpcUaSubscription opcSubscription,
     PauseTokenSource pauseToken,
     IStepTimingService stepTimingService,
     StepStatusReporter statusReporter,
@@ -56,6 +58,7 @@ public class PreExecutionInfrastructure(
 {
     public PausableOpcUaTagService OpcUa => opcUa;
     public OpcUaTagService PlcService => plcService;
+    public OpcUaSubscription OpcSubscription => opcSubscription;
     public PauseTokenSource PauseToken => pauseToken;
     public IStepTimingService StepTimingService => stepTimingService;
     public StepStatusReporter StatusReporter => statusReporter;

@@ -12,12 +12,6 @@ public partial class PreExecutionCoordinator
         StartChangeoverTimerForImmediateReset();
     }
 
-    private void HandleSoftResetExit()
-    {
-        // Очистка произойдёт по AskEnd в HandleGridClear
-        HandleChangeoverAfterReset(GetChangeoverResetMode());
-    }
-
     private void HandleHardResetExit()
     {
         // ВАЖНО: snapshot changeoverMode ДО очистки состояния

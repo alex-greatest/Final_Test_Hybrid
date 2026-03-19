@@ -1,0 +1,10 @@
+Solution Final_Test_Hybrid.slnx
+    Project Final_Test_Hybrid
+      Final_Test_Hybrid\Components\Engineer\MainEngineering.razor.cs:116 Method 'OnAiRtdCorrection' is never used
+      Final_Test_Hybrid\Components\Engineer\MainEngineering.razor.cs:121 Method 'OnDisableTestLog' is never used
+      Final_Test_Hybrid\Components\Engineer\MainEngineering.razor.cs:126 Method 'OnTestLogViewer' is never used
+      Final_Test_Hybrid\Components\Engineer\MainEngineering.razor.cs:146 Method 'OnViewCharts' is never used
+      Final_Test_Hybrid\Services\Main\Messages\MessageService.cs:1 Namespace does not correspond to file location, must be: 'Final_Test_Hybrid.Services.Main.Messages'
+      Final_Test_Hybrid\Services\Main\Messages\MessageService.cs:3 Qualifier is redundant
+    
+  

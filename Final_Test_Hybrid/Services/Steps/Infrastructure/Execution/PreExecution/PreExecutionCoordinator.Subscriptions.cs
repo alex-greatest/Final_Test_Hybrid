@@ -83,18 +83,28 @@ public partial class PreExecutionCoordinator
     {
         try
         {
-            await ExecuteGridClearAsync();
+            await HandlePostAskEndDecisionAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            infra.Logger.LogInformation("Post-AskEnd flow отменён новым reset");
         }
         catch (Exception ex)
         {
             infra.Logger.LogError(ex, "Ошибка в HandleGridClear");
             ResetInterruptState();
-            TryCompletePlcReset();
+            FinalizeResetCleanup();
         }
     }
 
     private void HandlePlcResetCompleted()
     {
+        if (Volatile.Read(ref _postAskEndActive) == 1)
+        {
+            infra.Logger.LogDebug("Пропуск OnResetCompleted cleanup: post-AskEnd flow ещё активен");
+            return;
+        }
+
         var resetSequence = GetResetSequenceSnapshot();
         if (!TryRunResetCleanupOnce())
         {
@@ -114,95 +124,22 @@ public partial class PreExecutionCoordinator
         infra.StatusReporter.ClearAllExceptScan(SequenceClearMode.OperationalReset);
     }
 
-    private async Task ExecuteGridClearAsync()
-    {
-        var window = Volatile.Read(ref _currentAskEndWindow);
-        var resetSequence = GetResetSequenceSnapshot();
-        if (window == null)
-        {
-            LogAskEndIgnoredAsStale(0, resetSequence);
-            LogInterruptDialogSuppressed("stale_seq", resetSequence, Volatile.Read(ref _interruptDialogAllowedSequence));
-            return;
-        }
-        if (window.Sequence != resetSequence)
-        {
-            LogAskEndIgnoredAsStale(window.Sequence, resetSequence);
-            LogInterruptDialogSuppressed("stale_seq", resetSequence, Volatile.Read(ref _interruptDialogAllowedSequence));
-            return;
-        }
-        RecordAskEndSequence(window.Sequence);
-        if (!TryRunResetCleanupOnce())
-        {
-            infra.Logger.LogDebug(
-                "Пропуск reset-cleanup: path={CleanupPath}, reason={SkipReason}, seq={ResetSequence}",
-                "AskEnd",
-                "already_done",
-                resetSequence);
-            CompletePlcResetOrLogStale(window.Sequence);
-            return;
-        }
-        if (GetResetSequenceSnapshot() != window.Sequence)
-        {
-            Interlocked.Exchange(ref _resetCleanupDone, 0);
-            LogAskEndIgnoredAsStale(window.Sequence, GetResetSequenceSnapshot());
-            CompletePlcResetOrLogStale(window.Sequence);
-            return;
-        }
-        infra.Logger.LogDebug(
-            "Выполнение reset-cleanup: path={CleanupPath}, seq={ResetSequence}",
-            "AskEnd",
-            resetSequence);
-
-        var context = CaptureAndClearState();
-        if (!ShouldShowInterruptDialog(context))
-        {
-            LogInterruptDialogSuppressed("conditions_not_met", window.Sequence, Volatile.Read(ref _interruptDialogAllowedSequence));
-            CompletePlcResetOrLogStale(window.Sequence);
-            return;
-        }
-        if (Volatile.Read(ref _interruptDialogAllowedSequence) != window.Sequence)
-        {
-            LogInterruptDialogSuppressed("series_latch", window.Sequence, Volatile.Read(ref _interruptDialogAllowedSequence));
-            CompletePlcResetOrLogStale(window.Sequence);
-            return;
-        }
-        await TryShowInterruptDialogAsync(context.SerialNumber!, window.Sequence);
-        CompletePlcResetOrLogStale(window.Sequence);
-    }
-
-    private (bool WasTestRunning, string? SerialNumber) CaptureAndClearState()
-    {
-        var wasTestRunning = state.BoilerState.IsTestRunning;
-        var serialNumber = state.BoilerState.SerialNumber;
-
-        ClearStateOnReset();
-        infra.StatusReporter.ClearAllExceptScan(SequenceClearMode.OperationalReset);
-
-        return (wasTestRunning, serialNumber);
-    }
-
-    private bool ShouldShowInterruptDialog((bool WasTestRunning, string? SerialNumber) context)
-    {
-        return context.WasTestRunning
-            && context.SerialNumber != null
-            && infra.AppSettings.UseInterruptReason;
-    }
-
-    private async Task TryShowInterruptDialogAsync(string serialNumber, int resetSequence)
+    private async Task<InterruptFlowResult> TryShowInterruptDialogAsync(string serialNumber, int resetSequence, CancellationToken ct)
     {
         if (!TryAcquireDialogLock())
         {
             CancelActiveDialog();
-            return;
+            return InterruptFlowResult.Cancelled();
         }
-        var cts = new CancellationTokenSource();
+
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var oldCts = Interlocked.Exchange(ref _interruptDialogCts, cts);
         DisposeOldCts(oldCts);
         MarkInterruptDialogActive(resetSequence);
 
         try
         {
-            await ShowInterruptReasonDialogAsync(serialNumber, cts.Token);
+            return await ShowInterruptReasonDialogAsync(serialNumber, cts.Token);
         }
         finally
         {
@@ -268,7 +205,7 @@ public partial class PreExecutionCoordinator
         }
     }
 
-    private async Task ShowInterruptReasonDialogAsync(string serialNumber, CancellationToken ct)
+    private async Task<InterruptFlowResult> ShowInterruptReasonDialogAsync(string serialNumber, CancellationToken ct)
     {
         void HandleCancel() => CancelActiveDialog();
         coordinators.PlcResetCoordinator.OnForceStop += HandleCancel;
@@ -294,7 +231,7 @@ public partial class PreExecutionCoordinator
                 ct);
 
             LogInterruptResult(result);
-            HandleChangeoverAfterInterrupt(result);
+            return result;
         }
         finally
         {
@@ -314,6 +251,7 @@ public partial class PreExecutionCoordinator
     private void HandleSoftStop()
     {
         CancelActiveDialog();
+        CancelPostAskEndFlow();
         var resetSequence = BeginPlcReset();
         var isFirstSoftResetInSeries = Interlocked.CompareExchange(
             ref _interruptReasonUsedInCurrentResetSeries,
@@ -328,6 +266,7 @@ public partial class PreExecutionCoordinator
     private void HandleHardReset()
     {
         CancelActiveDialog();
+        CancelPostAskEndFlow();
         TryCompletePlcReset();
         // Атомарно читаем и сбрасываем - определяем источник
         var isPending = Interlocked.Exchange(ref coordinators.PlcResetCoordinator.PlcHardResetPending, 0);

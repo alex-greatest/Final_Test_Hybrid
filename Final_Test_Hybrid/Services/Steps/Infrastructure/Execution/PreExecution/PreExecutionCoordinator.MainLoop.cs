@@ -170,7 +170,7 @@ public partial class PreExecutionCoordinator
         switch (reason)
         {
             case CycleExitReason.TestCompleted: HandleTestCompletedExit(); break;
-            case CycleExitReason.SoftReset: HandleSoftResetExit(); break;
+            case CycleExitReason.SoftReset: break;
             case CycleExitReason.HardReset: HandleHardResetExit(); break;
             case CycleExitReason.RepeatRequested: HandleRepeatRequestedExit(); break;
             case CycleExitReason.NokRepeatRequested: HandleNokRepeatRequestedExit(); break;
@@ -178,6 +178,8 @@ public partial class PreExecutionCoordinator
             case CycleExitReason.PipelineCancelled:
                 // Ничего — состояние сохраняется для retry или следующей попытки
                 break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(reason), reason, null);
         }
     }
 

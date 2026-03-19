@@ -60,6 +60,29 @@ public partial class PreExecutionCoordinator
         return GetResetSequenceSnapshot();
     }
 
+    internal bool IsPostAskEndFlowActive()
+    {
+        return Volatile.Read(ref _postAskEndActive) == 1;
+    }
+
+    internal bool TryConsumePostAskEndScanModeDecision(out bool shouldTransitionToReady)
+    {
+        shouldTransitionToReady = false;
+        if (IsPostAskEndFlowActive())
+        {
+            return false;
+        }
+
+        var decision = Interlocked.Exchange(ref _postAskEndScanModeDecision, 0);
+        if (decision == 0)
+        {
+            return false;
+        }
+
+        shouldTransitionToReady = decision == 1;
+        return true;
+    }
+
     private void ArmChangeoverPendingForReset(int resetSequence, int defaultTrigger)
     {
         var startState = Interlocked.CompareExchange(ref _changeoverStartState, ChangeoverStartPending, ChangeoverStartNone);
@@ -197,7 +220,7 @@ public partial class PreExecutionCoordinator
 
     private void HandleChangeoverAfterInterrupt(InterruptFlowResult result)
     {
-        if (result.IsSuccess)
+        if (result.IsSuccess || result.IsCancelled)
         {
             MarkChangeoverReasonSaved();
         }

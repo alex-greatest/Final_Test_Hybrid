@@ -118,9 +118,9 @@ private void ClearStateOnReset()
 PreExecutionCoordinator:
 - ждёт AskEnd перед стартом нового цикла;
 - отменяет ожидание штрихкода при reset;
-- для PLC-reset пути продолжает цикл только после AskEnd.
+- после AskEnd запускает post-AskEnd decision flow: показывает `red_smile`, ждёт `Req_Repeat` или `AskEnd=false`, и только после финального решения завершает cleanup/reset-window.
 - для HardReset допускает fallback-очистку в `HandleHardResetExit`, если AskEnd путь не завершил cleanup.
-- stale `AskEnd` игнорируется в `ExecuteGridClearAsync()` при отсутствии окна или несовпадении `window.Sequence != currentSeq`.
+- stale `AskEnd` игнорируется при отсутствии окна или несовпадении `window.Sequence != currentSeq`.
 
 ### Таймауты reset-flow (конфигурируемые)
 
@@ -168,7 +168,10 @@ RunSingleCycleAsync:
 
 ## Диалог причины прерывания при SoftReset
 
-Если в момент soft reset был активный тест и включён `UseInterruptReason`, после `AskEnd` открывается диалог `Причина прерывания`.
+Если в момент soft reset был активный тест и включён `UseInterruptReason`, после `AskEnd` выполняется post-AskEnd decision flow:
+- показывается `red_smile`;
+- если PLC запросил `Req_Repeat`, PC отвечает `AskRepeat=true` и переводит цикл в существующий repeat path;
+- если repeat не выбран, открывается диалог `Причина прерывания`, а cleanup выполняется только после штатного завершения диалога.
 
 - На одну серию reset разрешён максимум один показ диалога.
 - Серийный latch ставится на первом `SoftReset` серии независимо от фактического показа диалога.
@@ -194,6 +197,17 @@ RunSingleCycleAsync:
   - при подписке `PreExecutionCoordinator` вызывает `TryConsumePendingAutoReadyRequest()` и, если нужно, выполняет catch-up (`AutoReadyReplayConsumed`).
 - Источник сигнала для этого пути — `AutoReadySubscription.OnFirstAutoReceived` (one-shot): влияние `AutoReady` на старт changeover ограничено первым запуском.
 - Единственный owner финального старта changeover в reset-сценариях — `PreExecutionCoordinator` (sequence-aware проверка).
+- Для PLC soft reset `AskEnd` больше не считается прямым триггером старта changeover:
+  - `AskEnd` только подтверждает PLC reset и запускает post-AskEnd decision flow;
+  - ранний `RecordAskEndSequence(...)` в момент `AskEnd` не используется;
+  - при `repeat` changeover не стартует;
+  - при полном cleanup changeover стартует из финального cleanup path, где AskEnd фиксируется уже как завершённая стадия для changeover.
+- `ScanModeController` различает исход post-AskEnd flow:
+  - `full cleanup` возвращает scan-ready состояние после завершения post-AskEnd ветки;
+  - `repeat` не должен поднимать scan timing/session, потому что следующий цикл уходит в существующий repeat path с `_skipNextScan`.
+- UI/message gating не должен опираться только на `PlcResetCoordinator.IsActive`:
+  - во время post-AskEnd окна `PlcResetCoordinator.IsActive` уже может быть `false`;
+  - для инженерного UI и системных сообщений reset считается активным, пока истинно `PlcResetCoordinator.IsActive || PreExecutionCoordinator.IsPostAskEndFlowActive()`.
 - Дополнительные sequence-aware диагностики:
   - `ChangeoverStartDeferredBySeq` — AskEnd текущего seq ещё не получен, старт отложен;
   - `ChangeoverStartRejectedAsStale` — pending/AskEnd относятся к старому seq;
@@ -288,6 +302,10 @@ private void TransitionToReadyInternal()
     _sessionManager.AcquireSession(HandleBarcodeScanned);
 }
 ```
+
+- Для PLC soft reset `OnResetCompleted` больше не означает немедленный возврат scanner-ready состояния.
+- Если `PreExecutionCoordinator` ещё держит активный post-AskEnd flow, `ScanModeController` откладывает `TransitionToReadyInternal()`.
+- Возврат scanner session, restart scan timing и catch-up активация выполняются только после завершения post-AskEnd ветки.
 
 ### Гарантии при reset
 

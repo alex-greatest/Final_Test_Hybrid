@@ -49,6 +49,9 @@ public partial class PreExecutionCoordinator(
     private CancellationTokenSource _resetCts = new();
     private int _resetSequence;
     private int _resetCleanupDone;
+    private CancellationTokenSource? _postAskEndCts;
+    private int _postAskEndActive;
+    private int _postAskEndScanModeDecision;
     private int _interruptReasonUsedInCurrentResetSeries;
     private int _interruptDialogAllowedSequence;
     private int _interruptReasonDialogSequence;
