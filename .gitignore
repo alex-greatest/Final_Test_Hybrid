@@ -12,6 +12,8 @@ node_modules/
 /.tmp_build_out/
 /artifacts/inspect-*.txt
 Final_Test_Hybrid/tools/db-maintenance/out/
+Final_Test_Hybrid.Tests/bin/
+Final_Test_Hybrid.Tests/obj/
 
 # Local inspection and crash artifacts
 /inspect*.txt

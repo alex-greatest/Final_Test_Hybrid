@@ -15,6 +15,15 @@
 - **THEN** cleanup не должен завершаться как normal full cleanup
 - **AND** ownership прерывания должен перейти в reset/HardReset path
 
+### Requirement: Post-AskEnd Fail-Safe Release
+Система MUST гарантированно отпускать post-AskEnd terminal owner даже при исключении в cleanup или dialog-path.
+
+#### Scenario: Exception after post-AskEnd activation
+- **WHEN** `HandleGridClear()` уже поднял `IsPostAskEndActive`
+- **AND** в decision flow или cleanup возникает исключение
+- **THEN** release terminal state не должен зависеть только от catch-path event-handler
+- **AND** координатор должен завершить flow через `finally` или fail-safe release-path
+
 ### Requirement: Safe Terminal Decision Reads
 Система MUST принимать terminal PLC-решения только по known значениям runtime-cache.
 

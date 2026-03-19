@@ -15,6 +15,7 @@
 @inject IOptions<ModbusDispatcherOptions> DispatcherOptions
 @inject AccessLevelManager AccessLevelManager
 @inject DiagnosticManualSessionState ManualSessionState
+@inject DiagnosticDispatcherOwnership DispatcherOwnership
 @implements IAsyncDisposable
 
 <div class="connection-test-container">
@@ -286,7 +287,7 @@
     private DiagnosticPingData? _pingData;
     private bool _disposed;
     private bool _manualSessionEntered;
-    private bool _startedByPanel;
+    private DiagnosticDispatcherLease? _dispatcherLease;
 
     // Read state
     private RegisterPreset? _selectedReadPreset = ReadPresets[0];
@@ -322,10 +323,20 @@
 
         SubscribeDispatcherEvents();
 
-        _startedByPanel = !Dispatcher.IsStarted;
-        if (_startedByPanel)
+        var dispatcherLease = DispatcherOwnership.AcquirePanelLease();
+        try
         {
-            await Dispatcher.StartAsync();
+            if (dispatcherLease.ShouldStartDispatcher)
+            {
+                await Dispatcher.StartAsync();
+            }
+
+            _dispatcherLease = dispatcherLease;
+        }
+        catch
+        {
+            dispatcherLease.Release();
+            throw;
         }
 
         UpdateStatus();
@@ -1345,7 +1356,9 @@
         ExitManualSession();
         UnsubscribeDispatcherEvents();
 
-        if (_startedByPanel)
+        var dispatcherLease = _dispatcherLease;
+        _dispatcherLease = null;
+        if (dispatcherLease?.Release().ShouldStopDispatcher == true)
         {
             await Dispatcher.StopAsync();
         }

@@ -2,6 +2,7 @@ using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
+using Final_Test_Hybrid.Services.Diagnostic.Services;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
@@ -17,6 +18,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
 /// </summary>
 public class CheckCommsStep(
     IModbusDispatcher dispatcher,
+    DiagnosticDispatcherOwnership dispatcherOwnership,
     AutoReadySubscription autoReady,
     ExecutionPhaseState phaseState,
     DualLogger<CheckCommsStep> logger) : ITestStep, INonSkippable
@@ -39,7 +41,7 @@ public class CheckCommsStep(
     {
         phaseState.SetPhase(ExecutionPhase.WaitingForDiagnosticConnection);
         _ = context.ColumnIndex;
-        var shouldStopDispatcher = dispatcher.IsStarted;
+        DiagnosticDispatcherLease? dispatcherLease = null;
 
         try
         {
@@ -49,10 +51,10 @@ public class CheckCommsStep(
                 return BuildNoConnectionResult();
             }
 
-            if (!dispatcher.IsStarted)
+            dispatcherLease = dispatcherOwnership.AcquireRuntimeLease();
+            if (dispatcherLease.ShouldStartDispatcher)
             {
                 await dispatcher.StartAsync(ct);
-                shouldStopDispatcher = true;
             }
 
             var pingData = await WaitForPingDataAsync(ct);
@@ -66,14 +68,15 @@ public class CheckCommsStep(
                 "Связь с котлом установлена. ModeKey: 0x{ModeKey:X8}, BoilerStatus: {Status}",
                 pingData.ModeKey, pingData.BoilerStatus);
 
-            shouldStopDispatcher = false;
+            dispatcherLease.PromoteToPersistentRuntimeOwnership();
+            dispatcherLease = null;
             return TestStepResult.Pass();
         }
         finally
         {
             try
             {
-                if (shouldStopDispatcher)
+                if (dispatcherLease?.Release().ShouldStopDispatcher == true)
                 {
                     await StopDispatcherSafelyAsync();
                 }
@@ -112,17 +115,19 @@ public class CheckCommsStep(
             await Task.Delay(TimeSpan.FromMilliseconds(PollIntervalMs), ct);
             waited += TimeSpan.FromMilliseconds(PollIntervalMs);
 
-            if ((waited - lastLogTime).TotalMilliseconds >= LogIntervalMs)
+            if ((waited - lastLogTime).TotalMilliseconds < LogIntervalMs)
             {
-                logger.LogDebug("Ожидание ping данных... {Elapsed:F0}с", waited.TotalSeconds);
-                lastLogTime = waited;
+                continue;
             }
+
+            logger.LogDebug("Ожидание ping данных... {Elapsed:F0}с", waited.TotalSeconds);
+            lastLogTime = waited;
         }
 
         return null;
     }
 
-    private TestStepResult BuildNoConnectionResult()
+    private static TestStepResult BuildNoConnectionResult()
     {
         return TestStepResult.Fail(
             "Нет связи с котлом",

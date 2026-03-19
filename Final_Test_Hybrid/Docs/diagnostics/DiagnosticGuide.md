@@ -675,7 +675,8 @@ public class MyService(RegisterWriter writer)
 
 #### Ownership shared dispatcher в `ConnectionTestPanel`
 
-- `ConnectionTestPanel` хранит `startedByPanel`: в `DisposeAsync()` панель не вызывает `StopAsync()`, если shared dispatcher был запущен не ею.
+- `ConnectionTestPanel` не хранит локальный snapshot `startedByPanel`. Вместо этого панель берёт `DiagnosticDispatcherLease`, а остановка shared dispatcher разрешается только последнему активному lease.
+- `CheckCommsStep` при успешном захвате связи переводит свой runtime-lease в sticky ownership до следующего `StopAsync()`, поэтому старая панель не может погасить dispatcher, который уже нужен runtime.
 - Ручные диагностические и инженерные экраны (`HandProgram`, `IoEditorDialog`, `AiCallCheck`, `PidRegulatorCheck`, `RtdCalCheck`) этим пакетом не блокируются и не меняют поведение во время runtime.
 
 #### Упаковка строки

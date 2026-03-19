@@ -16,7 +16,7 @@
 - Сузить ownership `AutoReady` в `ErrorCoordinator`: OFF не поднимает `AutoModeDisabled` в terminal window, ON резюмит только `AutoModeDisabled`.
 - Локально исправить `TagWaiter.WaitForFalseAsync`, не меняя `WaitGroup/WaitForAllTrue`.
 - Сохранить ownership shared `IModbusDispatcher` в `ConnectionTestPanel`.
-- Добавить unit-test проект и зафиксировать change trail в docs/impact/openspec.
+- Добавить unit-test проект для helper/runtime инвариантов, не заявляя полное orchestration-покрытие completion/post-AskEnd, и зафиксировать change trail в docs/impact/openspec.
 
 ## Impact
 

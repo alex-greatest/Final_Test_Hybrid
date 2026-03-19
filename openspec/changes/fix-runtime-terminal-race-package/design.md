@@ -36,6 +36,7 @@
 - Terminal ownership становится отдельным state-object'ом, значит его нужно обновлять строго в `try/finally` и cancel-path'ах.
 - Поведение manual screens во время runtime остаётся прежним; пакет это сознательно не пересматривает.
 - Test harness использует white-box/reflection для приватных helper-path'ов, чтобы не раздувать production API.
+- Автоматическое покрытие этого change-set остаётся helper/runtime-level; orchestration-сценарии completion/post-AskEnd не считаются доказанными только за счёт этих тестов.
 
 ## Migration Plan
 

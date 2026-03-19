@@ -18,6 +18,10 @@
   - cleanup выполняется только после штатного завершения диалога;
   - при отсутствии активного теста cleanup выполняется сразу.
 - Новый reset во время post-AskEnd flow отменяет предыдущую ветку, скрывает `red_smile` и закрывает активный диалог причины.
+- Post-AskEnd exception-path больше не держит cleanup/release только на catch-path event-handler:
+  - `HandleGridClear()` теперь передаёт работу в отдельный `Task`-wrapper;
+  - normal cleanup, repeat-path и fail-safe release отпускают terminal owner через `finally`;
+  - если cleanup сам падает, координатор всё равно снимает `IsPostAskEndActive` и не оставляет залипший terminal window.
 - Серийный latch окна причины переработан:
   - `Save` или `Cancel` завершают серию и запрещают повторный показ окна в этой серии;
   - принудительное закрытие диалога новым soft reset право на показ не расходует;
@@ -76,6 +80,10 @@
   - `TestCompletionCoordinator` владеет `IsCompletionActive`;
   - `PreExecutionCoordinator` владеет `IsPostAskEndActive`;
   - `ErrorCoordinator` использует `HasTerminalHandshake` как owner terminal window.
+- Для post-AskEnd exception-path добавлен отдельный fail-safe release:
+  - event-handler больше не является единственной точкой cleanup;
+  - `FinalizeResetCleanup()` и repeat-path отпускают terminal owner через `finally`;
+  - аварийный release скрывает UI и снимает terminal-state даже при повторном исключении в cleanup.
 - Для ownership interrupt-ов сужена граница `AutoReady`:
   - `AutoReady OFF` во время completion/post-AskEnd не поднимает `AutoModeDisabled`;
   - `AutoReady ON` резюмит только `CurrentInterrupt == AutoModeDisabled`;
@@ -86,11 +94,16 @@
   - fallback stop-reason теперь идёт через единый resolver перед `PipelineCancelled` / `SoftReset`.
 - `ConnectionTestPanel.DisposeAsync()` больше не гасит shared `IModbusDispatcher`, если панель его не стартовала.
 - Manual screens и write-path'ы (`HandProgram`, `IoEditorDialog`, `AiCallCheck`, `PidRegulatorCheck`, `RtdCalCheck`) этим пакетом не меняются и остаются доступными во время runtime.
-- Добавлен unit-test проект `Final_Test_Hybrid.Tests` с покрытием helper/runtime инвариантов:
+- Добавлен unit-test проект `Final_Test_Hybrid.Tests` с покрытием runtime инвариантов:
   - `OpcUaSubscription.TryGetValue`;
   - `TagWaiter.WaitForFalseAsync`;
-  - `RuntimeTerminalState`;
+  - completion decision-loop;
+  - post-AskEnd decision-loop;
+  - pre-start hardening `_pendingExitReason` / `_resetSignal`;
   - ownership `ErrorCoordinator`.
+- Автоматическое покрытие этого пакета всё ещё не доказывает полный orchestration-path:
+  - dialog/cleanup ветки `FinalizeResetCleanup` и post-AskEnd reason dialog остаются вне автодоказательства;
+  - пакет покрывает decision-loop и ownership/runtime contracts, но не полный UI-orchestration сценарий completion/post-AskEnd.
 - Для change trail создан `openspec/changes/fix-runtime-terminal-race-package/`.
 
 ## Затронутые файлы

@@ -32,6 +32,25 @@ public sealed class ErrorCoordinatorOwnershipTests
     }
 
     [Fact]
+    public async Task ConnectionLoss_DuringPostAskEnd_RaisesPlcConnectionLost()
+    {
+        var executed = new TaskCompletionSource<InterruptReason>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var context = CreateContext(
+        [
+            new InterruptBehaviorStub(InterruptReason.PlcConnectionLost, (_, _) => Task.CompletedTask, executed)
+        ]);
+
+        context.RuntimeTerminalState.SetPostAskEndActive(true);
+        context.ConnectionState.SetConnected(true, "test");
+        context.ConnectionState.SetConnected(false, "test");
+
+        var reason = await executed.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(InterruptReason.PlcConnectionLost, reason);
+        Assert.Equal(InterruptReason.PlcConnectionLost, context.Coordinator.CurrentInterrupt);
+    }
+
+    [Fact]
     public async Task AutoReadyOff_DuringTerminalHandshake_DoesNotRaiseAutoModeDisabled()
     {
         var executed = new TaskCompletionSource<InterruptReason>(TaskCreationOptions.RunContinuationsAsynchronously);

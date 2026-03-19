@@ -101,8 +101,14 @@ public partial class PreExecutionCoordinator
         _skipNextScan = true;
         Volatile.Write(ref _postAskEndScanModeDecision, 2);
 
-        CompletePlcResetOrLogStale(expectedSequence);
-        FinishPostAskEndFlow();
+        try
+        {
+            CompletePlcResetOrLogStale(expectedSequence);
+        }
+        finally
+        {
+            FinishPostAskEndFlow();
+        }
     }
 
     private async Task ShowInterruptReasonThenCleanupAsync(
@@ -133,36 +139,41 @@ public partial class PreExecutionCoordinator
         FinalizeResetCleanup(expectedSequence, result);
     }
 
-    private void FinalizeResetCleanup()
-    {
-        FinalizeResetCleanup(GetResetSequenceSnapshot());
-    }
-
     private void FinalizeResetCleanup(int expectedSequence, InterruptFlowResult? interruptResult = null)
     {
         coordinators.CompletionUiState.HideImage();
-        if (!TryRunResetCleanupOnce())
+        try
         {
-            CompletePlcResetOrLogStale(expectedSequence);
-            FinishPostAskEndFlow();
-            return;
+            if (!TryRunResetCleanupOnce())
+            {
+                return;
+            }
+
+            var changeoverMode = GetChangeoverResetMode();
+            ClearStateOnReset();
+            infra.StatusReporter.ClearAllExceptScan(SequenceClearMode.OperationalReset);
+
+            // Только здесь AskEnd становится завершённой стадией для changeover.
+            RecordAskEndSequence(expectedSequence);
+            HandleChangeoverAfterReset(changeoverMode);
+            if (interruptResult != null)
+            {
+                HandleChangeoverAfterInterrupt(interruptResult);
+            }
+
+            Volatile.Write(ref _postAskEndScanModeDecision, 1);
         }
-
-        var changeoverMode = GetChangeoverResetMode();
-        ClearStateOnReset();
-        infra.StatusReporter.ClearAllExceptScan(SequenceClearMode.OperationalReset);
-
-        // Только здесь AskEnd становится завершённой стадией для changeover.
-        RecordAskEndSequence(expectedSequence);
-        HandleChangeoverAfterReset(changeoverMode);
-        if (interruptResult != null)
+        finally
         {
-            HandleChangeoverAfterInterrupt(interruptResult);
+            try
+            {
+                CompletePlcResetOrLogStale(expectedSequence);
+            }
+            finally
+            {
+                FinishPostAskEndFlow();
+            }
         }
-
-        Volatile.Write(ref _postAskEndScanModeDecision, 1);
-        CompletePlcResetOrLogStale(expectedSequence);
-        FinishPostAskEndFlow();
     }
 
     private void StartPostAskEndFlow()
@@ -216,6 +227,20 @@ public partial class PreExecutionCoordinator
         Volatile.Write(ref _postAskEndActive, 0);
         _runtimeTerminalState.SetPostAskEndActive(false);
         OnStateChanged?.Invoke();
+    }
+
+    private void EnsurePostAskEndFlowReleased(int expectedSequence)
+    {
+        if (Volatile.Read(ref _postAskEndActive) == 0)
+        {
+            return;
+        }
+
+        infra.Logger.LogWarning(
+            "Post-AskEnd flow закрыт через fail-safe release: seq={ResetSequence}",
+            expectedSequence);
+        ResetInterruptState();
+        CancelPostAskEndFlow();
     }
 
     private void MarkInterruptDialogCompletedInCurrentSeries(InterruptFlowResult result)

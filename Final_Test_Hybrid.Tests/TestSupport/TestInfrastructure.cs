@@ -4,6 +4,8 @@ using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.UI;
 using Final_Test_Hybrid.Services.Errors;
+using Final_Test_Hybrid.Services.OpcUa.Connection;
+using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.Behaviors;
 using Final_Test_Hybrid.Settings.OpcUa;
@@ -182,6 +184,12 @@ internal static class TestInfrastructure
         return Assert.IsType<TField>(field.GetValue(instance));
     }
 
+    public static void SetPrivateField(object instance, string name, object? value)
+    {
+        var field = Assert.IsAssignableFrom<FieldInfo>(instance.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic));
+        field.SetValue(instance, value);
+    }
+
     public static object? InvokePrivate(object instance, string name, params object?[] args)
     {
         var method = Assert.IsAssignableFrom<MethodInfo>(instance.GetType().GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic));
@@ -196,5 +204,14 @@ internal static class TestInfrastructure
     public static ConcurrentDictionary<string, object?> GetSubscriptionValues(object subscription)
     {
         return GetPrivateField<ConcurrentDictionary<string, object?>>(subscription, "_values");
+    }
+
+    public static OpcUaSubscription CreateSubscription()
+    {
+        var connectionState = new OpcUaConnectionState(CreateLogger<OpcUaConnectionState>());
+        return new OpcUaSubscription(
+            connectionState,
+            CreateOpcUaOptions(),
+            CreateDualLogger<OpcUaSubscription>());
     }
 }
