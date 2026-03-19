@@ -5,6 +5,12 @@ Final_Test_Hybrid/nul
 # Dependencies
 node_modules/
 
+# Local IDE and tool state
+/.idea/
+/.vs/
+/.playwright-mcp/
+/_tmp_*
+
 # Build outputs
 /.codex-build/
 %TEMP%/build_test/

@@ -11,14 +11,23 @@
   - корневые `inspect*.txt`;
   - `*.stackdump`;
   - `*scratchpadfull-diff.txt`;
-  - весь `%TEMP%/`.
-- Из индекса удалены уже попавшие артефакты без удаления локальных файлов с диска:
+  - весь `%TEMP%/`;
+  - `/.idea/`;
+  - `/.vs/`;
+  - `/.playwright-mcp/`;
+  - корневые `/_tmp_*`.
 - Из индекса удалены уже попавшие артефакты:
   - `.codex-build/obj/*`;
   - корневые `inspect*.txt`;
   - `bash.exe.stackdump`;
   - `CUsersALEXAN~1AppDataLocalTempclaudeD--projects-Final-Test-Hybrid9e99d8f2-2af3-4513-b9b4-5284331b2d7escratchpadfull-diff.txt`;
-  - `%TEMP%/inspect-result-storage.txt`.
+  - `%TEMP%/inspect-result-storage.txt`;
+  - `.idea/.idea.Final_Test_Hybrid/.idea/*`;
+  - `.vs/Final_Test_Hybrid.slnx/*`;
+  - `.vs/ProjectEvaluation/*`;
+  - `.playwright-mcp/screenshot_analysis.png`;
+  - `_tmp_readsoft_parse.py`;
+  - `_tmp_readsoft_table.md`.
 - Из workspace дополнительно удалены локальные inspect-отчёты:
   - корневые `inspect*.txt` и `inspectcode*.txt`;
   - `artifacts/inspect*.txt`;
@@ -41,6 +50,8 @@
   - новые и существующие локальные артефакты попадают под ignore (`!!`).
 - `git check-ignore -v .codex-build/modbus-stabilization inspect-hint-modbus-stabilization.txt inspect-warning-modbus-stabilization.txt bash.exe.stackdump` — подтверждено, что ignore-правила срабатывают от корневого `.gitignore`.
 - `git clean -fX -- inspect*.txt inspectcode*.txt artifacts/inspect*.txt .tmp_build_out/inspect*.txt .tmp_build_out/inspectcode*.txt %TEMP%/inspect*.txt` — локальные inspect-артефакты удалены из workspace.
+- `git ls-files ".idea" ".vs" ".playwright-mcp" "_tmp_readsoft_parse.py" "_tmp_readsoft_table.md"` — подтверждено, что IDE/tool-state и временные readsoft-файлы были ошибочно tracked до cleanup.
+- `git check-ignore -v ".idea/dummy" ".vs/dummy" ".playwright-mcp/dummy" "_tmp_readsoft_parse.py" "_tmp_probe.txt"` — подтверждено, что новые ignore-правила матчят IDE/tool-state и корневые временные `_tmp_*`.
 - `dotnet build` / `dotnet format` / `jb inspectcode` не запускались: change-set не меняет runtime-код, stable behavior и source-of-truth guide; правка ограничена git hygiene.
 
 ## Инциденты
