@@ -119,6 +119,7 @@ PreExecutionCoordinator:
 - ждёт AskEnd перед стартом нового цикла;
 - отменяет ожидание штрихкода при reset;
 - после AskEnd запускает post-AskEnd decision flow: показывает `red_smile`, ждёт `Req_Repeat` или `AskEnd=false`, и только после финального решения завершает cleanup/reset-window.
+- защита post-AskEnd flow поднимается синхронно в `HandleGridClear()` до первого `await`, чтобы ранний `OnResetCompleted` не успел выполнить `ClearStateOnReset()` между `AskEnd` и post-AskEnd веткой.
 - для HardReset допускает fallback-очистку в `HandleHardResetExit`, если AskEnd путь не завершил cleanup.
 - stale `AskEnd` игнорируется при отсутствии окна или несовпадении `window.Sequence != currentSeq`.
 
@@ -306,6 +307,10 @@ private void TransitionToReadyInternal()
 - Для PLC soft reset `OnResetCompleted` больше не означает немедленный возврат scanner-ready состояния.
 - Если `PreExecutionCoordinator` ещё держит активный post-AskEnd flow, `ScanModeController` откладывает `TransitionToReadyInternal()`.
 - Возврат scanner session, restart scan timing и catch-up активация выполняются только после завершения post-AskEnd ветки.
+- `BoilerState.IsTestRunning` в repeat-сценариях сбрасывается только после финального PLC outcome:
+  - normal completion repeat -> в `HandleRepeatRequestedExit` / `HandleNokRepeatRequestedExit`;
+  - reset repeat -> в `StartRepeatAfterReset`;
+  - full cleanup reset -> через `ClearStateOnReset()` -> `BoilerState.Clear()`.
 
 ### Гарантии при reset
 

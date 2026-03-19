@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Final_Test_Hybrid.Services.SpringBoot.Operation.Interrupt;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 
@@ -81,9 +82,14 @@ public partial class PreExecutionCoordinator
 
     private async void HandleGridClear()
     {
+        if (!TryBeginPostAskEndFlow(out var window))
+        {
+            return;
+        }
+
         try
         {
-            await HandlePostAskEndDecisionAsync();
+            await HandlePostAskEndDecisionAsync(window);
         }
         catch (OperationCanceledException)
         {
@@ -95,6 +101,19 @@ public partial class PreExecutionCoordinator
             ResetInterruptState();
             FinalizeResetCleanup();
         }
+    }
+
+    private bool TryBeginPostAskEndFlow([NotNullWhen(true)] out ResetAskEndWindow? window)
+    {
+        if (!TryGetCurrentAskEndWindow(out window))
+        {
+            return false;
+        }
+
+        // Поднимаем guard синхронно до первого await, чтобы ранний
+        // OnResetCompleted не успел очистить состояние до post-AskEnd ветки.
+        StartPostAskEndFlow();
+        return true;
     }
 
     private void HandlePlcResetCompleted()

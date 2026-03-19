@@ -22,6 +22,12 @@
   - ранний restart scan timing/session откладывается, пока post-AskEnd flow активен;
   - возврат scanner-ready состояния выполняется catch-up после завершения post-AskEnd ветки;
   - catch-up теперь различает `full cleanup` и `repeat`, чтобы repeat не поднимал scan timing/session раньше `_skipNextScan`.
+- Для гонки `AskEnd -> OnResetCompleted` добавлен ранний guard в `HandleGridClear()`:
+  - post-AskEnd flow помечается активным синхронно до первого `await`;
+  - это блокирует ранний `HandlePlcResetCompleted()` и не даёт стереть `BoilerState`/barcode/context до repeat decision.
+- `BoilerState.IsTestRunning` в repeat-путях больше не считается завершённым раньше PLC outcome:
+  - normal repeat -> `SetTestRunning(false)` перенесён в `HandleRepeatRequestedExit` / `HandleNokRepeatRequestedExit`;
+  - repeat after reset -> `SetTestRunning(false)` выполняется в `StartRepeatAfterReset`.
 - Engineer/UI gating и `MessageService` больше не используют только `PlcResetCoordinator.IsActive` как признак активного reset:
   - во время post-AskEnd окна дополнительно учитывается `PreExecutionCoordinator.IsPostAskEndFlowActive()`.
 

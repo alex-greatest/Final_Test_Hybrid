@@ -51,12 +51,14 @@ public partial class PreExecutionCoordinator
 
     private void HandleRepeatRequestedExit()
     {
+        state.BoilerState.SetTestRunning(false);
         ClearForRepeat();
         _skipNextScan = true;
     }
 
     private void HandleNokRepeatRequestedExit()
     {
+        state.BoilerState.SetTestRunning(false);
         ClearForNokRepeat();
         _skipNextScan = true;
         _executeFullPreparation = true;

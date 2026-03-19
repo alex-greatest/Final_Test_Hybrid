@@ -6,18 +6,8 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution
 
 public partial class PreExecutionCoordinator
 {
-    private async Task HandlePostAskEndDecisionAsync()
+    private async Task HandlePostAskEndDecisionAsync(ResetAskEndWindow window)
     {
-        if (!TryGetCurrentAskEndWindow(out var window))
-        {
-            return;
-        }
-
-        // AskEnd больше не считается финалом PLC reset-сценария.
-        // Changeover и финальная разблокировка разрешаются только
-        // после завершения post-AskEnd ветки.
-        StartPostAskEndFlow();
-
         var wasTestRunning = state.BoilerState.IsTestRunning;
         var serialNumber = state.BoilerState.SerialNumber;
 
@@ -105,6 +95,8 @@ public partial class PreExecutionCoordinator
         StopChangeoverAndAllowRestart();
         ClearChangeoverPendingState();
 
+        // Предыдущий тест считается завершённым только после PLC outcome.
+        state.BoilerState.SetTestRunning(false);
         ClearForRepeat();
         _skipNextScan = true;
         Volatile.Write(ref _postAskEndScanModeDecision, 2);
