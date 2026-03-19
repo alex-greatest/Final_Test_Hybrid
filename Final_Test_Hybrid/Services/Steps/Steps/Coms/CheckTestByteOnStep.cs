@@ -68,9 +68,6 @@ public class CheckTestByteOnStep(
     {
         logger.LogInformation("Проверка режима Стенд котла");
 
-        // Задержка для применения режима ECU (после WriteTestByteOnStep или SetStandModeAsync)
-        await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
-
         var modbusAddress = (ushort)(ModeKeyAddressDoc - _settings.BaseAddressOffset);
         var readResult = await context.PacedDiagReader.ReadUInt32Async(modbusAddress, ct);
 

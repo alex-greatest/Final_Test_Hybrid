@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Main.PlcReset;
@@ -11,6 +12,7 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 
@@ -33,6 +35,7 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly PausableRegisterReader _pausableRegisterReader;
     private readonly PausableRegisterWriter _pausableRegisterWriter;
     private readonly StepStatusReporter _statusReporter;
+    private readonly TimeSpan _stepPacingWindow;
     private readonly Lock _stateLock = new();
     private readonly object _enqueueLock = new();
     private readonly AsyncManualResetEvent _mapGate = new(false);
@@ -78,7 +81,8 @@ public partial class TestExecutionCoordinator : IDisposable
         ExecutionFlowState flowState,
         PausableRegisterReader pausableRegisterReader,
         PausableRegisterWriter pausableRegisterWriter,
-        RangeSliderUiState rangeSliderUiState)
+        RangeSliderUiState rangeSliderUiState,
+        IOptions<DiagnosticSettings> diagnosticSettings)
     {
         _logger = logger;
         _testLogger = testLogger;
@@ -96,6 +100,7 @@ public partial class TestExecutionCoordinator : IDisposable
         _pausableRegisterReader = pausableRegisterReader;
         _pausableRegisterWriter = pausableRegisterWriter;
         _statusReporter = statusReporter;
+        _stepPacingWindow = TimeSpan.FromMilliseconds(Math.Max(0, diagnosticSettings.Value.WriteVerifyDelayMs));
         _onExecutorStateChanged = HandleExecutorStateChanged;
         _executors = CreateAllExecutors(pausableOpcUaTagService, testLogger, loggerFactory, statusReporter, recipeProvider, rangeSliderUiState);
         SubscribeToExecutorEvents();
@@ -149,7 +154,7 @@ public partial class TestExecutionCoordinator : IDisposable
             .ToArray();
     }
 
-    private static ColumnExecutor CreateExecutor(
+    private ColumnExecutor CreateExecutor(
         int index,
         PausableOpcUaTagService opcUa,
         ITestStepLogger testLogger,
@@ -167,7 +172,7 @@ public partial class TestExecutionCoordinator : IDisposable
         Func<(int MapIndex, Guid RunId)> getMapSnapshot)
     {
         var context = new TestStepContext(
-            index, opcUa, loggerFactory.CreateLogger($"Column{index}"), recipeProvider, pauseToken,
+            index, _stepPacingWindow, opcUa, loggerFactory.CreateLogger($"Column{index}"), recipeProvider, pauseToken,
             pausableRegisterReader, pausableRegisterWriter, pausableTagWaiter, rangeSliderUiState);
         var executorLogger = loggerFactory.CreateLogger<ColumnExecutor>();
         var dualLogger = new DualLogger<ColumnExecutor>(executorLogger, testLogger);

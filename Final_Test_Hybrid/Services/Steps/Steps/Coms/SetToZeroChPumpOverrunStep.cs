@@ -35,7 +35,7 @@ public class SetToZeroChPumpOverrunStep(
             ZeroValue, RegisterChPumpOverrun);
 
         var modbusAddress = (ushort)(RegisterChPumpOverrun - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteUInt16Async(modbusAddress, ZeroValue, ct);
+        var result = await context.PacedDiagWriter.WriteUInt16Async(modbusAddress, ZeroValue, ct);
 
         if (!result.Success)
         {

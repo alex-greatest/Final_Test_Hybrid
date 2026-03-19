@@ -108,8 +108,10 @@ public interface ITestStep
 context.ColumnIndex       // Индекс столбца (0-3)
 context.OpcUa             // PausableOpcUaTagService (паузится при Auto OFF)
 context.TagWaiter         // PausableTagWaiter
-context.DiagReader        // PausableRegisterReader (Modbus)
-context.DiagWriter        // PausableRegisterWriter (Modbus)
+context.DiagReader        // Базовый PausableRegisterReader (не использовать в обычных test steps)
+context.DiagWriter        // Базовый PausableRegisterWriter (не использовать в обычных test steps)
+context.PacedDiagReader   // Обязательный путь для step-level Modbus чтения
+context.PacedDiagWriter   // Обязательный путь для step-level Modbus записи
 context.RecipeProvider    // Доступ к рецептам
 context.Variables         // Локальные переменные шага
 context.PauseToken        // Токен паузы
@@ -122,6 +124,13 @@ context.ReportProgress("Инициализация...");
 ```
 
 ### 2.2.1 Промежуточные результаты (ReportProgress)
+
+### 2.2.2 Контракт Modbus для test steps
+
+- Для обычных step-level Modbus операций использовать `context.PacedDiagReader` / `context.PacedDiagWriter`.
+- `context.DiagReader` / `context.DiagWriter` считать базовым/совместимостным путём и не использовать в новых test steps без отдельного обоснования.
+- Ручные `DelayAsync(...WriteVerifyDelayMs...)` между соседними Modbus `read/write` в test steps не использовать.
+- Global pacing получает тот же `CancellationToken`, умеет отменяться и pause-aware: ожидание не продолжается во время `Auto OFF`.
 
 Шаги могут сообщать о прогрессе выполнения через `context.ReportProgress()`. Сообщение отображается в колонке "Результаты" пока шаг выполняется.
 
@@ -320,12 +329,13 @@ var value = await context.OpcUa.ReadAsync<float>(ValueTag, ct);
 | Сервис | Использование | Паузится |
 |--------|---------------|----------|
 | `RegisterReader/Writer` | Системные операции | Нет |
-| `PausableRegisterReader/Writer` | Test steps (`context.DiagReader/Writer`) | Да |
+| `PausableRegisterReader/Writer` | Базовый слой test-step Modbus | Да |
+| `PacedRegisterReader/Writer` | Обычные test-step операции (`context.PacedDiagReader/Writer`) | Да |
 
 ```csharp
 // Чтение и запись в тестовом шаге
-var result = await context.DiagReader.ReadUInt32Async(modbusAddress, ct);
-var writeResult = await context.DiagWriter.WriteUInt32Async(address, value, ct);
+var result = await context.PacedDiagReader.ReadUInt32Async(modbusAddress, ct);
+var writeResult = await context.PacedDiagWriter.WriteUInt32Async(address, value, ct);
 ```
 
 ---
@@ -334,7 +344,8 @@ var writeResult = await context.DiagWriter.WriteUInt32Async(address, value, ct);
 
 ### Правило
 
-**Start тег сбрасывается ТОЛЬКО при успехе (End от PLC).** При ошибке, retry или skip — координатор сбросит Start через `ResetBlockStartAsync`.
+**Start тег сбрасывается ТОЛЬКО при успехе (End от PLC).** При ошибке шаг возвращает `Fail(...)` без записи `Start=false`. Координатор сбрасывает `Start` только в skip-ветке.
+Перед запуском PLC-шага и перед retry общий execution/pre-execution path не ждёт `Block.End=false`; `Start=true` пишется сразу.
 
 ```csharp
 // ✅ ПРАВИЛЬНО — сброс только при успехе
@@ -361,16 +372,18 @@ public async Task<TestStepResult> ExecuteAsync(...)
 | Сценарий | Кто сбрасывает |
 |----------|----------------|
 | **Успех (End)** | Шаг в `HandleSuccessAsync` |
-| **Ошибка (Error)** | Координатор `ResetBlockStartAsync` при Skip |
-| **Retry** | Координатор перед повторным выполнением |
-| **Cancel** | Координатор |
+| **Ошибка (Error)** | Никто: шаг завершает `Fail(...)` без записи `Start=false` |
+| **Retry** | Никто: шаг перезапускается без предварительного `Start=false` от PC |
+| **Skip** | Координатор `ResetBlockStartAsync` |
+| **Cancel** | Отдельного per-step сброса `Start` нет |
 
 ### Почему так
 
 - При ошибке шаг возвращает `TestStepResult.Fail()` и завершается
 - Координатор показывает диалог Retry/Skip
 - При Skip — координатор вызывает `ResetBlockStartAsync(step)` через `PlcBlockTagHelper.GetStartTag()`
-- При Retry — шаг перезапускается, Start запишется заново
+- При Retry — шаг перезапускается, `Start=true` запишется заново без промежуточного `Start=false` от PC
+- Отдельного pre-start guard по `Block.End=false` нет ни для первого запуска, ни для retry
 
 **См. также:** `TestExecutionCoordinator.ErrorResolution.cs` — `ProcessSkipAsync`
 

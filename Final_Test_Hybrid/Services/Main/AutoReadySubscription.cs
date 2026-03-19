@@ -2,9 +2,14 @@ namespace Final_Test_Hybrid.Services.Main;
 
 using Common;
 using Models.Plc.Tags;
+using Microsoft.Extensions.Logging;
+using OpcUa.Connection;
 using OpcUa.Subscription;
 
-public class AutoReadySubscription(OpcUaSubscription opcUaSubscription) : INotifyStateChanged
+public class AutoReadySubscription(
+    OpcUaSubscription opcUaSubscription,
+    OpcUaConnectionState connectionState,
+    ILogger<AutoReadySubscription> logger) : INotifyStateChanged
 {
     private readonly Lock _subscriptionLock = new();
     private Func<object?, Task>? _callback;
@@ -67,15 +72,22 @@ public class AutoReadySubscription(OpcUaSubscription opcUaSubscription) : INotif
     private Task OnValueChanged(object? value)
     {
         var isReady = value is true;
+        var wasReady = _isReady;
         var shouldFireFirstAuto = isReady && !_hasEverBeenReady;
         _isReady = isReady;
+
+        if (wasReady != isReady)
+        {
+            LogAutoReadyTransition(isReady, value);
+        }
+
         if (shouldFireFirstAuto)
         {
             _hasEverBeenReady = true;
-            OnFirstAutoReceived?.Invoke();
+            InvokeActionSafe(OnFirstAutoReceived, nameof(OnFirstAutoReceived));
         }
 
-        OnStateChanged?.Invoke();
+        InvokeActionSafe(OnStateChanged, nameof(OnStateChanged));
         return Task.CompletedTask;
     }
 
@@ -86,5 +98,26 @@ public class AutoReadySubscription(OpcUaSubscription opcUaSubscription) : INotif
     public void ResetFirstAutoFlag()
     {
         _hasEverBeenReady = false;
+    }
+
+    private void LogAutoReadyTransition(bool isReady, object? value)
+    {
+        logger.LogInformation(
+            "AutoReady {State}. OpcConnected={OpcConnected}. RawValue={RawValue}",
+            isReady ? "ON" : "OFF",
+            connectionState.IsConnected,
+            value);
+    }
+
+    private void InvokeActionSafe(Action? handler, string eventName)
+    {
+        try
+        {
+            handler?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка в обработчике {EventName}", eventName);
+        }
     }
 }

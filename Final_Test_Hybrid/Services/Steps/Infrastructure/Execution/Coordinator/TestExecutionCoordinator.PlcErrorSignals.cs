@@ -4,7 +4,6 @@ using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Plc;
 using Microsoft.Extensions.Logging;
-
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 
 public partial class TestExecutionCoordinator
@@ -143,24 +142,6 @@ public partial class TestExecutionCoordinator
         }
         _logger.LogDebug("Сброс Start для {BlockPath}", plcStep.PlcBlockPath);
         await _plcService.WriteAsync(startTag, false, ct);
-    }
-
-    private async Task<string?> TryResetBlockStartBeforeRetryAsync(ITestStep? step, CancellationToken ct)
-    {
-        if (step is not IHasPlcBlockPath plcStep)
-        {
-            return null;
-        }
-
-        var startTag = PlcBlockTagHelper.GetStartTag(plcStep);
-        if (startTag == null)
-        {
-            return null;
-        }
-
-        _logger.LogDebug("Сброс Start перед retry для {BlockPath}", plcStep.PlcBlockPath);
-        var result = await _plcService.WriteAsync(startTag, false, ct);
-        return result.Success ? null : result.Error ?? "неизвестная ошибка";
     }
 
     /// <summary>

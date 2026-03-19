@@ -35,7 +35,7 @@ public class FactoryResetStep(
             ResetValue, RegisterFactoryReset);
 
         var modbusAddress = (ushort)(RegisterFactoryReset - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteUInt16Async(modbusAddress, ResetValue, ct);
+        var result = await context.PacedDiagWriter.WriteUInt16Async(modbusAddress, ResetValue, ct);
 
         if (!result.Success)
         {

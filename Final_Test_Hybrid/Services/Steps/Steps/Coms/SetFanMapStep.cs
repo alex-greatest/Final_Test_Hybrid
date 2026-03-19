@@ -35,7 +35,7 @@ public class SetFanMapStep(
             FanStageValue, RegisterFanMap);
 
         var modbusAddress = (ushort)(RegisterFanMap - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteUInt16Async(modbusAddress, FanStageValue, ct);
+        var result = await context.PacedDiagWriter.WriteUInt16Async(modbusAddress, FanStageValue, ct);
 
         if (!result.Success)
         {

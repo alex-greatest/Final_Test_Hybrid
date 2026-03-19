@@ -40,9 +40,6 @@ public class ChStartStHeatoutStep(
             return TestStepResult.Fail($"Ошибка записи режима в регистр {RegisterOperationMode}. {writeResult.Error}");
         }
 
-        context.ReportProgress("Ожидание переключения режима...");
-        await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
-
         return await VerifyOperationModeAsync(context, ct);
     }
 
@@ -52,7 +49,7 @@ public class ChStartStHeatoutStep(
     private async Task<WriteOperationResult> WriteOperationModeAsync(TestStepContext context, CancellationToken ct)
     {
         var address = (ushort)(RegisterOperationMode - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteUInt16Async(address, MaxHeatingMode, ct);
+        var result = await context.PacedDiagWriter.WriteUInt16Async(address, MaxHeatingMode, ct);
 
         if (!result.Success)
         {
@@ -72,7 +69,7 @@ public class ChStartStHeatoutStep(
     private async Task<TestStepResult> VerifyOperationModeAsync(TestStepContext context, CancellationToken ct)
     {
         var address = (ushort)(RegisterOperationMode - _settings.BaseAddressOffset);
-        var readResult = await context.DiagReader.ReadUInt16Async(address, ct);
+        var readResult = await context.PacedDiagReader.ReadUInt16Async(address, ct);
 
         if (!readResult.Success)
         {

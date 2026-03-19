@@ -2,7 +2,6 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Access;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Options;
 
@@ -72,7 +71,6 @@ public class ChStartMinHeatoutStep(
             return TestStepResult.Fail(message);
         }
 
-        await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
         return await StartMinHeatoutAsync(context, ct);
     }
 
@@ -125,7 +123,6 @@ public class ChStartMinHeatoutStep(
             return await FailWithFaultAsync(context, message, ct);
         }
 
-        await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
         var modeReadResult = await context.PacedDiagReader.ReadUInt16Async(modeAddress, ct);
 
         if (!modeReadResult.Success)

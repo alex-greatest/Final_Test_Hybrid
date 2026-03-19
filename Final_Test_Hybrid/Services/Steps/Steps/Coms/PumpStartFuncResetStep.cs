@@ -65,8 +65,6 @@ public class PumpStartFuncResetStep(
             return CreateStandModeError(setResult);
         }
 
-        await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
-
         return await ResetPumpStartFuncAsync(context, ct);
     }
 
@@ -93,8 +91,6 @@ public class PumpStartFuncResetStep(
             context.Variables[HadErrorKey] = true;
             return CreateWriteError(writeResult);
         }
-
-        await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
 
         var readResult = await context.PacedDiagReader.ReadUInt16Async(modbusAddress, ct);
         if (!readResult.Success)

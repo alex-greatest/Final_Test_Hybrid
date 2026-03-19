@@ -72,7 +72,6 @@ public class ChStartMaxHeatoutStep(
             return TestStepResult.Fail(message);
         }
 
-        await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
         return await StartMaxHeatoutAsync(context, ct);
     }
 
@@ -125,7 +124,6 @@ public class ChStartMaxHeatoutStep(
             return await FailWithFaultAsync(context, message, ct);
         }
 
-        await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
         var modeReadResult = await context.PacedDiagReader.ReadUInt16Async(modeAddress, ct);
 
         if (!modeReadResult.Success)

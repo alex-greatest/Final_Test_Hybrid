@@ -57,8 +57,6 @@ public class SetDhwTankModeStep(
             return CreateStandModeError(setResult);
         }
 
-        await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
-
         return await SetTankModeAsync(context, ct);
     }
 
@@ -77,8 +75,6 @@ public class SetDhwTankModeStep(
             context.Variables[HadErrorKey] = true;
             return CreateWriteError(writeResult);
         }
-
-        await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
 
         var readResult = await context.PacedDiagReader.ReadUInt16Async(modbusAddress, ct);
         if (!readResult.Success)

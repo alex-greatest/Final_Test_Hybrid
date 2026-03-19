@@ -9,12 +9,12 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
 public class TestStepContext
 {
-    private static readonly TimeSpan StepPacingWindow = TimeSpan.FromMilliseconds(150);
     private Action<string>? _progressCallback;
-    private readonly TestStepModbusPacing _modbusPacing = new(StepPacingWindow);
+    private readonly TestStepModbusPacing _modbusPacing;
 
     public TestStepContext(
         int columnIndex,
+        TimeSpan stepPacingWindow,
         PausableOpcUaTagService opcUa,
         ILogger logger,
         IRecipeProvider recipeProvider,
@@ -29,6 +29,7 @@ public class TestStepContext
         Logger = logger;
         RecipeProvider = recipeProvider;
         PauseToken = pauseToken;
+        _modbusPacing = new TestStepModbusPacing(stepPacingWindow, pauseToken);
         DiagReader = diagReader;
         DiagWriter = diagWriter;
         TagWaiter = tagWaiter;

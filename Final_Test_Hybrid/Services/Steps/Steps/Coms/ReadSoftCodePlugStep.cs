@@ -145,10 +145,6 @@ public partial class ReadSoftCodePlugStep(
             return validationResult;
         }
 
-        // Задержка перед чтением для гарантии обновления данных в ЭБУ
-        logger.LogDebug("Ожидание {Delay} мс перед чтением параметров", _settings.WriteVerifyDelayMs);
-        await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
-
         foreach (var action in Actions)
         {
             var result = await ExecuteActionAsync(action, context, ct);

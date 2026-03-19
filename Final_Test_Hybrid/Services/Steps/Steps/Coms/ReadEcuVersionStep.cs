@@ -110,7 +110,7 @@ public class ReadEcuVersionStep(
         TestStepContext context, CancellationToken ct)
     {
         var address = (ushort)(RegisterMajorVersion - _settings.BaseAddressOffset);
-        var result = await context.DiagReader.ReadUInt16Async(address, ct);
+        var result = await context.PacedDiagReader.ReadUInt16Async(address, ct);
 
         if (!result.Success)
         {
@@ -129,7 +129,7 @@ public class ReadEcuVersionStep(
         TestStepContext context, CancellationToken ct)
     {
         var address = (ushort)(RegisterMinorVersion - _settings.BaseAddressOffset);
-        var result = await context.DiagReader.ReadUInt16Async(address, ct);
+        var result = await context.PacedDiagReader.ReadUInt16Async(address, ct);
 
         if (!result.Success)
         {

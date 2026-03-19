@@ -2,22 +2,26 @@ using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Errors;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Components.Errors;
 
 public partial class FloatingErrorBadgeHost : ComponentBase, IAsyncDisposable
 {
+    private const int MaxBlinkRestartAttempts = 5;
     private const string BadgeElementId = "floating-error-badge";
     private const string PanelElementId = "floating-active-errors-window";
 
     [Inject] private IErrorService ErrorService { get; set; } = null!;
     [Inject] private AppSettingsService AppSettingsService { get; set; } = null!;
     [Inject] private IJSRuntime JsRuntime { get; set; } = null!;
+    [Inject] private ILogger<FloatingErrorBadgeHost> Logger { get; set; } = null!;
 
     private bool _disposed;
     private bool _isPanelOpen;
     private bool _pendingBlinkRestart;
     private bool _wasBadgeVisible;
+    private int _blinkRestartAttemptCount;
     private int _resettableErrorsCount;
 
     private bool ShouldShowBadge => AppSettingsService.UseFloatingErrorBadge && _resettableErrorsCount > 0;
@@ -43,8 +47,22 @@ public partial class FloatingErrorBadgeHost : ComponentBase, IAsyncDisposable
             return;
         }
 
-        _pendingBlinkRestart = false;
-        await JsRuntime.InvokeVoidAsync("floatingPanel.restartAnimation", BadgeElementId);
+        if (_blinkRestartAttemptCount >= MaxBlinkRestartAttempts)
+        {
+            _pendingBlinkRestart = false;
+            return;
+        }
+
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("floatingPanel.restartAnimation", BadgeElementId);
+            _pendingBlinkRestart = false;
+            _blinkRestartAttemptCount = 0;
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+            await RetryBlinkRestartAsync(ex);
+        }
     }
 
     private void OnErrorsChanged()
@@ -68,13 +86,40 @@ public partial class FloatingErrorBadgeHost : ComponentBase, IAsyncDisposable
         if (!_wasBadgeVisible && shouldShowBadge)
         {
             _pendingBlinkRestart = true;
+            _blinkRestartAttemptCount = 0;
         }
 
         _wasBadgeVisible = shouldShowBadge;
+        if (!shouldShowBadge)
+        {
+            _pendingBlinkRestart = false;
+            _blinkRestartAttemptCount = 0;
+        }
+
         if (_resettableErrorsCount == 0)
         {
             _isPanelOpen = false;
         }
+    }
+
+    private async Task RetryBlinkRestartAsync(Exception ex)
+    {
+        _blinkRestartAttemptCount++;
+        if (_blinkRestartAttemptCount >= MaxBlinkRestartAttempts || !ShouldShowBadge || _disposed)
+        {
+            _pendingBlinkRestart = false;
+            Logger.LogWarning(ex,
+                "Не удалось перезапустить мигание floating error badge после {AttemptCount} попыток",
+                _blinkRestartAttemptCount);
+            return;
+        }
+
+        Logger.LogDebug(ex,
+            "Повторный запуск мигания floating error badge: попытка {AttemptCount} из {MaxAttempts}",
+            _blinkRestartAttemptCount,
+            MaxBlinkRestartAttempts);
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task TogglePanel()

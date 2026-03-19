@@ -14,7 +14,7 @@
                               ┌─────────────────────────────────────────────┐
                               │  PausableRegisterReader/Writer              │
                               │  + PacedRegisterReader/Writer               │
-                              │  (пауза + opt-in pacing для Coms/*)         │
+                              │  (пауза + pacing для test-step Modbus IO)   │
                               └──────────────┬──────────────────────────────┘
                                              │
               ┌──────────────────────────────┼──────────────────────────────┐
@@ -93,7 +93,7 @@ Services/Diagnostic/Protocol/CommandQueue/
 - `IModbusClient` — клиент для чтения/записи регистров
 - `RegisterReader` / `RegisterWriter` — высокоуровневые операции (системные, НЕ паузятся)
 - `PausableRegisterReader` / `PausableRegisterWriter` — базовые операции для тестовых шагов (паузятся)
-- `PacedRegisterReader` / `PacedRegisterWriter` — opt-in pacing для Modbus-heavy `Coms/*` шагов через `TestStepContext`
+- `PacedRegisterReader` / `PacedRegisterWriter` — pacing для step-level Modbus операций в `ITestStep` через `TestStepContext`
 - `PollingService` / `PollingTask` — периодический опрос регистров
 - `PingCommand` — keep-alive команда, читает ModeKey + BoilerStatus
 
@@ -537,7 +537,7 @@ public class DiagnosticReadStep : ITestStep
 {
     public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
     {
-        // Для Modbus-heavy шага используется pacing + pause-aware wrapper
+        // Для test-step Modbus используем paced wrapper
         var result = await context.PacedDiagReader.ReadUInt16Async(1005, ct);
 
         if (!result.Success)
@@ -558,33 +558,32 @@ public class DiagnosticReadStep : ITestStep
 TestStep вызывает context.PacedDiagReader.ReadUInt16Async(address, ct)
                             │
                             ▼
-        ┌─────────────────────────────────────┐
-        │ await pauseToken.WaitWhilePausedAsync(ct) │  ← Блокируется при Auto OFF
-        └─────────────────────────────────────┘
+        ┌─────────────────────────────────────────────────────────────┐
+        │ await pacing.WaitBeforeOperationAsync(ct)                  │
+        │  └─ pause-aware countdown: pauseToken + CancellationToken  │
+        └─────────────────────────────────────────────────────────────┘
                             │
                             ▼
         ┌─────────────────────────────────────┐
-        │ await pacing.WaitBeforeOperationAsync(ct) │  ← Только для opt-in paced wrappers
-        └─────────────────────────────────────┘
-                            │
-                            ▼ (только после Resume/окна pacing)
-        ┌─────────────────────────────────────┐
-        │ await inner.ReadUInt16Async(address, ct)  │  ← Реальное чтение
+        │ await inner.ReadUInt16Async(address, ct) │
+        │  └─ PausableRegisterReader ещё раз проверяет pauseToken    │
         └─────────────────────────────────────┘
 ```
 
 | Момент паузы | Поведение |
 |--------------|-----------|
 | ДО вызова `ReadUInt16Async` | Следующий вызов заблокируется |
-| ВО ВРЕМЯ `WaitWhilePausedAsync` | Ждёт Resume, потом читает |
-| ПОСЛЕ `WaitWhilePausedAsync` (в Modbus) | Операция завершится (по дизайну) |
+| ВО ВРЕМЯ pacing-delay | countdown ставится на паузу до `AutoReady=true` |
+| ПОСЛЕ pacing-delay, перед IO | `PausableRegisterReader/Writer` снова проверяет pauseToken |
+| ПОСЛЕ старта реального Modbus IO | Операция завершится по дизайну |
 
 Контракт pacing:
-- pacing применяется только через `context.PacedDiagReader` / `context.PacedDiagWriter`;
-- окно pacing: `150 мс`;
+- pacing применяется через `context.PacedDiagReader` / `context.PacedDiagWriter` и обязателен для обычного step-level Modbus IO;
+- окно pacing берётся из `Diagnostic:WriteVerifyDelayMs`;
 - первая paced-операция идёт без искусственной паузы;
 - каждая следующая ждёт только остаток окна;
-- ожидание всегда отменяемо через тот же `CancellationToken`.
+- ручные `DelayAsync(...WriteVerifyDelayMs...)` между соседними step-level Modbus операциями не использовать;
+- ожидание всегда отменяемо через тот же `CancellationToken` и не тикает во время `Auto OFF`.
 
 ## Чтение регистров
 

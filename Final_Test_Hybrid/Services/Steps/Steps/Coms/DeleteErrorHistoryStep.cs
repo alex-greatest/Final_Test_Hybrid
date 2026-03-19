@@ -35,7 +35,7 @@ public class DeleteErrorHistoryStep(
             ClearValue, RegisterErrorHistoryClear);
 
         var modbusAddress = (ushort)(RegisterErrorHistoryClear - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteUInt16Async(modbusAddress, ClearValue, ct);
+        var result = await context.PacedDiagWriter.WriteUInt16Async(modbusAddress, ClearValue, ct);
 
         if (!result.Success)
         {

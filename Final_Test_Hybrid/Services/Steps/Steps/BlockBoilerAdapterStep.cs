@@ -16,7 +16,6 @@ public class BlockBoilerAdapterStep(
     private const string StartTag = "ns=3;s=\"DB_VI\".\"Block_Boiler_Adapter\".\"Start\"";
     private const string EndTag = "ns=3;s=\"DB_VI\".\"Block_Boiler_Adapter\".\"End\"";
     private const string ErrorTag = "ns=3;s=\"DB_VI\".\"Block_Boiler_Adapter\".\"Error\"";
-    private static readonly TimeSpan EndResetTimeout = TimeSpan.FromSeconds(5);
 
     public string Id => "block-boiler-adapter";
     public string Name => "Block boiler adapter";
@@ -33,28 +32,10 @@ public class BlockBoilerAdapterStep(
     {
         phaseState.SetPhase(ExecutionPhase.WaitingForAdapter);
         logger.LogInformation("Запуск блокировки адаптера");
-        var endResetResult = await WaitForEndResetAsync(ct);
-        if (endResetResult != null)
-        {
-            return endResetResult;
-        }
         var writeResult = await context.OpcUa.WriteAsync(StartTag, true, ct);
         return writeResult.Error != null
             ? CreateWriteError(writeResult.Error)
             : await WaitForCompletionAsync(context, ct);
-    }
-
-    private async Task<PreExecutionResult?> WaitForEndResetAsync(CancellationToken ct)
-    {
-        try
-        {
-            await tagWaiter.WaitForFalseAsync(EndTag, EndResetTimeout, ct);
-            return null;
-        }
-        catch (TimeoutException)
-        {
-            return PreExecutionResult.FailRetryable("PLC не сбросил End", canSkip: false, userMessage: "PLC не сбросил End");
-        }
     }
 
     private async Task<PreExecutionResult> WaitForCompletionAsync(PreExecutionContext context, CancellationToken ct)

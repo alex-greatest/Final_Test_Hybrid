@@ -1,6 +1,5 @@
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
 namespace Final_Test_Hybrid.Services.Steps.Steps.Gas;
@@ -9,7 +8,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Gas;
 /// Тестовый шаг настройки установочного давления газа на входе.
 /// </summary>
 public class SetRequiredPressureStep(
-    DualLogger<SetRequiredPressureStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
+    DualLogger<SetRequiredPressureStep> logger) : IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.Gas.Set_Required_Pressure";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"Gas\".\"Set_Required_Pressure\".\"Start\"";
@@ -63,7 +62,7 @@ public class SetRequiredPressureStep(
     }
 
     /// <summary>
-    /// Обрабатывает завершение операции: чтение показаний датчиков и сброс Start.
+    /// Обрабатывает завершение операции: чтение показаний датчиков и возврат результата.
     /// </summary>
     private async Task<TestStepResult> HandleCompletionAsync(TestStepContext context, bool isSuccess, CancellationToken ct)
     {
@@ -79,17 +78,17 @@ public class SetRequiredPressureStep(
             return TestStepResult.Fail($"Ошибка чтения Gas_Pa: {gasPaError}");
         }
 
-        var resetResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
-        if (resetResult.Error != null)
-        {
-            return TestStepResult.Fail($"Ошибка сброса Start: {resetResult.Error}");
-        }
-
         logger.LogInformation("Gas_PAG: {GasPag:F3}, Gas_Pa: {GasPa:F3}, статус: {Status}",
             gasPag, gasPa, isSuccess ? "OK" : "NOK");
 
         if (isSuccess)
         {
+            var resetResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
+            if (resetResult.Error != null)
+            {
+                return TestStepResult.Fail($"Ошибка сброса Start: {resetResult.Error}");
+            }
+
             return TestStepResult.Pass($"PAG: {gasPag:F3}, Pa: {gasPa:F3}");
         }
 

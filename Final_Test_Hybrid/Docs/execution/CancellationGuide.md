@@ -217,7 +217,7 @@ if (step == null) return;
 
 **Подробно:** [StepsGuide.md](StepsGuide.md#часть-55-паттерн-сброса-start-тега)
 
-При ошибке/retry/skip координатор сбрасывает Start через `ResetBlockStartAsync`.
+При ошибке и retry шаг не должен сбрасывать `Start=false`; в skip-ветке координатор делает это через `ResetBlockStartAsync`.
 
 ---
 

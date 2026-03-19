@@ -46,7 +46,7 @@ public class ReadChPotiSetpointStep(
         logger.LogInformation("Чтение установленной температуры CH из регистра {Register}", RegisterChTempSetpoint);
 
         var modbusAddress = (ushort)(RegisterChTempSetpoint - _settings.BaseAddressOffset);
-        var result = await context.DiagReader.ReadUInt16Async(modbusAddress, ct);
+        var result = await context.PacedDiagReader.ReadUInt16Async(modbusAddress, ct);
 
         if (!result.Success)
         {

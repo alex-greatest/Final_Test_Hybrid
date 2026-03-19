@@ -89,7 +89,7 @@ public class ReadDhwPotiSetpointStep(
         TestStepContext context, CancellationToken ct)
     {
         var address = (ushort)(RegisterDhwTempSetpoint - _settings.BaseAddressOffset);
-        var result = await context.DiagReader.ReadUInt16Async(address, ct);
+        var result = await context.PacedDiagReader.ReadUInt16Async(address, ct);
 
         if (!result.Success)
         {

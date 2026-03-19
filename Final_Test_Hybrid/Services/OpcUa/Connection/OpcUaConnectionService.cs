@@ -37,7 +37,7 @@ public class OpcUaConnectionService(
             .ConfigureAwait(false);
         await ConnectWithRetryAsync(cancellationToken).ConfigureAwait(false);
         await CreateSubscriptionAsync(cancellationToken).ConfigureAwait(false);
-        connectionState.SetConnected(true);
+        connectionState.SetConnected(true, "InitialConnect");
     }
 
     private async Task ConnectWithRetryAsync(CancellationToken cancellationToken)
@@ -94,7 +94,7 @@ public class OpcUaConnectionService(
 
         logger.LogError("OPC UA KeepAlive не удался: {Status}. Запуск переподключения...", e.Status);
         subscription.InvalidateValuesCache();
-        connectionState.SetConnected(false);
+        connectionState.SetConnected(false, "KeepAliveFailure");
         StartReconnect();
     }
 
@@ -168,7 +168,7 @@ public class OpcUaConnectionService(
         {
             await DisposeSessionAsync(newSession, logSuccess: false).ConfigureAwait(false);
             subscriptionState.SetCompleted();
-            connectionState.SetConnected(false);
+            connectionState.SetConnected(false, "ReconnectAttemptFailed");
             logger.LogWarning(
                 "Reconnect не завершён. Повтор через {Interval} мс. Ошибка: {Error}",
                 _settings.ReconnectIntervalMs,
@@ -198,7 +198,7 @@ public class OpcUaConnectionService(
         subscriptionState.SetInitializing();
         await subscription.RecreateForSessionAsync(newSession, ct).ConfigureAwait(false);
         await SetActiveSessionAsync(newSession, ct).ConfigureAwait(false);
-        connectionState.SetConnected(true);
+        connectionState.SetConnected(true, "ReconnectSuccess");
         subscriptionState.SetCompleted();
         logger.LogInformation("Переподключение к OPC UA серверу выполнено успешно. Runtime-подписки пересозданы");
     }
@@ -236,7 +236,7 @@ public class OpcUaConnectionService(
 
         await DisposeSessionAsync(sessionToClose, logSuccess: true).ConfigureAwait(false);
         subscription.InvalidateValuesCache();
-        connectionState.SetConnected(false);
+        connectionState.SetConnected(false, "DisconnectAsync");
     }
 
     private async Task CompleteReconnectLoopAsync()

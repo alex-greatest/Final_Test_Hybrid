@@ -2,7 +2,6 @@
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Microsoft.Extensions.Logging;
-
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
 
 public partial class TestExecutionCoordinator
@@ -213,12 +212,6 @@ public partial class TestExecutionCoordinator
             await HandleTagTimeoutAsync("Req_Repeat не сброшен", ct);
             return;
         }
-        var startResetError = await TryResetBlockStartBeforeRetryAsync(error.FailedStep, ct);
-        if (startResetError != null)
-        {
-            HandleRetryStartResetFailure(error, executor, startResetError);
-            return;
-        }
         _retryState.MarkStarted();
         try
         {
@@ -234,26 +227,6 @@ public partial class TestExecutionCoordinator
             return;
         }
         StateManager.DequeueError();
-    }
-
-    private void HandleRetryStartResetFailure(StepError error, ColumnExecutor executor, string startResetError)
-    {
-        const string message = "PLC не сбросил Start перед повтором";
-        _logger.LogWarning(
-            "Не удалось сбросить Start перед retry для колонки {Column}: {Error}",
-            error.ColumnIndex,
-            startResetError);
-
-        executor.UpdateFailedErrorMessage(message);
-        var updated = StateManager.TryUpdateCurrentError(
-            error,
-            current => current with { ErrorMessage = message, OccurredAt = DateTime.Now });
-        if (!updated)
-        {
-            _logger.LogWarning(
-                "Не удалось обновить текущую ошибку очереди после сбоя Start-reset для колонки {Column}",
-                error.ColumnIndex);
-        }
     }
 
     private async Task HandleAskRepeatFailureAsync(StepError error, Exception ex, CancellationToken ct)

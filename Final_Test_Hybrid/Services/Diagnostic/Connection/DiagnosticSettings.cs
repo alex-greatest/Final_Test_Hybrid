@@ -62,7 +62,8 @@ public class DiagnosticSettings
     public ushort BaseAddressOffset { get; set; } = 1;
 
     /// <summary>
-    /// Задержка после записи перед чтением для верификации (мс).
+    /// Базовое окно pacing/verify для последовательных step-level Modbus операций (мс).
+    /// Для отдельных runtime-контуров вне test steps может использоваться как verify-delay.
     /// </summary>
     public int WriteVerifyDelayMs { get; set; } = 100;
 

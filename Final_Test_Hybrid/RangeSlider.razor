@@ -41,18 +41,18 @@
 
         @* Tick marks *@
         <div style="position: relative; height: 8px;">
-            @foreach (var tick in Ticks)
+            @foreach (var tick in TickMarks)
             {
-                var percent = ((tick - Min) / Range) * 100;
+                var percent = MapToVisualPercent(tick);
                 <div style="position: absolute; left: @(percent.ToString(CultureInfo.InvariantCulture))%; top: 0; transform: translateX(-50%); width: 1px; height: 8px; background-color: #555;"></div>
             }
         </div>
 
         @* Labels *@
         <div style="position: relative; height: 28px;">
-            @foreach (var tick in Ticks)
+            @foreach (var tick in TickLabels)
             {
-                var percent = ((tick - Min) / Range) * 100;
+                var percent = MapToVisualPercent(tick);
                 <span style="position: absolute; left: @(percent.ToString(CultureInfo.InvariantCulture))%; transform: translateX(-50%); font-size: 20px; color: #555; font-family: Arial, sans-serif;">
                     @tick.ToString("F1", CultureInfo.InvariantCulture)
                 </span>
@@ -71,37 +71,153 @@
     [Parameter] public double GreenZoneEnd { get; set; }
     [Parameter] public int TickCount { get; set; } = 20;
 
-    private double Range => Max - Min;
-    private double GreenStartPercent => ((GreenZoneStart - Min) / Range) * 100;
-    private double GreenEndPercent => ((GreenZoneEnd - Min) / Range) * 100;
-    private double GreenZoneWidth => GreenEndPercent - GreenStartPercent;
-    private double RightRedZoneWidth => 100 - GreenEndPercent;
-    
-    private double ClampedValue => Math.Max(Min, Math.Min(Max, Value));
-    private double ValuePercent => ((ClampedValue - Min) / Range) * 100;
+    private const double LeftDangerZonePercent = 15;
+    private const double SafeZonePercent = 70;
+    private const double RightDangerZonePercent = 15;
+    private const double FullScalePercent = 100;
 
-    private List<double> Ticks
+    private double Range => Max - Min;
+    private double EffectiveGreenZoneStart => ClampToScale(Math.Min(GreenZoneStart, GreenZoneEnd));
+    private double EffectiveGreenZoneEnd => ClampToScale(Math.Max(GreenZoneStart, GreenZoneEnd));
+    private double GreenStartPercent => LeftDangerZonePercent;
+    private double GreenZoneWidth => SafeZonePercent;
+    private double RightRedZoneWidth => RightDangerZonePercent;
+    private double ClampedValue => ClampToScale(Value);
+    private double ValuePercent => MapToVisualPercent(ClampedValue);
+    private int RedInnerTickCount => Range > 0 ? Math.Clamp(TickCount / 12, 0, 1) : 0;
+    private int GreenInnerTickCount => Range > 0 ? Math.Clamp(TickCount / 6, 2, 3) : 0;
+
+    private List<double> TickMarks
     {
         get
         {
-            var ticks = new HashSet<double> { Min, GreenZoneStart, GreenZoneEnd, Max };
+            var ticks = new SortedSet<double>();
+            AddSegmentTicks(ticks, Min, EffectiveGreenZoneStart, RedInnerTickCount);
+            AddSegmentTicks(ticks, EffectiveGreenZoneStart, EffectiveGreenZoneEnd, GreenInnerTickCount);
+            AddSegmentTicks(ticks, EffectiveGreenZoneEnd, Max, RedInnerTickCount);
+            return ticks.ToList();
+        }
+    }
 
-            // Добавляем промежуточные насечки между ключевыми точками
-            var keyPoints = new[] { Min, GreenZoneStart, GreenZoneEnd, Max };
-            Array.Sort(keyPoints);
-
-            foreach (var (start, end) in keyPoints.Zip(keyPoints.Skip(1)))
+    private List<double> TickLabels
+    {
+        get
+        {
+            var labels = new SortedSet<double>
             {
-                var segmentRange = end - start;
-                var segmentTicks = Math.Max(1, (int)Math.Round(segmentRange / Range * TickCount));
+                Min,
+                EffectiveGreenZoneStart,
+                EffectiveGreenZoneEnd,
+                Max
+            };
 
-                for (var i = 1; i < segmentTicks; i++)
-                {
-                    ticks.Add(start + (segmentRange / segmentTicks) * i);
-                }
+            var innerGreenTicks = GetSegmentInnerTicks(
+                EffectiveGreenZoneStart,
+                EffectiveGreenZoneEnd,
+                GreenInnerTickCount);
+
+            for (var i = 0; i < innerGreenTicks.Count; i += 2)
+            {
+                labels.Add(innerGreenTicks[i]);
             }
 
-            return ticks.OrderBy(t => t).ToList();
+            if (EffectiveGreenZoneEnd > EffectiveGreenZoneStart)
+            {
+                labels.Add((EffectiveGreenZoneStart + EffectiveGreenZoneEnd) / 2);
+            }
+
+            return labels.ToList();
         }
+    }
+
+    private double MapToVisualPercent(double value)
+    {
+        var clampedValue = ClampToScale(value);
+
+        if (Range <= 0)
+        {
+            return FullScalePercent / 2;
+        }
+
+        if (clampedValue <= EffectiveGreenZoneStart)
+        {
+            return MapSegment(clampedValue, Min, EffectiveGreenZoneStart, 0, LeftDangerZonePercent);
+        }
+
+        if (clampedValue <= EffectiveGreenZoneEnd)
+        {
+            return MapSegment(
+                clampedValue,
+                EffectiveGreenZoneStart,
+                EffectiveGreenZoneEnd,
+                LeftDangerZonePercent,
+                LeftDangerZonePercent + SafeZonePercent);
+        }
+
+        return MapSegment(
+            clampedValue,
+            EffectiveGreenZoneEnd,
+            Max,
+            LeftDangerZonePercent + SafeZonePercent,
+            FullScalePercent);
+    }
+
+    private double ClampToScale(double value)
+    {
+        return Math.Max(Min, Math.Min(Max, value));
+    }
+
+    private static void AddSegmentTicks(
+        SortedSet<double> ticks,
+        double start,
+        double end,
+        int innerTickCount)
+    {
+        ticks.Add(start);
+        ticks.Add(end);
+
+        foreach (var tick in GetSegmentInnerTicks(start, end, innerTickCount))
+        {
+            ticks.Add(tick);
+        }
+    }
+
+    private static List<double> GetSegmentInnerTicks(
+        double start,
+        double end,
+        int innerTickCount)
+    {
+        if (end <= start || innerTickCount <= 0)
+        {
+            return [];
+        }
+
+        var step = (end - start) / (innerTickCount + 1);
+        var ticks = new List<double>(innerTickCount);
+
+        for (var i = 1; i <= innerTickCount; i++)
+        {
+            ticks.Add(start + (step * i));
+        }
+
+        return ticks;
+    }
+
+    private static double MapSegment(
+        double value,
+        double inputStart,
+        double inputEnd,
+        double outputStart,
+        double outputEnd)
+    {
+        if (inputEnd <= inputStart)
+        {
+            return outputEnd;
+        }
+
+        var ratio = (value - inputStart) / (inputEnd - inputStart);
+        var clampedRatio = Math.Max(0, Math.Min(1, ratio));
+
+        return outputStart + ((outputEnd - outputStart) * clampedRatio);
     }
 }

@@ -111,7 +111,7 @@ public class CompareFlowNtcTemperaturesHotStep(
 
         // Читаем температуру из котла (Modbus)
         var address = (ushort)(RegisterChTemperature - _settings.BaseAddressOffset);
-        var modbusResult = await context.DiagReader.ReadInt16Async(address, ct);
+        var modbusResult = await context.PacedDiagReader.ReadInt16Async(address, ct);
         if (!modbusResult.Success)
         {
             var msg = $"Ошибка при чтении температуры котла из регистра {RegisterChTemperature}. {modbusResult.Error}";

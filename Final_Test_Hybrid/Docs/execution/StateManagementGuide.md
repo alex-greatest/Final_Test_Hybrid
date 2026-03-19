@@ -824,8 +824,9 @@ private void HandleHardReset()
 **Примечание по pre-execution error-resolution:**  
 `ErrorResolution.ConnectionLost` для pre-execution нормализуется в `PreExecutionResolution.HardReset`, а не в `Timeout`.
 
-`BlockBoilerAdapterStep` в pre-execution retry перед повторным запуском дополнительно пишет `Start=false`.
-Если запись `Start=false` не удалась, это остаётся retryable step error `PLC не сбросил Start перед повтором`, а не переводится в `HardReset`.
+`BlockBoilerAdapterStep` в pre-execution retry больше не пишет `Start=false` перед повторным запуском.
+Сброс `Start` остаётся только в success-ветке самого шага; retry повторно запускает блок без промежуточной записи `Start=false` со стороны PC.
+Перед запуском и повторным запуском `BlockBoilerAdapterStep` pre-start ожидание `End=false` не выполняется.
 
 ---
 

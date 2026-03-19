@@ -54,12 +54,6 @@ public partial class PreExecutionCoordinator
             infra.Logger.LogInformation("Отправляем SendAskRepeatAsync...");
             await coordinators.ErrorCoordinator.SendAskRepeatAsync(ct);
             coordinators.DialogCoordinator.CloseBlockErrorDialog();
-            var startResetError = await TryResetBlockStartBeforeRetryAsync(step, ct);
-            if (startResetError != null)
-            {
-                return CreateRetryStartResetError(step, startResetError);
-            }
-
             infra.Logger.LogInformation("SendAskRepeatAsync отправлен, повторяем шаг");
             errorScope.Clear();
             return await RetryStepAsync(step, context, stepId, ct);
@@ -108,34 +102,6 @@ public partial class PreExecutionCoordinator
         var result = await step.ExecuteAsync(context, ct);
         infra.StepTimingService.StopCurrentStepTiming();
         return result;
-    }
-
-    private async Task<string?> TryResetBlockStartBeforeRetryAsync(BlockBoilerAdapterStep step, CancellationToken ct)
-    {
-        var startTag = PlcBlockTagHelper.GetStartTag(step);
-        if (startTag == null)
-        {
-            return null;
-        }
-
-        infra.Logger.LogDebug("Сброс Start перед retry для {BlockPath}", step.PlcBlockPath);
-        var result = await infra.PlcService.WriteAsync(startTag, false, ct);
-        return result.Success ? null : result.Error ?? "неизвестная ошибка";
-    }
-
-    private PreExecutionResult CreateRetryStartResetError(BlockBoilerAdapterStep step, string startResetError)
-    {
-        const string message = "PLC не сбросил Start перед повтором";
-        infra.Logger.LogWarning(
-            "Не удалось сбросить Start перед retry шага {StepName}: {Error}",
-            step.Name,
-            startResetError);
-
-        return PreExecutionResult.FailRetryable(
-            message,
-            canSkip: false,
-            userMessage: message,
-            errors: []);
     }
 
     #endregion

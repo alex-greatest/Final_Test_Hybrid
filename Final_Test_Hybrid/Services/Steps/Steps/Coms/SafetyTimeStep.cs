@@ -4,7 +4,6 @@ using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Results;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Limits;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Options;
 
@@ -241,7 +240,6 @@ public class SafetyTimeStep(
             return TestStepResult.Fail(ComsStepFailureHelper.BuildWriteMessage(writeResult, $"сбросе блокировки через регистр {RegisterResetBlockage}", $"Ошибка сброса блокировки: {writeResult.Error}"));
         }
 
-        await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
         logger.LogInformation("Блокировка Б сброшена");
 
         return null;
