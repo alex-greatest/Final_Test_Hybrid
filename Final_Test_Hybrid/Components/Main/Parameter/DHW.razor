@@ -1,11 +1,16 @@
 @using System.Globalization
 @using Final_Test_Hybrid.Models.Plc.Tags
 @using Final_Test_Hybrid.Services.OpcUa.Subscription
+@using Final_Test_Hybrid.Services.Common
+@using Final_Test_Hybrid.Services.Diagnostic.Models
 @using Final_Test_Hybrid.Services.Diagnostic.Services
 @using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue
+@using Microsoft.Extensions.Logging
 @inject OpcUaSubscription Subscription
 @inject BoilerTemperatureService BoilerTemperatureService
 @inject IModbusDispatcher Dispatcher
+@inject ExecutionActivityTracker ActivityTracker
+@inject ILogger<DHW> Logger
 @implements IAsyncDisposable
 
 <div class="header-block-parameter param-dhw">
@@ -37,10 +42,15 @@
     private string _tDhwIn = "N/A";
     private string _tDhwOut = "N/A";
     private string _tDhwBoiler = "N/A";
-    private PeriodicTimer? _modbusTimer;
+    private static readonly TimeSpan IdlePollingInterval = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan ActivePollingInterval = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan ErrorLogThrottleInterval = TimeSpan.FromSeconds(30);
+    private const ushort DhwTemperatureRegisterDoc = 1009;
     private CancellationTokenSource? _cts;
     private Task? _pollingTask;
     private volatile bool _disposed;
+    private DateTime _lastErrorLogUtc = DateTime.MinValue;
+    private string? _lastErrorSignature;
     [Parameter] public bool EmitCachedValueImmediately { get; set; }
 
     protected override async Task OnInitializedAsync()
@@ -53,7 +63,7 @@
         Dispatcher.Connected += OnDispatcherConnected;
         Dispatcher.Disconnecting += OnDispatcherDisconnecting;
 
-        if (Dispatcher.IsStarted && Dispatcher.IsConnected)
+        if (CanPollModbus())
         {
             StartModbusPolling();
         }
@@ -110,13 +120,11 @@
     /// </summary>
     private void StartModbusPolling()
     {
-        if (!Dispatcher.IsConnected) return;
+        if (!CanPollModbus()) return;
         if (_pollingTask is { IsCompleted: false }) return;
 
         _cts?.Dispose();
         _cts = new CancellationTokenSource();
-        _modbusTimer?.Dispose();
-        _modbusTimer = new PeriodicTimer(TimeSpan.FromSeconds(2));
         _pollingTask = PollModbusAsync(_cts.Token);
     }
 
@@ -125,15 +133,21 @@
     /// </summary>
     private async Task PollModbusAsync(CancellationToken ct)
     {
-        var timer = _modbusTimer;
         var cts = _cts;
         try
         {
-            while (timer != null && await timer.WaitForNextTickAsync(ct).ConfigureAwait(false))
+            while (!ct.IsCancellationRequested)
             {
+                await Task.Delay(GetPollingInterval(), ct).ConfigureAwait(false);
+                if (!CanPollModbus())
+                {
+                    continue;
+                }
+
                 using var _ = ModbusCommandTraceContext.BeginScope("UI.DHW");
                 var result = await BoilerTemperatureService.ReadDHWTemperatureAsync(ct).ConfigureAwait(false);
                 _tDhwBoiler = result.Success ? FormatValue(result.Value) : "N/A";
+                LogPollingErrorIfNeeded(result, "температуры ГВС", DhwTemperatureRegisterDoc, "UI.DHW");
                 await InvokeAsync(StateHasChanged);
             }
         }
@@ -148,17 +162,59 @@
         }
         finally
         {
-            if (ReferenceEquals(timer, _modbusTimer))
-            {
-                _modbusTimer?.Dispose();
-                _modbusTimer = null;
-            }
             if (ReferenceEquals(cts, _cts))
             {
                 _cts?.Dispose();
                 _cts = null;
             }
         }
+    }
+
+    private bool CanPollModbus()
+    {
+        return Dispatcher.IsStarted && Dispatcher.IsConnected && !Dispatcher.IsReconnecting;
+    }
+
+    private TimeSpan GetPollingInterval()
+    {
+        return ActivityTracker.IsTestExecutionActive ? ActivePollingInterval : IdlePollingInterval;
+    }
+
+    private void LogPollingErrorIfNeeded(
+        DiagnosticReadResult<short> result,
+        string operation,
+        ushort registerDoc,
+        string source)
+    {
+        if (result.Success)
+        {
+            _lastErrorSignature = null;
+            _lastErrorLogUtc = DateTime.MinValue;
+            return;
+        }
+
+        var profile = ActivityTracker.IsTestExecutionActive ? "active" : "idle";
+        var signature = $"{result.FailureKind}|{result.Error}|{Dispatcher.IsConnected}|{Dispatcher.IsReconnecting}|{profile}";
+        var nowUtc = DateTime.UtcNow;
+        if (_lastErrorSignature == signature && nowUtc - _lastErrorLogUtc < ErrorLogThrottleInterval)
+        {
+            return;
+        }
+
+        _lastErrorSignature = signature;
+        _lastErrorLogUtc = nowUtc;
+        Logger.LogWarning(
+            "Котёл/Modbus {Source}: ошибка чтения {Operation}. Doc={DocAddress}, Modbus={ModbusAddress}, FailureKind={FailureKind}, Started={Started}, Connected={Connected}, Reconnecting={Reconnecting}, Profile={Profile}, Error={Error}",
+            source,
+            operation,
+            registerDoc,
+            result.Address,
+            result.FailureKind,
+            Dispatcher.IsStarted,
+            Dispatcher.IsConnected,
+            Dispatcher.IsReconnecting,
+            profile,
+            result.Error);
     }
 
     private async Task OnQDhwChanged(object? value)
@@ -213,7 +269,6 @@
             try { await _pollingTask; } catch { /* ignored */ }
         }
 
-        _modbusTimer?.Dispose();
         _cts?.Dispose();
 
         await Subscription.UnsubscribeAsync(MainScreenTags.DhwFs, OnQDhwChanged, removeTag: false, ct: CancellationToken.None);

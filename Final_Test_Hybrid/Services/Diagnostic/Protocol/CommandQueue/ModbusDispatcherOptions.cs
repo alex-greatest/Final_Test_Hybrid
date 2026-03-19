@@ -27,7 +27,17 @@ public class ModbusDispatcherOptions
     public int CommandWaitTimeoutMs { get; set; } = 100;
 
     /// <summary>
-    /// Интервал ping keep-alive (мс).
+    /// Интервал ping keep-alive во время активного test execution (мс).
+    /// </summary>
+    public int PingIntervalActiveMs { get; set; } = 5000;
+
+    /// <summary>
+    /// Интервал ping keep-alive в idle (мс).
+    /// </summary>
+    public int PingIntervalIdleMs { get; set; } = 10000;
+
+    /// <summary>
+    /// Legacy-поле для старых UI/ручных диагностических экранов.
     /// </summary>
     public int PingIntervalMs { get; set; } = 5000;
 

@@ -2,6 +2,7 @@ using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Access;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
+using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Options;
@@ -51,10 +52,10 @@ public class ChPumpStartStep(
     {
         logger.LogInformation("Retry: пытаемся установить режим Стенд перед запуском насоса");
 
-        var setResult = await accessLevelManager.SetStandModeAsync(context.DiagWriter, ct);
+        var setResult = await accessLevelManager.SetStandModeAsync(context.PacedDiagWriter, ct);
         if (!setResult.Success)
         {
-            return CreateStandModeError(setResult.Error ?? "Неизвестная ошибка");
+            return CreateStandModeError(setResult);
         }
 
         await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
@@ -79,20 +80,20 @@ public class ChPumpStartStep(
     {
         var modbusAddress = (ushort)(TestModeRegisterDoc - _settings.BaseAddressOffset);
 
-        var writeResult = await context.DiagWriter.WriteUInt16Async(modbusAddress, HeatingModeWithPump, ct);
+        var writeResult = await context.PacedDiagWriter.WriteUInt16Async(modbusAddress, HeatingModeWithPump, ct);
         if (!writeResult.Success)
         {
             context.Variables[HadErrorKey] = true;
-            return CreateWriteError(writeResult.Error ?? "Неизвестная ошибка");
+            return CreateWriteError(writeResult);
         }
 
         await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
 
-        var readResult = await context.DiagReader.ReadUInt16Async(modbusAddress, ct);
+        var readResult = await context.PacedDiagReader.ReadUInt16Async(modbusAddress, ct);
         if (!readResult.Success)
         {
             context.Variables[HadErrorKey] = true;
-            return CreateReadError(readResult.Error ?? "Неизвестная ошибка");
+            return CreateReadError(readResult);
         }
 
         if (readResult.Value == HeatingModeWithPump)
@@ -111,9 +112,9 @@ public class ChPumpStartStep(
     /// <summary>
     /// Создаёт результат ошибки установки режима стенда.
     /// </summary>
-    private TestStepResult CreateStandModeError(string error)
+    private TestStepResult CreateStandModeError(DiagnosticWriteResult result)
     {
-        var msg = $"Ошибка при установке режима Стенд перед запуском насоса. {error}";
+        var msg = ComsStepFailureHelper.BuildWriteMessage(result, "установке режима Стенд перед запуском насоса", $"Ошибка при установке режима Стенд перед запуском насоса. {result.Error ?? "Неизвестная ошибка"}");
         logger.LogError(msg);
         return TestStepResult.Fail(msg, errors: [ErrorDefinitions.ChPumpStartError]);
     }
@@ -121,9 +122,9 @@ public class ChPumpStartStep(
     /// <summary>
     /// Создаёт результат ошибки записи.
     /// </summary>
-    private TestStepResult CreateWriteError(string error)
+    private TestStepResult CreateWriteError(DiagnosticWriteResult result)
     {
-        var msg = $"Ошибка при записи значения {HeatingModeWithPump} в регистр {TestModeRegisterDoc}. {error}";
+        var msg = ComsStepFailureHelper.BuildWriteMessage(result, $"записи значения {HeatingModeWithPump} в регистр {TestModeRegisterDoc}", $"Ошибка при записи значения {HeatingModeWithPump} в регистр {TestModeRegisterDoc}. {result.Error ?? "Неизвестная ошибка"}");
         logger.LogError(msg);
         return TestStepResult.Fail(msg, errors: [ErrorDefinitions.ChPumpStartError]);
     }
@@ -131,9 +132,9 @@ public class ChPumpStartStep(
     /// <summary>
     /// Создаёт результат ошибки чтения.
     /// </summary>
-    private TestStepResult CreateReadError(string error)
+    private TestStepResult CreateReadError(DiagnosticReadResult<ushort> result)
     {
-        var msg = $"Ошибка при чтении регистра {TestModeRegisterDoc}. {error}";
+        var msg = ComsStepFailureHelper.BuildReadMessage(result, $"чтении регистра {TestModeRegisterDoc}", $"Ошибка при чтении регистра {TestModeRegisterDoc}. {result.Error ?? "Неизвестная ошибка"}");
         logger.LogError(msg);
         return TestStepResult.Fail(msg, errors: [ErrorDefinitions.ChPumpStartError]);
     }

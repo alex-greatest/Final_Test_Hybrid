@@ -7,7 +7,8 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Models;
 /// <param name="Error">Текст ошибки (null при успехе).</param>
 public record DiagnosticWriteResult(
     ushort Address,
-    string? Error)
+    string? Error,
+    DiagnosticFailureKind FailureKind)
 {
     /// <summary>
     /// Успешность операции записи.
@@ -18,11 +19,14 @@ public record DiagnosticWriteResult(
     /// Создаёт успешный результат.
     /// </summary>
     public static DiagnosticWriteResult Ok(ushort address) =>
-        new(address, null);
+        new(address, null, DiagnosticFailureKind.None);
 
     /// <summary>
     /// Создаёт результат с ошибкой.
     /// </summary>
-    public static DiagnosticWriteResult Fail(ushort address, string error) =>
-        new(address, error);
+    public static DiagnosticWriteResult Fail(
+        ushort address,
+        string error,
+        DiagnosticFailureKind failureKind = DiagnosticFailureKind.Functional) =>
+        new(address, error, failureKind);
 }

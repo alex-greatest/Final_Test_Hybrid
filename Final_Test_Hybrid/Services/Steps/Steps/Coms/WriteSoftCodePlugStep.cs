@@ -2,6 +2,7 @@ using Final_Test_Hybrid.Models;
 using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
+using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Final_Test_Hybrid.Services.Diagnostic.Models.Enums;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
@@ -16,7 +17,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
 public partial class WriteSoftCodePlugStep(
     BoilerState boilerState,
     IOptions<DiagnosticSettings> settings,
-    DualLogger<WriteSoftCodePlugStep> logger) : ITestStep, IRequiresRecipes
+    DualLogger<WriteSoftCodePlugStep> logger) : IRequiresRecipes
 {
     // Регистры (адреса из документации)
     private const ushort RegisterBoilerArticle = 1175;
@@ -178,13 +179,14 @@ public partial class WriteSoftCodePlugStep(
         logger.LogInformation("Запись артикульного номера котла: {Article}", article);
 
         var address = (ushort)(RegisterBoilerArticle - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteStringAsync(address, article, ArticleMaxLength, ct);
+        var result = await context.PacedDiagWriter.WriteStringAsync(address, article, ArticleMaxLength, ct);
 
         if (!result.Success)
         {
-            var msg = $"Ошибка при записи артикула в регистры {RegisterBoilerArticle}-{RegisterBoilerArticle + 6}. {result.Error}";
-            logger.LogError(msg);
-            return TestStepResult.Fail(msg, errors: [ErrorDefinitions.EcuWriteError]);
+            return CreateWriteFailure(
+                result,
+                $"записи артикула в регистры {RegisterBoilerArticle}-{RegisterBoilerArticle + 6}",
+                $"Ошибка при записи артикула в регистры {RegisterBoilerArticle}-{RegisterBoilerArticle + 6}. {result.Error}");
         }
 
         logger.LogInformation("Артикул записан успешно");
@@ -205,23 +207,35 @@ public partial class WriteSoftCodePlugStep(
         var address1 = (ushort)(register1 - _settings.BaseAddressOffset);
         var address2 = (ushort)(register2 - _settings.BaseAddressOffset);
 
-        var result1 = await context.DiagWriter.WriteUInt16Async(address1, value, ct);
+        var result1 = await context.PacedDiagWriter.WriteUInt16Async(address1, value, ct);
         if (!result1.Success)
         {
-            var msg = $"Ошибка при записи {parameterName} в регистры {register1}-{register2}. {result1.Error}";
-            logger.LogError(msg);
-            return TestStepResult.Fail(msg, errors: [ErrorDefinitions.EcuWriteError]);
+            return CreateWriteFailure(
+                result1,
+                $"записи {parameterName} в регистры {register1}-{register2}",
+                $"Ошибка при записи {parameterName} в регистры {register1}-{register2}. {result1.Error}");
         }
 
-        var result2 = await context.DiagWriter.WriteUInt16Async(address2, value, ct);
+        var result2 = await context.PacedDiagWriter.WriteUInt16Async(address2, value, ct);
         if (!result2.Success)
         {
-            var msg = $"Ошибка при записи {parameterName} в регистры {register1}-{register2}. {result2.Error}";
-            logger.LogError(msg);
-            return TestStepResult.Fail(msg, errors: [ErrorDefinitions.EcuWriteError]);
+            return CreateWriteFailure(
+                result2,
+                $"записи {parameterName} в регистры {register1}-{register2}",
+                $"Ошибка при записи {parameterName} в регистры {register1}-{register2}. {result2.Error}");
         }
 
         logger.LogInformation("{Parameter} записан успешно", parameterName);
         return TestStepResult.Pass();
+    }
+
+    private TestStepResult CreateWriteFailure(
+        DiagnosticWriteResult result,
+        string operation,
+        string functionalMessage)
+    {
+        var message = ComsStepFailureHelper.BuildWriteMessage(result, operation, functionalMessage);
+        logger.LogError(message);
+        return TestStepResult.Fail(message, errors: [ErrorDefinitions.EcuWriteError]);
     }
 }

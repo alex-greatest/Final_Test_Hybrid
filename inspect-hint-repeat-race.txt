@@ -1,6 +1,0 @@
-Solution Final_Test_Hybrid.slnx
-    Project Final_Test_Hybrid
-      Final_Test_Hybrid\Services\Steps\Infrastructure\Execution\PreExecution\PreExecutionCoordinator.Subscriptions.cs:74 Invert 'if' statement to reduce nesting
-      Final_Test_Hybrid\Services\Steps\Infrastructure\Execution\PreExecution\PreExecutionCoordinator.Subscriptions.cs:83 Avoid using 'async' for method with the 'void' return type or catch all exceptions in it: any exceptions unhandled by the method might lead to the process crash
-    
-  

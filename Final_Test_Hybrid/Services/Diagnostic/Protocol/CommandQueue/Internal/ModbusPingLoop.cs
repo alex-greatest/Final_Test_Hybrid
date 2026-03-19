@@ -1,4 +1,4 @@
-using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
 
 namespace Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue.Internal;
@@ -13,7 +13,7 @@ internal sealed class ModbusPingLoop
     private readonly Func<IModbusCommand, CancellationToken, ValueTask> _enqueueFunc;
     private readonly ModbusDispatcherOptions _options;
     private readonly ushort _baseAddressOffset;
-    private readonly IDualLogger _logger;
+    private readonly ExecutionActivityTracker _activityTracker;
 
     /// <summary>
     /// Вызывается при получении данных ping (только если не останавливаемся).
@@ -26,17 +26,17 @@ internal sealed class ModbusPingLoop
     /// <param name="enqueueFunc">Функция для отправки команд в очередь.</param>
     /// <param name="options">Настройки диспетчера.</param>
     /// <param name="baseAddressOffset">Смещение базового адреса из DiagnosticSettings.</param>
-    /// <param name="logger">Логгер.</param>
+    /// <param name="activityTracker">Трекер активности execution для выбора ping-профиля.</param>
     public ModbusPingLoop(
         Func<IModbusCommand, CancellationToken, ValueTask> enqueueFunc,
         ModbusDispatcherOptions options,
         ushort baseAddressOffset,
-        IDualLogger logger)
+        ExecutionActivityTracker activityTracker)
     {
         _enqueueFunc = enqueueFunc;
         _options = options;
         _baseAddressOffset = baseAddressOffset;
-        _logger = logger;
+        _activityTracker = activityTracker;
     }
 
     /// <summary>
@@ -47,12 +47,13 @@ internal sealed class ModbusPingLoop
     /// <param name="ct">Токен отмены.</param>
     public async Task RunAsync(Func<bool> isPortOpen, Func<bool> isStopping, CancellationToken ct)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(_options.PingIntervalMs));
-
         try
         {
-            while (await timer.WaitForNextTickAsync(ct).ConfigureAwait(false))
+            while (!ct.IsCancellationRequested)
             {
+                var interval = GetCurrentInterval();
+                await Task.Delay(interval, ct).ConfigureAwait(false);
+
                 // Только отправляем ping если порт открыт и не останавливаемся
                 if (!isPortOpen() || isStopping())
                 {
@@ -87,5 +88,14 @@ internal sealed class ModbusPingLoop
         {
             // Expected при StopAsync
         }
+    }
+
+    private TimeSpan GetCurrentInterval()
+    {
+        var intervalMs = _activityTracker.IsTestExecutionActive
+            ? _options.PingIntervalActiveMs
+            : _options.PingIntervalIdleMs;
+
+        return TimeSpan.FromMilliseconds(intervalMs);
     }
 }

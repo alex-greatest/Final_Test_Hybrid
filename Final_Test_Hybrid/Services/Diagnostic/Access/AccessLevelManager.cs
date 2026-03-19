@@ -73,6 +73,15 @@ public class AccessLevelManager(
     }
 
     /// <summary>
+    /// Устанавливает режим стенда через paced writer для Modbus-heavy шагов.
+    /// </summary>
+    public async Task<DiagnosticWriteResult> SetStandModeAsync(
+        PacedRegisterWriter writer, CancellationToken ct)
+    {
+        return await SetAccessLevelAsync(AccessLevel.Stand, StandKey, writer, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Сбрасывает в обычный режим (любой ключ != Engineering/Stand).
     /// </summary>
     public async Task ResetToNormalModeAsync(CancellationToken ct = default)
@@ -93,6 +102,15 @@ public class AccessLevelManager(
         return await SetAccessLevelAsync(AccessLevel.Normal, ResetKey, writer, ct).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Сбрасывает режим через paced writer для Modbus-heavy шагов.
+    /// </summary>
+    public async Task<DiagnosticWriteResult> ResetToNormalModeAsync(
+        PacedRegisterWriter writer, CancellationToken ct)
+    {
+        return await SetAccessLevelAsync(AccessLevel.Normal, ResetKey, writer, ct).ConfigureAwait(false);
+    }
+
     private async Task<bool> SetAccessLevelAsync(AccessLevel level, uint key, CancellationToken ct)
     {
         var result = await SetAccessLevelCoreAsync(level, key, registerWriter, ct).ConfigureAwait(false);
@@ -101,6 +119,12 @@ public class AccessLevelManager(
 
     private async Task<DiagnosticWriteResult> SetAccessLevelAsync(
         AccessLevel level, uint key, PausableRegisterWriter writer, CancellationToken ct)
+    {
+        return await SetAccessLevelCoreAsync(level, key, writer, ct).ConfigureAwait(false);
+    }
+
+    private async Task<DiagnosticWriteResult> SetAccessLevelAsync(
+        AccessLevel level, uint key, PacedRegisterWriter writer, CancellationToken ct)
     {
         return await SetAccessLevelCoreAsync(level, key, writer, ct).ConfigureAwait(false);
     }
@@ -124,6 +148,7 @@ public class AccessLevelManager(
         {
             RegisterWriter rw => await rw.WriteUInt32Async(modbusAddress, key, ct).ConfigureAwait(false),
             PausableRegisterWriter prw => await prw.WriteUInt32Async(modbusAddress, key, ct).ConfigureAwait(false),
+            PacedRegisterWriter pacedWriter => await pacedWriter.WriteUInt32Async(modbusAddress, key, ct).ConfigureAwait(false),
             _ => throw new ArgumentException($"Unsupported writer type: {writer.GetType()}", nameof(writer))
         };
 

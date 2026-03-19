@@ -30,11 +30,11 @@ public partial class ReadSoftCodePlugStep
 
         var expected = context.RecipeProvider.GetValue<ushort>(action.ExpectedRecipeKey)!.Value;
         var address = (ushort)(action.Register - _settings.BaseAddressOffset);
-        var read = await context.DiagReader.ReadUInt16Async(address, ct);
+        var read = await context.PacedDiagReader.ReadUInt16Async(address, ct);
 
         if (!read.Success)
         {
-            return CreateReadFailureResult(action.ReadErrorPrefix, read.Error);
+            return CreateReadFailureResult(read, $"чтении регистра {action.Register}", action.ReadErrorPrefix);
         }
 
         if (read.Value == expected)
@@ -65,11 +65,11 @@ public partial class ReadSoftCodePlugStep
         logger.LogInformation(action.ReadLogMessage);
 
         var address = (ushort)(action.StartRegister - _settings.BaseAddressOffset);
-        var read = await context.DiagReader.ReadStringAsync(address, action.MaxLength, ct);
+        var read = await context.PacedDiagReader.ReadStringAsync(address, action.MaxLength, ct);
 
         if (!read.Success)
         {
-            return CreateReadFailureResult(action.ReadErrorPrefix, read.Error);
+            return CreateReadFailureResult(read, $"чтении регистров {action.StartRegister}-{action.StartRegister + ((action.MaxLength + 1) / 2) - 1}", action.ReadErrorPrefix);
         }
 
         var actualValue = read.Value;
@@ -111,11 +111,11 @@ public partial class ReadSoftCodePlugStep
         logger.LogInformation(action.ReadLogMessage);
 
         var address = (ushort)(action.Register - _settings.BaseAddressOffset);
-        var read = await context.DiagReader.ReadUInt16Async(address, ct);
+        var read = await context.PacedDiagReader.ReadUInt16Async(address, ct);
 
         if (!read.Success)
         {
-            return CreateReadFailureResult(action.ReadErrorPrefix, read.Error);
+            return CreateReadFailureResult(read, $"чтении регистра {action.Register}", action.ReadErrorPrefix);
         }
 
         var actualValue = read.Value;
@@ -156,11 +156,11 @@ public partial class ReadSoftCodePlugStep
         logger.LogInformation(action.ReadLogMessage);
 
         var address = (ushort)(action.StartRegister - _settings.BaseAddressOffset);
-        var read = await context.DiagReader.ReadFloatAsync(address, ct);
+        var read = await context.PacedDiagReader.ReadFloatAsync(address, ct);
 
         if (!read.Success)
         {
-            return CreateReadFailureResult(action.ReadErrorPrefix, read.Error);
+            return CreateReadFailureResult(read, $"чтении регистров {action.StartRegister}-{action.StartRegister + 1}", action.ReadErrorPrefix);
         }
 
         var actualValue = read.Value;
@@ -197,11 +197,11 @@ public partial class ReadSoftCodePlugStep
         logger.LogInformation(action.ReadLogMessage);
 
         var address = (ushort)(action.StartRegister - _settings.BaseAddressOffset);
-        var read = await context.DiagReader.ReadStringAsync(address, action.MaxLength, ct);
+        var read = await context.PacedDiagReader.ReadStringAsync(address, action.MaxLength, ct);
 
         if (!read.Success)
         {
-            return CreateReadFailureResult(action.ReadErrorPrefix, read.Error);
+            return CreateReadFailureResult(read, $"чтении регистров {action.StartRegister}-{action.StartRegister + ((action.MaxLength + 1) / 2) - 1}", action.ReadErrorPrefix);
         }
 
         testResultsService.Add(
@@ -232,11 +232,11 @@ public partial class ReadSoftCodePlugStep
         logger.LogInformation(action.ReadLogMessage);
 
         var address = (ushort)(action.StartRegister - _settings.BaseAddressOffset);
-        var read = await context.DiagReader.ReadUInt32Async(address, ct);
+        var read = await context.PacedDiagReader.ReadUInt32Async(address, ct);
 
         if (!read.Success)
         {
-            return CreateReadFailureResult(action.ReadErrorPrefix, read.Error);
+            return CreateReadFailureResult(read, $"чтении регистров {action.StartRegister}-{action.StartRegister + 1}", action.ReadErrorPrefix);
         }
 
         testResultsService.Add(
@@ -267,11 +267,11 @@ public partial class ReadSoftCodePlugStep
         logger.LogInformation(action.ReadLogMessage);
 
         var address = (ushort)(action.Register - _settings.BaseAddressOffset);
-        var read = await context.DiagReader.ReadUInt16Async(address, ct);
+        var read = await context.PacedDiagReader.ReadUInt16Async(address, ct);
 
         if (!read.Success)
         {
-            return CreateReadFailureResult(action.ReadErrorPrefix, read.Error);
+            return CreateReadFailureResult(read, $"чтении регистра {action.Register}", action.ReadErrorPrefix);
         }
 
         var isMissing = read.Value == 0;
@@ -317,9 +317,12 @@ public partial class ReadSoftCodePlugStep
         return true;
     }
 
-    private TestStepResult CreateReadFailureResult(string prefix, string? error)
+    private TestStepResult CreateReadFailureResult<T>(
+        Final_Test_Hybrid.Services.Diagnostic.Models.DiagnosticReadResult<T> result,
+        string operation,
+        string prefix)
     {
-        var message = CreateReadFailureMessage(prefix, error);
+        var message = ComsStepFailureHelper.BuildReadMessage(result, operation, CreateReadFailureMessage(prefix, result.Error));
         logger.LogError(message);
         return TestStepResult.Fail(message);
     }

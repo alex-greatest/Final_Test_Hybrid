@@ -10,7 +10,8 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Models;
 public record DiagnosticReadResult<T>(
     ushort Address,
     T? Value,
-    string? Error)
+    string? Error,
+    DiagnosticFailureKind FailureKind)
 {
     /// <summary>
     /// Успешность операции чтения.
@@ -21,11 +22,14 @@ public record DiagnosticReadResult<T>(
     /// Создаёт успешный результат.
     /// </summary>
     public static DiagnosticReadResult<T> Ok(ushort address, T value) =>
-        new(address, value, null);
+        new(address, value, null, DiagnosticFailureKind.None);
 
     /// <summary>
     /// Создаёт результат с ошибкой.
     /// </summary>
-    public static DiagnosticReadResult<T> Fail(ushort address, string error) =>
-        new(address, default, error);
+    public static DiagnosticReadResult<T> Fail(
+        ushort address,
+        string error,
+        DiagnosticFailureKind failureKind = DiagnosticFailureKind.Functional) =>
+        new(address, default, error, failureKind);
 }

@@ -6,7 +6,14 @@ Final_Test_Hybrid/nul
 node_modules/
 
 # Build outputs
+/.codex-build/
 %TEMP%/build_test/
+%TEMP%/
 /.tmp_build_out/
 /artifacts/inspect-*.txt
 Final_Test_Hybrid/tools/db-maintenance/out/
+
+# Local inspection and crash artifacts
+/inspect*.txt
+*.stackdump
+*scratchpadfull-diff.txt

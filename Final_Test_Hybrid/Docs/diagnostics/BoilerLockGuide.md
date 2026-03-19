@@ -14,6 +14,10 @@
   - `LastErrorId` (`1047`, `uint16`).
 - Логика активна только при `ExecutionActivityTracker.IsTestExecutionActive == true`.
 - Подъём ECU-ошибки в `ErrorService` выполняется отдельным сервисом `EcuErrorSyncService` в lock-контексте.
+- Ping cadence теперь profile-based:
+  - active execution: `5000 мс`;
+  - idle: `10000 мс`.
+- Safety-контракт не меняется: `BoilerLock` продолжает питаться только валидным ping, а stale ping очищается при reconnect.
 
 ## Конфигурация
 
@@ -135,6 +139,7 @@
 ## Что не меняется
 
 - Ping keep-alive продолжает работать (не паузится).
+- Active ping cadence сохраняет остановку по `BoilerLock` в пределах одного активного ping-цикла.
 - Остальные системные сервисы продолжают работать.
 - `ActiveErrorsGrid` продолжает отображать данные из `ErrorService` без изменений UI-компонента.
 - PLC reset flow и HardReset flow не объединяются и не переопределяются этой логикой.

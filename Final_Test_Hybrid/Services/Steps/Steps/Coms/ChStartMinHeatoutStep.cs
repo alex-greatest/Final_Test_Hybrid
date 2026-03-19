@@ -15,7 +15,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
 public class ChStartMinHeatoutStep(
     AccessLevelManager accessLevelManager,
     IOptions<DiagnosticSettings> settings,
-    DualLogger<ChStartMinHeatoutStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
+    DualLogger<ChStartMinHeatoutStep> logger) : IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.Coms.CH_Start_Min_Heatout";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"Coms\".\"CH_Start_Min_Heatout\".\"Start\"";
@@ -64,10 +64,10 @@ public class ChStartMinHeatoutStep(
     {
         logger.LogInformation("Retry: переводим котёл в режим Стенд перед повторным запуском Min Heatout");
 
-        var setResult = await accessLevelManager.SetStandModeAsync(context.DiagWriter, ct);
+        var setResult = await accessLevelManager.SetStandModeAsync(context.PacedDiagWriter, ct);
         if (!setResult.Success)
         {
-            var message = $"Ошибка установки режима Стенд. {setResult.Error}";
+            var message = ComsStepFailureHelper.BuildWriteMessage(setResult, "установке режима Стенд", $"Ошибка установки режима Стенд. {setResult.Error}");
             logger.LogError(message);
             return TestStepResult.Fail(message);
         }
@@ -117,20 +117,20 @@ public class ChStartMinHeatoutStep(
     private async Task<TestStepResult> HandleReady1Async(TestStepContext context, CancellationToken ct)
     {
         var modeAddress = (ushort)(RegisterOperationMode - _settings.BaseAddressOffset);
-        var modeWriteResult = await context.DiagWriter.WriteUInt16Async(modeAddress, MinHeatingMode, ct);
+        var modeWriteResult = await context.PacedDiagWriter.WriteUInt16Async(modeAddress, MinHeatingMode, ct);
 
         if (!modeWriteResult.Success)
         {
-            var message = $"Ошибка записи режима в регистр {RegisterOperationMode}. {modeWriteResult.Error}";
+            var message = ComsStepFailureHelper.BuildWriteMessage(modeWriteResult, $"записи режима в регистр {RegisterOperationMode}", $"Ошибка записи режима в регистр {RegisterOperationMode}. {modeWriteResult.Error}");
             return await FailWithFaultAsync(context, message, ct);
         }
 
         await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
-        var modeReadResult = await context.DiagReader.ReadUInt16Async(modeAddress, ct);
+        var modeReadResult = await context.PacedDiagReader.ReadUInt16Async(modeAddress, ct);
 
         if (!modeReadResult.Success)
         {
-            var message = $"Ошибка чтения регистра {RegisterOperationMode}. {modeReadResult.Error}";
+            var message = ComsStepFailureHelper.BuildReadMessage(modeReadResult, $"чтении регистра {RegisterOperationMode}", $"Ошибка чтения регистра {RegisterOperationMode}. {modeReadResult.Error}");
             return await FailWithFaultAsync(context, message, ct);
         }
 
@@ -177,11 +177,11 @@ public class ChStartMinHeatoutStep(
     private async Task<TestStepResult> HandleReady2Async(TestStepContext context, CancellationToken ct)
     {
         var statusAddress = (ushort)(RegisterBoilerStatus - _settings.BaseAddressOffset);
-        var statusResult = await context.DiagReader.ReadUInt16Async(statusAddress, ct);
+        var statusResult = await context.PacedDiagReader.ReadUInt16Async(statusAddress, ct);
 
         if (!statusResult.Success)
         {
-            var message = $"Ошибка чтения статуса котла из регистра {RegisterBoilerStatus}. {statusResult.Error}";
+            var message = ComsStepFailureHelper.BuildReadMessage(statusResult, $"чтении статуса котла из регистра {RegisterBoilerStatus}", $"Ошибка чтения статуса котла из регистра {RegisterBoilerStatus}. {statusResult.Error}");
             return await FailWithFaultAsync(context, message, ct);
         }
 

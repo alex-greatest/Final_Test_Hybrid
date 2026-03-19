@@ -17,7 +17,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
 public class SafetyTimeStep(
     IOptions<DiagnosticSettings> settings,
     ITestResultsService testResultsService,
-    DualLogger<SafetyTimeStep> logger) : ITestStep, IRequiresRecipes, IProvideLimits
+    DualLogger<SafetyTimeStep> logger) : IRequiresRecipes, IProvideLimits
 {
     private const ushort RegisterEv1Current = 1023;
     private const ushort RegisterEv2Current = 1028;
@@ -217,11 +217,11 @@ public class SafetyTimeStep(
         logger.LogInformation("Проверка статуса котла...");
 
         var statusAddress = (ushort)(RegisterBoilerStatus - _settings.BaseAddressOffset);
-        var statusResult = await context.DiagReader.ReadInt16Async(statusAddress, ct);
+        var statusResult = await context.PacedDiagReader.ReadInt16Async(statusAddress, ct);
 
         if (!statusResult.Success)
         {
-            return TestStepResult.Fail($"Ошибка чтения статуса котла: {statusResult.Error}");
+            return TestStepResult.Fail(ComsStepFailureHelper.BuildReadMessage(statusResult, $"чтении статуса котла из регистра {RegisterBoilerStatus}", $"Ошибка чтения статуса котла: {statusResult.Error}"));
         }
 
         if (statusResult.Value != BlockageBStatus)
@@ -234,11 +234,11 @@ public class SafetyTimeStep(
         context.ReportProgress("Сброс блокировки...");
 
         var resetAddress = (ushort)(RegisterResetBlockage - _settings.BaseAddressOffset);
-        var writeResult = await context.DiagWriter.WriteUInt16Async(resetAddress, ResetValue, ct);
+        var writeResult = await context.PacedDiagWriter.WriteUInt16Async(resetAddress, ResetValue, ct);
 
         if (!writeResult.Success)
         {
-            return TestStepResult.Fail($"Ошибка сброса блокировки: {writeResult.Error}");
+            return TestStepResult.Fail(ComsStepFailureHelper.BuildWriteMessage(writeResult, $"сбросе блокировки через регистр {RegisterResetBlockage}", $"Ошибка сброса блокировки: {writeResult.Error}"));
         }
 
         await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
@@ -253,19 +253,19 @@ public class SafetyTimeStep(
     private async Task<CoilCurrentsResult> ReadCoilCurrentsAsync(TestStepContext context, CancellationToken ct)
     {
         var ev1Address = (ushort)(RegisterEv1Current - _settings.BaseAddressOffset);
-        var ev1Result = await context.DiagReader.ReadUInt16Async(ev1Address, ct);
+        var ev1Result = await context.PacedDiagReader.ReadUInt16Async(ev1Address, ct);
 
         if (!ev1Result.Success)
         {
-            return new CoilCurrentsResult(false, 0, 0, ev1Result.Error);
+            return new CoilCurrentsResult(false, 0, 0, ComsStepFailureHelper.BuildReadMessage(ev1Result, $"чтении тока катушки EV1 из регистра {RegisterEv1Current}", $"Ошибка чтения тока катушки EV1: {ev1Result.Error}"));
         }
 
         var ev2Address = (ushort)(RegisterEv2Current - _settings.BaseAddressOffset);
-        var ev2Result = await context.DiagReader.ReadUInt16Async(ev2Address, ct);
+        var ev2Result = await context.PacedDiagReader.ReadUInt16Async(ev2Address, ct);
 
         if (!ev2Result.Success)
         {
-            return new CoilCurrentsResult(false, 0, 0, ev2Result.Error);
+            return new CoilCurrentsResult(false, 0, 0, ComsStepFailureHelper.BuildReadMessage(ev2Result, $"чтении тока катушки EV2 из регистра {RegisterEv2Current}", $"Ошибка чтения тока катушки EV2: {ev2Result.Error}"));
         }
 
         return new CoilCurrentsResult(true, ev1Result.Value, ev2Result.Value, null);

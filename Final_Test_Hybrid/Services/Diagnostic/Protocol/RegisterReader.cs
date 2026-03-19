@@ -47,7 +47,7 @@ public class RegisterReader(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Ошибка чтения регистра {Address}: {Error}", address, ex.Message);
-            return DiagnosticReadResult<ushort>.Fail(address, ex.Message);
+            return DiagnosticReadResult<ushort>.Fail(address, ex.Message, DiagnosticFailureClassifier.FromException(ex));
         }
     }
 
@@ -89,7 +89,7 @@ public class RegisterReader(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Ошибка чтения регистра {Address}: {Error}", address, ex.Message);
-            return DiagnosticReadResult<short>.Fail(address, ex.Message);
+            return DiagnosticReadResult<short>.Fail(address, ex.Message, DiagnosticFailureClassifier.FromException(ex));
         }
     }
 
@@ -131,7 +131,7 @@ public class RegisterReader(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Ошибка чтения регистра {Address}: {Error}", addressHi, ex.Message);
-            return DiagnosticReadResult<uint>.Fail(addressHi, ex.Message);
+            return DiagnosticReadResult<uint>.Fail(addressHi, ex.Message, DiagnosticFailureClassifier.FromException(ex));
         }
     }
 
@@ -184,7 +184,7 @@ public class RegisterReader(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Ошибка чтения регистра {Address}: {Error}", addressHi, ex.Message);
-            return DiagnosticReadResult<float>.Fail(addressHi, ex.Message);
+            return DiagnosticReadResult<float>.Fail(addressHi, ex.Message, DiagnosticFailureClassifier.FromException(ex));
         }
     }
 
@@ -241,7 +241,7 @@ public class RegisterReader(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Ошибка чтения строки по адресу {Address}: {Error}", address, ex.Message);
-            return DiagnosticReadResult<string>.Fail(address, ex.Message);
+            return DiagnosticReadResult<string>.Fail(address, ex.Message, DiagnosticFailureClassifier.FromException(ex));
         }
     }
 
@@ -294,7 +294,7 @@ public class RegisterReader(
             for (var i = 0; i < count; i++)
             {
                 var address = (ushort)(startAddress + i);
-                results[address] = DiagnosticReadResult<ushort>.Fail(address, ex.Message);
+                results[address] = DiagnosticReadResult<ushort>.Fail(address, ex.Message, DiagnosticFailureClassifier.FromException(ex));
             }
         }
         return results;

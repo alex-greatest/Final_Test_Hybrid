@@ -50,14 +50,7 @@ public class BoilerTemperatureService(
     public async Task<DiagnosticReadResult<short>> ReadSupplyLineTemperatureAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterSupplyLineTemperature - _settings.BaseAddressOffset);
-        var result = await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
-
-        if (!result.Success)
-        {
-            _logger.LogError("Ошибка чтения температуры подающей линии: {Error}", result.Error!);
-        }
-
-        return result;
+        return await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -71,14 +64,7 @@ public class BoilerTemperatureService(
     public async Task<DiagnosticReadResult<short>> ReadDHWTemperatureAsync(CancellationToken ct = default)
     {
         var address = (ushort)(RegisterDhwTemperature - _settings.BaseAddressOffset);
-        var result = await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
-
-        if (!result.Success)
-        {
-            _logger.LogError("Ошибка чтения температуры ГВС: {Error}", result.Error!);
-        }
-
-        return result;
+        return await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
     }
 
     /// <summary>

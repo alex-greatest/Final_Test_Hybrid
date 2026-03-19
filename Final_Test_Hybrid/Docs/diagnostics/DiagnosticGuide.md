@@ -13,7 +13,8 @@
                                                    ▼
                               ┌─────────────────────────────────────────────┐
                               │  PausableRegisterReader/Writer              │
-                              │  (блокируется при Auto OFF)                 │
+                              │  + PacedRegisterReader/Writer               │
+                              │  (пауза + opt-in pacing для Coms/*)         │
                               └──────────────┬──────────────────────────────┘
                                              │
               ┌──────────────────────────────┼──────────────────────────────┐
@@ -91,7 +92,8 @@ Services/Diagnostic/Protocol/CommandQueue/
 - `IModbusDispatcher` — диспетчер команд с приоритетной очередью
 - `IModbusClient` — клиент для чтения/записи регистров
 - `RegisterReader` / `RegisterWriter` — высокоуровневые операции (системные, НЕ паузятся)
-- `PausableRegisterReader` / `PausableRegisterWriter` — операции для тестовых шагов (паузятся)
+- `PausableRegisterReader` / `PausableRegisterWriter` — базовые операции для тестовых шагов (паузятся)
+- `PacedRegisterReader` / `PacedRegisterWriter` — opt-in pacing для Modbus-heavy `Coms/*` шагов через `TestStepContext`
 - `PollingService` / `PollingTask` — периодический опрос регистров
 - `PingCommand` — keep-alive команда, читает ModeKey + BoilerStatus
 
@@ -152,7 +154,16 @@ private static void ConfigureDiagnosticEvents(ServiceProvider serviceProvider)
 | Таймаут команды | `false` | `true` | Ошибка связи — переподключение |
 | После StopAsync | `false` | `false` | Диспетчер остановлен |
 
-**Важно:** `IsConnected = true` устанавливается только после первой **успешной** команды (ping или пользовательской).
+**Важно:** `IsConnected = true` устанавливается только после первой **успешной** команды после старта или reconnect.
+
+Дополнительно для `UI.*`:
+- во время `IsReconnecting = true` display-only команды не ставятся в очередь;
+- `CH.razor` и `DHW.razor` перезапускают polling только после `Connected`;
+- stale ping не считается подтверждением живой связи.
+- display-only polling для `CH/DHW` работает с профилем:
+  - idle: `2000 мс`;
+  - active execution: `3000 мс`.
+- ошибки фонового display-only polling логируются в самих `CH/DHW` как источник `Котёл/Modbus` с throttling по повторяющейся ошибке; базовый `BoilerTemperatureService` для этих чтений не пишет per-tick error-log.
 
 ### Свойства
 
@@ -526,8 +537,8 @@ public class DiagnosticReadStep : ITestStep
 {
     public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
     {
-        // Пауза автоматически применится при Auto OFF
-        var result = await context.DiagReader.ReadUInt16Async(1005, ct);
+        // Для Modbus-heavy шага используется pacing + pause-aware wrapper
+        var result = await context.PacedDiagReader.ReadUInt16Async(1005, ct);
 
         if (!result.Success)
         {
@@ -541,17 +552,22 @@ public class DiagnosticReadStep : ITestStep
 }
 ```
 
-### Поведение паузы
+### Поведение паузы и step-level pacing
 
 ```
-TestStep вызывает context.DiagReader.ReadUInt16Async(address, ct)
+TestStep вызывает context.PacedDiagReader.ReadUInt16Async(address, ct)
                             │
                             ▼
         ┌─────────────────────────────────────┐
         │ await pauseToken.WaitWhilePausedAsync(ct) │  ← Блокируется при Auto OFF
         └─────────────────────────────────────┘
                             │
-                            ▼ (только после Resume)
+                            ▼
+        ┌─────────────────────────────────────┐
+        │ await pacing.WaitBeforeOperationAsync(ct) │  ← Только для opt-in paced wrappers
+        └─────────────────────────────────────┘
+                            │
+                            ▼ (только после Resume/окна pacing)
         ┌─────────────────────────────────────┐
         │ await inner.ReadUInt16Async(address, ct)  │  ← Реальное чтение
         └─────────────────────────────────────┘
@@ -562,6 +578,13 @@ TestStep вызывает context.DiagReader.ReadUInt16Async(address, ct)
 | ДО вызова `ReadUInt16Async` | Следующий вызов заблокируется |
 | ВО ВРЕМЯ `WaitWhilePausedAsync` | Ждёт Resume, потом читает |
 | ПОСЛЕ `WaitWhilePausedAsync` (в Modbus) | Операция завершится (по дизайну) |
+
+Контракт pacing:
+- pacing применяется только через `context.PacedDiagReader` / `context.PacedDiagWriter`;
+- окно pacing: `150 мс`;
+- первая paced-операция идёт без искусственной паузы;
+- каждая следующая ждёт только остаток окна;
+- ожидание всегда отменяемо через тот же `CancellationToken`.
 
 ## Чтение регистров
 
@@ -730,6 +753,8 @@ public class MyService(PollingService pollingService)
     "BaseAddressOffset": 1,
     "CommandQueue": {
       "ReconnectDelayMs": 5000,
+      "PingIntervalActiveMs": 5000,
+      "PingIntervalIdleMs": 10000,
       "PingIntervalMs": 5000
     }
   }
@@ -754,7 +779,9 @@ public class MyService(PollingService pollingService)
 | Параметр | Default | Описание |
 |----------|---------|----------|
 | `ReconnectDelayMs` | 5000 | Интервал переподключения (мс) |
-| `PingIntervalMs` | 5000 | Интервал ping keep-alive (мс) |
+| `PingIntervalActiveMs` | 5000 | Ping cadence во время active test execution |
+| `PingIntervalIdleMs` | 10000 | Ping cadence в idle |
+| `PingIntervalMs` | 5000 | Legacy fallback для ручных UI-экранов |
 | `HighBurstBeforeLow` | 8 | Порог fairness: после N High делается попытка выполнить 1 Low |
 
 Остальные настройки: HighPriorityQueueCapacity=100, LowPriorityQueueCapacity=10, CommandWaitTimeoutMs=100.
@@ -778,9 +805,14 @@ if (!result.Success)
 | Слой | Исключение | Результат |
 |------|------------|-----------|
 | `IModbusClient` | Пробрасывается | — |
-| `RegisterReader` | Ловится | `DiagnosticReadResult.Fail(error)` |
-| `RegisterWriter` | Ловится | `DiagnosticWriteResult.Fail(error)` |
+| `RegisterReader` | Ловится | `DiagnosticReadResult.Fail(error, failureKind)` |
+| `RegisterWriter` | Ловится | `DiagnosticWriteResult.Fail(error, failureKind)` |
 | `OperationCanceledException` | Пробрасывается на всех слоях | — |
+
+`failureKind`:
+- `Communication` — timeout/IOException, dispatcher unavailable, reconnect suppression `UI.*`;
+- `Functional` — ECU error-code, protocol/value validation, локальные business mismatch;
+- `None` — успешная операция.
 
 ### При потере связи
 
@@ -827,6 +859,11 @@ if (!result.Success)
 - timeout в `PingLoop`;
 - timeout в фоновых UI-pollers;
 - timeout в конкретном test-step маршруте.
+
+Reconnect-policy по traffic class:
+- `UI.*` считается `non-critical`;
+- во время reconnect `UI.*` подавляется до первой успешной команды post-reconnect;
+- `PingLoop`, `Coms/*`, recovery/reset flow и `BoilerLock` остаются `critical`.
 
 ## Потокобезопасность
 

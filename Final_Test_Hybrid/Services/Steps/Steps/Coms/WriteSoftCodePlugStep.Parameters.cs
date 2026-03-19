@@ -1,4 +1,3 @@
-using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
 namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
@@ -17,13 +16,11 @@ public partial class WriteSoftCodePlugStep
         logger.LogInformation("Запись макс. теплопроизводительности отопления: {Value}%", maxHeatOutputCh);
 
         var address = (ushort)(RegisterMaxHeatOutputCh - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteUInt16Async(address, maxHeatOutputCh, ct);
+        var result = await context.PacedDiagWriter.WriteUInt16Async(address, maxHeatOutputCh, ct);
 
         if (!result.Success)
         {
-            var msg = $"Ошибка при записи теплопроизводительности отопления в регистр {RegisterMaxHeatOutputCh}. {result.Error}";
-            logger.LogError(msg);
-            return TestStepResult.Fail(msg, errors: [ErrorDefinitions.EcuWriteError]);
+            return CreateWriteFailure(result, $"записи теплопроизводительности отопления в регистр {RegisterMaxHeatOutputCh}", $"Ошибка при записи теплопроизводительности отопления в регистр {RegisterMaxHeatOutputCh}. {result.Error}");
         }
 
         logger.LogInformation("Макс. теплопроизводительность отопления записана успешно");
@@ -39,13 +36,11 @@ public partial class WriteSoftCodePlugStep
         logger.LogInformation("Запись макс. теплопроизводительности ГВС: {Value}%", maxHeatOutputDhw);
 
         var address = (ushort)(RegisterMaxHeatOutputDhw - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteUInt16Async(address, maxHeatOutputDhw, ct);
+        var result = await context.PacedDiagWriter.WriteUInt16Async(address, maxHeatOutputDhw, ct);
 
         if (!result.Success)
         {
-            var msg = $"Ошибка при записи теплопроизводительности ГВС в регистр {RegisterMaxHeatOutputDhw}. {result.Error}";
-            logger.LogError(msg);
-            return TestStepResult.Fail(msg, errors: [ErrorDefinitions.EcuWriteError]);
+            return CreateWriteFailure(result, $"записи теплопроизводительности ГВС в регистр {RegisterMaxHeatOutputDhw}", $"Ошибка при записи теплопроизводительности ГВС в регистр {RegisterMaxHeatOutputDhw}. {result.Error}");
         }
 
         logger.LogInformation("Теплопроизводительность ГВС записана успешно");
@@ -61,13 +56,11 @@ public partial class WriteSoftCodePlugStep
         logger.LogInformation("Запись мин. теплопроизводительности отопления: {Value}%", minHeatOutputCh);
 
         var address = (ushort)(RegisterMinHeatOutputCh - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteUInt16Async(address, minHeatOutputCh, ct);
+        var result = await context.PacedDiagWriter.WriteUInt16Async(address, minHeatOutputCh, ct);
 
         if (!result.Success)
         {
-            var msg = $"Ошибка при записи мин. теплопроизводительности отопления в регистр {RegisterMinHeatOutputCh}. {result.Error}";
-            logger.LogError(msg);
-            return TestStepResult.Fail(msg, errors: [ErrorDefinitions.EcuWriteError]);
+            return CreateWriteFailure(result, $"записи мин. теплопроизводительности отопления в регистр {RegisterMinHeatOutputCh}", $"Ошибка при записи мин. теплопроизводительности отопления в регистр {RegisterMinHeatOutputCh}. {result.Error}");
         }
 
         logger.LogInformation("Мин. теплопроизводительность отопления записана успешно");
@@ -83,13 +76,11 @@ public partial class WriteSoftCodePlugStep
         logger.LogInformation("Запись режима работы насоса: {Value}", pumpMode);
 
         var address = (ushort)(RegisterPumpMode - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteUInt16Async(address, pumpMode, ct);
+        var result = await context.PacedDiagWriter.WriteUInt16Async(address, pumpMode, ct);
 
         if (!result.Success)
         {
-            var msg = $"Ошибка при записи режима работы насоса в регистр {RegisterPumpMode}. {result.Error}";
-            logger.LogError(msg);
-            return TestStepResult.Fail(msg, errors: [ErrorDefinitions.EcuWriteError]);
+            return CreateWriteFailure(result, $"записи режима работы насоса в регистр {RegisterPumpMode}", $"Ошибка при записи режима работы насоса в регистр {RegisterPumpMode}. {result.Error}");
         }
 
         logger.LogInformation("Режим работы насоса записан успешно");
@@ -105,13 +96,11 @@ public partial class WriteSoftCodePlugStep
         logger.LogInformation("Запись установленной скорости насоса: {Value} Вт", pumpSpeed);
 
         var address = (ushort)(RegisterPumpSpeed - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteUInt16Async(address, pumpSpeed, ct);
+        var result = await context.PacedDiagWriter.WriteUInt16Async(address, pumpSpeed, ct);
 
         if (!result.Success)
         {
-            var msg = $"Ошибка при записи скорости насоса в регистр {RegisterPumpSpeed}. {result.Error}";
-            logger.LogError(msg);
-            return TestStepResult.Fail(msg, errors: [ErrorDefinitions.EcuWriteError]);
+            return CreateWriteFailure(result, $"записи скорости насоса в регистр {RegisterPumpSpeed}", $"Ошибка при записи скорости насоса в регистр {RegisterPumpSpeed}. {result.Error}");
         }
 
         logger.LogInformation("Скорость насоса записана успешно");
@@ -127,13 +116,11 @@ public partial class WriteSoftCodePlugStep
         logger.LogInformation("Запись вида подаваемого газа: {Value}", gasType);
 
         var address = (ushort)(RegisterGasType - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteUInt16Async(address, gasType, ct);
+        var result = await context.PacedDiagWriter.WriteUInt16Async(address, gasType, ct);
 
         if (!result.Success)
         {
-            var msg = $"Ошибка при записи вида газа в регистр {RegisterGasType}. {result.Error}";
-            logger.LogError(msg);
-            return TestStepResult.Fail(msg, errors: [ErrorDefinitions.EcuWriteError]);
+            return CreateWriteFailure(result, $"записи вида газа в регистр {RegisterGasType}", $"Ошибка при записи вида газа в регистр {RegisterGasType}. {result.Error}");
         }
 
         logger.LogInformation("Вид подаваемого газа записан успешно");
@@ -149,13 +136,11 @@ public partial class WriteSoftCodePlugStep
         logger.LogInformation("Запись сдвига тока на модуляционной катушке: {Value} мА", currentOffset);
 
         var address = (ushort)(RegisterCurrentOffset - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteUInt16Async(address, currentOffset, ct);
+        var result = await context.PacedDiagWriter.WriteUInt16Async(address, currentOffset, ct);
 
         if (!result.Success)
         {
-            var msg = $"Ошибка при записи сдвига тока в регистр {RegisterCurrentOffset}. {result.Error}";
-            logger.LogError(msg);
-            return TestStepResult.Fail(msg, errors: [ErrorDefinitions.EcuWriteError]);
+            return CreateWriteFailure(result, $"записи сдвига тока в регистр {RegisterCurrentOffset}", $"Ошибка при записи сдвига тока в регистр {RegisterCurrentOffset}. {result.Error}");
         }
 
         logger.LogInformation("Сдвиг тока записан успешно");
@@ -171,13 +156,11 @@ public partial class WriteSoftCodePlugStep
         logger.LogInformation("Запись коэффициента k расхода воды: {Value}", flowCoeff);
 
         var address = (ushort)(RegisterFlowCoefficientHi - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteFloatAsync(address, flowCoeff, ct);
+        var result = await context.PacedDiagWriter.WriteFloatAsync(address, flowCoeff, ct);
 
         if (!result.Success)
         {
-            var msg = $"Ошибка при записи коэффициента k в регистры {RegisterFlowCoefficientHi}-{RegisterFlowCoefficientHi + 1}. {result.Error}";
-            logger.LogError(msg);
-            return TestStepResult.Fail(msg, errors: [ErrorDefinitions.EcuWriteError]);
+            return CreateWriteFailure(result, $"записи коэффициента k в регистры {RegisterFlowCoefficientHi}-{RegisterFlowCoefficientHi + 1}", $"Ошибка при записи коэффициента k в регистры {RegisterFlowCoefficientHi}-{RegisterFlowCoefficientHi + 1}. {result.Error}");
         }
 
         logger.LogInformation("Коэффициент k записан успешно");
@@ -193,13 +176,11 @@ public partial class WriteSoftCodePlugStep
         logger.LogInformation("Запись макс. мощности насоса в авто режиме: {Value} Вт", pumpPowerMax);
 
         var address = (ushort)(RegisterPumpPowerMax - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteUInt16Async(address, pumpPowerMax, ct);
+        var result = await context.PacedDiagWriter.WriteUInt16Async(address, pumpPowerMax, ct);
 
         if (!result.Success)
         {
-            var msg = $"Ошибка при записи макс. мощности насоса в регистр {RegisterPumpPowerMax}. {result.Error}";
-            logger.LogError(msg);
-            return TestStepResult.Fail(msg, errors: [ErrorDefinitions.EcuWriteError]);
+            return CreateWriteFailure(result, $"записи макс. мощности насоса в регистр {RegisterPumpPowerMax}", $"Ошибка при записи макс. мощности насоса в регистр {RegisterPumpPowerMax}. {result.Error}");
         }
 
         logger.LogInformation("Макс. мощность насоса записана успешно");
@@ -215,13 +196,11 @@ public partial class WriteSoftCodePlugStep
         logger.LogInformation("Запись мин. мощности насоса в авто режиме: {Value} Вт", pumpPowerMin);
 
         var address = (ushort)(RegisterPumpPowerMin - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteUInt16Async(address, pumpPowerMin, ct);
+        var result = await context.PacedDiagWriter.WriteUInt16Async(address, pumpPowerMin, ct);
 
         if (!result.Success)
         {
-            var msg = $"Ошибка при записи мин. мощности насоса в регистр {RegisterPumpPowerMin}. {result.Error}";
-            logger.LogError(msg);
-            return TestStepResult.Fail(msg, errors: [ErrorDefinitions.EcuWriteError]);
+            return CreateWriteFailure(result, $"записи мин. мощности насоса в регистр {RegisterPumpPowerMin}", $"Ошибка при записи мин. мощности насоса в регистр {RegisterPumpPowerMin}. {result.Error}");
         }
 
         logger.LogInformation("Мин. мощность насоса записана успешно");
@@ -237,13 +216,11 @@ public partial class WriteSoftCodePlugStep
         logger.LogInformation("Запись гистерезиса подогрева ГВС: {Value} °С", hysteresis);
 
         var address = (ushort)(RegisterComfortHysteresis - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteUInt16Async(address, hysteresis, ct);
+        var result = await context.PacedDiagWriter.WriteUInt16Async(address, hysteresis, ct);
 
         if (!result.Success)
         {
-            var msg = $"Ошибка при записи гистерезиса ГВС в регистр {RegisterComfortHysteresis}. {result.Error}";
-            logger.LogError(msg);
-            return TestStepResult.Fail(msg, errors: [ErrorDefinitions.EcuWriteError]);
+            return CreateWriteFailure(result, $"записи гистерезиса ГВС в регистр {RegisterComfortHysteresis}", $"Ошибка при записи гистерезиса ГВС в регистр {RegisterComfortHysteresis}. {result.Error}");
         }
 
         logger.LogInformation("Гистерезис подогрева ГВС записан успешно");
@@ -259,13 +236,11 @@ public partial class WriteSoftCodePlugStep
         logger.LogInformation("Запись макс. температуры подающей линии: {Value} °С", maxFlowTemp);
 
         var address = (ushort)(RegisterMaxFlowTemperature - _settings.BaseAddressOffset);
-        var result = await context.DiagWriter.WriteUInt16Async(address, maxFlowTemp, ct);
+        var result = await context.PacedDiagWriter.WriteUInt16Async(address, maxFlowTemp, ct);
 
         if (!result.Success)
         {
-            var msg = $"Ошибка при записи макс. температуры подающей линии в регистр {RegisterMaxFlowTemperature}. {result.Error}";
-            logger.LogError(msg);
-            return TestStepResult.Fail(msg, errors: [ErrorDefinitions.EcuWriteError]);
+            return CreateWriteFailure(result, $"записи макс. температуры подающей линии в регистр {RegisterMaxFlowTemperature}", $"Ошибка при записи макс. температуры подающей линии в регистр {RegisterMaxFlowTemperature}. {result.Error}");
         }
 
         logger.LogInformation("Макс. температура подающей линии записана успешно");

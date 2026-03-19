@@ -27,7 +27,7 @@ public class RegisterWriter(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Ошибка записи в регистр {Address}: {Error}", address, ex.Message);
-            return DiagnosticWriteResult.Fail(address, ex.Message);
+            return DiagnosticWriteResult.Fail(address, ex.Message, DiagnosticFailureClassifier.FromException(ex));
         }
     }
 
@@ -44,7 +44,7 @@ public class RegisterWriter(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Ошибка записи в регистр {Address}: {Error}", address, ex.Message);
-            return DiagnosticWriteResult.Fail(address, ex.Message);
+            return DiagnosticWriteResult.Fail(address, ex.Message, DiagnosticFailureClassifier.FromException(ex));
         }
     }
 
@@ -55,7 +55,7 @@ public class RegisterWriter(
     {
         try
         {
-            var registers = new ushort[]
+            var registers = new[]
             {
                 (ushort)(value >> 16),  // Hi word
                 (ushort)(value & 0xFFFF) // Lo word
@@ -67,7 +67,7 @@ public class RegisterWriter(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Ошибка записи в регистр {Address}: {Error}", addressHi, ex.Message);
-            return DiagnosticWriteResult.Fail(addressHi, ex.Message);
+            return DiagnosticWriteResult.Fail(addressHi, ex.Message, DiagnosticFailureClassifier.FromException(ex));
         }
     }
 
@@ -98,7 +98,7 @@ public class RegisterWriter(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Ошибка записи в регистр {Address}: {Error}", addressHi, ex.Message);
-            return DiagnosticWriteResult.Fail(addressHi, ex.Message);
+            return DiagnosticWriteResult.Fail(addressHi, ex.Message, DiagnosticFailureClassifier.FromException(ex));
         }
     }
 
@@ -143,7 +143,7 @@ public class RegisterWriter(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Ошибка записи строки в регистр {Address}: {Error}", address, ex.Message);
-            return DiagnosticWriteResult.Fail(address, ex.Message);
+            return DiagnosticWriteResult.Fail(address, ex.Message, DiagnosticFailureClassifier.FromException(ex));
         }
     }
 }

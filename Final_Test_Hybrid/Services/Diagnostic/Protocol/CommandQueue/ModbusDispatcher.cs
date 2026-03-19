@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
@@ -46,12 +47,14 @@ public class ModbusDispatcher : IModbusDispatcher
     /// <param name="connectionManager">Менеджер соединений Modbus.</param>
     /// <param name="options">Настройки диспетчера.</param>
     /// <param name="diagnosticSettings">Настройки диагностики (включая BaseAddressOffset).</param>
+    /// <param name="activityTracker">Трекер активности test execution для ping-профиля.</param>
     /// <param name="logger">Логгер.</param>
     /// <param name="testStepLogger">Логгер тестовых шагов.</param>
     public ModbusDispatcher(
         ModbusConnectionManager connectionManager,
         IOptions<ModbusDispatcherOptions> options,
         IOptions<DiagnosticSettings> diagnosticSettings,
+        ExecutionActivityTracker activityTracker,
         ILogger<ModbusDispatcher> logger,
         ITestStepLogger testStepLogger)
     {
@@ -81,7 +84,7 @@ public class ModbusDispatcher : IModbusDispatcher
             EnqueueAsync,
             _options,
             baseAddressOffset,
-            _logger);
+            activityTracker);
 
         // Настраиваем колбэк ping
         _pingLoop.OnPingDataReceived = HandlePingDataReceived;
@@ -139,6 +142,13 @@ public class ModbusDispatcher : IModbusDispatcher
             channel = _commandQueue.GetChannel(command.Priority);
         }
 
+        if (ShouldSuppressDuringReconnect(command))
+        {
+            command.SetException(new InvalidOperationException(
+                $"Команда подавлена во время переподключения: Source={command.Source}, Command={command.CommandName}"));
+            return;
+        }
+
         if (channel == null)
         {
             throw new InvalidOperationException("Диспетчер не инициализирован");
@@ -152,6 +162,12 @@ public class ModbusDispatcher : IModbusDispatcher
         {
             throw new InvalidOperationException("Диспетчер остановлен, новые команды не принимаются");
         }
+    }
+
+    private bool ShouldSuppressDuringReconnect(IModbusCommand command)
+    {
+        return _isReconnecting
+            && ModbusTrafficClassifier.GetTrafficClass(command.Source) == ModbusTrafficClass.NonCritical;
     }
 
     /// <inheritdoc />

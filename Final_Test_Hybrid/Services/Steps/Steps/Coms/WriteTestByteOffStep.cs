@@ -28,11 +28,14 @@ public class WriteTestByteOffStep(
     {
         logger.LogInformation("Вывод котла из режима Стенд");
 
-        var result = await accessLevelManager.ResetToNormalModeAsync(context.DiagWriter, ct);
+        var result = await accessLevelManager.ResetToNormalModeAsync(context.PacedDiagWriter, ct);
 
         if (!result.Success)
         {
-            var errorMsg = $"Ошибка при записи ключа сброса в регистры 1000-1001. {result.Error}";
+            var errorMsg = ComsStepFailureHelper.BuildWriteMessage(
+                result,
+                "записи ключа сброса в регистры 1000-1001",
+                $"Ошибка при записи ключа сброса в регистры 1000-1001. {result.Error}");
             logger.LogError(errorMsg);
             return TestStepResult.Fail(errorMsg, errors: [ErrorDefinitions.WriteBytesOff]);
         }

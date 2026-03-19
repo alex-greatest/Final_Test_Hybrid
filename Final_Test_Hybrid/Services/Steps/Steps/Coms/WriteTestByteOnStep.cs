@@ -22,12 +22,14 @@ public class WriteTestByteOnStep(
     {
         logger.LogInformation("Установка режима Стенд");
 
-        var result = await accessLevelManager.SetStandModeAsync(context.DiagWriter, ct);
+        var result = await accessLevelManager.SetStandModeAsync(context.PacedDiagWriter, ct);
 
         if (!result.Success)
         {
-            // Все ошибки (timeout, нет связи, Modbus error) уже в result.Error
-            var errorMsg = $"Ошибка при записи ключа 0xD7F8DB56 в регистры 1000-1001. {result.Error}";
+            var errorMsg = ComsStepFailureHelper.BuildWriteMessage(
+                result,
+                "записи ключа 0xD7F8DB56 в регистры 1000-1001",
+                $"Ошибка при записи ключа 0xD7F8DB56 в регистры 1000-1001. {result.Error}");
             logger.LogError(errorMsg);
             return TestStepResult.Fail(errorMsg, errors: [ErrorDefinitions.WriteBytesOn]);
         }

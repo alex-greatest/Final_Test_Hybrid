@@ -2,6 +2,7 @@ using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Access;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
+using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Options;
@@ -51,10 +52,10 @@ public class CheckTestByteOnStep(
     {
         logger.LogInformation("Retry: пытаемся установить режим Стенд");
 
-        var setResult = await accessLevelManager.SetStandModeAsync(context.DiagWriter, ct);
+        var setResult = await accessLevelManager.SetStandModeAsync(context.PacedDiagWriter, ct);
         if (!setResult.Success)
         {
-            return CreateWriteError(setResult.Error ?? "Неизвестная ошибка");
+            return CreateWriteError(setResult);
         }
 
         return await CheckStandModeAsync(context, ct);
@@ -71,12 +72,12 @@ public class CheckTestByteOnStep(
         await context.DelayAsync(TimeSpan.FromMilliseconds(_settings.WriteVerifyDelayMs), ct);
 
         var modbusAddress = (ushort)(ModeKeyAddressDoc - _settings.BaseAddressOffset);
-        var readResult = await context.DiagReader.ReadUInt32Async(modbusAddress, ct);
+        var readResult = await context.PacedDiagReader.ReadUInt32Async(modbusAddress, ct);
 
         if (!readResult.Success)
         {
             context.Variables[HadErrorKey] = true;
-            return CreateReadError(readResult.Error ?? "Неизвестная ошибка");
+            return CreateReadError(readResult);
         }
 
         if (readResult.Value == StandModeKey)
@@ -94,9 +95,12 @@ public class CheckTestByteOnStep(
     /// <summary>
     /// Создаёт результат ошибки чтения.
     /// </summary>
-    private TestStepResult CreateReadError(string error)
+    private TestStepResult CreateReadError(DiagnosticReadResult<uint> result)
     {
-        var msg = $"Ошибка при чтении ключа из регистров {ModeKeyAddressDoc}-{ModeKeyAddressDoc + 1}. {error}";
+        var msg = ComsStepFailureHelper.BuildReadMessage(
+            result,
+            $"чтении ключа из регистров {ModeKeyAddressDoc}-{ModeKeyAddressDoc + 1}",
+            $"Ошибка при чтении ключа из регистров {ModeKeyAddressDoc}-{ModeKeyAddressDoc + 1}. {result.Error ?? "Неизвестная ошибка"}");
         logger.LogError(msg);
         return TestStepResult.Fail(msg, errors: [ErrorDefinitions.BoilerNotStandMode]);
     }
@@ -104,9 +108,12 @@ public class CheckTestByteOnStep(
     /// <summary>
     /// Создаёт результат ошибки записи.
     /// </summary>
-    private TestStepResult CreateWriteError(string error)
+    private TestStepResult CreateWriteError(DiagnosticWriteResult result)
     {
-        var msg = $"Ошибка при записи ключа 0x{StandModeKey:X8} в регистры {ModeKeyAddressDoc}-{ModeKeyAddressDoc + 1}. {error}";
+        var msg = ComsStepFailureHelper.BuildWriteMessage(
+            result,
+            $"записи ключа 0x{StandModeKey:X8} в регистры {ModeKeyAddressDoc}-{ModeKeyAddressDoc + 1}",
+            $"Ошибка при записи ключа 0x{StandModeKey:X8} в регистры {ModeKeyAddressDoc}-{ModeKeyAddressDoc + 1}. {result.Error ?? "Неизвестная ошибка"}");
         logger.LogError(msg);
         return TestStepResult.Fail(msg, errors: [ErrorDefinitions.BoilerNotStandMode]);
     }
