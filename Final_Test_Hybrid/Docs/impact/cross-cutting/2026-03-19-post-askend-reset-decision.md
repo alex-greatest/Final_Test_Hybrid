@@ -55,6 +55,11 @@
   - linked CTS в `HandleTestCompletionAsync()` теперь включает и `_currentCts.Token`;
   - это закрывает зависание при non-PLC hard reset (`PlcConnectionLost -> ErrorCoordinator.Reset()`), который отменяет текущий цикл через `_currentCts.Cancel()`, но не вооружает PLC reset-window;
   - при потере связи во время картинки/ожидания `End=false` completion выходит в существующий `HardReset` path, а `HandleHardResetExit()` доходит до `OperationalReset` cleanup вместо зависшего заполненного грида.
+- Completion-flow после штатного завершения теста теперь принимает PLC decision без дополнительной задержки после `End=true`:
+  - сначала подтверждается запись `End=true`;
+  - затем completion ждёт либо `Req_Repeat=true`, либо `End=false`;
+  - если `Req_Repeat=true` приходит раньше сброса `End`, repeat запускается сразу, без ожидания `End=false`;
+  - если PLC сбрасывает `End` и `Req_Repeat` не поднят, выполняется обычное завершение теста.
 - Stable doc `CycleExitGuide.md` синхронизирован: completion handshake должен прерываться и PLC reset-токеном, и cycle CTS hard reset-пути.
 
 ## Затронутые файлы
@@ -76,6 +81,7 @@
 - `Final_Test_Hybrid/Components/Main/Modals/Interrupt/InterruptReasonDialog.razor`
 - `Final_Test_Hybrid/Docs/runtime/PlcResetGuide.md`
 - `Final_Test_Hybrid/Docs/execution/CycleExitGuide.md`
+- `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs`
 
 ## Проверки
 
@@ -85,6 +91,11 @@
 - `dotnet format style --verify-no-changes Final_Test_Hybrid.slnx` — успешно.
 - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.MainLoop.cs" --no-build --format=Text "--output=inspect-warning-completion-hard-reset.txt" -e=WARNING` — без warning.
 - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.MainLoop.cs" --no-build --format=Text "--output=inspect-hint-completion-hard-reset.txt" -e=HINT` — без hint после удаления trailing comma.
+- `dotnet build Final_Test_Hybrid.slnx` после правки completion handshake — неуспешно по той же внешней причине: `Final_Test_Hybrid.exe` остаётся заблокирован процессом `Final_Test_Hybrid (24876)`, MSB3027/MSB3021 на copy `apphost.exe -> bin\\Debug\\net10.0-windows\\Final_Test_Hybrid.exe`.
+- `dotnet format analyzers --verify-no-changes Final_Test_Hybrid.slnx` после правки completion handshake — успешно.
+- `dotnet format style --verify-no-changes Final_Test_Hybrid.slnx` после правки completion handshake — успешно.
+- `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs" --no-build --format=Text "--output=inspect-warning-completion-repeat-decision.txt" -e=WARNING` — без warning по отчёту.
+- `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs" --no-build --format=Text "--output=inspect-hint-completion-repeat-decision.txt" -e=HINT` — без hint по отчёту.
 
 ## Инциденты
 

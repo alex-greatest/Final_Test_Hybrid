@@ -14,16 +14,33 @@ public abstract class ModbusCommandBase<T> : IModbusCommand
     /// <summary>
     /// Инициализирует команду с указанным приоритетом и токеном отмены.
     /// </summary>
-    protected ModbusCommandBase(CommandPriority priority, CancellationToken ct)
+    protected ModbusCommandBase(
+        CommandPriority priority,
+        string commandName,
+        string details,
+        string? source,
+        CancellationToken ct)
     {
         Priority = priority;
         CancellationToken = ct;
+        CommandName = commandName;
+        Details = details;
+        Source = string.IsNullOrWhiteSpace(source) ? ModbusCommandTraceContext.CurrentSource : source;
     }
 
     /// <summary>
     /// Task для ожидания результата выполнения команды.
     /// </summary>
     public Task<T> Task => _tcs.Task;
+
+    /// <inheritdoc />
+    public string CommandName { get; }
+
+    /// <inheritdoc />
+    public string Source { get; }
+
+    /// <inheritdoc />
+    public string Details { get; }
 
     /// <inheritdoc />
     public CommandPriority Priority { get; }
@@ -74,16 +91,33 @@ public abstract class ModbusCommandBase : IModbusCommand
     /// <summary>
     /// Инициализирует команду с указанным приоритетом и токеном отмены.
     /// </summary>
-    protected ModbusCommandBase(CommandPriority priority, CancellationToken ct)
+    protected ModbusCommandBase(
+        CommandPriority priority,
+        string commandName,
+        string details,
+        string? source,
+        CancellationToken ct)
     {
         Priority = priority;
         CancellationToken = ct;
+        CommandName = commandName;
+        Details = details;
+        Source = string.IsNullOrWhiteSpace(source) ? ModbusCommandTraceContext.CurrentSource : source;
     }
 
     /// <summary>
     /// Task для ожидания завершения команды.
     /// </summary>
     public Task Task => _tcs.Task;
+
+    /// <inheritdoc />
+    public string CommandName { get; }
+
+    /// <inheritdoc />
+    public string Source { get; }
+
+    /// <inheritdoc />
+    public string Details { get; }
 
     /// <inheritdoc />
     public CommandPriority Priority { get; }

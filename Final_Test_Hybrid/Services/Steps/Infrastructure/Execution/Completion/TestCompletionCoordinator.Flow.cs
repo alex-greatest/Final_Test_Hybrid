@@ -21,30 +21,12 @@ public partial class TestCompletionCoordinator
             {
                 return CompletionResult.Cancelled;
             }
-            logger.LogInformation("End = true записан, ожидание сброса от PLC");
+            logger.LogInformation("End = true записан, ожидание решения PLC");
 
-            // 2. Ждать пока подписка увидит true (запись дошла до PLC)
-            var currentValue = deps.Subscription.GetValue<bool>(BaseTags.ErrorSkip);
-            logger.LogInformation("Текущее значение End после записи: {Value}", currentValue);
+            await deps.TagWaiter.WaitForTrueAsync(BaseTags.ErrorSkip, timeout: TimeSpan.FromSeconds(5), ct);
 
-            if (!currentValue)
-            {
-                logger.LogWarning("End ещё false, ждём подтверждения записи...");
-                await deps.TagWaiter.WaitForTrueAsync(BaseTags.ErrorSkip, timeout: TimeSpan.FromSeconds(5), ct);
-                logger.LogInformation("End = true подтверждено");
-            }
-            // 3. Ждать End = false (PLC сбросит) — может быть прервано Reset
-            await deps.TagWaiter.WaitForFalseAsync(BaseTags.ErrorSkip, timeout: null, ct);
-            logger.LogDebug("PLC сбросил End");
-
-            // 3. Delay 1 секунда (даём PLC время выставить Req_Repeat)
-            await Task.Delay(1000, ct);
-
-            // 4. Читаем Req_Repeat → решение
-            var reqRepeat = deps.Subscription.GetValue<bool>(BaseTags.ErrorRetry);
-            logger.LogInformation("Req_Repeat = {ReqRepeat}", reqRepeat);
-
-            if (reqRepeat)
+            var shouldRepeat = await WaitCompletionDecisionAsync(ct);
+            if (shouldRepeat)
             {
                 return await HandleRepeatAsync(testResult, ct);
             }
@@ -53,13 +35,35 @@ public partial class TestCompletionCoordinator
         }
         catch (OperationCanceledException)
         {
-            logger.LogInformation("Ожидание End прервано");
+            logger.LogInformation("Ожидание completion-handshake прервано");
             return CompletionResult.Cancelled;
         }
         finally
         {
             IsWaitingForCompletion = false;
         }
+    }
+
+    private async Task<bool> WaitCompletionDecisionAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            if (deps.Subscription.GetValue<bool>(BaseTags.ErrorRetry))
+            {
+                logger.LogInformation("Completion: Req_Repeat = true");
+                return true;
+            }
+
+            if (!deps.Subscription.GetValue<bool>(BaseTags.ErrorSkip))
+            {
+                logger.LogInformation("Completion: End сброшен без Req_Repeat");
+                return false;
+            }
+
+            await Task.Delay(200, ct);
+        }
+
+        throw new OperationCanceledException(ct);
     }
 
     private async Task<CompletionResult> HandleRepeatAsync(int testResult, CancellationToken ct)

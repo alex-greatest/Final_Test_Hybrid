@@ -8,6 +8,21 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
 public interface IModbusCommand
 {
     /// <summary>
+    /// Диагностическое имя команды.
+    /// </summary>
+    string CommandName { get; }
+
+    /// <summary>
+    /// Источник команды: шаг, UI, ping или иной consumer.
+    /// </summary>
+    string Source { get; }
+
+    /// <summary>
+    /// Краткие детали команды для timeout-логов.
+    /// </summary>
+    string Details { get; }
+
+    /// <summary>
     /// Приоритет команды.
     /// </summary>
     CommandPriority Priority { get; }

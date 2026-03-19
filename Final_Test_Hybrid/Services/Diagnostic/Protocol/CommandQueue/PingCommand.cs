@@ -25,7 +25,12 @@ public class PingCommand : ModbusCommandBase<DiagnosticPingData>
     /// <param name="baseAddressOffset">Смещение базового адреса из настроек.</param>
     /// <param name="ct">Токен отмены.</param>
     public PingCommand(CommandPriority priority, ushort baseAddressOffset, CancellationToken ct)
-        : base(priority, ct)
+        : base(
+            priority,
+            commandName: "Ping",
+            details: $"baseAddress={ModeKeyAddressDoc - baseAddressOffset},count={RegisterCount}",
+            source: "PingLoop",
+            ct: ct)
     {
         _baseAddressOffset = baseAddressOffset;
         _baseAddress = (ushort)(ModeKeyAddressDoc - baseAddressOffset);

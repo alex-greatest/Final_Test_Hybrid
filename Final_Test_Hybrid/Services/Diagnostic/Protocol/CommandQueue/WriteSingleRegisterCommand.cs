@@ -18,7 +18,12 @@ public class WriteSingleRegisterCommand : ModbusCommandBase
         ushort value,
         CommandPriority priority,
         CancellationToken ct)
-        : base(priority, ct)
+        : base(
+            priority,
+            commandName: "WriteSingleRegister",
+            details: $"address={address},value={value}",
+            source: null,
+            ct: ct)
     {
         _address = address;
         _value = value;

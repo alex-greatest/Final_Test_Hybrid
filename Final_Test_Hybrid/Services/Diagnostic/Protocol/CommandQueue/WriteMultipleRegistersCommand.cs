@@ -18,7 +18,12 @@ public class WriteMultipleRegistersCommand : ModbusCommandBase
         ushort[] values,
         CommandPriority priority,
         CancellationToken ct)
-        : base(priority, ct)
+        : base(
+            priority,
+            commandName: "WriteMultipleRegisters",
+            details: $"address={address},count={values.Length}",
+            source: null,
+            ct: ct)
     {
         _address = address;
         _values = values;

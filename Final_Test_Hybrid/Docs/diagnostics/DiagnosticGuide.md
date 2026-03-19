@@ -796,6 +796,38 @@ if (!result.Success)
 
 Подпишитесь на `Disconnecting` чтобы остановить polling (в Form1.cs уже настроено).
 
+### Детализация timeout-лога
+
+Для communication timeout worker пишет расширенный warning перед reconnect:
+
+```text
+Ошибка связи: The operation has timed out. Command=ReadHoldingRegisters, Source=Coms/Read_Soft_Code_Plug, Priority=High, Details=address=1174,count=7. Переподключение...
+```
+
+Поля лога:
+
+| Поле | Описание |
+|------|----------|
+| `Command` | Тип Modbus-команды (`ReadHoldingRegisters`, `WriteSingleRegister`, `WriteMultipleRegisters`, `Ping`) |
+| `Source` | Источник команды в текущем async-flow |
+| `Priority` | Приоритет очереди (`High`/`Low`) |
+| `Details` | Краткие параметры команды (`address`, `count`, `value`) |
+
+Текущие метки `Source`:
+
+| Source | Откуда приходит |
+|--------|------------------|
+| `PingLoop` | keep-alive ping диспетчера |
+| `UI.CH` | фоновое чтение температуры CH на главном экране |
+| `UI.DHW` | фоновое чтение температуры DHW на главном экране |
+| `Coms/...` и другие имена шагов | Modbus-команды, созданные внутри `ITestStep.ExecuteAsync(...)` через `ColumnExecutor` |
+| `Unknown` | consumer не проставил trace-source; это сигнал для дальнейшей локализации источника |
+
+Этот лог нужен, чтобы отличать:
+- timeout в `PingLoop`;
+- timeout в фоновых UI-pollers;
+- timeout в конкретном test-step маршруте.
+
 ## Потокобезопасность
 
 | Компонент | Потокобезопасность |

@@ -18,7 +18,12 @@ public class ReadHoldingRegistersCommand : ModbusCommandBase<ushort[]>
         ushort count,
         CommandPriority priority,
         CancellationToken ct)
-        : base(priority, ct)
+        : base(
+            priority,
+            commandName: "ReadHoldingRegisters",
+            details: $"address={address},count={count}",
+            source: null,
+            ct: ct)
     {
         _address = address;
         _count = count;

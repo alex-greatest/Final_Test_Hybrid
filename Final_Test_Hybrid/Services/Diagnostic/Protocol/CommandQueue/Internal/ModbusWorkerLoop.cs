@@ -283,7 +283,13 @@ internal sealed class ModbusWorkerLoop
             {
                 command.SetException(ex);
                 setConnected(false);
-                _logger.LogWarning("Ошибка связи: {Error}. Переподключение...", ex.Message);
+                _logger.LogWarning(
+                    "Ошибка связи: {Error}. Command={Command}, Source={Source}, Priority={Priority}, Details={Details}. Переподключение...",
+                    ex.Message,
+                    command.CommandName,
+                    command.Source,
+                    command.Priority,
+                    command.Details);
                 throw; // Выходим из ProcessCommandsLoopAsync для reconnect
             }
             catch (Exception ex)

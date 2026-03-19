@@ -131,6 +131,7 @@
         {
             while (timer != null && await timer.WaitForNextTickAsync(ct).ConfigureAwait(false))
             {
+                using var _ = ModbusCommandTraceContext.BeginScope("UI.DHW");
                 var result = await BoilerTemperatureService.ReadDHWTemperatureAsync(ct).ConfigureAwait(false);
                 _tDhwBoiler = result.Success ? FormatValue(result.Value) : "N/A";
                 await InvokeAsync(StateHasChanged);

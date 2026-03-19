@@ -2,6 +2,7 @@ using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Limits;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
@@ -196,6 +197,8 @@ public class ColumnExecutor(
 
     private async Task<TestStepResult> ExecuteWithEndGuardAsync(ITestStep step, CancellationToken ct)
     {
+        using var _ = ModbusCommandTraceContext.BeginScope(step.Name);
+
         if (step is IHasPlcBlockPath plcStep && PlcBlockTagHelper.GetEndTag(plcStep) is { } endTag)
         {
             try

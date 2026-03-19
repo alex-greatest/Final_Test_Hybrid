@@ -148,14 +148,15 @@ private void HandleCycleExit(CycleExitReason reason)
 
 ### Прерывание completion-flow при reset
 
-Во время `HandleTestCompletionAsync()` ожидание PLC handshake (`End=false`) обязано
+Во время `HandleTestCompletionAsync()` ожидание PLC completion-handshake (`Req_Repeat=true`
+или `End=false` после записи `End=true`) обязано
 прерываться не только PLC reset-токеном, но и отменой текущего cycle CTS.
 
 Причина:
 
 - PLC soft reset отменяет completion через reset-token;
 - non-PLC hard reset (например, `PlcConnectionLost -> ErrorCoordinator.Reset()`) отменяет текущий цикл через `_currentCts.Cancel()`;
-- completion-flow не должен оставаться в бесконечном `WaitForFalseAsync(End)` после hard reset, иначе `HandleHardResetExit()` не дойдёт до cleanup sequence UI.
+- completion-flow не должен оставаться в ожидании PLC decision после hard reset, иначе `HandleHardResetExit()` не дойдёт до cleanup sequence UI.
 
 ## Очистка по AskEnd (HandleGridClear)
 
