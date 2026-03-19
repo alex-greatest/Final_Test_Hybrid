@@ -198,6 +198,11 @@ RunSingleCycleAsync:
   - при подписке `PreExecutionCoordinator` вызывает `TryConsumePendingAutoReadyRequest()` и, если нужно, выполняет catch-up (`AutoReadyReplayConsumed`).
 - Источник сигнала для этого пути — `AutoReadySubscription.OnFirstAutoReceived` (one-shot): влияние `AutoReady` на старт changeover ограничено первым запуском.
 - Единственный owner финального старта changeover в reset-сценариях — `PreExecutionCoordinator` (sequence-aware проверка).
+- `ChangeoverResetMode` для reset-сценария фиксируется один раз на старте `HandleStopSignal()` и дальше не пересчитывается из `FlowState.StopReason`.
+  Это отдельный latch для changeover reset semantics:
+  - в `ScanStep` / без активного теста mode фиксируется как `WaitForAskEndOnly`;
+  - при активном тесте с `UseInterruptReason` и валидным `SerialNumber` mode фиксируется как `WaitForReason`;
+  - поздний cleanup/restart changeover использует тот же latched mode текущего reset-cycle.
 - Для PLC soft reset `AskEnd` больше не считается прямым триггером старта changeover:
   - `AskEnd` только подтверждает PLC reset и запускает post-AskEnd decision flow;
   - ранний `RecordAskEndSequence(...)` в момент `AskEnd` не используется;

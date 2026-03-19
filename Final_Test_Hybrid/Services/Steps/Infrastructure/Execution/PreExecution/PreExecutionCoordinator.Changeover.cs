@@ -17,6 +17,7 @@ public partial class PreExecutionCoordinator
     private int _changeoverAskEndSequence;
     private int _changeoverReasonSaved;
     private int _changeoverStartedSequence = -1;
+    private int _changeoverResetModeSnapshot = (int)ChangeoverResetMode.Immediate;
 
     private enum ChangeoverResetMode
     {
@@ -35,19 +36,30 @@ public partial class PreExecutionCoordinator
             && infra.AppSettings.UseInterruptReason;
     }
 
-    private bool ShouldDelayChangeoverUntilAskEndOnly()
-    {
-        var stopReason = state.FlowState.StopReason;
-        return stopReason is ExecutionStopReason.PlcSoftReset or ExecutionStopReason.PlcHardReset or ExecutionStopReason.PlcForceStop;
-    }
-
     private ChangeoverResetMode GetChangeoverResetMode()
     {
-        return ShouldDelayChangeoverStart()
+        return (ChangeoverResetMode)Volatile.Read(ref _changeoverResetModeSnapshot);
+    }
+
+    private ChangeoverResetMode LatchChangeoverResetModeForCurrentReset()
+    {
+        var mode = ComputeChangeoverResetModeForCurrentReset();
+        Volatile.Write(ref _changeoverResetModeSnapshot, (int)mode);
+        return mode;
+    }
+
+    private ChangeoverResetMode ComputeChangeoverResetModeForCurrentReset()
+    {
+        return state.BoilerState.IsTestRunning
+            && state.BoilerState.SerialNumber != null
+            && infra.AppSettings.UseInterruptReason
             ? ChangeoverResetMode.WaitForReason
-            : ShouldDelayChangeoverUntilAskEndOnly()
-                ? ChangeoverResetMode.WaitForAskEndOnly
-                : ChangeoverResetMode.Immediate;
+            : ChangeoverResetMode.WaitForAskEndOnly;
+    }
+
+    private void ResetLatchedChangeoverResetMode()
+    {
+        Volatile.Write(ref _changeoverResetModeSnapshot, (int)ChangeoverResetMode.Immediate);
     }
 
     private int GetResetSequenceSnapshot()

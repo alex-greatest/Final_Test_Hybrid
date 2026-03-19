@@ -185,6 +185,7 @@ public partial class PreExecutionCoordinator(
     {
         var resetSequence = Interlocked.Increment(ref _resetSequence);
         ArmResetCleanupGuard();
+        ResetLatchedChangeoverResetMode();
         infra.Logger.LogDebug(
             "Старт reset-цикла: seq={ResetSequence}, source={ResetSource}, cleanupArmed={CleanupArmed}",
             resetSequence,

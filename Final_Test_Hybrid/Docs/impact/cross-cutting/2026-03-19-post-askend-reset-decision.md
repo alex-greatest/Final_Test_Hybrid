@@ -25,6 +25,9 @@
 - Для гонки `AskEnd -> OnResetCompleted` добавлен ранний guard в `HandleGridClear()`:
   - post-AskEnd flow помечается активным синхронно до первого `await`;
   - это блокирует ранний `HandlePlcResetCompleted()` и не даёт стереть `BoilerState`/barcode/context до repeat decision.
+- Для changeover reset semantics добавлен отдельный latch:
+  - `ChangeoverResetMode` вычисляется один раз на входе в `HandleStopSignal()` и сохраняется на весь reset-cycle;
+  - stop и поздний restart changeover больше не зависят от повторного чтения mutable `FlowState.StopReason`.
 - `BoilerState.IsTestRunning` в repeat-путях больше не считается завершённым раньше PLC outcome:
   - normal repeat -> `SetTestRunning(false)` перенесён в `HandleRepeatRequestedExit` / `HandleNokRepeatRequestedExit`;
   - repeat after reset -> `SetTestRunning(false)` выполняется в `StartRepeatAfterReset`.
@@ -35,10 +38,11 @@
 
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionDependencies.cs`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.cs`
-- `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.CycleExit.cs`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.Changeover.cs`
+- `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.CycleExit.cs`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.Subscriptions.cs`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.PostAskEnd.cs`
+- `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Scanning/ScanModeController.cs`
 - `Final_Test_Hybrid/Docs/runtime/PlcResetGuide.md`
 
 ## Проверки

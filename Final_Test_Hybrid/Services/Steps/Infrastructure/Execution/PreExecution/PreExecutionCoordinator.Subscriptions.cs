@@ -53,9 +53,10 @@ public partial class PreExecutionCoordinator
         var stopReason = resolution == PreExecutionResolution.SoftStop
             ? ExecutionStopReason.PlcSoftReset
             : ExecutionStopReason.PlcHardReset;
+        var changeoverMode = LatchChangeoverResetModeForCurrentReset();
         state.FlowState.RequestStop(stopReason, stopAsFailure: true);
         SignalReset(exitReason);
-        StopChangeoverTimerForReset(GetChangeoverResetMode());
+        StopChangeoverTimerForReset(changeoverMode);
 
         if (TryCancelActiveOperation(exitReason))
         {
