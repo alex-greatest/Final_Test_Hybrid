@@ -62,7 +62,9 @@
 @code {
     private RadzenDataGrid<TestSequenseData>? _grid;
     private IEnumerable<TestSequenseData> _data = [];
+    private bool _pendingGridReload;
     private bool _pendingScrollToBottom = true;
+    private bool _disposed;
 
     private static string GetCellClass(TestSequenseData data)
     {
@@ -83,6 +85,12 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_pendingGridReload)
+        {
+            await ReloadGridAndScheduleScrollAsync();
+            return;
+        }
+
         if (!_pendingScrollToBottom)
         {
             return;
@@ -92,25 +100,61 @@
         await ScrollToBottom();
     }
 
+    public Task EnsureScrolledToBottomAsync()
+    {
+        return InvokeAsync(RequestScrollToBottom);
+    }
+
     private async void HandleDataChanged()
     {
         try
         {
-            await InvokeAsync(async () =>
-            {
-                _data = TestSequenseService.Data;
-                _pendingScrollToBottom = true;
-                StateHasChanged();
-                if (_grid != null)
-                {
-                    await _grid.Reload();
-                }
-            });
+            await InvokeAsync(RefreshGridAsync);
         }
-        catch (Exception)
+        catch (ObjectDisposedException)
         {
             // ignored
         }
+        catch (InvalidOperationException) when (_disposed)
+        {
+            // ignored
+        }
+    }
+
+    private Task RefreshGridAsync()
+    {
+        if (_disposed)
+        {
+            return Task.CompletedTask;
+        }
+
+        _data = TestSequenseService.Data;
+        _pendingGridReload = true;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task ReloadGridAndScheduleScrollAsync()
+    {
+        _pendingGridReload = false;
+
+        if (_grid != null)
+        {
+            await _grid.Reload();
+        }
+
+        RequestScrollToBottom();
+    }
+
+    private void RequestScrollToBottom()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _pendingScrollToBottom = true;
+        StateHasChanged();
     }
 
     private async Task ScrollToBottom()
@@ -120,6 +164,7 @@
 
     public void Dispose()
     {
+        _disposed = true;
         TestSequenseService.OnDataChanged -= HandleDataChanged;
     }
 }

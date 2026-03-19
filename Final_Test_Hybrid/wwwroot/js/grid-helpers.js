@@ -5,9 +5,22 @@ window.scrollGridToBottom = (containerId) => {
     }
 
     const scrollArea = container.querySelector(".rz-data-grid-data");
-    if (scrollArea) {
-        scrollArea.scrollTop = scrollArea.scrollHeight;
+    if (!(scrollArea instanceof HTMLElement)) {
+        return;
     }
+
+    const scrollToBottom = (attempt) => {
+        scrollArea.scrollTop = scrollArea.scrollHeight;
+        if (attempt >= 2 || !scrollArea.isConnected) {
+            return;
+        }
+
+        window.requestAnimationFrame(() => {
+            scrollToBottom(attempt + 1);
+        });
+    };
+
+    scrollToBottom(0);
 };
 
 window.scrollGridToTop = (containerId) => {

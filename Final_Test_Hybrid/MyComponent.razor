@@ -29,7 +29,7 @@
 
 <RadzenStack Orientation="Orientation.Vertical" Gap="0" class="app-stack-vertical">
     <div class="app-tabs-shell">
-        <RadzenTabs RenderMode="TabRenderMode.Client" @bind-SelectedIndex="@selectedIndex" class="app-tabs-90">
+        <RadzenTabs RenderMode="TabRenderMode.Client" @bind-SelectedIndex="@_selectedIndex" Change="@OnMainTabChanged" class="app-tabs-90">
             <Tabs>
                 <RadzenTabsItem Text="Главный экран">
                     <div style="height: 100%; padding: 0 20px;">
@@ -86,7 +86,7 @@
                                 else
                                 {
                                     <MessageHelper />
-                                    <TestSequenseGrid />
+                                    <TestSequenseGrid @ref="_testSequenseGrid" />
                                 }
                             </div>
                         </RadzenStack>
@@ -114,7 +114,7 @@
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Обзор">
                     <div class="app-tabs-shell app-tabs-shell-inside">
-                        <RadzenTabs RenderMode="TabRenderMode.Client" @bind-SelectedIndex="@innerSelectedIndex"
+                        <RadzenTabs RenderMode="TabRenderMode.Client" @bind-SelectedIndex="@_innerSelectedIndex"
                                     Style="height: 100%; width: 100%" class="scheme-tabs">
                             <Tabs>
                                 <RadzenTabsItem Text="Газ">
@@ -211,8 +211,10 @@
 <FloatingErrorBadgeHost />
 
 @code {
-    private int selectedIndex = 0;
-    private int innerSelectedIndex = 0;
+    private const int MainTabIndex = 0;
+    private int _selectedIndex;
+    private int _innerSelectedIndex;
+    private TestSequenseGrid? _testSequenseGrid;
     private bool _disposed;
 
     protected override void OnInitialized()
@@ -234,6 +236,17 @@
     {
         if (_disposed) return;
         _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnMainTabChanged(int tabIndex)
+    {
+        _selectedIndex = tabIndex;
+        if (_disposed || tabIndex != MainTabIndex || _testSequenseGrid == null)
+        {
+            return;
+        }
+
+        await _testSequenseGrid.EnsureScrolledToBottomAsync();
     }
 
     private void HandleTestCompletionChanged()
