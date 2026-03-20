@@ -63,7 +63,8 @@ public sealed partial class ErrorCoordinator : IErrorCoordinator, IInterruptCont
 
     private void HandleConnectionChanged(bool isConnected)
     {
-        var isActive = _subscriptions.ActivityTracker.IsAnyActive;
+        var isActive = _subscriptions.ActivityTracker.IsAnyActive
+            || _subscriptions.RuntimeTerminalState.HasTerminalHandshake;
         if (_disposed || isConnected || !isActive) { return; }
         FireAndForgetInterrupt(InterruptReason.PlcConnectionLost);
     }
@@ -74,6 +75,7 @@ public sealed partial class ErrorCoordinator : IErrorCoordinator, IInterruptCont
 
         var isReady = _subscriptions.AutoReady.IsReady;
         var isActive = _subscriptions.ActivityTracker.IsAnyActive;
+        var hasTerminalHandshake = _subscriptions.RuntimeTerminalState.HasTerminalHandshake;
 
         if (isReady)
         {
@@ -83,6 +85,12 @@ public sealed partial class ErrorCoordinator : IErrorCoordinator, IInterruptCont
         }
 
         _logger.LogInformation("AutoReady OFF → pause");
+        if (hasTerminalHandshake)
+        {
+            _logger.LogInformation("AutoReady OFF во время terminal handshake: AutoModeDisabled не поднимается");
+            return;
+        }
+
         if (isActive)
         {
             FireAndForgetInterrupt(InterruptReason.AutoModeDisabled);

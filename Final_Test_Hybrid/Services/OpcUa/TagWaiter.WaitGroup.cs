@@ -6,6 +6,9 @@ namespace Final_Test_Hybrid.Services.OpcUa;
 
 public partial class TagWaiter
 {
+    // ReSharper disable once LocalizableElement
+    private const string EmptyWaitGroupMessage = "WaitGroup должен содержать хотя бы одно условие";
+
     #region WaitGroup Factory
 
     /// <summary>
@@ -38,7 +41,7 @@ public partial class TagWaiter
     {
         if (builder.Conditions.Count == 0)
         {
-            throw new ArgumentException("WaitGroup должен содержать хотя бы одно условие", nameof(builder));
+            throw new ArgumentException(EmptyWaitGroupMessage, nameof(builder));
         }
 
         var genericResult = await WaitAnyAsync(builder.ToGeneric(), pauseGate, ct);
@@ -79,7 +82,7 @@ public partial class TagWaiter
     {
         if (builder.Conditions.Count == 0)
         {
-            throw new ArgumentException("WaitGroup должен содержать хотя бы одно условие", nameof(builder));
+            throw new ArgumentException(EmptyWaitGroupMessage, nameof(builder));
         }
 
         var earlyResult = CheckCurrentValues(builder, pauseGate);
@@ -223,6 +226,22 @@ public partial class TagWaiter
         }
         var current = subscription.GetValue<T>(nodeId);
         if (current != null && condition(current))
+        {
+            tcs.TrySetResult(current);
+        }
+    }
+
+    private void RecheckFalseValue(
+        string nodeId,
+        TaskCompletionSource<bool> tcs,
+        PauseTokenSource? pauseGate)
+    {
+        if (pauseGate?.IsPaused == true)
+        {
+            return;
+        }
+
+        if (subscription.GetValue(nodeId) is bool current && !current)
         {
             tcs.TrySetResult(current);
         }

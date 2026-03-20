@@ -15,7 +15,7 @@ Services/Steps/Infrastructure/Execution/ErrorCoordinator/
     ├── IInterruptBehavior.cs         # Интерфейс стратегии
     ├── IInterruptContext.cs          # Контекст для поведений
     ├── InterruptBehaviorRegistry.cs  # DI-based реестр поведений
-    ├── PlcConnectionLostBehavior.cs  # 5 сек задержка → Reset
+    ├── PlcConnectionLostBehavior.cs  # 5 сек задержка + stable toast id → Reset
     ├── AutoModeDisabledBehavior.cs   # Пауза и ожидание
     ├── BoilerLockBehavior.cs         # Пауза при блокировке котла
     └── TagTimeoutBehavior.cs         # 5 сек задержка → Reset
@@ -77,6 +77,7 @@ services.AddSingleton<IInterruptBehavior, NewReasonBehavior>();
 - `ConnectionState` — состояние соединения с ПЛК
 - `AutoReady` — готовность автоматического режима
 - `ActivityTracker` — отслеживание активности тегов
+- `RuntimeTerminalState` — terminal window completion/post-AskEnd вне active phase tracker
 
 ### ErrorResolutionServices
 Сервисы для разрешения ошибок:
@@ -116,6 +117,15 @@ _errorCoordinator.OnInterruptChanged -= HandleInterruptChanged;
 | `SendAskRepeatAsync(ct)` | Пишет `AskRepeat=true` для handshake повтора |
 | `SendAskRepeatAsync(blockErrorTag, ct)` | Совместимая перегрузка; `blockErrorTag` не используется в runtime |
 | `WaitForRetrySignalResetAsync(ct)` | Ожидает `Req_Repeat=false` (таймаут 60 сек) |
+
+## Ownership terminal window
+
+- `HandleConnectionChanged()` считает runtime активным, когда истинно `ActivityTracker.IsAnyActive || RuntimeTerminalState.HasTerminalHandshake`.
+- `completion` и `post-AskEnd` не расширяют `ExecutionActivityTracker`: их owner хранится отдельно в `RuntimeTerminalState`.
+- Во время terminal handshake `AutoReady OFF` не должен поднимать `AutoModeDisabled`.
+- `AutoReady ON` запускает resume-path только если `CurrentInterrupt == AutoModeDisabled`.
+- `BoilerLock`, `PlcConnectionLost`, `TagTimeout` и любой другой non-`AutoModeDisabled` interrupt не снимаются broad-resume от `AutoReady ON`.
+- `MessageService` использует тот же ownership-контур для main message: terminal window и active interrupt должны побеждать raw `AutoReady`/raw connection narrative.
 
 ### Дополнительно: аварийный retry-flow
 
@@ -200,6 +210,8 @@ public interface IInterruptContext
 - **Задержка:** 5 секунд (даём время на восстановление)
 - **Действие:** Reset
 - **Ошибка:** PlcConnectionLost
+- **Toast contract:** detail `Сброс через 5 сек`, явный `duration = 5000 ms`, stable `id = interrupt-plc-connection-lost`
+- **Main message:** pending-reset и reset-busy тексты живут не в behavior, а в `MessageService`
 
 ### AutoModeDisabledBehavior
 - **Задержка:** нет

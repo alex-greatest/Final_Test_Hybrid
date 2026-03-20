@@ -10,7 +10,8 @@
 2. `GridProfilesGuide.md` — профили таблиц (`grid-unified`, `main-grid-legacy`, `overview-grid-io`).
 3. `ButtonPatternsGuide.md` — семантика кнопок и правила блокировок.
 4. `MainScreenGuide.md` — композиция и логика вкладки «Главный экран».
-5. `SettingsBlockingGuide.md` — отдельный гайд по блокировке галочек в настройках.
+5. `MessageSemanticsGuide.md` — source-of-truth для нижней строки `MessageHelper` и её связи с runtime ownership.
+6. `SettingsBlockingGuide.md` — отдельный гайд по блокировке галочек в настройках.
 
 ## Карта задач
 
@@ -20,6 +21,7 @@
 | Добавить/изменить DataGrid-профиль | [GridProfilesGuide.md](GridProfilesGuide.md) |
 | Проверить корректность кнопок и блокировок | [ButtonPatternsGuide.md](ButtonPatternsGuide.md) |
 | Разобрать структуру главного экрана | [MainScreenGuide.md](MainScreenGuide.md) |
+| Проверить приоритеты main message и terminal-state semantics | [MessageSemanticsGuide.md](MessageSemanticsGuide.md) |
 | Изменить блокировку настроек | [SettingsBlockingGuide.md](SettingsBlockingGuide.md) |
 
 ## Контракт result/history/timer вкладок

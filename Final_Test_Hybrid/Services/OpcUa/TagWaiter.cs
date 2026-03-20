@@ -167,7 +167,57 @@ public partial class TagWaiter(
         PauseTokenSource? pauseGate,
         TimeSpan? timeout = null,
         CancellationToken ct = default)
-        => WaitForValueAsync<bool>(nodeId, v => !v, pauseGate, timeout, ct);
+        => WaitForFalseCoreAsync(nodeId, pauseGate, timeout, ct);
+
+    private async Task WaitForFalseCoreAsync(
+        string nodeId,
+        PauseTokenSource? pauseGate,
+        TimeSpan? timeout,
+        CancellationToken ct)
+    {
+        if (pauseGate?.IsPaused != true && subscription.GetValue(nodeId) is bool current && !current)
+        {
+            return;
+        }
+
+        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        Task OnValueChanged(object? value)
+        {
+            if (pauseGate?.IsPaused == true || value is not bool typed || typed)
+            {
+                return Task.CompletedTask;
+            }
+
+            testLogger.LogInformation("  Получен сигнал: {Value}", typed);
+            tcs.TrySetResult(typed);
+            return Task.CompletedTask;
+        }
+
+        await SubscribeWithReconnectRetryAsync(nodeId, OnValueChanged, ct);
+
+        Action? onResumed = null;
+        try
+        {
+            if (pauseGate != null)
+            {
+                onResumed = () => RecheckFalseValue(nodeId, tcs, pauseGate);
+                pauseGate.OnResumed += onResumed;
+            }
+
+            RecheckFalseValue(nodeId, tcs, pauseGate);
+            await WaitWithTimeoutAsync(tcs.Task, timeout, pauseGate, ct);
+        }
+        finally
+        {
+            if (onResumed != null)
+            {
+                pauseGate!.OnResumed -= onResumed;
+            }
+
+            await subscription.UnsubscribeAsync(nodeId, OnValueChanged, removeTag: false, ct: CancellationToken.None);
+        }
+    }
 
     #endregion
 }

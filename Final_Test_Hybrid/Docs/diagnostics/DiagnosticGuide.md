@@ -682,6 +682,12 @@ public class MyService(RegisterWriter writer)
 - После успешной записи панель **обязательно** читает тот же диапазон через `RegisterReader.ReadStringAsync(...)`.
 - Успех фиксируется только если read-back значение побайтно совпало с введённой строкой.
 
+#### Ownership shared dispatcher в `ConnectionTestPanel`
+
+- `ConnectionTestPanel` не хранит локальный snapshot `startedByPanel`. Вместо этого панель берёт `DiagnosticDispatcherLease`, а остановка shared dispatcher разрешается только последнему активному lease.
+- `CheckCommsStep` при успешном захвате связи переводит свой runtime-lease в sticky ownership до следующего `StopAsync()`, поэтому старая панель не может погасить dispatcher, который уже нужен runtime.
+- Ручные диагностические и инженерные экраны (`HandProgram`, `IoEditorDialog`, `AiCallCheck`, `PidRegulatorCheck`, `RtdCalCheck`) этим пакетом не блокируются и не меняют поведение во время runtime.
+
 #### Упаковка строки
 
 - Используется ASCII.

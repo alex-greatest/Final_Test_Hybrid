@@ -43,12 +43,12 @@
     <div style="position: relative; width: 100%;">
         <RadzenTextBox
             Style="width: 100%; padding-right: 30px;"
-            Value="@GetDisplayValue()"
+            Value="@_serialInput.Draft"
             ReadOnly="@IsFieldReadOnly"
             @oninput="OnInput"
             @onkeydown="OnKeyDown"
             Placeholder="@Placeholder"/>
-        @if (!IsFieldReadOnly && !string.IsNullOrEmpty(GetDisplayValue()))
+        @if (!IsFieldReadOnly && !string.IsNullOrEmpty(_serialInput.Draft))
         {
             <RadzenIcon
                 Icon="close"
@@ -68,7 +68,7 @@
     OnClose="@CloseErrorPanel" />
 
 @code {
-    private string _manualInput = "";
+    private readonly BoilerInfoInputDraft _serialInput = new();
     private bool _disposed;
     private const string PlaceholderText = "Отсканируйте или введите";
 
@@ -114,6 +114,7 @@
         CompletionCoordinator.OnPrepareErrorDialogRequested += HandlePrepareErrorDialogAsync;
         CompletionCoordinator.OnSaveProgressChanged += HandleSaveProgressChanged;
         ScanModeController.OnStateChanged += OnScanModeStateChanged;
+        SyncSerialInputDraft();
     }
 
     private void OnScanModeStateChanged() => InvokeIfNotDisposed(StateHasChanged);
@@ -127,11 +128,9 @@
         });
     }
 
-    private string GetDisplayValue() => BoilerState.SerialNumber ?? PreExecution.CurrentBarcode ?? _manualInput;
-
     private void OnDataChanged() => InvokeIfNotDisposed(StateHasChanged);
 
-    private void OnScanStateChanged() => InvokeIfNotDisposed(StateHasChanged);
+    private void OnScanStateChanged() => InvokeIfNotDisposed(RefreshSerialInputDraft);
 
     private void OnBlockingStateChanged() => InvokeIfNotDisposed(StateHasChanged);
 
@@ -139,45 +138,57 @@
 
     private void OnUseMesChanged(bool _)
     {
-        _manualInput = "";
+        _serialInput.Clear();
         BoilerState.Clear();
         PreExecution.ClearBarcode();
         InvokeIfNotDisposed(StateHasChanged);
     }
 
-    private void OnInput(ChangeEventArgs e) => _manualInput = e.Value?.ToString() ?? "";
+    private void OnInput(ChangeEventArgs e) => _serialInput.Update(e.Value?.ToString());
 
     private void OnKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key != "Enter" || IsFieldReadOnly || string.IsNullOrEmpty(_manualInput)) return;
+        if (e.Key != "Enter" || IsFieldReadOnly)
+        {
+            return;
+        }
 
-        PreExecution.SubmitBarcode(_manualInput);
+        var submitValue = _serialInput.GetSubmitValue();
+        if (submitValue == null)
+        {
+            return;
+        }
+
+        PreExecution.SubmitBarcode(submitValue);
     }
 
     private void OnBoilerStateChanged()
     {
-        if (BoilerState.SerialNumber != null)
-        {
-            InvokeIfNotDisposed(ClearManualInput);
-        }
-        else
-        {
-            InvokeIfNotDisposed(StateHasChanged);
-        }
+        InvokeIfNotDisposed(RefreshSerialInputDraft);
     }
 
-    private void ClearManualInput()
+    private void RefreshSerialInputDraft()
     {
-        _manualInput = "";
+        SyncSerialInputDraft();
         StateHasChanged();
     }
 
     private void ClearSerialNumber()
     {
-        _manualInput = "";
+        _serialInput.Clear();
         PreExecution.ClearBarcode();
         BoilerState.Clear();
         StateHasChanged();
+    }
+
+    private void SyncSerialInputDraft()
+    {
+        _serialInput.SyncFromPreserved(GetPreservedSerialNumber());
+    }
+
+    private string? GetPreservedSerialNumber()
+    {
+        return BoilerState.SerialNumber ?? PreExecution.CurrentBarcode;
     }
 
     private void InvokeIfNotDisposed(Action action)

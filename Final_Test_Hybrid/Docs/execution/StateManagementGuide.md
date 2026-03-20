@@ -53,7 +53,7 @@
 
 | Термин | Значение |
 |--------|----------|
-| **Soft reset** | Сброс по Req_Reset когда `wasInScanPhase=true`. Вызывает `ForceStop()`. **До AskEnd** данные сохраняются, **после AskEnd** очищаются через `ClearStateOnReset()`. |
+| **Soft reset** | Сброс по Req_Reset когда `wasInScanPhase=true`. Вызывает `ForceStop()`. **До AskEnd** данные сохраняются, **после AskEnd** проходит через post-AskEnd decision flow; `ClearStateOnReset()` вызывается только после финального PLC outcome или fail-safe cleanup. |
 | **Hard reset** | Сброс по Req_Reset когда `wasInScanPhase=false`. Очистка состояния идёт через общий one-shot guard: основной путь по `OnAskEndReceived` (`HandleGridClear()`), fallback — в `HandleHardResetExit()`, без повторной очистки. |
 | **ForceStop** | Метод `ErrorCoordinator.ForceStop()`. Resume + ClearInterrupt. НЕ вызывает OnReset. |
 | **Reset** | Метод `ErrorCoordinator.Reset()`. Resume + `Clear(TagReadTimeout)` + ClearInterrupt + OnReset event. |
@@ -234,7 +234,7 @@ public bool IsInScanningPhase
 ```
 
 Используется `PlcResetCoordinator` для определения типа сброса:
-- `true` → **Soft reset** (ForceStop) — данные очищаются по OnAskEndReceived через HandleGridClear()
+- `true` → **Soft reset** (ForceStop) — `OnAskEndReceived` запускает `HandleGridClear()` и post-AskEnd decision flow; cleanup выполняется после PLC outcome
 - `false` → **Hard reset** (Reset) — основной cleanup по AskEnd, fallback в `HandleHardResetExit()`; оба пути используют `TryRunResetCleanupOnce()`
 
 ### Диаграмма состояний
@@ -620,6 +620,33 @@ private bool ShouldUseSoftDeactivation()
 }
 ```
 
+## RuntimeTerminalState
+
+**Файл:** `Services/Steps/Infrastructure/Execution/RuntimeTerminalState.cs`
+
+Отдельный singleton для terminal window, которые не являются активной фазой выполнения, но ещё владеют runtime-решением PLC.
+
+### API
+
+| Член | Тип | Описание |
+|------|-----|----------|
+| `IsCompletionActive` | `bool` | Идёт completion-handshake после `End=true` |
+| `IsPostAskEndActive` | `bool` | Идёт post-AskEnd decision flow |
+| `HasTerminalHandshake` | `bool` | Любое terminal окно активно |
+| `SetCompletionActive(bool)` | `void` | Обновить completion-owner |
+| `SetPostAskEndActive(bool)` | `void` | Обновить post-AskEnd owner |
+| `OnChanged` | `Action` | Событие смены terminal state |
+
+### Правила использования
+
+- `TestCompletionCoordinator` и `PreExecutionCoordinator` обязаны обновлять terminal flags в `try/finally`, finish и cancel-path'ах.
+- Для post-AskEnd `HandleGridClear()` остаётся синхронной event-entry, а cleanup и terminal release обязаны жить в отдельном `Task` и `finally`; release не должен зависеть от event-handler catch-path.
+- `ExecutionActivityTracker` остаётся owner только active-phase (`PreExecution`, `TestExecution`) и не расширяется terminal cleanup-окнами.
+- `ErrorCoordinator` использует `HasTerminalHandshake` для ownership `PlcConnectionLost` и фильтрации `AutoModeDisabled`.
+- `MessageService` подписывается на `RuntimeTerminalState.OnChanged` и использует terminal flags как owner для main message.
+- Для post-AskEnd `MessageService` читает `RuntimeTerminalState.IsPostAskEndActive`; `PreExecutionCoordinator.IsPostAskEndFlowActive()` остаётся только частью expanded reset-gate.
+- Raw `AutoReady` и raw connection остаются только fallback-источниками вне terminal/interrupt/reset.
+
 ---
 
 ## PlcResetCoordinator
@@ -644,7 +671,7 @@ private bool ShouldUseSoftDeactivation()
 
 | Тип | Условие | Метод | Очистка состояния |
 |-----|---------|-------|-------------------|
-| **Soft** | `wasInScanPhase = true` | `ForceStop()` | По `OnAskEndReceived` → `HandleGridClear()` → `ClearStateOnReset()` |
+| **Soft** | `wasInScanPhase = true` | `ForceStop()` | По `OnAskEndReceived` → `HandleGridClear()` → post-AskEnd decision flow → cleanup/repeat |
 | **Hard** | `wasInScanPhase = false` | `Reset()` | По `OnAskEndReceived` **или** fallback в `HandleHardResetExit()`; один раз через `TryRunResetCleanupOnce()` |
 
 **Важно:**
@@ -691,9 +718,9 @@ WaitForAskEnd(AskEndTimeoutSec) ──► Ожидание Ask_End от PLC
        │
        ▼ (успех)
 OnAskEndReceived() ──► PreExecutionCoordinator.HandleGridClear()
-       │                → ExecuteGridClearAsync()
-       │                → TryRunResetCleanupOnce()
-       │                → ClearStateOnReset() + ClearAllExceptScan(SequenceClearMode.OperationalReset)
+       │                → ExecutePostAskEndFlowAsync()
+       │                → Wait `Req_Repeat=true` или `AskEnd=false`
+       │                → FinalizeResetCleanup() / StartRepeatAfterReset()
        ▼
 ExecuteSmartReset(wasInScanPhase)
        │
@@ -836,7 +863,7 @@ private void HandleHardReset()
 |---------|-----------|-------------|-------|
 | **OnForceStop** | PreExecutionCoordinator | Отмена операции, RequestStop | `HandleSoftStop()` |
 | **OnForceStop** | TestExecutionCoordinator | Errors, StopAsFailure | `HandleForceStop()` → `ClearErrors()` |
-| **OnAskEndReceived** | PreExecutionCoordinator | Основной cleanup reset-состояния + очистка sequence UI через `OperationalReset` | `HandleGridClear()` → `ExecuteGridClearAsync()` → `TryRunResetCleanupOnce()` |
+| **OnAskEndReceived** | PreExecutionCoordinator | Запуск post-AskEnd decision flow; cleanup и repeat выбираются после PLC outcome | `HandleGridClear()` → `ExecutePostAskEndFlowAsync()` |
 | **OnReset** | PreExecutionCoordinator | Stop-reason, запуск hard-reset path | `HandleHardReset()` → `HandleStopSignal(HardReset)` |
 | **OnReset** | TestExecutionCoordinator | Errors, StopAsFailure | `HandleReset()` → `ClearErrors()` |
 | **Test completion** | PreExecutionCoordinator | Финализация + completed-history через `CompletedTest` | `HandleTestCompletionAsync()` |
@@ -855,36 +882,30 @@ private void HandleSoftStop()
 }
 
 // OnAskEndReceived → HandleGridClear()
-private async void HandleGridClear()
+private void HandleGridClear()
 {
-    try { await ExecuteGridClearAsync(); }
-    catch { TryCompletePlcReset(); }
-}
-
-private async Task ExecuteGridClearAsync()
-{
-    var window = Volatile.Read(ref _currentAskEndWindow);
-    var currentSeq = GetResetSequenceSnapshot();
-    if (window == null || window.Sequence != currentSeq)
+    if (!TryBeginPostAskEndFlow(out var window))
     {
-        return; // stale AskEnd
-    }
-
-    RecordAskEndSequence(window.Sequence);
-    if (!TryRunResetCleanupOnce())
-    {
-        CompletePlcReset(window.Sequence);
         return;
     }
 
-    var context = CaptureAndClearState();
-    var allowDialog = ShouldShowInterruptDialog(context)
-        && Volatile.Read(ref _interruptDialogAllowedSequence) == window.Sequence;
-    if (allowDialog)
+    _ = ExecutePostAskEndFlowAsync(window);
+}
+
+private async Task ExecutePostAskEndFlowAsync(ResetAskEndWindow window)
+{
+    try
     {
-        await TryShowInterruptDialogAsync(context.SerialNumber!);
+        await HandlePostAskEndDecisionAsync(window);
     }
-    CompletePlcReset(window.Sequence);
+    catch
+    {
+        HandlePostAskEndFailure(window.Sequence);
+    }
+    finally
+    {
+        EnsurePostAskEndFlowReleased(window.Sequence);
+    }
 }
 
 // OnReset → HandleHardReset()
@@ -914,7 +935,7 @@ private void HandleHardReset()
 | Режим | Где используется | Что делает |
 |------|------|------|
 | `SequenceClearMode.CompletedTest` | `ClearForTestCompletion()`, `ClearForRepeat()`, `ClearForNokRepeat()` | Вызывает `SaveCompletedTestHistory()`: `BoilerState.SaveLastTestInfo()`, `StepHistoryService.CaptureSnapshot(...)`, `StepHistoryExcelExporter.ExportIfEnabledAsync(...)`, затем оставляет только scan-строку. |
-| `SequenceClearMode.OperationalReset` | `HandleGridClear()`, `CaptureAndClearState()`, `HandleHardResetExit()` | Сохраняет snapshot прерванного прогона только в `StepHistoryService`, если в sequence есть meaningful шаги помимо scan-строки. `BoilerState.SaveLastTestInfo()` и auto-export не вызываются. |
+| `SequenceClearMode.OperationalReset` | `FinalizeResetCleanup()`, `HandleHardResetExit()` | Сохраняет snapshot прерванного прогона только в `StepHistoryService`, если в sequence есть meaningful шаги помимо scan-строки. `BoilerState.SaveLastTestInfo()` и auto-export не вызываются. |
 | `SequenceClearMode.ClearOnly` | `ScanModeController.PerformFullDeactivation()` при logout вне PLC reset | Очищает sequence UI до scan-строки без snapshot и без export. |
 
 Семантика `BoilerState` в этих путях разная:
@@ -969,6 +990,7 @@ State machine для фаз жизненного цикла системы:
 | `State` | ExecutionStateManager | UI (OnStateChanged), координаторы | `TransitionTo` |
 | `IsPreExecutionActive` | ExecutionActivityTracker | ScanModeController, ErrorCoordinator (IsAnyActive) | PreExecutionCoordinator |
 | `IsTestExecutionActive` | ExecutionActivityTracker | ScanModeController, ErrorCoordinator (IsAnyActive) | TestExecutionCoordinator |
+| `HasTerminalHandshake` | RuntimeTerminalState | ErrorCoordinator, MessageService | TestCompletionCoordinator, PreExecutionCoordinator |
 | `HadSkippedError` | ExecutionStateManager | TestExecutionCoordinator | `MarkErrorSkipped()` |
 
 ---

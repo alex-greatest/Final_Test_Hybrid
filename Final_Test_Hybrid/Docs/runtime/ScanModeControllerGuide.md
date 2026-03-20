@@ -21,6 +21,8 @@ IsScanModeEnabled = IsAuthenticated && IsReady
 - Для старта changeover используется one-shot источник `AutoReadySubscription.OnFirstAutoReceived` через `ChangeoverStartGate`.
 - В `ChangeoverStartGate` есть pending/replay для поздней подписки `PreExecutionCoordinator`, чтобы первый сигнал не терялся (`AutoReadyReplayConsumed`).
 - После первого запуска последующие изменения `AutoReady` не должны перезапускать переналадку и не должны влиять на changeover во время теста.
+- После `OnResetCompleted` во время активного post-AskEnd окна scanner-ready не возвращается немедленно: `ScanModeController` ждёт завершения terminal ветки.
+- Deferred catch-up после post-AskEnd использует **latest** `AutoReadySubscription.IsReady` на момент закрытия окна, а не старый snapshot до reset.
 
 ## Состояния
 
@@ -39,6 +41,13 @@ IsInScanningPhase = _isActivated && !_isResetting
 Используется `PlcResetCoordinator` для определения типа сброса:
 - `true` → мягкий сброс (ForceStop)
 - `false` → жёсткий сброс (Reset)
+
+### Deferred scanner-ready после post-AskEnd
+
+- `OnResetCompleted` во время PLC soft reset больше не означает немедленный `TransitionToReadyInternal()`.
+- Если `PreExecutionCoordinator.IsPostAskEndFlowActive()` ещё true, controller удерживает reset-state до финального PLC outcome.
+- `full cleanup` возвращает scan timing/session после завершения post-AskEnd ветки.
+- `repeat` не поднимает scan timing/session, потому что следующий цикл уходит в существующий repeat path с `_skipNextScan`.
 
 ## Жизненный цикл
 

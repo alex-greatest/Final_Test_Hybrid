@@ -13,11 +13,13 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordin
 public sealed class ErrorCoordinatorSubscriptions(
     OpcUaConnectionState connectionState,
     AutoReadySubscription autoReady,
-    ExecutionActivityTracker activityTracker)
+    ExecutionActivityTracker activityTracker,
+    RuntimeTerminalState runtimeTerminalState)
 {
     public OpcUaConnectionState ConnectionState => connectionState;
     public AutoReadySubscription AutoReady => autoReady;
     public ExecutionActivityTracker ActivityTracker => activityTracker;
+    public RuntimeTerminalState RuntimeTerminalState => runtimeTerminalState;
 }
 
 /// <summary>

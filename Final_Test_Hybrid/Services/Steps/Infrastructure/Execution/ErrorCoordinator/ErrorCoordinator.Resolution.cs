@@ -150,6 +150,11 @@ public sealed partial class ErrorCoordinator
 
         try
         {
+            if (!_pauseToken.IsPaused || CurrentInterrupt != InterruptReason.AutoModeDisabled)
+            {
+                return;
+            }
+
             if (_pauseToken.IsPaused)
             {
                 _pauseToken.Resume();

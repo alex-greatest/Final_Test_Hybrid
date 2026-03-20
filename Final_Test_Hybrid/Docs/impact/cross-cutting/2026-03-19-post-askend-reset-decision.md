@@ -3,6 +3,7 @@
 ## Контур
 
 - PLC reset / PreExecution / completion UI / changeover
+- ErrorCoordinator / TagWaiter / diagnostic shared dispatcher ownership
 
 ## Что изменено
 
@@ -17,6 +18,10 @@
   - cleanup выполняется только после штатного завершения диалога;
   - при отсутствии активного теста cleanup выполняется сразу.
 - Новый reset во время post-AskEnd flow отменяет предыдущую ветку, скрывает `red_smile` и закрывает активный диалог причины.
+- Post-AskEnd exception-path больше не держит cleanup/release только на catch-path event-handler:
+  - `HandleGridClear()` теперь передаёт работу в отдельный `Task`-wrapper;
+  - normal cleanup, repeat-path и fail-safe release отпускают terminal owner через `finally`;
+  - если cleanup сам падает, координатор всё равно снимает `IsPostAskEndActive` и не оставляет залипший terminal window.
 - Серийный latch окна причины переработан:
   - `Save` или `Cancel` завершают серию и запрещают повторный показ окна в этой серии;
   - принудительное закрытие диалога новым soft reset право на показ не расходует;
@@ -62,6 +67,75 @@
   - если PLC сбрасывает `End` и `Req_Repeat` не поднят, выполняется обычное завершение теста.
 - Stable doc `CycleExitGuide.md` синхронизирован: completion handshake должен прерываться и PLC reset-токеном, и cycle CTS hard reset-пути.
 
+### Дополнение: runtime terminal race package
+
+- В `OpcUaSubscription` добавлен safe-read контракт `TryGetValue<T>(...)` для decision-loop'ов, где `unknown` нельзя трактовать как `false`.
+- Completion и post-AskEnd больше не принимают PLC decision по пустому/invalid runtime-cache:
+  - `Req_Repeat=true` и `End=false`/`AskEnd=false` учитываются только при known bool;
+  - при `unknown` цикл продолжает ждать реальное PLC-значение, reset или cancel.
+- `TagWaiter.WaitForFalseAsync` больше не может ложно завершиться после `SubscribeAsync()`/`Resume()` на пустом cache:
+  - recheck после subscribe/resume переведён на raw-cache семантику;
+  - generic `WaitGroup/WaitForAllTrue` в этот пакет не расширялись.
+- Добавлен singleton `RuntimeTerminalState`:
+  - `TestCompletionCoordinator` владеет `IsCompletionActive`;
+  - `PreExecutionCoordinator` владеет `IsPostAskEndActive`;
+  - `ErrorCoordinator` использует `HasTerminalHandshake` как owner terminal window.
+- Для post-AskEnd exception-path добавлен отдельный fail-safe release:
+  - event-handler больше не является единственной точкой cleanup;
+  - `FinalizeResetCleanup()` и repeat-path отпускают terminal owner через `finally`;
+  - аварийный release скрывает UI и снимает terminal-state даже при повторном исключении в cleanup.
+- Для ownership interrupt-ов сужена граница `AutoReady`:
+  - `AutoReady OFF` во время completion/post-AskEnd не поднимает `AutoModeDisabled`;
+  - `AutoReady ON` резюмит только `CurrentInterrupt == AutoModeDisabled`;
+  - `BoilerLock`, `PlcConnectionLost`, `TagTimeout` broad-resume не снимаются.
+- `PreExecutionCoordinator` получил hardening `_pendingExitReason` и `_resetSignal`:
+  - `_pendingExitReason` переведён в атомарный sentinel;
+  - `_resetSignal` читается через local snapshot на цикл;
+  - fallback stop-reason теперь идёт через единый resolver перед `PipelineCancelled` / `SoftReset`.
+- `ConnectionTestPanel.DisposeAsync()` больше не гасит shared `IModbusDispatcher`, если панель его не стартовала.
+- Manual screens и write-path'ы (`HandProgram`, `IoEditorDialog`, `AiCallCheck`, `PidRegulatorCheck`, `RtdCalCheck`) этим пакетом не меняются и остаются доступными во время runtime.
+- Добавлен unit-test проект `Final_Test_Hybrid.Tests` с покрытием runtime инвариантов:
+  - `OpcUaSubscription.TryGetValue`;
+  - `TagWaiter.WaitForFalseAsync`;
+  - completion decision-loop;
+  - post-AskEnd decision-loop;
+  - pre-start hardening `_pendingExitReason` / `_resetSignal`;
+  - ownership `ErrorCoordinator`.
+- Автоматическое покрытие этого пакета всё ещё не доказывает полный orchestration-path:
+  - dialog/cleanup ветки `FinalizeResetCleanup` и post-AskEnd reason dialog остаются вне автодоказательства;
+  - пакет покрывает decision-loop и ownership/runtime contracts, но не полный UI-orchestration сценарий completion/post-AskEnd.
+- Для change trail создан `openspec/changes/fix-runtime-terminal-race-package/`.
+
+### Дополнение: MessageService + PlcConnectionLost toast alignment (2026-03-20)
+
+- `MessageService` переведён с raw priority-table на snapshot/scenario resolver.
+- `MessageService` теперь слушает `RuntimeTerminalState.OnChanged` и использует terminal owner через `RuntimeTerminalState` и для completion, и для post-AskEnd.
+- Для нижней строки зафиксированы отдельные terminal-message сценарии:
+  - `IsCompletionActive` -> `Тест завершён. Ожидание решения PLC...`;
+  - `IsPostAskEndActive` -> `Сброс подтверждён. Ожидание решения PLC...`.
+- `PreExecutionCoordinator.IsPostAskEndFlowActive()` в `MessageService` остаётся только частью expanded reset-gate:
+  `PlcResetCoordinator.IsActive || PreExecutionCoordinator.IsPostAskEndFlowActive()`.
+- Raw `AutoReady` больше не производит reset/terminal auto-text:
+  - ветка `Нет автомата. Выполняется сброс...` удалена;
+  - raw `!AutoReady` оставлен только как idle/pre-start fallback.
+- Для `PlcConnectionLost` добавлена явная pending-reset стадия main message:
+  - при `CurrentInterrupt == PlcConnectionLost` и ещё не активном reset -> `Потеря связи с PLC. Ожидание сброса...`;
+  - после входа в reset-path -> `Потеря связи с PLC. Выполняется сброс...`.
+- Raw `!IsConnected` опущен ниже terminal/reset ownership и работает только вне interrupt/terminal/reset.
+- `PlcConnectionLostBehavior` оставляет reset-path без изменения, но toast теперь живёт столько же, сколько обещает оператору:
+  - detail `Сброс через 5 сек`;
+  - `duration = 5000 ms`;
+  - stable `id = interrupt-plc-connection-lost`.
+- Для новых main-message/toast текстов добавлен минимальный resource-sync без расширения глобального localization-layer:
+  - сообщения `MessageService` и `PlcConnectionLostBehavior` читаются через `MessageTextResources`;
+  - ключи размещены в существующем `Form1.resx`, потому что отдельного message-resource контура в repo ещё нет.
+- Добавлен отдельный stable guide `Docs/ui/MessageSemanticsGuide.md`; старый `MessageServiceDescription.md` переведён в historical redirect.
+- Новый пакет не меняет:
+  - приоритет result image в `MyComponent`;
+  - header/settings blocking contract;
+  - toast semantics для interrupt-ов кроме `PlcConnectionLost`.
+- `no new incident`: пакет устраняет уже известную UI/runtime ambiguity вокруг main message и toast, без выявления нового production failure mode.
+
 ## Затронутые файлы
 
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionDependencies.cs`
@@ -73,15 +147,42 @@
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.MainLoop.cs`
 - `Final_Test_Hybrid/Services/Main/PlcReset/PlcResetCoordinator.cs`
 - `Final_Test_Hybrid/Services/Main/Messages/MessageService.cs`
+- `Final_Test_Hybrid/Services/Main/Messages/MessageServiceResolver.cs`
+- `Final_Test_Hybrid/Services/Main/Messages/MessageTextResources.cs`
+- `Final_Test_Hybrid/Properties/AssemblyInfo.cs`
 - `Final_Test_Hybrid/Form1.cs`
+- `Final_Test_Hybrid/Form1.resx`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Scanning/ScanModeController.cs`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Scanning/ScanModeController.cs`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.Subscriptions.cs`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.Pipeline.Helpers.cs`
 - `Final_Test_Hybrid/Components/Main/Modals/Interrupt/InterruptReasonDialog.razor`
+- `Final_Test_Hybrid/Components/Main/MessageHelper.razor`
 - `Final_Test_Hybrid/Docs/runtime/PlcResetGuide.md`
 - `Final_Test_Hybrid/Docs/execution/CycleExitGuide.md`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs`
+- `Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.Callbacks.cs`
+- `Final_Test_Hybrid/Services/OpcUa/TagWaiter.cs`
+- `Final_Test_Hybrid/Services/OpcUa/TagWaiter.WaitGroup.cs`
+- `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/RuntimeTerminalState.cs`
+- `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/ErrorCoordinator/ErrorCoordinator.cs`
+- `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/ErrorCoordinator/ErrorCoordinator.Interrupts.cs`
+- `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/ErrorCoordinator/ErrorCoordinator.Resolution.cs`
+- `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/ErrorCoordinator/ErrorCoordinatorDependencies.cs`
+- `Final_Test_Hybrid/Services/DependencyInjection/StepsServiceExtensions.cs`
+- `Final_Test_Hybrid/Components/Overview/ConnectionTestPanel.razor`
+- `Final_Test_Hybrid/Docs/runtime/ErrorCoordinatorGuide.md`
+- `Final_Test_Hybrid/Docs/execution/StateManagementGuide.md`
+- `Final_Test_Hybrid/Docs/ui/MessageSemanticsGuide.md`
+- `Final_Test_Hybrid/Docs/ui/MainScreenGuide.md`
+- `Final_Test_Hybrid/Docs/ui/README.md`
+- `Final_Test_Hybrid/MessageServiceDescription.md`
+- `Final_Test_Hybrid/Docs/runtime/ScanModeControllerGuide.md`
+- `Final_Test_Hybrid/Docs/diagnostics/DiagnosticGuide.md`
+- `Final_Test_Hybrid/Docs/runtime/TagWaiterGuide.md`
+- `Final_Test_Hybrid.Tests/*`
+- `Final_Test_Hybrid.slnx`
+- `openspec/changes/fix-runtime-terminal-race-package/*`
 
 ## Проверки
 
@@ -96,7 +197,39 @@
 - `dotnet format style --verify-no-changes Final_Test_Hybrid.slnx` после правки completion handshake — успешно.
 - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs" --no-build --format=Text "--output=inspect-warning-completion-repeat-decision.txt" -e=WARNING` — без warning по отчёту.
 - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs" --no-build --format=Text "--output=inspect-hint-completion-repeat-decision.txt" -e=HINT` — без hint по отчёту.
+- `dotnet build Final_Test_Hybrid.slnx` после runtime-terminal пакета — успешно; baseline warning только `MSB3277` по `WindowsBase`.
+- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj` — успешно, 8/8.
+- `dotnet build Final_Test_Hybrid.slnx` после финального cleanup `TestCompletionCoordinator` — успешно; baseline warning только `MSB3277` по `WindowsBase`.
+- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj` после финального cleanup `TestCompletionCoordinator` — успешно, 8/8.
+- `dotnet format analyzers --verify-no-changes Final_Test_Hybrid.slnx` после финального cleanup `TestCompletionCoordinator` — успешно.
+- `dotnet format style --verify-no-changes Final_Test_Hybrid.slnx` после финального cleanup `TestCompletionCoordinator` — успешно.
+- `jb inspectcode Final_Test_Hybrid.slnx` по списку изменённых `*.cs` с `-e=WARNING` — без warning после выноса `EmptyWaitGroupMessage`.
+- `jb inspectcode Final_Test_Hybrid.slnx` по списку изменённых `*.cs` с `-e=HINT` — только неблокирующие structural/style hint в затронутых runtime helper/service файлах; новых warning нет.
+- `openspec validate fix-runtime-terminal-race-package --strict --no-interactive` — успешно.
+- `dotnet build Final_Test_Hybrid.slnx` после rollback UI/runtime gating-среза — успешно; baseline warning только `MSB3277` по `WindowsBase`.
+- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj` после rollback UI/runtime gating-среза — успешно, 8/8.
+- `dotnet format analyzers --verify-no-changes Final_Test_Hybrid.slnx` после rollback UI/runtime gating-среза — успешно.
+- `dotnet format style --verify-no-changes Final_Test_Hybrid.slnx` после rollback UI/runtime gating-среза — успешно.
+- `jb inspectcode Final_Test_Hybrid.slnx` по списку изменённых `*.cs` с `-e=WARNING` после rollback UI/runtime gating-среза — отчёт пуст (`Solution Final_Test_Hybrid.slnx`).
+- `jb inspectcode Final_Test_Hybrid.slnx` по списку изменённых `*.cs` с `-e=HINT` после rollback UI/runtime gating-среза — только неблокирующие structural/style hint; новых warning нет.
+- `openspec validate fix-runtime-terminal-race-package --strict --no-interactive` после rollback UI/runtime gating-среза — успешно.
+- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj` после правки `MessageService`/toast alignment — успешно, 30/30; baseline warning только `MSB3277` по `WindowsBase`.
+- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj` после финальной корректировки message-matrix — успешно, 31/31; baseline warning только `MSB3277` по `WindowsBase`.
+- `dotnet build Final_Test_Hybrid.slnx` после финальной корректировки message-matrix — успешно; baseline warning `MSB3277` по `WindowsBase` и существующий `CS0067` в test stub `DiagnosticDispatcherOwnershipTests.TestModbusDispatcher.PingDataUpdated`.
+- `dotnet format analyzers --verify-no-changes Final_Test_Hybrid.slnx` после финальной корректировки message-matrix — успешно.
+- `dotnet format style --verify-no-changes Final_Test_Hybrid.slnx` после финальной корректировки message-matrix — успешно.
+- `dotnet build Final_Test_Hybrid.slnx` после resource-sync message/toast текстов — успешно; baseline warning `MSB3277` по `WindowsBase` и существующий `CS0067` в test stub `DiagnosticDispatcherOwnershipTests.TestModbusDispatcher.PingDataUpdated`.
+- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj` после resource-sync message/toast текстов — успешно, 31/31.
+- `dotnet format analyzers --verify-no-changes Final_Test_Hybrid.slnx` после resource-sync message/toast текстов — успешно.
+- `dotnet format style --verify-no-changes Final_Test_Hybrid.slnx` после resource-sync message/toast текстов — успешно.
+- `powershell -ExecutionPolicy Bypass -File C:\Users\Alexander\.codex\skills\localization-sync-guard\scripts\replay_localization_sync.ps1 -RepoRoot . -RequireResourceSync -RequireCyrillicLogs` — успешно после переноса новых message-ключей в `Form1.resx`.
+- `jb inspectcode Final_Test_Hybrid.slnx` по изменённым `*.cs` для message/toast-пакета (`-e=WARNING`) — последний завершённый отчёт перед финальным trivial cleanup содержал один warning `Qualifier is redundant` в `MessageService.cs`; warning устранён.
+- `jb inspectcode Final_Test_Hybrid.slnx` по изменённым `*.cs` для message/toast-пакета (`-e=HINT`) — CLI нестабилен по завершению процесса и зависает после записи отчёта; блокирующих compile/test regressions пакет не показывает.
 
 ## Инциденты
 
-- no new incident
+- Confirmed failure modes, зафиксированные этим пакетом:
+  - stale-cache false-finish / false-cleanup в completion и post-AskEnd;
+  - false-success `TagWaiter.WaitForFalseAsync` после subscribe/resume на пустом cache;
+  - shared dispatcher ownership в `ConnectionTestPanel`.
+- Так как отдельного incident-контура в `Docs` нет, change trail вынесен в `openspec/changes/fix-runtime-terminal-race-package/` и должен поддерживаться вместе с этим impact.

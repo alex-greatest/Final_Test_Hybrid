@@ -117,4 +117,67 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="PlcConnectionLostResetting" xml:space="preserve">
+    <value>Потеря связи с PLC. Выполняется сброс...</value>
+  </data>
+  <data name="TagTimeoutResetting" xml:space="preserve">
+    <value>Нет ответа от ПЛК. Выполняется сброс...</value>
+  </data>
+  <data name="PlcConnectionLostPendingReset" xml:space="preserve">
+    <value>Потеря связи с PLC. Ожидание сброса...</value>
+  </data>
+  <data name="TagTimeout" xml:space="preserve">
+    <value>Нет ответа от ПЛК</value>
+  </data>
+  <data name="BoilerLock" xml:space="preserve">
+    <value>Блокировка котла. Ожидание восстановления</value>
+  </data>
+  <data name="Disconnected" xml:space="preserve">
+    <value>Нет связи с PLC</value>
+  </data>
+  <data name="CompletionActive" xml:space="preserve">
+    <value>Тест завершён. Ожидание решения PLC...</value>
+  </data>
+  <data name="PostAskEndActive" xml:space="preserve">
+    <value>Сброс подтверждён. Ожидание решения PLC...</value>
+  </data>
+  <data name="GenericReset" xml:space="preserve">
+    <value>Сброс теста...</value>
+  </data>
+  <data name="WaitForAuto" xml:space="preserve">
+    <value>Ожидание автомата</value>
+  </data>
+  <data name="LoginRequired" xml:space="preserve">
+    <value>Войдите в систему</value>
+  </data>
+  <data name="ScanPrompt" xml:space="preserve">
+    <value>Отсканируйте серийный номер котла</value>
+  </data>
+  <data name="PhaseBarcodeReceived" xml:space="preserve">
+    <value>Штрихкод получен</value>
+  </data>
+  <data name="PhaseValidatingSteps" xml:space="preserve">
+    <value>Проверка шагов...</value>
+  </data>
+  <data name="PhaseValidatingRecipes" xml:space="preserve">
+    <value>Проверка рецептов...</value>
+  </data>
+  <data name="PhaseLoadingRecipes" xml:space="preserve">
+    <value>Загрузка рецептов...</value>
+  </data>
+  <data name="PhaseCreatingDbRecords" xml:space="preserve">
+    <value>Создание записей в БД...</value>
+  </data>
+  <data name="PhaseWaitingForAdapter" xml:space="preserve">
+    <value>Подсоедините адаптер к котлу и нажмите "Блок"</value>
+  </data>
+  <data name="PhaseWaitingForDiagnosticConnection" xml:space="preserve">
+    <value>Подключите кабель связи с котлом</value>
+  </data>
+  <data name="PlcConnectionLostTitle" xml:space="preserve">
+    <value>Потеря связи с PLC</value>
+  </data>
+  <data name="PlcConnectionLostToastDetailFormat" xml:space="preserve">
+    <value>Сброс через {0:0} сек</value>
+  </data>
 </root>

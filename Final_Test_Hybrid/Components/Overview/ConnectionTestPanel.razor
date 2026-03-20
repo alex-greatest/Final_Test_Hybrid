@@ -15,6 +15,7 @@
 @inject IOptions<ModbusDispatcherOptions> DispatcherOptions
 @inject AccessLevelManager AccessLevelManager
 @inject DiagnosticManualSessionState ManualSessionState
+@inject DiagnosticDispatcherOwnership DispatcherOwnership
 @implements IAsyncDisposable
 
 <div class="connection-test-container">
@@ -286,6 +287,7 @@
     private DiagnosticPingData? _pingData;
     private bool _disposed;
     private bool _manualSessionEntered;
+    private DiagnosticDispatcherLease? _dispatcherLease;
 
     // Read state
     private RegisterPreset? _selectedReadPreset = ReadPresets[0];
@@ -319,17 +321,52 @@
         ManualSessionState.EnterConnectionTest();
         _manualSessionEntered = true;
 
-        // Subscribe to dispatcher events
+        SubscribeDispatcherEvents();
+
+        var dispatcherLease = DispatcherOwnership.AcquirePanelLease();
+        try
+        {
+            if (dispatcherLease.ShouldStartDispatcher)
+            {
+                await Dispatcher.StartAsync();
+            }
+
+            _dispatcherLease = dispatcherLease;
+        }
+        catch
+        {
+            dispatcherLease.Release();
+            throw;
+        }
+
+        UpdateStatus();
+    }
+
+    private void SubscribeDispatcherEvents()
+    {
         Dispatcher.Connected += OnConnected;
         Dispatcher.Disconnecting += OnDisconnecting;
         Dispatcher.Stopped += OnStopped;
         Dispatcher.PingDataUpdated += OnPingDataUpdated;
+    }
 
-        // Start dispatcher
-        await Dispatcher.StartAsync();
+    private void UnsubscribeDispatcherEvents()
+    {
+        Dispatcher.Connected -= OnConnected;
+        Dispatcher.Disconnecting -= OnDisconnecting;
+        Dispatcher.Stopped -= OnStopped;
+        Dispatcher.PingDataUpdated -= OnPingDataUpdated;
+    }
 
-        // Update initial state
-        UpdateStatus();
+    private void ExitManualSession()
+    {
+        if (!_manualSessionEntered)
+        {
+            return;
+        }
+
+        ManualSessionState.ExitConnectionTest();
+        _manualSessionEntered = false;
     }
 
     /// <summary>
@@ -1316,20 +1353,15 @@
     public async ValueTask DisposeAsync()
     {
         _disposed = true;
-        if (_manualSessionEntered)
+        ExitManualSession();
+        UnsubscribeDispatcherEvents();
+
+        var dispatcherLease = _dispatcherLease;
+        _dispatcherLease = null;
+        if (dispatcherLease?.Release().ShouldStopDispatcher == true)
         {
-            ManualSessionState.ExitConnectionTest();
-            _manualSessionEntered = false;
+            await Dispatcher.StopAsync();
         }
-
-        // Unsubscribe from events
-        Dispatcher.Connected -= OnConnected;
-        Dispatcher.Disconnecting -= OnDisconnecting;
-        Dispatcher.Stopped -= OnStopped;
-        Dispatcher.PingDataUpdated -= OnPingDataUpdated;
-
-        // Stop dispatcher
-        await Dispatcher.StopAsync();
     }
 
     /// <summary>

@@ -95,20 +95,25 @@ public partial class PreExecutionCoordinator
     {
         if (coordinators.TestCoordinator.IsRunning || state.ActivityTracker.IsPreExecutionActive)
         {
-            _pendingExitReason = exitReason;
+            SetPendingExitReason(exitReason);
             _currentCts?.Cancel();
             return true;
         }
         return false;
     }
 
-    private async void HandleGridClear()
+    private void HandleGridClear()
     {
         if (!TryBeginPostAskEndFlow(out var window))
         {
             return;
         }
 
+        _ = ExecutePostAskEndFlowAsync(window);
+    }
+
+    private async Task ExecutePostAskEndFlowAsync(ResetAskEndWindow window)
+    {
         try
         {
             await HandlePostAskEndDecisionAsync(window);
@@ -119,9 +124,28 @@ public partial class PreExecutionCoordinator
         }
         catch (Exception ex)
         {
-            infra.Logger.LogError(ex, "Ошибка в HandleGridClear");
-            ResetInterruptState();
-            FinalizeResetCleanup();
+            infra.Logger.LogError(ex, "Ошибка в post-AskEnd flow: seq={ResetSequence}", window.Sequence);
+            HandlePostAskEndFailure(window.Sequence);
+        }
+        finally
+        {
+            EnsurePostAskEndFlowReleased(window.Sequence);
+        }
+    }
+
+    private void HandlePostAskEndFailure(int expectedSequence)
+    {
+        ResetInterruptState();
+        try
+        {
+            FinalizeResetCleanup(expectedSequence);
+        }
+        catch (Exception ex)
+        {
+            infra.Logger.LogError(
+                ex,
+                "Fail-safe cleanup после ошибки post-AskEnd завершился с исключением: seq={ResetSequence}",
+                expectedSequence);
         }
     }
 
