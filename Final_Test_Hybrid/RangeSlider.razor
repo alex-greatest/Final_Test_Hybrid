@@ -18,7 +18,7 @@
 
         @* Value indicator - капля с значением *@
         <div style="position: absolute; top: -48px; left: @(ValuePercent.ToString(CultureInfo.InvariantCulture))%; transform: translateX(-50%); z-index: 3; display: flex; flex-direction: column; align-items: center;">
-            @* Капля с числом *@
+                @* Капля с числом *@
             <div style="background: linear-gradient(135deg, #333 0%, #111 100%);
                         color: #fff;
                         padding: 4px 10px;
@@ -30,7 +30,7 @@
                         border: 2px solid #fff;
                         min-width: 50px;
                         text-align: center;">
-                @Value.ToString("F1", CultureInfo.InvariantCulture)
+                @FormatCurrentValue()
             </div>
             @* Линия-указатель *@
             <div style="width: 2px; height: 8px; background: linear-gradient(to bottom, #333, #666);"></div>
@@ -68,6 +68,7 @@
     [Parameter] public double GreenZoneStart { get; set; }
     [Parameter] public double GreenZoneEnd { get; set; }
     [Parameter] public int TickCount { get; set; } = 20;
+    [Parameter] public int? DisplayPrecision { get; set; }
 
     private const double LeftDangerZonePercent = 15;
     private const double SafeZonePercent = 70;
@@ -80,12 +81,15 @@
     private double EffectiveGreenZoneStart => ClampToScale(Math.Min(GreenZoneStart, GreenZoneEnd));
     private double EffectiveGreenZoneEnd => ClampToScale(Math.Max(GreenZoneStart, GreenZoneEnd));
     private double GreenZoneCenter => EffectiveGreenZoneStart + ((EffectiveGreenZoneEnd - EffectiveGreenZoneStart) / 2);
+    private double GreenZoneLeftInnerTick => EffectiveGreenZoneStart + ((GreenZoneCenter - EffectiveGreenZoneStart) / 2);
+    private double GreenZoneRightInnerTick => GreenZoneCenter + ((EffectiveGreenZoneEnd - GreenZoneCenter) / 2);
     private double GreenStartPercent => LeftDangerZonePercent;
     private double GreenZoneWidth => SafeZonePercent;
     private double RightRedZoneWidth => RightDangerZonePercent;
     private double ClampedValue => ClampToScale(Value);
     private double ValuePercent => MapToVisualPercent(ClampedValue);
-    private int LabelPrecision => GetLabelPrecision();
+    private int LabelPrecision => DisplayPrecision ?? GetLabelPrecision();
+    private int ValuePrecision => DisplayPrecision ?? GetValuePrecision();
 
     private List<double> TickMarks
     {
@@ -96,7 +100,9 @@
             AddUniqueValue(ticks, Min);
             AddSegmentMidpoint(ticks, Min, EffectiveGreenZoneStart);
             AddUniqueValue(ticks, EffectiveGreenZoneStart);
+            AddUniqueValue(ticks, GreenZoneLeftInnerTick);
             AddUniqueValue(ticks, GreenZoneCenter);
+            AddUniqueValue(ticks, GreenZoneRightInnerTick);
             AddUniqueValue(ticks, EffectiveGreenZoneEnd);
             AddSegmentMidpoint(ticks, EffectiveGreenZoneEnd, Max);
             AddUniqueValue(ticks, Max);
@@ -163,15 +169,32 @@
 
     private int GetLabelPrecision()
     {
-        var labels = TickLabelValues;
+        return GetPrecision(TickLabelValues);
+    }
+
+    private int GetValuePrecision()
+    {
+        var values = new List<double>(TickLabelValues);
+        AddUniqueValue(values, Value);
+        return GetPrecision(values);
+    }
+
+    private static int GetPrecision(IEnumerable<double> sourceValues)
+    {
+        var values = new List<double>();
+        foreach (var value in sourceValues)
+        {
+            AddUniqueValue(values, value);
+        }
+
         for (var precision = BaseLabelPrecision; precision <= MaxLabelPrecision; precision++)
         {
-            var formattedValues = labels
+            var formattedValues = values
                 .Select(value => value.ToString($"F{precision}", CultureInfo.InvariantCulture))
                 .Distinct()
                 .Count();
 
-            if (formattedValues == labels.Count)
+            if (formattedValues == values.Count)
             {
                 return precision;
             }
@@ -235,6 +258,11 @@
     private string FormatLabel(double value)
     {
         return value.ToString($"F{LabelPrecision}", CultureInfo.InvariantCulture);
+    }
+
+    private string FormatCurrentValue()
+    {
+        return Value.ToString($"F{ValuePrecision}", CultureInfo.InvariantCulture);
     }
 
     private static bool ContainsApproximate(IEnumerable<double> values, double candidate)

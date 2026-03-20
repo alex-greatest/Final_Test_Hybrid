@@ -19,6 +19,7 @@ public class TestCompletionUiState
 
     private bool _showResultImage;
     private int _testResult;
+    private int _imageRenderVersion;
 
     public TestCompletionUiState(
         PlcResetCoordinator plcResetCoordinator,
@@ -75,6 +76,15 @@ public class TestCompletionUiState
         "\"Один шаг\" - закончить тест или \"Повтор\" для повтора теста";
 
     /// <summary>
+    /// Версия рендера изображения результата.
+    /// Используется только UI для принудительного пересоздания DOM-узла картинки.
+    /// </summary>
+    public int ImageRenderVersion
+    {
+        get { lock (_lock) return _imageRenderVersion; }
+    }
+
+    /// <summary>
     /// Событие изменения состояния (для обновления UI).
     /// </summary>
     public event Action? OnStateChanged;
@@ -88,6 +98,7 @@ public class TestCompletionUiState
         {
             _testResult = testResult;
             _showResultImage = true;
+            _imageRenderVersion++;
         }
         OnStateChanged?.Invoke();
     }

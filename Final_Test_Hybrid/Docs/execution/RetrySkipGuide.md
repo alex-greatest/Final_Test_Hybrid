@@ -37,12 +37,14 @@
 [5] Подготовка к rerun
     PC: InvokeRetryStartedSafely() → панель закрывается
     PC: WaitForRetrySignalResetAsync() → Req_Repeat = false
+    PC: Если stale Block.Error/Block.End уже active в known cache,
+        ждёт их сброса в false перед rerun
     PC: Не пишет Start = false для PLC-блока
-    PC: Не ждёт Block.End = false перед повторным запуском PLC-шага
+    PC: Не делает безусловный pre-start wait по Block.End = false
     PLC: Сам держит состояние блока до повторного запуска
                 ↓
 [6] Фоновый retry (tracked task)
-    PC: DequeueError() → освобождает очередь
+    PC: TryRemoveError(active error) → освобождает именно активную ошибку
     PC: ExecuteRetryInBackgroundAsync() → фоновой retry (tracked)
                 ↓
 [7] Следующая ошибка (если есть)
@@ -73,10 +75,16 @@
     PC: ResetBlockStartAsync()
     PC: ResetFaultIfNoBlockAsync()
     PC: MarkErrorSkipped()
-    PC: DequeueError()       ← СНАЧАЛА удаляем из очереди
+    PC: TryRemoveError(active error) ← СНАЧАЛА удаляем именно активную ошибку
     PC: ClearFailedState()   ← ПОТОМ открываем gate
     ❌ НЕ отправляет AskRepeat
 ```
+
+## Active Error Binding
+
+- Во время открытого error-resolution диалога координатор фиксирует active error context: колонка + шаг, для которых сейчас принимается решение.
+- `Retry` и `Skip` завершают именно этот context и удаляют из очереди только соответствующую ошибку.
+- Pending ошибки других колонок остаются в FIFO и становятся следующими active после завершения текущего решения.
 
 ## Gate Mechanism (ColumnExecutor)
 
@@ -138,7 +146,7 @@ public async Task RetryLastFailedStepAsync(CancellationToken ct)
 |----------|-------|------|
 | **Условие** | `Req_Repeat = true` | `End=true (AND Block.Error)` |
 | **AskRepeat** | Да | Нет |
-| **Ждёт PLC** | `Req_Repeat = false` | Сброс сигналов Skip (60 сек) |
+| **Ждёт PLC** | `Req_Repeat = false` + stale `Block.Error/End = false`, если они already-active в known cache | Сброс сигналов Skip (60 сек) |
 | **Сброс Start** | Нет | Да, при Skip |
 | **Шаг выполняется** | Заново | Нет |
 | **Gate** | `OpenGate()` после успеха | `Set()` сразу |
@@ -155,10 +163,11 @@ public async Task RetryLastFailedStepAsync(CancellationToken ct)
 [00:11] SendAskRepeatAsync → AskRepeat=true
 [00:12] InvokeRetryStartedSafely → панель закрывается
 [00:13] WaitForRetrySignalResetAsync → Req_Repeat=false
-[00:14] DequeueError
-[00:15] ExecuteRetryInBackgroundAsync (фоновой, tracked)
-[00:16] while → HasPendingErrors = true
-[00:17] Диалог Col 1 ← СРАЗУ!
+[00:14] stale Block.Error/End=false (только если already-active в cache)
+[00:15] TryRemoveError(active error)
+[00:16] ExecuteRetryInBackgroundAsync (фоновой, tracked)
+[00:17] while → HasPendingErrors = true
+[00:18] Диалог Col 1 ← СРАЗУ!
 ```
 
 ## Settlement между картами (после Retry/Skip)
@@ -203,6 +212,8 @@ private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, C
         return;
     }
 
+    await EnsureRetrySignalsFreshAsync(error.FailedStep, ct);
+
     _retryState.MarkStarted();
     try
     {
@@ -218,12 +229,12 @@ private async Task ProcessRetryAsync(StepError error, ColumnExecutor executor, C
         return;
     }
 
-    StateManager.DequeueError();
+    StateManager.TryRemoveError(error);
 }
 ```
 
-`StateManager.DequeueError()` вызывается после успешной публикации `RetryRequested`.
-Retry-path не пишет `Start=false`; шаг остаётся в обычном `PausedOnError`, только если handshake `Req_Repeat` или публикация retry-события не завершились штатно.
+`StateManager.TryRemoveError(error)` вызывается после успешной публикации `RetryRequested` и удаляет именно active error context, а не текущую голову очереди "вслепую".
+Retry-path не пишет `Start=false`; шаг остаётся в обычном `PausedOnError`, только если handshake `Req_Repeat`, freshness guard или публикация retry-события не завершились штатно.
 
 ### ExecuteRetryInBackgroundAsync
 
@@ -287,10 +298,11 @@ private async Task ExecuteRetryInBackgroundAsync(StepError error, ColumnExecutor
 - Запись `Fault=true/false` выполняется с ограниченным retry (до 3 попыток, пауза 250 мс).
 - Если все попытки записи Fault неуспешны, выполняется fail-fast в `HardReset` (`_errorCoordinator.Reset()` + отмена текущего прогона).
 
-### Таймаут Req_Repeat (60 сек)
+### Таймаут Req_Repeat / stale retry signals (60 сек)
 
-Если PLC не сбросит сигнал за 60 секунд → `HandleTagTimeoutAsync()` → жёсткий стоп теста.
-Это защита от залипших сигналов, которые могут вызвать автоматический Retry/Skip для другой колонки.
+- Если PLC не сбросит `Req_Repeat` за 60 секунд → `HandleTagTimeoutAsync()` → жёсткий стоп теста.
+- Если после `Req_Repeat=false` stale `Block.Error` или `Block.End` не уйдут в false за 60 секунд → тот же fail-fast path.
+- Это защита от залипших сигналов, которые могли мгновенно завершить retry старым `Error/End` или визуально увести решение не в тот active context.
 
 ### `CheckCommsStep` при `AutoReady OFF`
 
@@ -307,5 +319,5 @@ private async Task ExecuteRetryInBackgroundAsync(StepError error, ColumnExecutor
 
 ### Race Condition при Skip
 
-Порядок важен: `DequeueError()` ПЕРЕД `ClearFailedState()`.
+Порядок важен: `TryRemoveError(active error)` ПЕРЕД `ClearFailedState()`.
 Иначе возможен сценарий: gate открылся → новая ошибка → EnqueueError отклонена (дубликат) → ошибка потеряна.

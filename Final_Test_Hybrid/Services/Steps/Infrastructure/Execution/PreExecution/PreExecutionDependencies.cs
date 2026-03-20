@@ -43,6 +43,7 @@ public class PreExecutionInfrastructure(
     PausableOpcUaTagService opcUa,
     OpcUaTagService plcService,
     OpcUaSubscription opcSubscription,
+    PausableTagWaiter tagWaiter,
     PauseTokenSource pauseToken,
     IStepTimingService stepTimingService,
     StepStatusReporter statusReporter,
@@ -59,6 +60,7 @@ public class PreExecutionInfrastructure(
     public PausableOpcUaTagService OpcUa => opcUa;
     public OpcUaTagService PlcService => plcService;
     public OpcUaSubscription OpcSubscription => opcSubscription;
+    public PausableTagWaiter TagWaiter => tagWaiter;
     public PauseTokenSource PauseToken => pauseToken;
     public IStepTimingService StepTimingService => stepTimingService;
     public StepStatusReporter StatusReporter => statusReporter;

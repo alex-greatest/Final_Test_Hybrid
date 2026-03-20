@@ -8,6 +8,7 @@
 
 - `Final_Test_Hybrid/MyComponent.razor`
 - `Final_Test_Hybrid/MyComponent.razor.css`
+- `Final_Test_Hybrid/Components/Main/ResultImagePanel.razor`
 - `Final_Test_Hybrid/Components/Main/TestSequenseGrid.razor`
 - `Final_Test_Hybrid/Components/Main/TestSequenseGrid.razor.css`
 
@@ -45,7 +46,7 @@
 Порядок приоритета контента:
 
 1. `TestCompletionUiState.ShowResultImage == true`  
-   Показывается итоговое изображение результата с подсказкой по кнопкам завершения/повтора. В этом режиме `MessageHelper` не рендерится, но внутренняя семантика нижней строки продолжает жить в `MessageService` и должна оставаться консистентной для момента, когда helper снова станет видимым.
+   Показывается итоговое изображение результата с подсказкой по кнопкам завершения/повтора. Разметка result-image живёт в `ResultImagePanel`, а `MyComponent` сохраняет только приоритет этой ветки относительно slider/grid. В этом режиме `MessageHelper` не рендерится, но внутренняя семантика нижней строки продолжает жить в `MessageService` и должна оставаться консистентной для момента, когда helper снова станет видимым.
 2. `RangeSliderUiState.HasActiveSliders == true`  
    Показывается `RangeSliderDisplay`.
 3. Иначе  

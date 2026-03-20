@@ -79,9 +79,19 @@ public partial class TestExecutionCoordinator
                 HandleRetryRequested(evt);
                 break;
             case ExecutionEventKind.RetryCompleted:
+                EnqueueFailedExecutors();
+                break;
+            case ExecutionEventKind.SkipRequested:
+            case ExecutionEventKind.StopRequested:
+            case ExecutionEventKind.UnhandledException:
+            case ExecutionEventKind.MapStarted:
+            case ExecutionEventKind.MapCompleted:
                 break;
             case ExecutionEventKind.SequenceCompleted:
                 InvokeSequenceCompletedSafely();
+                break;
+            default:
+                _logger.LogDebug("Необработанный event loop сигнал: {Kind}", evt.Kind);
                 break;
         }
     }

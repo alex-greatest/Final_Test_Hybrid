@@ -1,5 +1,4 @@
 ﻿using Final_Test_Hybrid.Models.Steps;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Coordinator;
@@ -46,6 +45,11 @@ public partial class TestExecutionCoordinator
             var hadErrors = StateManager.HasPendingErrors;
             foreach (var executor in _executors.Where(e => e.HasFailed))
             {
+                if (_retryState.IsColumnSuppressed(executor.ColumnIndex))
+                {
+                    continue;
+                }
+
                 var error = CreateErrorFromExecutor(executor);
                 StateManager.EnqueueError(error);
             }

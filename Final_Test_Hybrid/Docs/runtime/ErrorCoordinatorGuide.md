@@ -116,7 +116,7 @@ _errorCoordinator.OnInterruptChanged -= HandleInterruptChanged;
 | `WaitForResolutionAsync(options)` | Ожидание решения оператора (Retry/Skip/Timeout) |
 | `SendAskRepeatAsync(ct)` | Пишет `AskRepeat=true` для handshake повтора |
 | `SendAskRepeatAsync(blockErrorTag, ct)` | Совместимая перегрузка; `blockErrorTag` не используется в runtime |
-| `WaitForRetrySignalResetAsync(ct)` | Ожидает `Req_Repeat=false` (таймаут 60 сек) |
+| `WaitForRetrySignalResetAsync(ct)` | Ожидает только `Req_Repeat=false` (таймаут 60 сек) |
 
 ## Ownership terminal window
 
@@ -135,8 +135,9 @@ _errorCoordinator.OnInterruptChanged -= HandleInterruptChanged;
 ### Retry Handshake
 
 - `SendAskRepeatAsync(...)` отвечает только за запись `AskRepeat=true`.
-- Ожидание `Block.Error=false` в retry-flow не используется.
-- Контроль зависшего handshake выполняется через `WaitForRetrySignalResetAsync(...)` по `Req_Repeat=false` (60 секунд).
+- `WaitForRetrySignalResetAsync(...)` отвечает только за `Req_Repeat=false`.
+- Свежесть `Block.Error/Block.End` для retry PLC-шага проверяет уже coordinator-level freshness guard после `Req_Repeat=false`.
+- `ErrorCoordinator` не должен расширяться до block-level stale-cache логики retry.
 ## WaitForResolutionAsync API
 
 ### Сигнатура

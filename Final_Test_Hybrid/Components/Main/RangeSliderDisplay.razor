@@ -3,26 +3,33 @@
 @implements IDisposable
 
 <div class="range-slider-display-container">
-    @if (!string.IsNullOrEmpty(RangeSliderUiState.Title))
-    {
-        <div class="range-slider-title">@RangeSliderUiState.Title</div>
-    }
-    @foreach (var kvp in RangeSliderUiState.GetActiveSliders())
-    {
-        var data = kvp.Value;
-        <RangeSlider
-            Label="@data.Label"
-            Unit="@data.Unit"
-            Min="@data.Min"
-            Max="@data.Max"
-            Value="@data.Value"
-            GreenZoneStart="@data.GreenZoneStart"
-            GreenZoneEnd="@data.GreenZoneEnd"
-            TickCount="@data.TickCount" />
-    }
+@if (!string.IsNullOrEmpty(RangeSliderUiState.Title))
+{
+    <div class="range-slider-title">@RangeSliderUiState.Title</div>
+}
+@{
+    var sliders = GetSlidersForDisplay();
+    var displayPrecision = GetDisplayPrecision(sliders);
+}
+@foreach (var data in sliders)
+{
+    <RangeSlider
+        Label="@data.Label"
+        Unit="@data.Unit"
+        Min="@data.Min"
+        Max="@data.Max"
+        Value="@data.Value"
+        GreenZoneStart="@data.GreenZoneStart"
+        GreenZoneEnd="@data.GreenZoneEnd"
+        TickCount="@data.TickCount"
+        DisplayPrecision="@displayPrecision" />
+}
 </div>
 
 @code {
+    private const int BasePrecision = 1;
+    private const int MaxPrecision = 4;
+
     /// <summary>
     /// Подписывается на событие изменения состояния слайдеров.
     /// </summary>
@@ -37,6 +44,67 @@
     private void HandleStateChanged()
     {
         InvokeAsync(StateHasChanged);
+    }
+
+    private List<RangeSliderDisplayData> GetSlidersForDisplay()
+    {
+        return RangeSliderUiState.GetActiveSliders()
+            .OrderBy(kvp => kvp.Key)
+            .Select(kvp => kvp.Value)
+            .ToList();
+    }
+
+    private static int GetDisplayPrecision(IReadOnlyCollection<RangeSliderDisplayData> sliders)
+    {
+        var requiredPrecision = BasePrecision;
+
+        foreach (var slider in sliders)
+        {
+            requiredPrecision = Math.Max(requiredPrecision, GetRequiredPrecision(slider));
+        }
+
+        return requiredPrecision;
+    }
+
+    private static int GetRequiredPrecision(RangeSliderDisplayData slider)
+    {
+        var values = new List<double>();
+        AddUniqueValue(values, slider.Min);
+        AddUniqueValue(values, Math.Min(slider.GreenZoneStart, slider.GreenZoneEnd));
+        AddUniqueValue(values, GetGreenZoneCenter(slider));
+        AddUniqueValue(values, Math.Max(slider.GreenZoneStart, slider.GreenZoneEnd));
+        AddUniqueValue(values, slider.Max);
+        AddUniqueValue(values, slider.Value);
+
+        for (var precision = BasePrecision; precision <= MaxPrecision; precision++)
+        {
+            var formattedValues = values
+                .Select(value => value.ToString($"F{precision}", System.Globalization.CultureInfo.InvariantCulture))
+                .Distinct()
+                .Count();
+
+            if (formattedValues == values.Count)
+            {
+                return precision;
+            }
+        }
+
+        return MaxPrecision;
+    }
+
+    private static double GetGreenZoneCenter(RangeSliderDisplayData slider)
+    {
+        var greenStart = Math.Min(slider.GreenZoneStart, slider.GreenZoneEnd);
+        var greenEnd = Math.Max(slider.GreenZoneStart, slider.GreenZoneEnd);
+        return greenStart + ((greenEnd - greenStart) / 2);
+    }
+
+    private static void AddUniqueValue(List<double> values, double value)
+    {
+        if (!values.Any(existingValue => Math.Abs(existingValue - value) < 0.000001))
+        {
+            values.Add(value);
+        }
     }
 
     /// <summary>

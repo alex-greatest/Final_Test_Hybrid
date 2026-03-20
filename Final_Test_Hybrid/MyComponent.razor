@@ -72,12 +72,7 @@
                                 </RadzenCard>
                                 @if (TestCompletionUiState.ShowResultImage)
                                 {
-                                    <div class="result-image-container">
-                                        <div class="result-image-hint">
-                                            <span class="hint-action">«Один шаг»</span> — закончить тест или <span class="hint-action">«Повтор»</span> для повтора теста
-                                        </div>
-                                        <img src="@TestCompletionUiState.ImagePath" alt="Test Result" />
-                                    </div>
+                                    <ResultImagePanel />
                                 }
                                 else if (RangeSliderUiState.HasActiveSliders)
                                 {

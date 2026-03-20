@@ -9,6 +9,8 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution
 
 public partial class PreExecutionCoordinator
 {
+    private static readonly TimeSpan RetrySignalFreshnessTimeout = TimeSpan.FromSeconds(60);
+
     #region Retry Loop
 
     private async Task<PreExecutionResult> ExecuteRetryLoopAsync(
@@ -40,23 +42,13 @@ public partial class PreExecutionCoordinator
 
             if (resolution == PreExecutionResolution.Retry)
             {
-                var retryResult = await ExecuteRetryAsync();
+                var retryResult = await ExecuteRetryAsync(step, context, stepId, errorScope, ct);
                 return (retryResult, !retryResult.IsRetryable);
             }
 
             coordinators.DialogCoordinator.CloseBlockErrorDialog();
             infra.Logger.LogInformation("Не Retry, выходим из цикла с {Resolution}", resolution);
             return (CreateExitResult(resolution, result), true);
-        }
-
-        async Task<PreExecutionResult> ExecuteRetryAsync()
-        {
-            infra.Logger.LogInformation("Отправляем SendAskRepeatAsync...");
-            await coordinators.ErrorCoordinator.SendAskRepeatAsync(ct);
-            coordinators.DialogCoordinator.CloseBlockErrorDialog();
-            infra.Logger.LogInformation("SendAskRepeatAsync отправлен, повторяем шаг");
-            errorScope.Clear();
-            return await RetryStepAsync(step, context, stepId, ct);
         }
 
         try
@@ -76,6 +68,29 @@ public partial class PreExecutionCoordinator
         {
             errorScope.Clear();
         }
+    }
+
+    private async Task<PreExecutionResult> ExecuteRetryAsync(
+        BlockBoilerAdapterStep step,
+        PreExecutionContext context,
+        Guid stepId,
+        ErrorScope errorScope,
+        CancellationToken ct)
+    {
+        try
+        {
+            await PrepareRetryStartAsync(step, ct);
+        }
+        catch (TimeoutException)
+        {
+            infra.Logger.LogWarning("Таймаут retry-handshake PLC перед повтором блока {StepName}", step.Name);
+            return PreExecutionResult.Fail("Таймаут retry-handshake PLC перед повтором");
+        }
+
+        coordinators.DialogCoordinator.CloseBlockErrorDialog();
+        infra.Logger.LogInformation("Retry-handshake завершён, повторяем шаг");
+        errorScope.Clear();
+        return await RetryStepAsync(step, context, stepId, ct);
     }
 
     private static PreExecutionResult CreateExitResult(
@@ -208,6 +223,31 @@ public partial class PreExecutionCoordinator
     private static string? GetBlockErrorTag(BlockBoilerAdapterStep step)
     {
         return PlcBlockTagHelper.GetErrorTag(step);
+    }
+
+    private async Task PrepareRetryStartAsync(BlockBoilerAdapterStep step, CancellationToken ct)
+    {
+        infra.Logger.LogInformation("Отправляем SendAskRepeatAsync...");
+        await coordinators.ErrorCoordinator.SendAskRepeatAsync(ct);
+        infra.Logger.LogDebug("Ожидание сброса Req_Repeat перед retry блока {StepName}", step.Name);
+        await coordinators.ErrorCoordinator.WaitForRetrySignalResetAsync(ct);
+        await EnsureRetrySignalsFreshAsync(step, ct);
+    }
+
+    private Task EnsureRetrySignalsFreshAsync(BlockBoilerAdapterStep step, CancellationToken ct)
+    {
+        return PlcRetrySignalFreshnessGuard.EnsureSignalsFreshAsync(
+            step,
+            infra.OpcSubscription,
+            infra.TagWaiter.WaitForFalseAsync,
+            RetrySignalFreshnessTimeout,
+            (signalName, operation, tag) => infra.Logger.LogDebug(
+                "Ожидание сброса stale {SignalName} перед {Operation}: {Tag}",
+                signalName,
+                operation,
+                tag),
+            "retry pre-execution PLC-блока",
+            ct);
     }
 
     #endregion

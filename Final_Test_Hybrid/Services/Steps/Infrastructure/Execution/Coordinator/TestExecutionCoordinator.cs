@@ -6,6 +6,7 @@ using Final_Test_Hybrid.Services.Diagnostic.Protocol;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
+using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
@@ -31,6 +32,7 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly IStepTimingService _stepTimingService;
     private readonly TagWaiter _tagWaiter;
     private readonly PausableTagWaiter _pausableTagWaiter;
+    private readonly OpcUaSubscription _opcSubscription;
     private readonly ExecutionFlowState _flowState;
     private readonly PausableRegisterReader _pausableRegisterReader;
     private readonly PausableRegisterWriter _pausableRegisterWriter;
@@ -42,6 +44,7 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly Action _onExecutorStateChanged;
     private List<TestMap> _maps = [];
     private CancellationTokenSource? _cts;
+    private StepError? _activeResolutionError;
     private ExecutionStopReason _latchedStopReason = ExecutionStopReason.None;
     private bool _latchedStopAsFailure;
     private int _activeMapIndex = -1;
@@ -78,6 +81,7 @@ public partial class TestExecutionCoordinator : IDisposable
         IStepTimingService stepTimingService,
         TagWaiter tagWaiter,
         PausableTagWaiter pausableTagWaiter,
+        OpcUaSubscription opcSubscription,
         ExecutionFlowState flowState,
         PausableRegisterReader pausableRegisterReader,
         PausableRegisterWriter pausableRegisterWriter,
@@ -96,6 +100,7 @@ public partial class TestExecutionCoordinator : IDisposable
         _stepTimingService = stepTimingService;
         _tagWaiter = tagWaiter;
         _pausableTagWaiter = pausableTagWaiter;
+        _opcSubscription = opcSubscription;
         _flowState = flowState;
         _pausableRegisterReader = pausableRegisterReader;
         _pausableRegisterWriter = pausableRegisterWriter;

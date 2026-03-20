@@ -74,6 +74,40 @@ public class ExecutionStateManager
         return result;
     }
 
+    public bool TryRemoveError(StepError expectedError)
+    {
+        var removed = false;
+
+        lock (_queueLock)
+        {
+            if (_errorQueue.Count == 0)
+            {
+                return false;
+            }
+
+            var remainingErrors = new Queue<StepError>(_errorQueue.Count);
+            while (_errorQueue.TryDequeue(out var current))
+            {
+                if (!removed && current.ColumnIndex == expectedError.ColumnIndex && current.UiStepId == expectedError.UiStepId)
+                {
+                    removed = true;
+                    continue;
+                }
+
+                remainingErrors.Enqueue(current);
+            }
+
+            ReplaceQueue(remainingErrors);
+        }
+
+        if (removed)
+        {
+            OnStateChanged?.Invoke(State);
+        }
+
+        return removed;
+    }
+
     public bool TryUpdateCurrentError(StepError expectedError, Func<StepError, StepError> update)
     {
         lock (_queueLock)

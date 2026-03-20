@@ -7,29 +7,7 @@ public partial class TestExecutionCoordinator
     private Channel<ExecutionEvent>? _eventChannel;
     private readonly List<Task> _pendingRetries = [];
     private readonly Lock _pendingRetriesLock = new();
-    private readonly RetryState _retryState = new();
-
-    private sealed class RetryState
-    {
-        private int _activeCount;
-
-        public bool IsActive => Volatile.Read(ref _activeCount) > 0;
-
-        public void MarkStarted()
-        {
-            Interlocked.Increment(ref _activeCount);
-        }
-
-        public void MarkCompleted()
-        {
-            Interlocked.Decrement(ref _activeCount);
-        }
-
-        public void Reset()
-        {
-            Interlocked.Exchange(ref _activeCount, 0);
-        }
-    }
+    private readonly RetryCoordinationState _retryState = new();
 
     /// <summary>
     /// Запускает канал событий, если он еще не создан.
@@ -61,10 +39,10 @@ public partial class TestExecutionCoordinator
     /// <summary>
     /// Пытается опубликовать некритическое событие.
     /// </summary>
-    private bool TryPublishEvent(ExecutionEvent evt)
+    private void TryPublishEvent(ExecutionEvent evt)
     {
         var channel = _eventChannel;
-        return channel != null && channel.Writer.TryWrite(evt);
+        _ = channel != null && channel.Writer.TryWrite(evt);
     }
 
     /// <summary>

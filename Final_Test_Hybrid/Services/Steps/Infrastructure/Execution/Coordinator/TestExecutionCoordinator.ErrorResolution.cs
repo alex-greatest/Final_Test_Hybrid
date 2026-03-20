@@ -31,27 +31,36 @@ public partial class TestExecutionCoordinator
             {
                 break;
             }
-            var resolution = await WaitResolutionSafeAsync(error, cts.Token);
-            if (resolution == ErrorResolution.None)
+
+            SetActiveResolutionError(error);
+            try
             {
-                break;
+                var resolution = await WaitResolutionSafeAsync(error, cts.Token);
+                if (resolution == ErrorResolution.None)
+                {
+                    break;
+                }
+                if (resolution == ErrorResolution.ConnectionLost)
+                {
+                    interruptedByConnectionLoss = true;
+                    await HandleTransientConnectionLossAsync(cts.Token);
+                    break;
+                }
+                if (cts.IsCancellationRequested || _flowState.IsStopRequested)
+                {
+                    break;
+                }
+                if (resolution == ErrorResolution.Timeout)
+                {
+                    await HandleTagTimeoutAsync("ожидание решения оператора", cts.Token);
+                    break;
+                }
+                await ProcessErrorResolution(error, resolution, cts.Token);
             }
-            if (resolution == ErrorResolution.ConnectionLost)
+            finally
             {
-                interruptedByConnectionLoss = true;
-                await HandleTransientConnectionLossAsync(cts.Token);
-                break;
+                ClearActiveResolutionError(error);
             }
-            if (cts.IsCancellationRequested || _flowState.IsStopRequested)
-            {
-                break;
-            }
-            if (resolution == ErrorResolution.Timeout)
-            {
-                await HandleTagTimeoutAsync("ожидание решения оператора", cts.Token);
-                break;
-            }
-            await ProcessErrorResolution(error, resolution, cts.Token);
         }
         if (CanReturnToRunningState(cts, interruptedByConnectionLoss))
         {
@@ -212,7 +221,16 @@ public partial class TestExecutionCoordinator
             await HandleTagTimeoutAsync("Req_Repeat не сброшен", ct);
             return;
         }
-        _retryState.MarkStarted();
+        try
+        {
+            await EnsureRetrySignalsFreshAsync(error.FailedStep, ct);
+        }
+        catch (TimeoutException)
+        {
+            await HandleTagTimeoutAsync("сброс stale retry-сигналов блока", ct);
+            return;
+        }
+        _retryState.MarkRequested(error.ColumnIndex);
         try
         {
             await PublishEventCritical(new ExecutionEvent(
@@ -222,11 +240,18 @@ public partial class TestExecutionCoordinator
         }
         catch (Exception ex)
         {
-            _retryState.MarkCompleted();
+            _retryState.MarkCompleted(error.ColumnIndex);
             await HandleRetryPublishFailureAsync(error, ex);
             return;
         }
-        StateManager.DequeueError();
+
+        if (!TryRemoveResolvedError(error))
+        {
+            _logger.LogWarning(
+                "Не удалось удалить активную ошибку из очереди после RetryRequested: колонка {Column}, шаг {Step}",
+                error.ColumnIndex,
+                error.StepName);
+        }
     }
 
     private async Task HandleAskRepeatFailureAsync(StepError error, Exception ex, CancellationToken ct)
@@ -300,7 +325,7 @@ public partial class TestExecutionCoordinator
         }
         finally
         {
-            _retryState.MarkCompleted();
+            _retryState.MarkCompleted(error.ColumnIndex);
             TryPublishEvent(new ExecutionEvent(
                 ExecutionEventKind.RetryCompleted,
                 StepError: error,
@@ -396,7 +421,51 @@ public partial class TestExecutionCoordinator
 
         _statusReporter.ReportSkipped(error.UiStepId);
         StateManager.MarkErrorSkipped();
-        StateManager.DequeueError();
+
+        if (!TryRemoveResolvedError(error))
+        {
+            _logger.LogWarning(
+                "Не удалось удалить активную ошибку из очереди после Skip: колонка {Column}, шаг {Step}",
+                error.ColumnIndex,
+                error.StepName);
+        }
         executor.ClearFailedState();
+    }
+
+    private void SetActiveResolutionError(StepError error)
+    {
+        lock (_stateLock)
+        {
+            _activeResolutionError = error;
+        }
+
+        _logger.LogDebug(
+            "Активный error-resolution context: колонка {Column}, шаг {Step}",
+            error.ColumnIndex,
+            error.StepName);
+    }
+
+    private void ClearActiveResolutionError(StepError error)
+    {
+        lock (_stateLock)
+        {
+            if (_activeResolutionError == error)
+            {
+                _activeResolutionError = null;
+            }
+        }
+    }
+
+    private bool TryRemoveResolvedError(StepError error)
+    {
+        lock (_stateLock)
+        {
+            if (_activeResolutionError != error)
+            {
+                return false;
+            }
+        }
+
+        return StateManager.TryRemoveError(error);
     }
 }

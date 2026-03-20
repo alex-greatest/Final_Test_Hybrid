@@ -334,7 +334,7 @@
 }
 
 /* ===== RESULT IMAGE ===== */
-.result-image-container {
+::deep .result-image-container {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -345,13 +345,13 @@
     position: relative;
 }
 
-.result-image-container img {
+::deep .result-image-container img {
     width: 100%;
     height: 100%;
     object-fit: fill;
 }
 
-.result-image-hint {
+::deep .result-image-hint {
     position: absolute;
     top: 20px;
     left: 0;
@@ -364,6 +364,6 @@
     text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
 }
 
-.result-image-hint .hint-action {
+::deep .result-image-hint .hint-action {
     font-weight: 900;
 }

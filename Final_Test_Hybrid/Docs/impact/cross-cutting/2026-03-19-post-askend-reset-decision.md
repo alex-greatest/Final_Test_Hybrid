@@ -245,3 +245,20 @@
   - shared dispatcher ownership в `ConnectionTestPanel`.
 - Для добавления штатного completion-disconnect новых failure mode не выявлено: `no new incident`.
 - Так как отдельного incident-контура в `Docs` нет, change trail вынесен в `openspec/changes/fix-runtime-terminal-race-package/` и должен поддерживаться вместе с этим impact.
+
+### Дополнение: result-image render hardening после soft reset (2026-03-20)
+
+- Runtime state machine `PLC soft reset -> AskEnd -> post-AskEnd` этим change-set не меняется.
+- Result-image блок главного экрана вынесен в отдельный `ResultImagePanel`, чтобы lifecycle DOM-узла картинки жил отдельно от `MyComponent`, а сам `MyComponent` сохранил прежний приоритет веток `result image -> slider -> grid`.
+- `TestCompletionUiState` получил только технический UI-маркер `ImageRenderVersion`:
+  - маркер увеличивается на каждом `ShowImage(...)`;
+  - он не участвует в reset/runtime решениях;
+  - используется только для принудительного пересоздания `<img>` при повторном показе того же пути.
+- В `app-core.js` добавлен локальный `resultImageProbe`:
+  - после рендера проверяет `complete/naturalWidth`;
+  - слушает `load/error`;
+  - передаёт результат обратно в `ResultImagePanel`;
+  - stale callbacks отбрасываются по `ImageRenderVersion`.
+- На failure загрузки/отрисовки result-image пишется warning с контекстом `version/path/result/show/postAskEnd`, без изменения операторского UX и без автоматического fallback-переключения экрана.
+- `MyComponent.razor.css` переведён на `::deep` только для классов result-image, чтобы сохранить прежний внешний вид после выноса разметки в дочерний компонент.
+- `no new incident`: пакет добавляет render hardening и диагностику для редкого UI-сбоя, но не фиксирует новый подтверждённый production failure mode в reset state machine.

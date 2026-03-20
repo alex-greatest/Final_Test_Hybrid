@@ -61,6 +61,7 @@ public sealed class PostAskEndDecisionLoopTests
             null!,
             null!,
             subscription,
+            null!,
             new PauseTokenSource(),
             null!,
             null!,

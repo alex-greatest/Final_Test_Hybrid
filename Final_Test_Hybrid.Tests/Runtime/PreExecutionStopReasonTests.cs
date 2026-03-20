@@ -58,6 +58,7 @@ public sealed class PreExecutionStopReasonTests
             null!,
             null!,
             subscription,
+            null!,
             new PauseTokenSource(),
             null!,
             null!,

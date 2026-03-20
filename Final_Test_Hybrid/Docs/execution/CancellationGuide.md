@@ -172,15 +172,15 @@ await Task.WhenAll(executorTasks);  // Без linked CTS
 Шаги ОБЯЗАНЫ уважать `CancellationToken`. Timeout не поможет если шаг его игнорирует —
 система не может безопасно прервать выполняющийся код без кооперации шага.
 
-### 4. DequeueError до фактического retry
+### 4. Удаление active error после публикации retry
 
 ```csharp
-// ErrorCoordinator
-var error = errorQueue.Dequeue();  // До retry
+await PublishEventCritical(new ExecutionEvent(...));
+StateManager.TryRemoveError(error);
 ```
 
-**Почему OK:** При Stop/Reset вызывается `SetMaps() → Reset()`, который очищает всё.
-Ошибка не теряется — она или обрабатывается, или очищается вместе с состоянием.
+**Почему OK:** Из очереди удаляется только active error context после успешной публикации `RetryRequested`.
+При Stop/Reset вызывается `SetMaps() → Reset()`, который очищает всё. Pending ошибки других колонок не теряются и не удаляются чужим retry.
 
 ### 5. Двойной Stop (OnForceStop + OnReset)
 

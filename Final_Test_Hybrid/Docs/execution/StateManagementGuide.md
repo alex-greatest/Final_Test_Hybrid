@@ -460,6 +460,7 @@ public enum ExecutionState
 | `ClearErrors()` | Очистить очередь ошибок |
 | `HasPendingErrors` | Есть ошибки в очереди |
 | `CurrentError` | Текущая ошибка (peek) |
+| `TryRemoveError(error)` | Удалить конкретную ошибку из очереди с сохранением порядка остальных |
 | `ErrorCount` | Количество ошибок |
 | `IsActive` | `Running`, `Processing`, или `PausedOnError` |
 | `CanProcessSignals` | `State == PausedOnError` |
@@ -486,6 +487,8 @@ public enum ExecutionState
 ### Решение (после)
 
 Диалог ошибки показывается **СРАЗУ** при обнаружении. Другие колонки **продолжают работать**.
+
+Во время активного диалога координатор работает с явным active error context. `Retry/Skip` завершают именно этот context и удаляют из очереди конкретную ошибку, а не произвольную FIFO-голову.
 
 ### Архитектура: Channel<bool> как async auto-reset сигнал
 
@@ -853,6 +856,7 @@ private void HandleHardReset()
 
 `BlockBoilerAdapterStep` в pre-execution retry больше не пишет `Start=false` перед повторным запуском.
 Сброс `Start` остаётся только в success-ветке самого шага; retry повторно запускает блок без промежуточной записи `Start=false` со стороны PC.
+Перед повторным запуском pre-execution retry обязан дождаться `Req_Repeat=false`, а затем отфильтровать stale `Block.Error/End` через freshness guard.
 Перед запуском и повторным запуском `BlockBoilerAdapterStep` pre-start ожидание `End=false` не выполняется.
 
 ---
