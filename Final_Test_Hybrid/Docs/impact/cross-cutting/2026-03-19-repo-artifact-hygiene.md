@@ -16,6 +16,10 @@
   - `/.vs/`;
   - `/.playwright-mcp/`;
   - корневые `/_tmp_*`.
+- Для Rider добавлено точечное исключение из ignore:
+  - разрешён только `.idea/.idea.Final_Test_Hybrid/.idea/vcs.xml`;
+  - остальные `.idea`-файлы и локальное IDE-состояние остаются игнорируемыми.
+- Причина исключения: Rider периодически терял VCS mapping проекта, потому что `vcs.xml` не восстанавливался из репозитория и локально исчезал, хотя CLI `git` оставался исправным.
 - Из индекса удалены уже попавшие артефакты:
   - `.codex-build/obj/*`;
   - корневые `inspect*.txt`;
@@ -40,6 +44,7 @@
 ## Затронутые файлы
 
 - `.gitignore`
+- `.idea/.idea.Final_Test_Hybrid/.idea/vcs.xml`
 - `Final_Test_Hybrid/Docs/impact/cross-cutting/2026-03-19-repo-artifact-hygiene.md`
 
 ## Проверки
@@ -52,6 +57,8 @@
 - `git clean -fX -- inspect*.txt inspectcode*.txt artifacts/inspect*.txt .tmp_build_out/inspect*.txt .tmp_build_out/inspectcode*.txt %TEMP%/inspect*.txt` — локальные inspect-артефакты удалены из workspace.
 - `git ls-files ".idea" ".vs" ".playwright-mcp" "_tmp_readsoft_parse.py" "_tmp_readsoft_table.md"` — подтверждено, что IDE/tool-state и временные readsoft-файлы были ошибочно tracked до cleanup.
 - `git check-ignore -v ".idea/dummy" ".vs/dummy" ".playwright-mcp/dummy" "_tmp_readsoft_parse.py" "_tmp_probe.txt"` — подтверждено, что новые ignore-правила матчят IDE/tool-state и корневые временные `_tmp_*`.
+- `git check-ignore -v .idea\\.idea.Final_Test_Hybrid\\.idea\\vcs.xml` — до правки подтверждено, что Rider `vcs.xml` ошибочно игнорировался.
+- `git status --short -- .gitignore .idea/.idea.Final_Test_Hybrid/.idea/vcs.xml` — после правки `vcs.xml` выходит из ignore и виден как repo-tracked candidate для фиксации VCS mapping.
 - `dotnet build` / `dotnet format` / `jb inspectcode` не запускались: change-set не меняет runtime-код, stable behavior и source-of-truth guide; правка ограничена git hygiene.
 
 ## Инциденты

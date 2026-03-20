@@ -50,9 +50,8 @@ public partial class PreExecutionCoordinator
 
     private ChangeoverResetMode ComputeChangeoverResetModeForCurrentReset()
     {
-        return state.BoilerState.IsTestRunning
-            && state.BoilerState.SerialNumber != null
-            && infra.AppSettings.UseInterruptReason
+        return state.BoilerState is { IsTestRunning: true, SerialNumber: not null }
+               && infra.AppSettings.UseInterruptReason
             ? ChangeoverResetMode.WaitForReason
             : ChangeoverResetMode.WaitForAskEndOnly;
     }

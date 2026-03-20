@@ -1,7 +1,7 @@
 @using Final_Test_Hybrid.Models.Database
 @using Final_Test_Hybrid.Models.Database.Edit
 
-<div class="tab-content grid-unified-host">
+<div class="tab-content grid-unified-host grid-wide-editor-host">
     @if (_loadError)
     {
         <RadzenAlert AlertStyle="AlertStyle.Danger" Shade="Shade.Lighter"
@@ -39,9 +39,10 @@
             </div>
             <span class="record-count">Записей: @_filteredRecipes.Count</span>
         </div>
-        <RadzenDataGrid @ref="_grid" Data="@_filteredRecipes" TItem="RecipeEditModel" class="grid-unified"
+        <RadzenDataGrid @ref="_grid" Data="@_filteredRecipes" TItem="RecipeEditModel" class="grid-unified grid-wide-editor"
                         EditMode="DataGridEditMode.Single"
                         AllowFiltering="true" AllowSorting="true"
+                        AllowColumnResize="true"
                         AllowColumnReorder="true"
                         FilterText="@DataGridRu.Filter"
                         ApplyFilterText="@DataGridRu.ApplyFilter"
@@ -65,6 +66,8 @@
                         EmptyText="@DataGridRu.Empty">
             <Columns>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Width="50px"
+                                      CssClass="wide-grid-checkbox-cell"
+                                      Resizable="false"
                                       Sortable="false" Filterable="false"
                                       TextAlign="TextAlign.Center">
                     <HeaderTemplate>
@@ -79,12 +82,14 @@
                     </Template>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="Address"
+                                      MinWidth="160px"
                                       Title="Адрес">
                     <EditTemplate Context="item">
                         <RadzenTextBox @bind-Value="item.Address" MaxLength="100" class="w-full" />
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="TagName"
+                                      MinWidth="220px"
                                       Title="Название параметра">
                     <EditTemplate Context="item">
                         <RadzenTextBox @bind-Value="item.TagName" MaxLength="100" class="w-full" />
@@ -103,6 +108,7 @@
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="IsPlc"
+                                      CssClass="wide-grid-checkbox-cell"
                                       Title="PLC" Width="60px" TextAlign="TextAlign.Center">
                     <Template Context="item">
                         <RadzenCheckBox Value="@item.IsPlc" Disabled="true" />
@@ -112,6 +118,7 @@
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="Value"
+                                      MinWidth="140px"
                                       Title="Значение">
                     <EditTemplate Context="item">
                         @if (item.PlcType == PlcType.BOOL)
@@ -124,8 +131,7 @@
                         {
                             <RadzenTextBox @bind-Value="item.Value"
                                            MaxLength="255"
-                                           class="w-full"
-                                           Change="@(() => ValidateValue(item))" />
+                                           class="w-full" />
                         }
                     </EditTemplate>
                 </RadzenDataGridColumn>
@@ -136,12 +142,16 @@
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel" Property="Description"
+                                      MinWidth="240px"
                                       Title="Описание">
                     <EditTemplate Context="item">
                         <RadzenTextArea @bind-Value="item.Description" MaxLength="500" Rows="3" class="w-full" />
                     </EditTemplate>
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="RecipeEditModel"
+                                      Frozen="true"
+                                      FrozenPosition="FrozenColumnPosition.Right"
+                                      Resizable="false"
                                       TextAlign="TextAlign.Center" Sortable="false"
                                       Filterable="false" Width="100px">
                     <Template Context="item">

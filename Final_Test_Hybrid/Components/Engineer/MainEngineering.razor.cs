@@ -17,22 +17,34 @@ public partial class MainEngineering : IDisposable
     [Inject]
     public required SettingsAccessStateManager SettingsAccessState { get; set; }
     [Inject]
+    public required AutoReadySubscription AutoReady { get; set; }
+    [Inject]
     public required PlcResetCoordinator PlcResetCoordinator { get; set; }
     [Inject]
     public required IErrorCoordinator ErrorCoordinator { get; set; }
 
-    private bool IsMainSettingsDisabled => PreExecution.IsProcessing
+    private bool IsMainSettingsDisabled => HasCriticalEngineeringBlock()
         || !SettingsAccessState.CanInteract
-        || PlcResetCoordinator.IsActive
-        || PreExecution.IsPostAskEndFlowActive()
         || ErrorCoordinator.CurrentInterrupt != null;
+
+    private bool IsHandProgramDisabled => AutoReady.IsReady;
+
+    private bool IsIoEditorDisabled => AutoReady.IsReady;
 
     protected override void OnInitialized()
     {
         PreExecution.OnStateChanged += HandleStateChanged;
         SettingsAccessState.OnStateChanged += HandleStateChanged;
+        AutoReady.OnStateChanged += HandleStateChanged;
         PlcResetCoordinator.OnActiveChanged += HandleStateChanged;
         ErrorCoordinator.OnInterruptChanged += HandleStateChanged;
+    }
+
+    private bool HasCriticalEngineeringBlock()
+    {
+        return PreExecution.IsProcessing
+            || PlcResetCoordinator.IsActive
+            || PreExecution.IsPostAskEndFlowActive();
     }
 
     private void HandleStateChanged()
@@ -60,7 +72,7 @@ public partial class MainEngineering : IDisposable
 
     private async Task OnHandProgram()
     {
-        if (IsMainSettingsDisabled)
+        if (IsHandProgramDisabled)
         {
             return;
         }
@@ -80,7 +92,7 @@ public partial class MainEngineering : IDisposable
 
     private async Task OnIoEditor()
     {
-        if (IsMainSettingsDisabled)
+        if (IsIoEditorDisabled)
         {
             return;
         }
@@ -167,6 +179,7 @@ public partial class MainEngineering : IDisposable
     {
         PreExecution.OnStateChanged -= HandleStateChanged;
         SettingsAccessState.OnStateChanged -= HandleStateChanged;
+        AutoReady.OnStateChanged -= HandleStateChanged;
         PlcResetCoordinator.OnActiveChanged -= HandleStateChanged;
         ErrorCoordinator.OnInterruptChanged -= HandleStateChanged;
     }

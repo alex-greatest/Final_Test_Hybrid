@@ -651,6 +651,15 @@ public class MyService(RegisterWriter writer)
 }
 ```
 
+### Runtime-контракт вкладки `Тест связи`
+
+Вкладка `Тест связи` живёт в `Components/Engineer/Modals/HandProgramDialog.razor` и рендерит `Components/Overview/ConnectionTestPanel.razor` только пока ручной diagnostic session разрешён runtime-состоянием.
+
+- Вкладка недоступна при `BoilerState.IsTestRunning = true`.
+- Если тест стартовал уже во время открытой вкладки, `HandProgramDialog` обязан уйти на безопасную вкладку, чтобы `ConnectionTestPanel` был выгружен.
+- Выгрузка `ConnectionTestPanel` закрывает ручной session через `DiagnosticManualSessionState.ExitConnectionTest()` и вызывает `Dispatcher.StopAsync()`.
+- Контракт нужен, чтобы ручная Modbus-диагностика не оставалась активной параллельно с execution runtime.
+
 ### Ручная запись в панели `Тест связи`
 
 В `Components/Overview/ConnectionTestPanel.razor` write-панель использует **документные адреса**. Оператор вводит значения из протокола (`1175..1181`, `1133..1136` и т.д.), а компонент сам переводит их в Modbus-адреса через `BaseAddressOffset`.

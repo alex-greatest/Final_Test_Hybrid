@@ -9,6 +9,7 @@
 | Профиль | Класс контейнера | Класс грида | Назначение |
 |------|------|------|------|
 | Unified | `grid-unified-host` | `grid-unified` | Базовый единый стиль таблиц на большинстве экранов |
+| Wide Editor | `grid-wide-editor-host` | `grid-wide-editor` | Модификатор для широких editor-grid: resize колонок, ellipsis в body, action-column frozen справа |
 | Main Legacy | нет отдельного host | `main-grid-legacy` | Исторический компактный вид таблицы шагов на главном экране |
 | Overview IO | нет отдельного host | `overview-grid-io` | Таблицы калибровки/IO во вкладке «Обзор» |
 
@@ -25,8 +26,11 @@
 - `Components/Results/StepTimingsGrid.razor`
 - `Components/Results/ActiveTimersGrid.razor`
 - `Components/Engineer/StandDatabase/BoilerTypesGrid.razor`
-- `Components/Engineer/StandDatabase/ErrorSettingsTemplatesGrid.razor`
 - `Components/Engineer/StandDatabase/StepFinalTestsGrid.razor`
+
+### `grid-unified-host` + `grid-unified` + `grid-wide-editor-host` + `grid-wide-editor`
+
+- `Components/Engineer/StandDatabase/ErrorSettingsTemplatesGrid.razor`
 - `Components/Engineer/StandDatabase/Recipe/RecipesGrid.razor`
 - `Components/Engineer/StandDatabase/ResultSettings/ResultSettingsSimpleGrid.razor`
 - `Components/Engineer/StandDatabase/ResultSettings/ResultSettingsRangeGrid.razor`
@@ -52,6 +56,17 @@
    `.rz-cell-data`, `.rz-column-title-content`, `.rz-sortable-column`, `.rz-column-title`.
 4. В edit-режиме используются отдельные правила для `rz-textbox`, `rz-dropdown`, `rz-textarea`.
 5. Кнопки действий в ячейках имеют фиксированный компактный размер.
+
+## Wide Editor: ключевые правила
+
+Источник: `wwwroot/css/app.css`.
+
+1. Профиль используется только как opt-in модификатор поверх `grid-unified`, а не как отдельная замена unified-стиля.
+2. Включает `AllowColumnResize` для рабочих колонок и фиксирует служебные колонки (`select`, `actions`) через `Resizable="false"`.
+3. Action-column закрепляется справа через `Frozen="true"` и `FrozenPosition="Right"`.
+4. В body display-текст обрезается по ширине ячейки через `ellipsis`, чтобы не наезжать на соседние колонки.
+5. Header сохраняет anti-clipping поведение unified-профиля и не переводится на body-ellipsis правила.
+6. Edit-контролы обязаны оставаться внутри ширины ячейки (`width:100%`, `min-width:0`, без overflow поверх соседей).
 
 ## Main Legacy: ключевые правила
 
@@ -95,12 +110,14 @@
 - Делать профиль изолированным и предсказуемым.
 - Проверять типографику шапки и тела отдельно.
 - Держать `grid-unified` как основной стиль для типовых таблиц.
+- Для широких editor-grid добавлять отдельный opt-in модификатор, а не менять `grid-unified` глобально.
 
 ## Don't
 
 - Не менять `grid-unified` под уникальный кейс одного экрана.
 - Не переводить `TestSequenseGrid` на `grid-unified`.
 - Не использовать глобальный broad override для всех `rz-data-grid`.
+- Не оставлять `overflow: visible` для body wide-editor ячеек, если это даёт наезд текста на соседние колонки.
 
 ## Чек-лист ревью для DataGrid
 

@@ -6,6 +6,7 @@
 @inject PlcSubscriptionState SubscriptionState
 @inject OpcUaConnectionState ConnectionState
 @inject PreExecutionCoordinator PreExecution
+@inject BoilerState BoilerState
 @inject DialogService DialogService
 @implements IAsyncDisposable
 
@@ -39,8 +40,8 @@
                 <RadzenTabsItem Text="Пн. выходы">
                     <PneumaticOutputsPanel IsInteractive="true" EmitCachedValueImmediately="true" />
                 </RadzenTabsItem>
-                <RadzenTabsItem Text="Тест связи">
-                    @if (_selectedTabIndex == TestConnectionTabIndex)
+                <RadzenTabsItem Text="Тест связи" Disabled="@IsConnectionTestTabDisabled">
+                    @if (!IsConnectionTestTabDisabled && _selectedTabIndex == TestConnectionTabIndex)
                     {
                         <ConnectionTestPanel />
                     }
@@ -52,16 +53,19 @@
 
 @code {
     private const int TestConnectionTabIndex = 8;
+    private const int DefaultTabIndex = 0;
 
     private bool _disposed;
     private bool _isClosing;
     private int _selectedTabIndex;
+    private bool IsConnectionTestTabDisabled => BoilerState.IsTestRunning;
 
     protected override void OnInitialized()
     {
         SubscriptionState.OnStateChanged += HandleStateChanged;
         ConnectionState.ConnectionStateChanged += HandleConnectionChanged;
         PreExecution.OnStateChanged += HandlePreExecutionChanged;
+        BoilerState.OnChanged += HandleBoilerStateChanged;
     }
 
     private void HandleStateChanged()
@@ -82,6 +86,20 @@
         _ = InvokeAsync(StateHasChanged);
     }
 
+    private void HandleBoilerStateChanged()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _ = InvokeAsync(() =>
+        {
+            EnsureConnectionTestTabAvailable();
+            StateHasChanged();
+        });
+    }
+
     private void HandlePreExecutionChanged()
     {
         if (_disposed || _isClosing || PreExecution.IsAcceptingInput)
@@ -93,12 +111,23 @@
         _ = InvokeAsync(() => DialogService.Close());
     }
 
+    private void EnsureConnectionTestTabAvailable()
+    {
+        if (!IsConnectionTestTabDisabled || _selectedTabIndex != TestConnectionTabIndex)
+        {
+            return;
+        }
+
+        _selectedTabIndex = DefaultTabIndex;
+    }
+
     public ValueTask DisposeAsync()
     {
         _disposed = true;
         SubscriptionState.OnStateChanged -= HandleStateChanged;
         ConnectionState.ConnectionStateChanged -= HandleConnectionChanged;
         PreExecution.OnStateChanged -= HandlePreExecutionChanged;
+        BoilerState.OnChanged -= HandleBoilerStateChanged;
         return ValueTask.CompletedTask;
     }
 }

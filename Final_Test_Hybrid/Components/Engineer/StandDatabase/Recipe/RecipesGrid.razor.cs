@@ -172,15 +172,6 @@ public partial class RecipesGrid
         item.Value = item.PlcType == PlcType.BOOL ? "false" : string.Empty;
     }
 
-    private void ValidateValue(RecipeEditModel item)
-    {
-        var error = GetValueTypeError(item);
-        if (error != null)
-        {
-            NotificationService.Notify(NotificationSeverity.Warning, "Внимание", error);
-        }
-    }
-
     private static string? GetValidationError(RecipeEditModel item)
     {
         if (string.IsNullOrWhiteSpace(item.Address))

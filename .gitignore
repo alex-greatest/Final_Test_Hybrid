@@ -6,7 +6,12 @@ Final_Test_Hybrid/nul
 node_modules/
 
 # Local IDE and tool state
-/.idea/
+/.idea/*
+!/.idea/.idea.Final_Test_Hybrid/
+/.idea/.idea.Final_Test_Hybrid/*
+!/.idea/.idea.Final_Test_Hybrid/.idea/
+/.idea/.idea.Final_Test_Hybrid/.idea/*
+!/.idea/.idea.Final_Test_Hybrid/.idea/vcs.xml
 /.vs/
 /.playwright-mcp/
 /_tmp_*

@@ -38,9 +38,14 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
 }
 
 .step-select-cell .step-name {
     flex: 1;
+    min-width: 0;
     font-size: 19px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }

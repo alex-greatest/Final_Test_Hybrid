@@ -48,15 +48,23 @@
     margin-top: 10px;
 }
 
-::deep .save-button.rz-button {
-    background-color: #3b82f6;
-    color: white;
+::deep .dialog-button.rz-button {
     padding: 14px 28px;
     font-size: 20px;
     font-weight: 700;
     border-radius: 4px;
+    min-height: 52px;
+}
+
+::deep .save-button.rz-button {
+    background-color: #3b82f6;
+    color: white;
 }
 
 ::deep .save-button.rz-button:hover {
     background-color: #2563eb;
+}
+
+::deep .cancel-button.rz-button {
+    min-width: 154px;
 }

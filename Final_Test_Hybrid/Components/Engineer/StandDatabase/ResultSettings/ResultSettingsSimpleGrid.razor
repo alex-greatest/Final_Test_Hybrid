@@ -1,7 +1,7 @@
 @using Final_Test_Hybrid.Models.Database
 @using Final_Test_Hybrid.Models.Database.Edit
 
-<div class="grid-container grid-unified-host">
+<div class="grid-container grid-unified-host grid-wide-editor-host">
     <div class="grid-toolbar">
         <div class="toolbar-buttons">
             <RadzenButton Icon="add" Text="Добавить"
@@ -10,9 +10,10 @@
         </div>
         <span class="record-count">Записей: @Items.Count</span>
     </div>
-    <RadzenDataGrid @ref="_grid" Data="@Items" TItem="ResultSettingsEditModel" class="grid-unified"
+    <RadzenDataGrid @ref="_grid" Data="@Items" TItem="ResultSettingsEditModel" class="grid-unified grid-wide-editor"
                 EditMode="DataGridEditMode.Single"
                 AllowFiltering="true" AllowSorting="true"
+                AllowColumnResize="true"
                 AllowColumnReorder="true"
                 FilterText="@DataGridRu.Filter"
                 ApplyFilterText="@DataGridRu.ApplyFilter"
@@ -36,6 +37,8 @@
                 EmptyText="@DataGridRu.Empty">
         <Columns>
             <RadzenDataGridColumn TItem="ResultSettingsEditModel" Width="50px"
+                                  CssClass="wide-grid-checkbox-cell"
+                                  Resizable="false"
                                   Sortable="false" Filterable="false" TextAlign="TextAlign.Center">
                 <HeaderTemplate>
                     <RadzenCheckBox TValue="bool" Value="@IsAllSelected" Change="@OnSelectAllChanged" />
@@ -46,18 +49,21 @@
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="AddressValue"
+                                  MinWidth="160px"
                                   Title="Адрес значения">
                 <EditTemplate Context="item">
                     <RadzenTextBox @bind-Value="item.AddressValue" MaxLength="100" class="w-full" />
                 </EditTemplate>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="ParameterName"
+                                  MinWidth="220px"
                                   Title="Название параметра">
                 <EditTemplate Context="item">
                     <RadzenTextBox @bind-Value="item.ParameterName" MaxLength="100" class="w-full"/>
                 </EditTemplate>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="AddressStatus"
+                                  MinWidth="160px"
                                   Title="Адрес статуса">
                 <EditTemplate Context="item">
                     <RadzenTextBox @bind-Value="item.AddressStatus" MaxLength="100" class="w-full"/>
@@ -88,6 +94,7 @@
                 </EditTemplate>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="Nominal"
+                                  MinWidth="140px"
                                   Title="Номинал" Width="100px">
                 <EditTemplate Context="item">
                     <RadzenTextBox @bind-Value="item.Nominal" MaxLength="30" class="w-full"/>
@@ -100,12 +107,16 @@
                 </EditTemplate>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="ResultSettingsEditModel" Property="Description"
+                                  MinWidth="240px"
                                   Title="Описание">
                 <EditTemplate Context="item">
                     <RadzenTextArea @bind-Value="item.Description" MaxLength="500" Rows="2" class="w-full"/>
                 </EditTemplate>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="ResultSettingsEditModel"
+                                  Frozen="true"
+                                  FrozenPosition="FrozenColumnPosition.Right"
+                                  Resizable="false"
                                   TextAlign="TextAlign.Center" Sortable="false"
                                   Filterable="false" Width="100px">
                 <Template Context="item">

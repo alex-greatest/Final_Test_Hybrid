@@ -582,6 +582,82 @@ svg {
     font-size: 21px;
 }
 
+/* ===== WIDE EDITOR GRID ===== */
+.grid-wide-editor-host {
+    min-height: 0;
+}
+
+.grid-wide-editor {
+    --wide-grid-frozen-background: #f3f3f3;
+    --wide-grid-frozen-shadow: rgba(0, 0, 0, 0.14);
+}
+
+.grid-wide-editor .rz-grid-table tbody td {
+    min-width: 0;
+}
+
+.grid-wide-editor .rz-grid-table tbody td > * {
+    max-width: 100%;
+    min-width: 0;
+}
+
+.grid-wide-editor .rz-grid-table tbody td:not(.rz-frozen-cell-right) .rz-cell-data {
+    display: block;
+    max-width: 100%;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.grid-wide-editor .rz-grid-table tbody td.wide-grid-checkbox-cell > *,
+.grid-wide-editor .rz-grid-table tbody td.wide-grid-checkbox-cell .rz-cell-data {
+    overflow: visible !important;
+}
+
+.grid-wide-editor .rz-grid-table tbody td.wide-grid-checkbox-cell .rz-cell-data {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 26px;
+}
+
+.grid-wide-editor .rz-grid-table tbody td .rz-stack,
+.grid-wide-editor .rz-grid-table tbody td .rz-textbox,
+.grid-wide-editor .rz-grid-table tbody td .rz-dropdown,
+.grid-wide-editor .rz-grid-table tbody td .rz-textarea {
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden !important;
+}
+
+.grid-wide-editor .rz-grid-table tbody td .rz-textbox input,
+.grid-wide-editor .rz-grid-table tbody td .rz-dropdown-label,
+.grid-wide-editor .rz-grid-table tbody td .rz-textarea {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.grid-wide-editor .rz-grid-table tbody td .rz-dropdown-label {
+    white-space: nowrap !important;
+}
+
+.grid-wide-editor .rz-grid-table-fixed .rz-frozen-cell-right,
+.grid-wide-editor .rz-grid-table-fixed .rz-frozen-cell-right-inner {
+    background: var(--wide-grid-frozen-background) !important;
+    z-index: 4;
+}
+
+.grid-wide-editor .rz-grid-table-fixed .rz-frozen-cell-right.rz-frozen-cell-right-end,
+.grid-wide-editor .rz-grid-table-fixed .rz-frozen-cell-right-inner {
+    box-shadow: -6px 0 12px -10px var(--wide-grid-frozen-shadow);
+}
+
+.grid-wide-editor .rz-grid-table thead th.rz-frozen-cell-right,
+.grid-wide-editor .rz-grid-table thead th.rz-frozen-cell-right-inner {
+    background: var(--wide-grid-frozen-background) !important;
+    z-index: 5;
+}
+
 /* Overview: типографика таблиц как в IoEditorDialog */
 .overview-grid-io {
     font-size: 19px;

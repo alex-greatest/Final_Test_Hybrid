@@ -14,6 +14,8 @@
 | Опасное действие | `Danger` | Сброс, reset, разрушительная операция |
 | Положительный статус | `Success` | Индикация «действие недоступно/ошибок нет» |
 
+Исключение: в `Components/Main/Modals/Interrupt/InterruptReasonDialog.razor` кнопка `Отмена` намеренно оформлена как `Danger` по операторскому сценарию и закрывает диалог только после успешной проверки через инженерный `PasswordDialog`, используя тот же `EngineerPassword`.
+
 ## Кнопки главного экрана
 
 ### `OperatorInfo` (`Components/Main/OperatorInfo.razor`)

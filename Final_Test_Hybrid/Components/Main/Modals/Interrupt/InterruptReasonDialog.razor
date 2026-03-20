@@ -1,4 +1,5 @@
 @using Final_Test_Hybrid.Services.SpringBoot.Operation.Interrupt
+@using Final_Test_Hybrid.Components.Engineer.Modals
 @inject NotificationService NotificationService
 @inject DialogService DialogService
 @implements IDisposable
@@ -15,17 +16,18 @@
     }
 
     <div class="dialog-buttons">
-        <RadzenButton Text="Отмена"
-                      Icon="close"
-                      Click="@OnCancelClick"
-                      ButtonStyle="ButtonStyle.Light"
-                      Disabled="_isSaving" />
         <RadzenButton Text="Сохранить"
                       Icon="save"
                       Click="@OnSaveClick"
                       ButtonStyle="ButtonStyle.Primary"
                       IsBusy="_isSaving"
-                      class="save-button" />
+                      class="dialog-button save-button" />
+        <RadzenButton Text="Отмена"
+                      Icon="close"
+                      Click="@OnCancelClick"
+                      ButtonStyle="ButtonStyle.Danger"
+                      Disabled="_isSaving"
+                      class="dialog-button cancel-button" />
     </div>
 </div>
 
@@ -50,14 +52,34 @@
         await ExecuteSaveAsync();
     }
 
-    private void OnCancelClick()
+    private async Task OnCancelClick()
     {
         if (_disposed)
         {
             return;
         }
 
+        var isAuthorized = await ShowPasswordDialogAsync();
+        if (!isAuthorized || _disposed)
+        {
+            return;
+        }
+
         DialogService.Close();
+    }
+
+    private async Task<bool> ShowPasswordDialogAsync()
+    {
+        var result = await DialogService.OpenAsync<PasswordDialog>(
+            "Введите пароль",
+            new Dictionary<string, object>(),
+            new DialogOptions
+            {
+                Width = "350px",
+                CloseDialogOnOverlayClick = false
+            });
+
+        return result is true;
     }
 
     private bool ValidateReason()
