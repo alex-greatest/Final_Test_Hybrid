@@ -314,6 +314,20 @@ private static void StopDispatcherSafely(IModbusDispatcher dispatcher, ILogger l
 
 После reset пользователь может вручную вызвать `StartAsync()` для восстановления связи.
 
+### Интеграция со штатным завершением теста
+
+Диагностический сервис также автоматически останавливается при штатном завершении теста.
+
+| Событие | Источник | Действие |
+|---------|----------|----------|
+| OK/NOK completion | `TestCompletionCoordinator.HandleTestCompletedAsync()` | best-effort `dispatcher.StopAsync()` сразу после показа result image |
+
+Контракт runtime:
+- связь с котлом поднимается только в `Coms/Check_Comms`;
+- после показа `OK/NOK` картинки completion-handshake с PLC (`End/Req_Repeat`) идёт уже без активной Modbus-связи;
+- soft/hard reset path не меняется и по-прежнему останавливает dispatcher через существующие hooks `OnForceStop` / `OnReset`;
+- repeat/new cycle должен снова поднять связь через `Coms/Check_Comms`.
+
 ## Ping Keep-Alive
 
 Диспетчер периодически отправляет ping-команду для:
@@ -552,6 +566,11 @@ public class DiagnosticReadStep : ITestStep
 }
 ```
 
+Для `Coms/Safety_Time` действует отдельный safety-контракт:
+- единичный `read/write` fail сам по себе не меняет поведение шага;
+- подтверждённая потеря диагностической связи (`DiagnosticConnectionState=false`) во время измерения делает результат недействительным;
+- шаг не пережидает reconnect внутри текущего измерения и должен завершиться communication-fail с дальнейшим восстановлением только через штатный `Retry`.
+
 ### Поведение паузы и step-level pacing
 
 ```
@@ -686,6 +705,7 @@ public class MyService(RegisterWriter writer)
 
 - `ConnectionTestPanel` не хранит локальный snapshot `startedByPanel`. Вместо этого панель берёт `DiagnosticDispatcherLease`, а остановка shared dispatcher разрешается только последнему активному lease.
 - `CheckCommsStep` при успешном захвате связи переводит свой runtime-lease в sticky ownership до следующего `StopAsync()`, поэтому старая панель не может погасить dispatcher, который уже нужен runtime.
+- Штатный completion-path также завершает это sticky runtime-ownership через `StopAsync()` сразу после показа `OK/NOK` картинки.
 - Ручные диагностические и инженерные экраны (`HandProgram`, `IoEditorDialog`, `AiCallCheck`, `PidRegulatorCheck`, `RtdCalCheck`) этим пакетом не блокируются и не меняют поведение во время runtime.
 
 #### Упаковка строки

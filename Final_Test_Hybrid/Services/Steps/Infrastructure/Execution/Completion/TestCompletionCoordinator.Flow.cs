@@ -15,6 +15,8 @@ public partial class TestCompletionCoordinator
         _runtimeTerminalState.SetCompletionActive(true);
         try
         {
+            await StopDiagnosticDispatcherSafelyAsync();
+
             // 1. Записать End = true
             var written = await TryWriteTagAsync(BaseTags.ErrorSkip, true, "End = true", ct);
             if (!written)
@@ -41,6 +43,24 @@ public partial class TestCompletionCoordinator
         finally
         {
             _runtimeTerminalState.SetCompletionActive(false);
+        }
+    }
+
+    private async Task StopDiagnosticDispatcherSafelyAsync()
+    {
+        if (!deps.Dispatcher.IsStarted)
+        {
+            return;
+        }
+
+        try
+        {
+            await deps.Dispatcher.StopAsync();
+            logger.LogInformation("Диагностическая связь остановлена перед completion-handshake");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка остановки диагностической связи перед completion-handshake");
         }
     }
 

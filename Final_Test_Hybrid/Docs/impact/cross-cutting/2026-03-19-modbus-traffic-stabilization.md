@@ -29,6 +29,10 @@
   - `CH/*CompareFlowNtc*`, `DHW/*CompareFlowNtc*`.
 - `CheckCommsStep` и polling-циклы бизнес-ожидания не менялись: их wall-clock/business waits не считаются pacing-дублем и сохранены без ослабления existing safety-flow.
 - Для selected `Coms/*` шагов введён единый helper communication-vs-functional сообщений без добавления новых error codes.
+- `Coms/Safety_Time` получил отдельный runtime guard для подтверждённой потери диагностической связи:
+  - штатный сценарий измерения не менялся;
+  - единичный `read-fail` без `DiagnosticConnectionState=false` не переводит шаг в новый fail-fast режим;
+  - при подтверждённом disconnect измерение помечается недействительным и шаг завершается communication-fail без ожидания reconnect внутри текущего запуска.
 - `CH.razor` и `DHW.razor` переведены на guarded polling:
   - idle: `2000 мс`;
   - active execution: `3000 мс`;
@@ -98,6 +102,12 @@
 - `dotnet format style Final_Test_Hybrid.slnx --verify-no-changes` — успешно; workspace warning без влияния на результат.
 - `jb inspectcode Final_Test_Hybrid.slnx "--include=<changed.cs>" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-warning-modbus-step-pacing.txt" -e=WARNING` — отчёт сформирован, новых блокирующих warning по этому change-set не выявлено.
 - `jb inspectcode Final_Test_Hybrid.slnx "--include=<changed.cs>" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-hint-modbus-step-pacing.txt" -e=HINT` — отчёт сформирован; suggestion/hint уровня cleanup есть, но новых safety-регрессий по pacing/пауза/отмена не найдено.
+- После точечного guard для `Coms/Safety_Time` повторно выполнены:
+  - `dotnet build Final_Test_Hybrid.slnx` — успешно; остаётся тот же внешний warning `MSB3277` по `WindowsBase`.
+  - `dotnet format analyzers Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
+  - `dotnet format style Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
+  - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/SafetyTimeStep.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-warning-safety-time.txt" -e=WARNING` — новых warning по файлу нет.
+  - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/SafetyTimeStep.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-hint-safety-time.txt" -e=HINT` — остались только cleanup-подсказки и reflection false-positive (`SafetyTimeStep` загружается через runtime registry).
 
 ## Residual Risks
 

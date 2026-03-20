@@ -1,4 +1,6 @@
 using Final_Test_Hybrid.Models.Plc.Tags;
+using Final_Test_Hybrid.Services.Diagnostic.Models;
+using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
@@ -54,7 +56,13 @@ public sealed class CompletionDecisionLoopTests
 
     private static TestCompletionCoordinator CreateCoordinator(OpcUaSubscription subscription)
     {
-        var deps = new TestCompletionDependencies(null!, null!, subscription, null!, null!);
+        var deps = new TestCompletionDependencies(
+            null!,
+            null!,
+            subscription,
+            new TestModbusDispatcher(),
+            null!,
+            null!);
         return new TestCompletionCoordinator(
             deps,
             TestInfrastructure.CreateDualLogger<TestCompletionCoordinator>(),
@@ -64,5 +72,57 @@ public sealed class CompletionDecisionLoopTests
     private static Task<bool> InvokeWaitCompletionDecisionAsync(TestCompletionCoordinator coordinator, CancellationToken ct)
     {
         return Assert.IsAssignableFrom<Task<bool>>(TestInfrastructure.InvokePrivate(coordinator, "WaitCompletionDecisionAsync", ct));
+    }
+
+    private sealed class TestModbusDispatcher : IModbusDispatcher
+    {
+        event Func<Task>? IModbusDispatcher.Disconnecting
+        {
+            add { }
+            remove { }
+        }
+
+        event Action? IModbusDispatcher.Connected
+        {
+            add { }
+            remove { }
+        }
+
+        event Action? IModbusDispatcher.Stopped
+        {
+            add { }
+            remove { }
+        }
+
+        event Action<DiagnosticPingData>? IModbusDispatcher.PingDataUpdated
+        {
+            add { }
+            remove { }
+        }
+
+        bool IModbusDispatcher.IsConnected => false;
+        bool IModbusDispatcher.IsReconnecting => false;
+        bool IModbusDispatcher.IsStarted => false;
+        DiagnosticPingData? IModbusDispatcher.LastPingData => null;
+
+        ValueTask IModbusDispatcher.EnqueueAsync(IModbusCommand command, CancellationToken ct)
+        {
+            throw new NotSupportedException();
+        }
+
+        Task IModbusDispatcher.StartAsync(CancellationToken ct)
+        {
+            throw new NotSupportedException();
+        }
+
+        Task IModbusDispatcher.StopAsync()
+        {
+            return Task.CompletedTask;
+        }
+
+        ValueTask IAsyncDisposable.DisposeAsync()
+        {
+            return ValueTask.CompletedTask;
+        }
     }
 }

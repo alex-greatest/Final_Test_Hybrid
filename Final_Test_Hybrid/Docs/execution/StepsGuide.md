@@ -277,6 +277,11 @@ public string? GetLimits(LimitsContext context)
 - `CheckCommsStep` реализует `INonSkippable`, поэтому оператор не может обойти шаг.
 - При `AutoReady = false` и отсутствии диагностической связи шаг возвращает `NoDiagnosticConnection`; рабочий путь продолжения — восстановить автомат и выполнить `Retry`.
 
+**Примечание по `Coms/Safety_Time`:**
+- Шаг измерения `Safety time` сохраняет штатный wall-clock отсчёт только при непрерывно подтверждённой диагностической связи.
+- Если `DiagnosticConnectionState` во время шага переходит в `false`, измерение считается недействительным и шаг завершается communication-fail.
+- Краткий reconnect внутри этого шага не пережидается: продолжение допускается только через штатный `Retry`.
+
 ---
 
 ## Часть 4: Работа с PLC (OPC-UA)

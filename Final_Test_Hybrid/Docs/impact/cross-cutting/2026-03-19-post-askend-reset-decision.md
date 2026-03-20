@@ -65,6 +65,10 @@
   - затем completion ждёт либо `Req_Repeat=true`, либо `End=false`;
   - если `Req_Repeat=true` приходит раньше сброса `End`, repeat запускается сразу, без ожидания `End=false`;
   - если PLC сбрасывает `End` и `Req_Repeat` не поднят, выполняется обычное завершение теста.
+- Completion-flow после штатного завершения теста теперь сразу гасит диагностическую связь с котлом:
+  - после показа `OK/NOK` картинки `TestCompletionCoordinator` выполняет best-effort `IModbusDispatcher.StopAsync()`;
+  - completion-handshake (`End/Req_Repeat`) и save/repeat decision продолжаются уже без активного Modbus runtime-session;
+  - существующие reset hooks `PlcResetCoordinator.OnForceStop` и `ErrorCoordinator.OnReset` не меняются и продолжают останавливать dispatcher как раньше.
 - Stable doc `CycleExitGuide.md` синхронизирован: completion handshake должен прерываться и PLC reset-токеном, и cycle CTS hard reset-пути.
 
 ### Дополнение: runtime terminal race package
@@ -161,6 +165,7 @@
 - `Final_Test_Hybrid/Docs/runtime/PlcResetGuide.md`
 - `Final_Test_Hybrid/Docs/execution/CycleExitGuide.md`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs`
+- `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionDependencies.cs`
 - `Final_Test_Hybrid/Services/OpcUa/Subscription/OpcUaSubscription.Callbacks.cs`
 - `Final_Test_Hybrid/Services/OpcUa/TagWaiter.cs`
 - `Final_Test_Hybrid/Services/OpcUa/TagWaiter.WaitGroup.cs`
@@ -225,6 +230,12 @@
 - `powershell -ExecutionPolicy Bypass -File C:\Users\Alexander\.codex\skills\localization-sync-guard\scripts\replay_localization_sync.ps1 -RepoRoot . -RequireResourceSync -RequireCyrillicLogs` — успешно после переноса новых message-ключей в `Form1.resx`.
 - `jb inspectcode Final_Test_Hybrid.slnx` по изменённым `*.cs` для message/toast-пакета (`-e=WARNING`) — последний завершённый отчёт перед финальным trivial cleanup содержал один warning `Qualifier is redundant` в `MessageService.cs`; warning устранён.
 - `jb inspectcode Final_Test_Hybrid.slnx` по изменённым `*.cs` для message/toast-пакета (`-e=HINT`) — CLI нестабилен по завершению процесса и зависает после записи отчёта; блокирующих compile/test regressions пакет не показывает.
+- `dotnet build Final_Test_Hybrid.slnx` после добавления штатного completion-disconnect — успешно; baseline warning только `MSB3277` по `WindowsBase`.
+- `dotnet format analyzers Final_Test_Hybrid.slnx --verify-no-changes` после добавления штатного completion-disconnect — успешно.
+- `dotnet format style Final_Test_Hybrid.slnx --verify-no-changes` после добавления штатного completion-disconnect — успешно.
+- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --no-build` после добавления штатного completion-disconnect — успешно, 36/36.
+- `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs;Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionDependencies.cs;Final_Test_Hybrid.Tests/Runtime/CompletionDecisionLoopTests.cs" --no-build --format=Text "--output=D:\projects\Final_Test_Hybrid\.codex-build\inspect-warning-completion-disconnect.txt" -e=WARNING` — отчёт пуст (`Solution Final_Test_Hybrid.slnx`); CLI дополнительно написал внешний `IOException` по занятому `rpswa.dswa.cache.json`, без warning по change-set.
+- `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs;Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionDependencies.cs;Final_Test_Hybrid.Tests/Runtime/CompletionDecisionLoopTests.cs" --no-build --format=Text "--output=D:\projects\Final_Test_Hybrid\.codex-build\inspect-hint-completion-disconnect.txt" -e=HINT` — один неблокирующий hint в тесте: `CompletionDecisionLoopTests.cs:22 Method has overload with cancellation support`; runtime warning/hint по production-файлам не выявлены.
 
 ## Инциденты
 
@@ -232,4 +243,5 @@
   - stale-cache false-finish / false-cleanup в completion и post-AskEnd;
   - false-success `TagWaiter.WaitForFalseAsync` после subscribe/resume на пустом cache;
   - shared dispatcher ownership в `ConnectionTestPanel`.
+- Для добавления штатного completion-disconnect новых failure mode не выявлено: `no new incident`.
 - Так как отдельного incident-контура в `Docs` нет, change trail вынесен в `openspec/changes/fix-runtime-terminal-race-package/` и должен поддерживаться вместе с этим impact.

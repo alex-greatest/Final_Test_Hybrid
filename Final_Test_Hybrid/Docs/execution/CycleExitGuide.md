@@ -160,6 +160,13 @@ private void HandleCycleExit(CycleExitReason reason)
 - completion decision-loop читает `Req_Repeat` и `End=false` только через known/unknown контракт `OpcUaSubscription.TryGetValue<bool>(...)`.
 - empty/bad cache не трактуется как `false`: completion ждёт реальное PLC-решение или reset/cancel.
 
+### Разрыв диагностики на штатном completion
+
+- После показа `OK/NOK` картинки `TestCompletionCoordinator.HandleTestCompletedAsync()` делает best-effort `IModbusDispatcher.StopAsync()`.
+- Этот teardown выполняется только в штатном completion-path и не заменяет существующие reset hooks.
+- PLC completion-handshake после картинки (`End/Req_Repeat`) продолжается без активной Modbus-связи с котлом.
+- Если PLC выбирает repeat, следующий цикл обязан снова поднять связь через `Coms/Check_Comms`.
+
 ### Детерминированный resolver stop-reason
 
 - `_pendingExitReason` хранится атомарно как `int` sentinel, а не nullable enum.
