@@ -248,6 +248,14 @@ RunSingleCycleAsync:
 - UI/message gating не должен опираться только на `PlcResetCoordinator.IsActive`:
   - во время post-AskEnd окна `PlcResetCoordinator.IsActive` уже может быть `false`;
   - для инженерного UI и системных сообщений reset считается активным, пока истинно `PlcResetCoordinator.IsActive || PreExecutionCoordinator.IsPostAskEndFlowActive()`.
+- `MessageService` обязан использовать тот же expanded reset-gate и terminal ownership:
+  - во время post-AskEnd raw `AutoReady OFF` не должен порождать auto-message;
+  - main message для post-AskEnd фиксирован как `Сброс подтверждён. Ожидание решения PLC...`;
+  - во время completion фиксирован как `Тест завершён. Ожидание решения PLC...`.
+- Для `PlcConnectionLost` в terminal/reset-сценариях нижняя строка должна иметь pending-reset фазу:
+  - до входа в reset-path — `Потеря связи с PLC. Ожидание сброса...`;
+  - после входа в reset-path — `Потеря связи с PLC. Выполняется сброс...`;
+  - brief reconnect сам по себе не должен возвращать main message к normal/raw state, пока interrupt не очищен.
 - Дополнительные sequence-aware диагностики:
   - `ChangeoverStartDeferredBySeq` — AskEnd текущего seq ещё не получен, старт отложен;
   - `ChangeoverStartRejectedAsStale` — pending/AskEnd относятся к старому seq;

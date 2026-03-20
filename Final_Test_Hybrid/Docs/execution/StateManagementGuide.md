@@ -643,6 +643,9 @@ private bool ShouldUseSoftDeactivation()
 - Для post-AskEnd `HandleGridClear()` остаётся синхронной event-entry, а cleanup и terminal release обязаны жить в отдельном `Task` и `finally`; release не должен зависеть от event-handler catch-path.
 - `ExecutionActivityTracker` остаётся owner только active-phase (`PreExecution`, `TestExecution`) и не расширяется terminal cleanup-окнами.
 - `ErrorCoordinator` использует `HasTerminalHandshake` для ownership `PlcConnectionLost` и фильтрации `AutoModeDisabled`.
+- `MessageService` подписывается на `RuntimeTerminalState.OnChanged` и использует terminal flags как owner для main message.
+- Для post-AskEnd `MessageService` читает `RuntimeTerminalState.IsPostAskEndActive`; `PreExecutionCoordinator.IsPostAskEndFlowActive()` остаётся только частью expanded reset-gate.
+- Raw `AutoReady` и raw connection остаются только fallback-источниками вне terminal/interrupt/reset.
 
 ---
 
@@ -987,7 +990,7 @@ State machine для фаз жизненного цикла системы:
 | `State` | ExecutionStateManager | UI (OnStateChanged), координаторы | `TransitionTo` |
 | `IsPreExecutionActive` | ExecutionActivityTracker | ScanModeController, ErrorCoordinator (IsAnyActive) | PreExecutionCoordinator |
 | `IsTestExecutionActive` | ExecutionActivityTracker | ScanModeController, ErrorCoordinator (IsAnyActive) | TestExecutionCoordinator |
-| `HasTerminalHandshake` | RuntimeTerminalState | ErrorCoordinator | TestCompletionCoordinator, PreExecutionCoordinator |
+| `HasTerminalHandshake` | RuntimeTerminalState | ErrorCoordinator, MessageService | TestCompletionCoordinator, PreExecutionCoordinator |
 | `HadSkippedError` | ExecutionStateManager | TestExecutionCoordinator | `MarkErrorSkipped()` |
 
 ---

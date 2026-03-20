@@ -106,6 +106,36 @@
   - пакет покрывает decision-loop и ownership/runtime contracts, но не полный UI-orchestration сценарий completion/post-AskEnd.
 - Для change trail создан `openspec/changes/fix-runtime-terminal-race-package/`.
 
+### Дополнение: MessageService + PlcConnectionLost toast alignment (2026-03-20)
+
+- `MessageService` переведён с raw priority-table на snapshot/scenario resolver.
+- `MessageService` теперь слушает `RuntimeTerminalState.OnChanged` и использует terminal owner через `RuntimeTerminalState` и для completion, и для post-AskEnd.
+- Для нижней строки зафиксированы отдельные terminal-message сценарии:
+  - `IsCompletionActive` -> `Тест завершён. Ожидание решения PLC...`;
+  - `IsPostAskEndActive` -> `Сброс подтверждён. Ожидание решения PLC...`.
+- `PreExecutionCoordinator.IsPostAskEndFlowActive()` в `MessageService` остаётся только частью expanded reset-gate:
+  `PlcResetCoordinator.IsActive || PreExecutionCoordinator.IsPostAskEndFlowActive()`.
+- Raw `AutoReady` больше не производит reset/terminal auto-text:
+  - ветка `Нет автомата. Выполняется сброс...` удалена;
+  - raw `!AutoReady` оставлен только как idle/pre-start fallback.
+- Для `PlcConnectionLost` добавлена явная pending-reset стадия main message:
+  - при `CurrentInterrupt == PlcConnectionLost` и ещё не активном reset -> `Потеря связи с PLC. Ожидание сброса...`;
+  - после входа в reset-path -> `Потеря связи с PLC. Выполняется сброс...`.
+- Raw `!IsConnected` опущен ниже terminal/reset ownership и работает только вне interrupt/terminal/reset.
+- `PlcConnectionLostBehavior` оставляет reset-path без изменения, но toast теперь живёт столько же, сколько обещает оператору:
+  - detail `Сброс через 5 сек`;
+  - `duration = 5000 ms`;
+  - stable `id = interrupt-plc-connection-lost`.
+- Для новых main-message/toast текстов добавлен минимальный resource-sync без расширения глобального localization-layer:
+  - сообщения `MessageService` и `PlcConnectionLostBehavior` читаются через `MessageTextResources`;
+  - ключи размещены в существующем `Form1.resx`, потому что отдельного message-resource контура в repo ещё нет.
+- Добавлен отдельный stable guide `Docs/ui/MessageSemanticsGuide.md`; старый `MessageServiceDescription.md` переведён в historical redirect.
+- Новый пакет не меняет:
+  - приоритет result image в `MyComponent`;
+  - header/settings blocking contract;
+  - toast semantics для interrupt-ов кроме `PlcConnectionLost`.
+- `no new incident`: пакет устраняет уже известную UI/runtime ambiguity вокруг main message и toast, без выявления нового production failure mode.
+
 ## Затронутые файлы
 
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionDependencies.cs`
@@ -117,12 +147,17 @@
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.MainLoop.cs`
 - `Final_Test_Hybrid/Services/Main/PlcReset/PlcResetCoordinator.cs`
 - `Final_Test_Hybrid/Services/Main/Messages/MessageService.cs`
+- `Final_Test_Hybrid/Services/Main/Messages/MessageServiceResolver.cs`
+- `Final_Test_Hybrid/Services/Main/Messages/MessageTextResources.cs`
+- `Final_Test_Hybrid/Properties/AssemblyInfo.cs`
 - `Final_Test_Hybrid/Form1.cs`
+- `Final_Test_Hybrid/Form1.resx`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Scanning/ScanModeController.cs`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Scanning/ScanModeController.cs`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.Subscriptions.cs`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.Pipeline.Helpers.cs`
 - `Final_Test_Hybrid/Components/Main/Modals/Interrupt/InterruptReasonDialog.razor`
+- `Final_Test_Hybrid/Components/Main/MessageHelper.razor`
 - `Final_Test_Hybrid/Docs/runtime/PlcResetGuide.md`
 - `Final_Test_Hybrid/Docs/execution/CycleExitGuide.md`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/Completion/TestCompletionCoordinator.Flow.cs`
@@ -138,6 +173,10 @@
 - `Final_Test_Hybrid/Components/Overview/ConnectionTestPanel.razor`
 - `Final_Test_Hybrid/Docs/runtime/ErrorCoordinatorGuide.md`
 - `Final_Test_Hybrid/Docs/execution/StateManagementGuide.md`
+- `Final_Test_Hybrid/Docs/ui/MessageSemanticsGuide.md`
+- `Final_Test_Hybrid/Docs/ui/MainScreenGuide.md`
+- `Final_Test_Hybrid/Docs/ui/README.md`
+- `Final_Test_Hybrid/MessageServiceDescription.md`
 - `Final_Test_Hybrid/Docs/runtime/ScanModeControllerGuide.md`
 - `Final_Test_Hybrid/Docs/diagnostics/DiagnosticGuide.md`
 - `Final_Test_Hybrid/Docs/runtime/TagWaiterGuide.md`
@@ -174,6 +213,18 @@
 - `jb inspectcode Final_Test_Hybrid.slnx` по списку изменённых `*.cs` с `-e=WARNING` после rollback UI/runtime gating-среза — отчёт пуст (`Solution Final_Test_Hybrid.slnx`).
 - `jb inspectcode Final_Test_Hybrid.slnx` по списку изменённых `*.cs` с `-e=HINT` после rollback UI/runtime gating-среза — только неблокирующие structural/style hint; новых warning нет.
 - `openspec validate fix-runtime-terminal-race-package --strict --no-interactive` после rollback UI/runtime gating-среза — успешно.
+- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj` после правки `MessageService`/toast alignment — успешно, 30/30; baseline warning только `MSB3277` по `WindowsBase`.
+- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj` после финальной корректировки message-matrix — успешно, 31/31; baseline warning только `MSB3277` по `WindowsBase`.
+- `dotnet build Final_Test_Hybrid.slnx` после финальной корректировки message-matrix — успешно; baseline warning `MSB3277` по `WindowsBase` и существующий `CS0067` в test stub `DiagnosticDispatcherOwnershipTests.TestModbusDispatcher.PingDataUpdated`.
+- `dotnet format analyzers --verify-no-changes Final_Test_Hybrid.slnx` после финальной корректировки message-matrix — успешно.
+- `dotnet format style --verify-no-changes Final_Test_Hybrid.slnx` после финальной корректировки message-matrix — успешно.
+- `dotnet build Final_Test_Hybrid.slnx` после resource-sync message/toast текстов — успешно; baseline warning `MSB3277` по `WindowsBase` и существующий `CS0067` в test stub `DiagnosticDispatcherOwnershipTests.TestModbusDispatcher.PingDataUpdated`.
+- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj` после resource-sync message/toast текстов — успешно, 31/31.
+- `dotnet format analyzers --verify-no-changes Final_Test_Hybrid.slnx` после resource-sync message/toast текстов — успешно.
+- `dotnet format style --verify-no-changes Final_Test_Hybrid.slnx` после resource-sync message/toast текстов — успешно.
+- `powershell -ExecutionPolicy Bypass -File C:\Users\Alexander\.codex\skills\localization-sync-guard\scripts\replay_localization_sync.ps1 -RepoRoot . -RequireResourceSync -RequireCyrillicLogs` — успешно после переноса новых message-ключей в `Form1.resx`.
+- `jb inspectcode Final_Test_Hybrid.slnx` по изменённым `*.cs` для message/toast-пакета (`-e=WARNING`) — последний завершённый отчёт перед финальным trivial cleanup содержал один warning `Qualifier is redundant` в `MessageService.cs`; warning устранён.
+- `jb inspectcode Final_Test_Hybrid.slnx` по изменённым `*.cs` для message/toast-пакета (`-e=HINT`) — CLI нестабилен по завершению процесса и зависает после записи отчёта; блокирующих compile/test regressions пакет не показывает.
 
 ## Инциденты
 
