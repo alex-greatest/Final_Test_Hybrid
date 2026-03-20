@@ -276,10 +276,11 @@ public string? GetLimits(LimitsContext context)
 **Примечание по `Coms/Check_Comms`:**
 - `CheckCommsStep` реализует `INonSkippable`, поэтому оператор не может обойти шаг.
 - При `AutoReady = false` и отсутствии диагностической связи шаг возвращает `NoDiagnosticConnection`; рабочий путь продолжения — восстановить автомат и выполнить `Retry`.
+- После захвата runtime-lease шаг ждёт именно свежий runtime ping; stale `LastPingData` от ручной панели не считается успешной проверкой связи.
 
 **Примечание по `Coms/Safety_Time`:**
-- Шаг измерения `Safety time` сохраняет штатный wall-clock отсчёт только при непрерывно подтверждённой диагностической связи.
-- Если `DiagnosticConnectionState` во время шага переходит в `false`, измерение считается недействительным и шаг завершается communication-fail.
+- Шаг измерения `Safety time` использует только фактические step-level Modbus операции как источник истины по связи.
+- Любой read/write fail текущей попытки завершает шаг ошибкой без отдельного diagnostic connection latch.
 - Краткий reconnect внутри этого шага не пережидается: продолжение допускается только через штатный `Retry`.
 
 ---

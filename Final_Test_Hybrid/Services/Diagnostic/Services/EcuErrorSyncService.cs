@@ -39,6 +39,7 @@ public sealed class EcuErrorSyncService : IDisposable
         _logger = logger;
         _dispatcher.PingDataUpdated += OnPingDataUpdated;
         _dispatcher.Disconnecting += OnDisconnecting;
+        _dispatcher.Stopped += OnStopped;
     }
 
     /// <summary>
@@ -178,17 +179,27 @@ public sealed class EcuErrorSyncService : IDisposable
     /// </summary>
     private Task OnDisconnecting()
     {
+        ClearStateOnDispatcherStop();
+        return Task.CompletedTask;
+    }
+
+    private void OnStopped()
+    {
+        ClearStateOnDispatcherStop();
+    }
+
+    private void ClearStateOnDispatcherStop()
+    {
         lock (_lock)
         {
             if (_disposed)
             {
-                return Task.CompletedTask;
+                return;
             }
 
             ClearCurrentErrorInternal();
             ResetStateInternal();
         }
-        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -229,5 +240,6 @@ public sealed class EcuErrorSyncService : IDisposable
         // Отписка вне lock — безопасно и избегает потенциального deadlock
         _dispatcher.PingDataUpdated -= OnPingDataUpdated;
         _dispatcher.Disconnecting -= OnDisconnecting;
+        _dispatcher.Stopped -= OnStopped;
     }
 }

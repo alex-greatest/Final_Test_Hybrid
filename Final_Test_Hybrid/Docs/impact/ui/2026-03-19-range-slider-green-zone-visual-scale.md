@@ -15,12 +15,24 @@
   - положение указателя значения;
   - риски;
   - подписи шкалы.
-- Плотность рисок теперь разделена по сегментам:
-  - в красных зонах остаётся не более одной промежуточной риски на сторону;
-  - в зелёной зоне добавляются дополнительные промежуточные риски без визуального перегруза.
-- Подписи шкалы ограничены и теперь выводятся выборочно:
-  - ключевые точки (`Min`, `GreenStart`, середина зелёной зоны, `GreenEnd`, `Max`) остаются всегда;
-  - внутри зелёной зоны дополнительно подписывается только каждая вторая промежуточная риска.
+- Риски переведены на фиксированный набор опорных точек:
+  - `Min`;
+  - midpoint левой красной зоны;
+  - `GreenStart`;
+  - середина зелёной зоны;
+  - `GreenEnd`;
+  - midpoint правой красной зоны;
+  - `Max`.
+- Подписи шкалы больше не зависят от правила `каждая вторая риска` и теперь строятся только из ключевых точек:
+  - `Min`;
+  - `GreenStart`;
+  - середина зелёной зоны;
+  - `GreenEnd`;
+  - `Max`.
+- Для подписей добавлено авто-форматирование точности отображения:
+  - исходные значения `Min/Max/GreenZoneStart/GreenZoneEnd` и runtime-логика не меняются;
+  - UI повышает число знаков после запятой только если при базовом округлении разные ключевые точки выглядели бы одинаково.
+- Крайние подписи `Min/Max` выровнены по краям шкалы, чтобы правый край не выглядел пустым или визуально повреждённым.
 - Численные `Min/Max/GreenZoneStart/GreenZoneEnd` и логика `RangeSliderUiState` не менялись.
 - Добавлен guard для вырожденной шкалы `Min == Max`, чтобы генерация рисок не делила на нулевой диапазон.
 
@@ -33,7 +45,7 @@
 - `dotnet build Final_Test_Hybrid.slnx` — успешно; остался внешний warning `MSB3277` по конфликту `WindowsBase 4.0.0.0/5.0.0.0`, не связан с этой правкой.
 - `dotnet format analyzers --verify-no-changes Final_Test_Hybrid.slnx` — успешно.
 - `dotnet format style --verify-no-changes Final_Test_Hybrid.slnx` — успешно.
-- `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/RangeSlider.razor" --no-build --format=Text "--output=inspect-warning-range-slider.txt" -e=WARNING` — без warning по отчёту.
+- `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/RangeSlider.razor" --no-build --format=Text "--output=inspect-warning-range-slider.txt" -e=WARNING` — без warning по итоговому отчёту.
 
 ## Инциденты
 

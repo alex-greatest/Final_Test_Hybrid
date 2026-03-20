@@ -34,6 +34,8 @@ public class ModbusDispatcher : IModbusDispatcher
     private Task? _pingTask;
     private volatile bool _isStopping;
     private bool _isStopped;
+    private bool _reconnectQueueClosed;
+    private long _reconnectGeneration;
     private volatile bool _isConnected;
     private volatile bool _isReconnecting;
     private volatile bool _isPortOpen;
@@ -78,7 +80,6 @@ public class ModbusDispatcher : IModbusDispatcher
         _workerLoop.OnFirstCommandSucceeded = NotifyConnectedSafely;
         _workerLoop.OnConnectionLost = HandleConnectionLostAsync;
         _workerLoop.DoConnect = () => _connectionManager.Connect();
-        _workerLoop.DoClose = () => _connectionManager.Close();
 
         _pingLoop = new ModbusPingLoop(
             EnqueueAsync,
@@ -131,6 +132,8 @@ public class ModbusDispatcher : IModbusDispatcher
         ThrowIfDisposed();
 
         Channel<IModbusCommand>? channel;
+        bool rejectForReconnect;
+        long reconnectGeneration;
 
         lock (_stateLock)
         {
@@ -139,13 +142,14 @@ public class ModbusDispatcher : IModbusDispatcher
                 throw new InvalidOperationException("Диспетчер остановлен, новые команды не принимаются");
             }
 
-            channel = _commandQueue.GetChannel(command.Priority);
+            rejectForReconnect = _isReconnecting || _reconnectQueueClosed;
+            channel = rejectForReconnect ? null : _commandQueue.GetChannel(command.Priority);
+            reconnectGeneration = _reconnectGeneration;
         }
 
-        if (ShouldSuppressDuringReconnect(command))
+        if (rejectForReconnect)
         {
-            command.SetException(new InvalidOperationException(
-                $"Команда подавлена во время переподключения: Source={command.Source}, Command={command.CommandName}"));
+            FailCommandDuringReconnect(command);
             return;
         }
 
@@ -158,16 +162,13 @@ public class ModbusDispatcher : IModbusDispatcher
         {
             await channel.Writer.WriteAsync(command, ct).ConfigureAwait(false);
         }
+        catch (ChannelClosedException) when (TryFailClosedChannelDuringReconnect(command, reconnectGeneration))
+        {
+        }
         catch (ChannelClosedException)
         {
             throw new InvalidOperationException("Диспетчер остановлен, новые команды не принимаются");
         }
-    }
-
-    private bool ShouldSuppressDuringReconnect(IModbusCommand command)
-    {
-        return _isReconnecting
-            && ModbusTrafficClassifier.GetTrafficClass(command.Source) == ModbusTrafficClass.NonCritical;
     }
 
     /// <inheritdoc />
@@ -182,6 +183,7 @@ public class ModbusDispatcher : IModbusDispatcher
             if (_isStopped)
             {
                 _commandQueue.RecreateChannels(_options);
+                _reconnectQueueClosed = false;
                 _isStopped = false;
             }
 
@@ -240,7 +242,7 @@ public class ModbusDispatcher : IModbusDispatcher
 
         // 3. Закрываем порт СРАЗУ — прервёт in-flight NModbus команду (IOException)
         _connectionManager.Close();
-        _isPortOpen = false;
+        SetPortOpenState(false);
 
         // 4. Отменяем команды в очереди СРАЗУ — разблокирует ping loop и другие ожидающие
         _commandQueue.CancelAllPendingCommands();
@@ -287,6 +289,7 @@ public class ModbusDispatcher : IModbusDispatcher
         _isConnected = false;
         _isPortOpen = false;
         _isReconnecting = false;
+        _reconnectQueueClosed = false;
         _lastPingData = null;
         ctsToCancel.Dispose();
         pingCtsToCancel?.Dispose();
@@ -323,7 +326,7 @@ public class ModbusDispatcher : IModbusDispatcher
             {
                 var shouldContinue = await _workerLoop.RunIterationAsync(
                     isPortOpen: () => _isPortOpen,
-                    setPortOpen: value => _isPortOpen = value,
+                    setPortOpen: SetPortOpenState,
                     isConnected: () => _isConnected,
                     setConnected: value => _isConnected = value,
                     setReconnecting: value => _isReconnecting = value,
@@ -390,6 +393,7 @@ public class ModbusDispatcher : IModbusDispatcher
             _isConnected = false;
             _isPortOpen = false;
             _isReconnecting = false;
+            _reconnectQueueClosed = false;
             _lastPingData = null;
             ctsToDispose?.Dispose();
             pingCtsToDispose?.Dispose();
@@ -407,11 +411,17 @@ public class ModbusDispatcher : IModbusDispatcher
     /// </summary>
     private async Task HandleConnectionLostAsync(CancellationToken ct)
     {
-        // Очищаем старые ping данные при разрыве соединения
-        _lastPingData = null;
+        BeginReconnect();
 
         // Уведомляем подписчиков с таймаутом
-        await NotifyDisconnectingAsync().WaitAsync(TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
+        try
+        {
+            await NotifyDisconnectingAsync().WaitAsync(TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            _logger.LogWarning("Таймаут ожидания Disconnecting handlers при reconnect (2 сек)");
+        }
     }
 
     /// <summary>
@@ -499,6 +509,68 @@ public class ModbusDispatcher : IModbusDispatcher
 
     #endregion
 
+    #region Reconnect Helpers
+
+    private void BeginReconnect()
+    {
+        lock (_stateLock)
+        {
+            _reconnectGeneration++;
+            _isConnected = false;
+            _isReconnecting = true;
+            _lastPingData = null;
+
+            if (!_reconnectQueueClosed)
+            {
+                _commandQueue.CompleteChannels();
+                _reconnectQueueClosed = true;
+            }
+        }
+
+        _commandQueue.FailPendingCommandsOnReconnect(ModbusReconnectExceptionFactory.CreateForPendingCommand);
+        _connectionManager.Close();
+        SetPortOpenState(false);
+    }
+
+    private void SetPortOpenState(bool value)
+    {
+        lock (_stateLock)
+        {
+            if (value && _reconnectQueueClosed)
+            {
+                _commandQueue.RecreateChannels(_options);
+                _reconnectQueueClosed = false;
+            }
+
+            _isPortOpen = value;
+        }
+    }
+
+    private bool TryFailClosedChannelDuringReconnect(
+        IModbusCommand command,
+        long enqueueReconnectGeneration)
+    {
+        lock (_stateLock)
+        {
+            if (!_isReconnecting
+                && !_reconnectQueueClosed
+                && _reconnectGeneration == enqueueReconnectGeneration)
+            {
+                return false;
+            }
+        }
+
+        FailCommandDuringReconnect(command);
+        return true;
+    }
+
+    private static void FailCommandDuringReconnect(IModbusCommand command)
+    {
+        command.SetException(ModbusReconnectExceptionFactory.CreateForRejectedCommand(command));
+    }
+
+    #endregion
+
     #region Dispose
 
     /// <summary>
@@ -524,6 +596,7 @@ public class ModbusDispatcher : IModbusDispatcher
 
         await StopAsync().ConfigureAwait(false);
         _connectionManager.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     #endregion

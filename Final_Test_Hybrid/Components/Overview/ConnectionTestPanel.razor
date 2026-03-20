@@ -1012,8 +1012,7 @@
     /// </summary>
     private async Task<bool> ResetToNormalModeAsync()
     {
-        await AccessLevelManager.ResetToNormalModeAsync();
-        return true;
+        return await AccessLevelManager.ResetToNormalModeAsync();
     }
 
     /// <summary>

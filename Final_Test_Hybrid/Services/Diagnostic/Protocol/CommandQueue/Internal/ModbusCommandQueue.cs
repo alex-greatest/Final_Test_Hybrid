@@ -52,21 +52,19 @@ internal sealed class ModbusCommandQueue
     /// </summary>
     public void CancelAllPendingCommands()
     {
-        if (HighQueue != null)
-        {
-            while (HighQueue.Reader.TryRead(out var cmd))
-            {
-                cmd.SetCanceled();
-            }
-        }
+        CancelPendingCommands(HighQueue);
+        CancelPendingCommands(LowQueue);
+    }
 
-        if (LowQueue != null)
-        {
-            while (LowQueue.Reader.TryRead(out var cmd))
-            {
-                cmd.SetCanceled();
-            }
-        }
+    /// <summary>
+    /// Завершает все ожидающие команды ошибкой reconnect.
+    /// </summary>
+    public void FailPendingCommandsOnReconnect(Func<IModbusCommand, Exception> exceptionFactory)
+    {
+        ArgumentNullException.ThrowIfNull(exceptionFactory);
+
+        FailPendingCommands(HighQueue, exceptionFactory);
+        FailPendingCommands(LowQueue, exceptionFactory);
     }
 
     /// <summary>
@@ -77,5 +75,23 @@ internal sealed class ModbusCommandQueue
     public Channel<IModbusCommand>? GetChannel(CommandPriority priority)
     {
         return priority == CommandPriority.High ? HighQueue : LowQueue;
+    }
+
+    private static void CancelPendingCommands(Channel<IModbusCommand>? queue)
+    {
+        while (queue?.Reader.TryRead(out var cmd) == true)
+        {
+            cmd.SetCanceled();
+        }
+    }
+
+    private static void FailPendingCommands(
+        Channel<IModbusCommand>? queue,
+        Func<IModbusCommand, Exception> exceptionFactory)
+    {
+        while (queue?.Reader.TryRead(out var cmd) == true)
+        {
+            cmd.SetException(exceptionFactory(cmd));
+        }
     }
 }

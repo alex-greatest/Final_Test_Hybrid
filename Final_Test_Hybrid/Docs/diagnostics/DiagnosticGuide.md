@@ -156,8 +156,10 @@ private static void ConfigureDiagnosticEvents(ServiceProvider serviceProvider)
 
 **Важно:** `IsConnected = true` устанавливается только после первой **успешной** команды после старта или reconnect.
 
-Дополнительно для `UI.*`:
-- во время `IsReconnecting = true` display-only команды не ставятся в очередь;
+Дополнительно для reconnect:
+- во время `IsReconnecting = true` любые новые Modbus-команды fail-fast и не ставятся в очередь;
+- pending queued команды, которые уже стояли в очереди до входа в reconnect, завершаются communication-fail и не дожидаются восстановления;
+- writer, который ждал место в заполненном bounded channel и попал в тот же reconnect-period, тоже завершается communication-fail этого периода;
 - `CH.razor` и `DHW.razor` перезапускают polling только после `Connected`;
 - stale ping не считается подтверждением живой связи.
 - display-only polling для `CH/DHW` работает с профилем:
@@ -446,7 +448,7 @@ if (pingData != null)
 - Подписывается на `PingDataUpdated` события диспетчера
 - Взводит ошибку только в lock-контексте: `BoilerStatus in {1,2}` + `LastErrorId` из whitelist `111.txt`
 - Вне lock-контекста очищает активную ECU-ошибку (если была)
-- При disconnect очищает активную ECU-ошибку и сбрасывает внутреннее состояние
+- При `Disconnecting` и `Stopped` очищает активную ECU-ошибку и сбрасывает внутреннее состояние
 
 ### Контракт LastErrorId
 
@@ -471,7 +473,7 @@ lock (_lock)
 
 ### Поведение при disconnect
 
-При разрыве связи (`Disconnecting` event):
+При разрыве связи (`Disconnecting`) или полной остановке dispatcher (`Stopped`):
 1. Сбрасывается внутреннее `_currentErrorId = 0`
 2. Активная ECU-ошибка очищается из `ErrorService`
 3. После восстановления ошибка поднимется заново только при выполнении lock-контекста
@@ -539,7 +541,9 @@ if (error != null)
 - Для шага `Coms/Check_Comms` (`CheckCommsStep`) при `AutoReady = false` применяется fail-fast по результату шага: `TestStepResult.Fail(...NoDiagnosticConnection...)` формируется сразу.
 - Fail-результат этого шага фиксируется в `ColumnExecutor` до `pauseToken.WaitWhilePausedAsync`, поэтому error-flow запускается сразу; показ диалога может отложиться до `AutoReady = true`.
 - В этом шаге используется wall-clock ожидание (`Task.Delay`), а не pause-aware `context.DelayAsync`, чтобы timeout не «замораживался» на паузе автомата.
+- После захвата runtime-lease шаг требует новый ping уже в ownership runtime и не принимает существующий `LastPingData` как успешную проверку.
 - При неуспешном завершении `CheckCommsStep` диспетчер диагностики должен быть остановлен через `StopAsync`, чтобы не оставлять бесконечный reconnect в фоне.
+- Это правило действует и для shared-session reuse: fail-path `NoDiagnosticConnection` обязан погасить dispatcher и stale diagnostic state, даже если dispatcher был поднят ручной панелью.
 - Для non-PLC шагов запись `DB_Station.Test.Fault` в error-flow выполняется с bounded retry (3 попытки, 250 мс); при окончательном провале запускается `HardReset`.
 - Показ Retry/Skip-диалога при `AutoReady OFF` может быть отложен до восстановления автомата (`AutoReady = true`); это штатное поведение.
 - Повтор шага (`Retry`) имеет смысл только после восстановления `AutoReady`.
@@ -567,8 +571,9 @@ public class DiagnosticReadStep : ITestStep
 ```
 
 Для `Coms/Safety_Time` действует отдельный safety-контракт:
-- единичный `read/write` fail сам по себе не меняет поведение шага;
-- подтверждённая потеря диагностической связи (`DiagnosticConnectionState=false`) во время измерения делает результат недействительным;
+- шаг не использует отдельный latch подтверждённой диагностической связи;
+- источником истины считаются только реальные `PacedDiagReader` / `PacedDiagWriter` операции текущего запуска;
+- любой read/write fail завершает текущую попытку measurement ошибкой;
 - шаг не пережидает reconnect внутри текущего измерения и должен завершиться communication-fail с дальнейшим восстановлением только через штатный `Retry`.
 
 ### Поведение паузы и step-level pacing
@@ -844,7 +849,7 @@ if (!result.Success)
 | `OperationCanceledException` | Пробрасывается на всех слоях | — |
 
 `failureKind`:
-- `Communication` — timeout/IOException, dispatcher unavailable, reconnect suppression `UI.*`;
+- `Communication` — timeout/IOException, dispatcher unavailable, fail-fast reconnect rejection/drain;
 - `Functional` — ECU error-code, protocol/value validation, локальные business mismatch;
 - `None` — успешная операция.
 
@@ -856,11 +861,17 @@ if (!result.Success)
    - `IModbusClient` → исключение пробрасывается
    - `RegisterReader/Writer` → возвращает `Fail` с `Error = ex.Message`
 2. Диспетчер ловит, логирует "Ошибка связи: ... Переподключение..."
-3. Закрывает порт, уведомляет подписчиков `Disconnecting`
-4. Ждёт 5 сек → пытается переподключиться
-5. При успехе первой команды → `Connected` event
+3. Сразу помечает `IsReconnecting = true`, закрывает каналы очереди на запись и завершает все pending queued команды communication-fail
+4. Закрывает порт, уведомляет подписчиков `Disconnecting`
+5. Ждёт 5 сек → пытается переподключиться
+6. После открытия порта пересоздаёт каналы очереди
+7. При успехе первой новой команды → `Connected` event
 
 Подпишитесь на `Disconnecting` чтобы остановить polling (в Form1.cs уже настроено).
+
+Важно:
+- reconnect восстанавливает только будущие операции;
+- старые pending await не продолжаются после восстановления и должны вызываться заново новым циклом/новой попыткой.
 
 ### Детализация timeout-лога
 
@@ -894,10 +905,11 @@ if (!result.Success)
 - timeout в фоновых UI-pollers;
 - timeout в конкретном test-step маршруте.
 
-Reconnect-policy по traffic class:
-- `UI.*` считается `non-critical`;
-- во время reconnect `UI.*` подавляется до первой успешной команды post-reconnect;
-- `PingLoop`, `Coms/*`, recovery/reset flow и `BoilerLock` остаются `critical`.
+Reconnect-policy:
+- во время reconnect новые команды любого источника fail-fast и не попадают в очередь;
+- pending queued команды любого источника завершаются communication-fail до начала выполнения;
+- in-flight команда не меняется и падает по transport exception path;
+- после восстановления исполняются только новые команды.
 
 ## Потокобезопасность
 
@@ -925,9 +937,10 @@ Reconnect-policy по traffic class:
 
 | Инвариант | Реализация |
 |-----------|------------|
-| Единственный владелец connect/close | Фасад через `DoConnect`/`DoClose` колбэки |
+| Единственный владелец connect/close | Фасад через `DoConnect` + reconnect/stop helpers |
 | Очистка при "воркер умер сам" | `CleanupWorkerStateIfNeeded` в фасаде |
 | Порядок Stop | CompleteChannels → Cancel CTS → Close port → CancelAllPendingCommands → wait tasks → cleanup |
+| Порядок reconnect | mark reconnecting → CompleteChannels → fail pending queued commands → Close port → Disconnecting → reconnect loop → RecreateChannels |
 | Защита от параллельных Disconnecting | Interlocked gate `_isNotifyingDisconnect` |
 | Race protection ping при Stop | `isStopping` + `isPortOpen` проверки |
 

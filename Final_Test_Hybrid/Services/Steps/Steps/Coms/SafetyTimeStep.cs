@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
+using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Final_Test_Hybrid.Services.Results;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Limits;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
@@ -15,12 +16,12 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
 /// </summary>
 public class SafetyTimeStep(
     IOptions<DiagnosticSettings> settings,
-    DiagnosticConnectionState connectionState,
     ITestResultsService testResultsService,
     DualLogger<SafetyTimeStep> logger) : IRequiresRecipes, IProvideLimits
 {
     private const ushort RegisterEv1Current = 1023;
     private const ushort RegisterEv2Current = 1028;
+    private const ushort CoilCurrentsRegisterCount = RegisterEv2Current - RegisterEv1Current + 1;
     private const ushort RegisterBoilerStatus = 1005;
     private const ushort RegisterResetBlockage = 1153;
     private const ushort CurrentThresholdMa = 200;
@@ -32,7 +33,6 @@ public class SafetyTimeStep(
     private const string SafetyTimeMinRecipe = "ns=3;s=\"DB_Recipe\".\"Time\".\"ignSafetyTimeMin\"";
     private const string SafetyTimeMaxRecipe = "ns=3;s=\"DB_Recipe\".\"Time\".\"ignSafetyTimeMax\"";
     private const string ResultParameterName = "Safety time";
-    private const string ConnectionLostMessage = "Потеря связи с котлом: измерение Safety time недействительно";
 
     private readonly DiagnosticSettings _settings = settings.Value;
 
@@ -64,23 +64,18 @@ public class SafetyTimeStep(
         logger.LogInformation("Запуск измерения времени безопасного отключения");
         RemoveOldResult();
 
-        using var connectionLoss = new ConnectionLossLatch(connectionState);
-        var initialConnectionResult = GetConnectionLostStepResult(context, connectionLoss);
-        if (initialConnectionResult != null)
-        {
-            return initialConnectionResult;
-        }
-
-        var coilsOnResult = await WaitForCoilsOnAsync(context, connectionLoss, ct);
+        var coilsOnResult = await WaitForCoilsOnAsync(context, ct);
         if (coilsOnResult != null)
         {
             return coilsOnResult;
         }
 
-        var safetyTimeResult = await MeasureSafetyTimeAsync(context, connectionLoss, ct);
+        var safetyTimeResult = await MeasureSafetyTimeAsync(context, ct);
         if (!safetyTimeResult.Success)
         {
-            return TestStepResult.Fail(safetyTimeResult.Error ?? "Ошибка измерения safety time");
+            return TestStepResult.Fail(
+                safetyTimeResult.Error ?? "Ошибка измерения safety time",
+                canSkip: safetyTimeResult.CanSkip);
         }
 
         var saveResult = SaveResult(context, safetyTimeResult.SafetyTime);
@@ -107,38 +102,11 @@ public class SafetyTimeStep(
         testResultsService.Remove(ResultParameterName);
     }
 
-    private TestStepResult? GetConnectionLostStepResult(TestStepContext context, ConnectionLossLatch connectionLoss)
-    {
-        if (!connectionLoss.IsLost)
-        {
-            return null;
-        }
-
-        logger.LogWarning(ConnectionLostMessage);
-        context.ReportProgress("Потеря связи с котлом");
-        return TestStepResult.Fail(ConnectionLostMessage);
-    }
-
-    private SafetyTimeResult? GetConnectionLostMeasurementResult(
-        TestStepContext context,
-        ConnectionLossLatch connectionLoss)
-    {
-        if (!connectionLoss.IsLost)
-        {
-            return null;
-        }
-
-        logger.LogWarning(ConnectionLostMessage);
-        context.ReportProgress("Потеря связи с котлом");
-        return new SafetyTimeResult(false, 0f, ConnectionLostMessage);
-    }
-
     /// <summary>
     /// Фаза 1: Ожидание включения катушек EV1/EV2 (ток >= 200 мА).
     /// </summary>
     private async Task<TestStepResult?> WaitForCoilsOnAsync(
         TestStepContext context,
-        ConnectionLossLatch connectionLoss,
         CancellationToken ct)
     {
         logger.LogInformation("Ожидание включения катушек EV1/EV2...");
@@ -150,22 +118,12 @@ public class SafetyTimeStep(
         {
             ct.ThrowIfCancellationRequested();
 
-            var connectionLostResult = GetConnectionLostStepResult(context, connectionLoss);
-            if (connectionLostResult != null)
-            {
-                return connectionLostResult;
-            }
-
             var readResult = await ReadCoilCurrentsAsync(context, ct);
-            connectionLostResult = GetConnectionLostStepResult(context, connectionLoss);
-            if (connectionLostResult != null)
-            {
-                return connectionLostResult;
-            }
-
             if (!readResult.Success)
             {
-                return TestStepResult.Fail($"Ошибка чтения тока катушек: {readResult.Error}");
+                return TestStepResult.Fail(
+                    $"Ошибка чтения тока катушек: {readResult.Error}",
+                    canSkip: readResult.CanSkip);
             }
 
             if (readResult is { Ev1Current: >= CurrentThresholdMa, Ev2Current: >= CurrentThresholdMa })
@@ -176,12 +134,6 @@ public class SafetyTimeStep(
             }
 
             context.ReportProgress($"Ожидание катушек: EV1={readResult.Ev1Current} мА, EV2={readResult.Ev2Current} мА");
-            connectionLostResult = GetConnectionLostStepResult(context, connectionLoss);
-            if (connectionLostResult != null)
-            {
-                return connectionLostResult;
-            }
-
             await context.DelayAsync(TimeSpan.FromMilliseconds(PollingIntervalMs), ct);
         }
 
@@ -193,7 +145,6 @@ public class SafetyTimeStep(
     /// </summary>
     private async Task<SafetyTimeResult> MeasureSafetyTimeAsync(
         TestStepContext context,
-        ConnectionLossLatch connectionLoss,
         CancellationToken ct)
     {
         logger.LogInformation("Измерение времени отключения катушек...");
@@ -205,22 +156,14 @@ public class SafetyTimeStep(
         {
             ct.ThrowIfCancellationRequested();
 
-            var connectionLostResult = GetConnectionLostMeasurementResult(context, connectionLoss);
-            if (connectionLostResult != null)
-            {
-                return connectionLostResult;
-            }
-
             var readResult = await ReadCoilCurrentsAsync(context, ct);
-            connectionLostResult = GetConnectionLostMeasurementResult(context, connectionLoss);
-            if (connectionLostResult != null)
-            {
-                return connectionLostResult;
-            }
-
             if (!readResult.Success)
             {
-                return new SafetyTimeResult(false, 0f, $"Ошибка чтения тока катушек: {readResult.Error}");
+                return new SafetyTimeResult(
+                    false,
+                    0f,
+                    $"Ошибка чтения тока катушек: {readResult.Error}",
+                    readResult.CanSkip);
             }
 
             if (readResult.Ev1Current < CurrentThresholdMa && readResult.Ev2Current < CurrentThresholdMa)
@@ -229,20 +172,14 @@ public class SafetyTimeStep(
                 var safetyTime = (float)(stopwatch.ElapsedMilliseconds / 1000.0);
                 logger.LogInformation("Катушки выключены за {SafetyTime:F2} сек: EV1={Ev1} мА, EV2={Ev2} мА",
                     safetyTime, readResult.Ev1Current, readResult.Ev2Current);
-                return new SafetyTimeResult(true, safetyTime, null);
+                return new SafetyTimeResult(true, safetyTime, null, true);
             }
 
-            context.ReportProgress($"Измерение: {stopwatch.ElapsedMilliseconds / 1000.0:F1} сек...");
-            connectionLostResult = GetConnectionLostMeasurementResult(context, connectionLoss);
-            if (connectionLostResult != null)
-            {
-                return connectionLostResult;
-            }
-
+            context.ReportProgress(BuildMeasurementProgressMessage(stopwatch.ElapsedMilliseconds, readResult));
             await context.DelayAsync(TimeSpan.FromMilliseconds(PollingIntervalMs), ct);
         }
 
-        return new SafetyTimeResult(false, 0f, "Таймаут ожидания отключения катушек (30 сек)");
+        return new SafetyTimeResult(false, 0f, "Таймаут ожидания отключения катушек (30 сек)", true);
     }
 
     /// <summary>
@@ -296,7 +233,9 @@ public class SafetyTimeStep(
 
         if (!statusResult.Success)
         {
-            return TestStepResult.Fail(ComsStepFailureHelper.BuildReadMessage(statusResult, $"чтении статуса котла из регистра {RegisterBoilerStatus}", $"Ошибка чтения статуса котла: {statusResult.Error}"));
+            return TestStepResult.Fail(
+                ComsStepFailureHelper.BuildReadMessage(statusResult, $"чтении статуса котла из регистра {RegisterBoilerStatus}", $"Ошибка чтения статуса котла: {statusResult.Error}"),
+                canSkip: statusResult.FailureKind != DiagnosticFailureKind.Communication);
         }
 
         if (statusResult.Value != BlockageBStatus)
@@ -313,7 +252,9 @@ public class SafetyTimeStep(
 
         if (!writeResult.Success)
         {
-            return TestStepResult.Fail(ComsStepFailureHelper.BuildWriteMessage(writeResult, $"сбросе блокировки через регистр {RegisterResetBlockage}", $"Ошибка сброса блокировки: {writeResult.Error}"));
+            return TestStepResult.Fail(
+                ComsStepFailureHelper.BuildWriteMessage(writeResult, $"сбросе блокировки через регистр {RegisterResetBlockage}", $"Ошибка сброса блокировки: {writeResult.Error}"),
+                canSkip: writeResult.FailureKind != DiagnosticFailureKind.Communication);
         }
 
         logger.LogInformation("Блокировка Б сброшена");
@@ -326,64 +267,68 @@ public class SafetyTimeStep(
     /// </summary>
     private async Task<CoilCurrentsResult> ReadCoilCurrentsAsync(TestStepContext context, CancellationToken ct)
     {
-        var ev1Address = (ushort)(RegisterEv1Current - _settings.BaseAddressOffset);
-        var ev1Result = await context.PacedDiagReader.ReadUInt16Async(ev1Address, ct);
+        var startAddress = (ushort)(RegisterEv1Current - _settings.BaseAddressOffset);
+        var readResults = await context.PacedDiagReader.ReadMultipleUInt16Async(startAddress, CoilCurrentsRegisterCount, ct);
+        var ev1Result = GetCoilCurrentResult(readResults, RegisterEv1Current, "EV1");
 
         if (!ev1Result.Success)
         {
-            return new CoilCurrentsResult(false, 0, 0, ComsStepFailureHelper.BuildReadMessage(ev1Result, $"чтении тока катушки EV1 из регистра {RegisterEv1Current}", $"Ошибка чтения тока катушки EV1: {ev1Result.Error}"));
+            return new CoilCurrentsResult(
+                false,
+                0,
+                0,
+                ComsStepFailureHelper.BuildReadMessage(ev1Result, $"чтении тока катушки EV1 из регистра {RegisterEv1Current}", $"Ошибка чтения тока катушки EV1: {ev1Result.Error}"),
+                ev1Result.FailureKind != DiagnosticFailureKind.Communication);
         }
 
-        var ev2Address = (ushort)(RegisterEv2Current - _settings.BaseAddressOffset);
-        var ev2Result = await context.PacedDiagReader.ReadUInt16Async(ev2Address, ct);
+        var ev2Result = GetCoilCurrentResult(readResults, RegisterEv2Current, "EV2");
 
         if (!ev2Result.Success)
         {
-            return new CoilCurrentsResult(false, 0, 0, ComsStepFailureHelper.BuildReadMessage(ev2Result, $"чтении тока катушки EV2 из регистра {RegisterEv2Current}", $"Ошибка чтения тока катушки EV2: {ev2Result.Error}"));
+            return new CoilCurrentsResult(
+                false,
+                0,
+                0,
+                ComsStepFailureHelper.BuildReadMessage(ev2Result, $"чтении тока катушки EV2 из регистра {RegisterEv2Current}", $"Ошибка чтения тока катушки EV2: {ev2Result.Error}"),
+                ev2Result.FailureKind != DiagnosticFailureKind.Communication);
         }
 
-        return new CoilCurrentsResult(true, ev1Result.Value, ev2Result.Value, null);
+        return new CoilCurrentsResult(true, ev1Result.Value, ev2Result.Value, null, true);
+    }
+
+    private DiagnosticReadResult<ushort> GetCoilCurrentResult(
+        Dictionary<ushort, DiagnosticReadResult<ushort>> readResults,
+        ushort documentAddress,
+        string coilName)
+    {
+        var modbusAddress = (ushort)(documentAddress - _settings.BaseAddressOffset);
+        if (readResults.TryGetValue(modbusAddress, out var result))
+        {
+            return result;
+        }
+
+        var error = $"Пакетное чтение не вернуло регистр {documentAddress} ({coilName})";
+        logger.LogError(error);
+        return DiagnosticReadResult<ushort>.Fail(modbusAddress, error);
+    }
+
+    private static string BuildMeasurementProgressMessage(long elapsedMilliseconds, CoilCurrentsResult readResult)
+    {
+        return $"Измерение: {elapsedMilliseconds / 1000.0:F1} сек, EV1={readResult.Ev1Current} мА, EV2={readResult.Ev2Current} мА";
     }
 
     /// <summary>
     /// Результат чтения токов катушек.
     /// </summary>
-    private sealed record CoilCurrentsResult(bool Success, ushort Ev1Current, ushort Ev2Current, string? Error);
+    private sealed record CoilCurrentsResult(
+        bool Success,
+        ushort Ev1Current,
+        ushort Ev2Current,
+        string? Error,
+        bool CanSkip);
 
     /// <summary>
     /// Результат измерения safety time.
     /// </summary>
-    private sealed record SafetyTimeResult(bool Success, float SafetyTime, string? Error);
-
-    private sealed class ConnectionLossLatch : IDisposable
-    {
-        private readonly DiagnosticConnectionState _connectionState;
-        private int _lost;
-
-        public ConnectionLossLatch(DiagnosticConnectionState connectionState)
-        {
-            _connectionState = connectionState;
-            if (!connectionState.IsConnected)
-            {
-                _lost = 1;
-            }
-
-            _connectionState.ConnectionStateChanged += HandleConnectionStateChanged;
-        }
-
-        public bool IsLost => Volatile.Read(ref _lost) == 1;
-
-        public void Dispose()
-        {
-            _connectionState.ConnectionStateChanged -= HandleConnectionStateChanged;
-        }
-
-        private void HandleConnectionStateChanged(bool connected)
-        {
-            if (!connected)
-            {
-                Interlocked.Exchange(ref _lost, 1);
-            }
-        }
-    }
+    private sealed record SafetyTimeResult(bool Success, float SafetyTime, string? Error, bool CanSkip);
 }

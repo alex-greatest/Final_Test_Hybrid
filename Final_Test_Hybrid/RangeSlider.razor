@@ -1,4 +1,3 @@
-@using Microsoft.AspNetCore.Components
 @using System.Globalization
 
 <div style="margin-bottom: 30px; padding: 10px 40px; background-color: #f5f5f5; border: 1px solid #ccc;">
@@ -50,11 +49,10 @@
 
         @* Labels *@
         <div style="position: relative; height: 28px;">
-            @foreach (var tick in TickLabels)
+            @foreach (var label in TickLabels)
             {
-                var percent = MapToVisualPercent(tick);
-                <span style="position: absolute; left: @(percent.ToString(CultureInfo.InvariantCulture))%; transform: translateX(-50%); font-size: 20px; color: #555; font-family: Arial, sans-serif;">
-                    @tick.ToString("F1", CultureInfo.InvariantCulture)
+                <span style="@GetLabelStyle(label)">
+                    @FormatLabel(label.Value)
                 </span>
             }
         </div>
@@ -75,58 +73,54 @@
     private const double SafeZonePercent = 70;
     private const double RightDangerZonePercent = 15;
     private const double FullScalePercent = 100;
+    private const int BaseLabelPrecision = 1;
+    private const int MaxLabelPrecision = 4;
 
     private double Range => Max - Min;
     private double EffectiveGreenZoneStart => ClampToScale(Math.Min(GreenZoneStart, GreenZoneEnd));
     private double EffectiveGreenZoneEnd => ClampToScale(Math.Max(GreenZoneStart, GreenZoneEnd));
+    private double GreenZoneCenter => EffectiveGreenZoneStart + ((EffectiveGreenZoneEnd - EffectiveGreenZoneStart) / 2);
     private double GreenStartPercent => LeftDangerZonePercent;
     private double GreenZoneWidth => SafeZonePercent;
     private double RightRedZoneWidth => RightDangerZonePercent;
     private double ClampedValue => ClampToScale(Value);
     private double ValuePercent => MapToVisualPercent(ClampedValue);
-    private int RedInnerTickCount => Range > 0 ? Math.Clamp(TickCount / 12, 0, 1) : 0;
-    private int GreenInnerTickCount => Range > 0 ? Math.Clamp(TickCount / 6, 2, 3) : 0;
+    private int LabelPrecision => GetLabelPrecision();
 
     private List<double> TickMarks
     {
         get
         {
-            var ticks = new SortedSet<double>();
-            AddSegmentTicks(ticks, Min, EffectiveGreenZoneStart, RedInnerTickCount);
-            AddSegmentTicks(ticks, EffectiveGreenZoneStart, EffectiveGreenZoneEnd, GreenInnerTickCount);
-            AddSegmentTicks(ticks, EffectiveGreenZoneEnd, Max, RedInnerTickCount);
-            return ticks.ToList();
+            var ticks = new List<double>();
+
+            AddUniqueValue(ticks, Min);
+            AddSegmentMidpoint(ticks, Min, EffectiveGreenZoneStart);
+            AddUniqueValue(ticks, EffectiveGreenZoneStart);
+            AddUniqueValue(ticks, GreenZoneCenter);
+            AddUniqueValue(ticks, EffectiveGreenZoneEnd);
+            AddSegmentMidpoint(ticks, EffectiveGreenZoneEnd, Max);
+            AddUniqueValue(ticks, Max);
+
+            ticks.Sort();
+            return ticks;
         }
     }
 
-    private List<double> TickLabels
+    private List<SliderLabel> TickLabels
     {
         get
         {
-            var labels = new SortedSet<double>
-            {
-                Min,
-                EffectiveGreenZoneStart,
-                EffectiveGreenZoneEnd,
-                Max
-            };
+            var labels = new List<SliderLabel>();
 
-            var innerGreenTicks = GetSegmentInnerTicks(
-                EffectiveGreenZoneStart,
-                EffectiveGreenZoneEnd,
-                GreenInnerTickCount);
+            AddUniqueLabel(labels, Min, LabelAlignment.Start);
+            AddUniqueLabel(labels, EffectiveGreenZoneStart, LabelAlignment.Center);
+            AddUniqueLabel(labels, GreenZoneCenter, LabelAlignment.Center);
+            AddUniqueLabel(labels, EffectiveGreenZoneEnd, LabelAlignment.Center);
+            AddUniqueLabel(labels, Max, LabelAlignment.End);
 
-            for (var i = 0; i < innerGreenTicks.Count; i += 2)
-            {
-                labels.Add(innerGreenTicks[i]);
-            }
-
-            if (EffectiveGreenZoneEnd > EffectiveGreenZoneStart)
-            {
-                labels.Add((EffectiveGreenZoneStart + EffectiveGreenZoneEnd) / 2);
-            }
-
-            return labels.ToList();
+            return labels
+                .OrderBy(label => label.Value)
+                .ToList();
         }
     }
 
@@ -167,40 +161,90 @@
         return Math.Max(Min, Math.Min(Max, value));
     }
 
-    private static void AddSegmentTicks(
-        SortedSet<double> ticks,
-        double start,
-        double end,
-        int innerTickCount)
+    private int GetLabelPrecision()
     {
-        ticks.Add(start);
-        ticks.Add(end);
-
-        foreach (var tick in GetSegmentInnerTicks(start, end, innerTickCount))
+        var labels = TickLabelValues;
+        for (var precision = BaseLabelPrecision; precision <= MaxLabelPrecision; precision++)
         {
-            ticks.Add(tick);
+            var formattedValues = labels
+                .Select(value => value.ToString($"F{precision}", CultureInfo.InvariantCulture))
+                .Distinct()
+                .Count();
+
+            if (formattedValues == labels.Count)
+            {
+                return precision;
+            }
+        }
+
+        return MaxLabelPrecision;
+    }
+
+    private List<double> TickLabelValues =>
+    [
+        Min,
+        EffectiveGreenZoneStart,
+        GreenZoneCenter,
+        EffectiveGreenZoneEnd,
+        Max
+    ];
+
+    private static void AddUniqueValue(List<double> values, double value)
+    {
+        if (!ContainsApproximate(values, value))
+        {
+            values.Add(value);
         }
     }
 
-    private static List<double> GetSegmentInnerTicks(
-        double start,
-        double end,
-        int innerTickCount)
+    private static void AddSegmentMidpoint(List<double> values, double start, double end)
     {
-        if (end <= start || innerTickCount <= 0)
+        if (end <= start)
         {
-            return [];
+            return;
         }
 
-        var step = (end - start) / (innerTickCount + 1);
-        var ticks = new List<double>(innerTickCount);
+        AddUniqueValue(values, start + ((end - start) / 2));
+    }
 
-        for (var i = 1; i <= innerTickCount; i++)
+    private static void AddUniqueLabel(List<SliderLabel> labels, double value, LabelAlignment alignment)
+    {
+        if (labels.Any(label => AreClose(label.Value, value)))
         {
-            ticks.Add(start + (step * i));
+            return;
         }
 
-        return ticks;
+        labels.Add(new SliderLabel(value, alignment));
+    }
+
+    private string GetLabelStyle(SliderLabel label)
+    {
+        var percent = MapToVisualPercent(label.Value).ToString(CultureInfo.InvariantCulture);
+
+        return label.Alignment switch
+        {
+            LabelAlignment.Start =>
+                $"position: absolute; left: {percent}%; transform: none; font-size: 20px; color: #555; font-family: Arial, sans-serif; white-space: nowrap;",
+            LabelAlignment.End =>
+                $"position: absolute; left: {percent}%; transform: translateX(-100%); font-size: 20px; color: #555; font-family: Arial, sans-serif; white-space: nowrap;",
+            _ =>
+                $"position: absolute; left: {percent}%; transform: translateX(-50%); font-size: 20px; color: #555; font-family: Arial, sans-serif; white-space: nowrap;"
+        };
+    }
+
+    private string FormatLabel(double value)
+    {
+        return value.ToString($"F{LabelPrecision}", CultureInfo.InvariantCulture);
+    }
+
+    private static bool ContainsApproximate(IEnumerable<double> values, double candidate)
+    {
+        return values.Any(value => AreClose(value, candidate));
+    }
+
+    private static bool AreClose(double left, double right)
+    {
+        return Math.Abs(left - right) < 0.000001;
     }
 
     private static double MapSegment(
@@ -219,5 +263,14 @@
         var clampedRatio = Math.Max(0, Math.Min(1, ratio));
 
         return outputStart + ((outputEnd - outputStart) * clampedRatio);
+    }
+
+    private sealed record SliderLabel(double Value, LabelAlignment Alignment);
+
+    private enum LabelAlignment
+    {
+        Start,
+        Center,
+        End
     }
 }

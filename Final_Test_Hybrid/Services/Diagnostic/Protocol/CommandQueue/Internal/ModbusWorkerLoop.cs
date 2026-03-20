@@ -33,11 +33,6 @@ internal sealed class ModbusWorkerLoop
     public Action? DoConnect;
 
     /// <summary>
-    /// Вызывается для закрытия соединения. Фасад владеет close.
-    /// </summary>
-    public Action? DoClose;
-
-    /// <summary>
     /// Создаёт экземпляр воркера.
     /// </summary>
     /// <param name="connectionManager">Менеджер подключения (только для чтения состояния и выполнения команд).</param>
@@ -89,7 +84,7 @@ internal sealed class ModbusWorkerLoop
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка в воркере диспетчера: {Error}", ex.Message);
-            await HandleConnectionErrorAsync(setConnected, setPortOpen, ct).ConfigureAwait(false);
+            await HandleConnectionErrorAsync(setConnected, ct).ConfigureAwait(false);
             return true;
         }
     }
@@ -100,7 +95,7 @@ internal sealed class ModbusWorkerLoop
     /// <param name="timeoutMs">Таймаут ожидания в мс.</param>
     /// <param name="ct">Токен отмены.</param>
     /// <returns>Команда или null если таймаут.</returns>
-    public async Task<IModbusCommand?> WaitForCommandAsync(int timeoutMs, CancellationToken ct)
+    private async Task<IModbusCommand?> WaitForCommandAsync(int timeoutMs, CancellationToken ct)
     {
         var highQueue = _commandQueue.HighQueue;
         var lowQueue = _commandQueue.LowQueue;
@@ -282,7 +277,6 @@ internal sealed class ModbusWorkerLoop
             catch (Exception ex) when (!isStopping() && CommunicationErrorHelper.IsCommunicationError(ex))
             {
                 command.SetException(ex);
-                setConnected(false);
                 _logger.LogWarning(
                     "Ошибка связи: {Error}. Command={Command}, Source={Source}, Priority={Priority}, Details={Details}. Переподключение...",
                     ex.Message,
@@ -318,14 +312,9 @@ internal sealed class ModbusWorkerLoop
     /// </summary>
     private async Task HandleConnectionErrorAsync(
         Action<bool> setConnected,
-        Action<bool> setPortOpen,
         CancellationToken ct)
     {
         setConnected(false);
-        setPortOpen(false);
-
-        // Фасад владеет close - вызываем через колбэк
-        DoClose?.Invoke();
 
         // Уведомляем фасад о потере соединения (он очистит _lastPingData)
         if (OnConnectionLost != null)

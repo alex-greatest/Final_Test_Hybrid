@@ -17,7 +17,6 @@ public static class DiagnosticServiceExtensions
     {
         services.Configure<DiagnosticSettings>(config.GetSection("Diagnostic"));
         services.Configure<ModbusDispatcherOptions>(config.GetSection("Diagnostic:CommandQueue"));
-        services.AddSingleton<DiagnosticConnectionState>();
 
         // Command Queue Architecture
         services.AddSingleton<ModbusConnectionManager>();

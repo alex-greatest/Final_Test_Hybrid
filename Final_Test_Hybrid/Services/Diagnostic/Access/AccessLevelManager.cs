@@ -84,9 +84,9 @@ public class AccessLevelManager(
     /// <summary>
     /// Сбрасывает в обычный режим (любой ключ != Engineering/Stand).
     /// </summary>
-    public async Task ResetToNormalModeAsync(CancellationToken ct = default)
+    public async Task<bool> ResetToNormalModeAsync(CancellationToken ct = default)
     {
-        await SetAccessLevelAsync(AccessLevel.Normal, ResetKey, ct).ConfigureAwait(false);
+        return await SetAccessLevelAsync(AccessLevel.Normal, ResetKey, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -149,7 +149,7 @@ public class AccessLevelManager(
             RegisterWriter rw => await rw.WriteUInt32Async(modbusAddress, key, ct).ConfigureAwait(false),
             PausableRegisterWriter prw => await prw.WriteUInt32Async(modbusAddress, key, ct).ConfigureAwait(false),
             PacedRegisterWriter pacedWriter => await pacedWriter.WriteUInt32Async(modbusAddress, key, ct).ConfigureAwait(false),
-            _ => throw new ArgumentException($"Unsupported writer type: {writer.GetType()}", nameof(writer))
+            _ => throw new System.Diagnostics.UnreachableException()
         };
 
         if (result.Success)

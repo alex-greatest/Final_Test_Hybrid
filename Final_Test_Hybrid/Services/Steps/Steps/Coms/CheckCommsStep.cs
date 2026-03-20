@@ -47,8 +47,7 @@ public class CheckCommsStep(
         {
             if (!autoReady.IsReady)
             {
-                logger.LogWarning("AutoReady=false: проверка связи с котлом прервана");
-                return BuildNoConnectionResult();
+                return await FailNoConnectionAsync("AutoReady=false: проверка связи с котлом прервана");
             }
 
             dispatcherLease = dispatcherOwnership.AcquireRuntimeLease();
@@ -57,11 +56,12 @@ public class CheckCommsStep(
                 await dispatcher.StartAsync(ct);
             }
 
-            var pingData = await WaitForPingDataAsync(ct);
+            var initialPingData = dispatcher.LastPingData;
+            var pingData = await WaitForPingDataAsync(initialPingData, ct);
 
             if (pingData == null)
             {
-                return BuildNoConnectionResult();
+                return await FailNoConnectionAsync("Проверка связи с котлом завершилась без свежего ping");
             }
 
             logger.LogInformation(
@@ -89,9 +89,11 @@ public class CheckCommsStep(
     }
 
     /// <summary>
-    /// Ожидает получения ping данных от котла.
+    /// Ожидает получения свежих ping данных от котла.
     /// </summary>
-    private async Task<DiagnosticPingData?> WaitForPingDataAsync(CancellationToken ct)
+    private async Task<DiagnosticPingData?> WaitForPingDataAsync(
+        DiagnosticPingData? initialPingData,
+        CancellationToken ct)
     {
         var waited = TimeSpan.Zero;
         var lastLogTime = TimeSpan.Zero;
@@ -107,9 +109,9 @@ public class CheckCommsStep(
             }
 
             var pingData = dispatcher.LastPingData;
-            if (pingData != null)
+            if (HasFreshPingData(initialPingData, pingData))
             {
-                return pingData;
+                return pingData!;
             }
 
             await Task.Delay(TimeSpan.FromMilliseconds(PollIntervalMs), ct);
@@ -127,11 +129,30 @@ public class CheckCommsStep(
         return null;
     }
 
+    private static bool HasFreshPingData(
+        DiagnosticPingData? initialPingData,
+        DiagnosticPingData? currentPingData)
+    {
+        if (currentPingData == null)
+        {
+            return false;
+        }
+
+        return initialPingData == null || !ReferenceEquals(initialPingData, currentPingData);
+    }
+
     private static TestStepResult BuildNoConnectionResult()
     {
         return TestStepResult.Fail(
             "Нет связи с котлом",
             errors: [ErrorDefinitions.NoDiagnosticConnection]);
+    }
+
+    private async Task<TestStepResult> FailNoConnectionAsync(string message)
+    {
+        logger.LogWarning(message);
+        await StopDispatcherSafelyAsync();
+        return BuildNoConnectionResult();
     }
 
     private async Task StopDispatcherSafelyAsync()
