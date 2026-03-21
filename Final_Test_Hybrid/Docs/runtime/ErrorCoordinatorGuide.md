@@ -136,7 +136,7 @@ _errorCoordinator.OnInterruptChanged -= HandleInterruptChanged;
 
 - `SendAskRepeatAsync(...)` отвечает только за запись `AskRepeat=true`.
 - `WaitForRetrySignalResetAsync(...)` отвечает только за `Req_Repeat=false`.
-- Свежесть `Block.Error/Block.End` для retry PLC-шага проверяет уже coordinator-level freshness guard после `Req_Repeat=false`.
+- После `Req_Repeat=false` retry PLC-шага сразу продолжает rerun без отдельной stale-проверки `Block.Error/Block.End`.
 - `ErrorCoordinator` не должен расширяться до block-level stale-cache логики retry.
 ## WaitForResolutionAsync API
 

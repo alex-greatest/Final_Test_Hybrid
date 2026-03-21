@@ -221,15 +221,6 @@ public partial class TestExecutionCoordinator
             await HandleTagTimeoutAsync("Req_Repeat не сброшен", ct);
             return;
         }
-        try
-        {
-            await EnsureRetrySignalsFreshAsync(error.FailedStep, ct);
-        }
-        catch (TimeoutException)
-        {
-            await HandleTagTimeoutAsync("сброс stale retry-сигналов блока", ct);
-            return;
-        }
         _retryState.MarkRequested(error.ColumnIndex);
         try
         {

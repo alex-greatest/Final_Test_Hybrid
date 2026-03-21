@@ -218,7 +218,7 @@
         SubscriptionState.OnStateChanged += HandleStateChanged;
         ConnectionState.ConnectionStateChanged += HandleConnectionChanged;
         TestCompletionUiState.OnStateChanged += HandleTestCompletionChanged;
-        RangeSliderUiState.OnStateChanged += HandleRangeSliderChanged;
+        RangeSliderUiState.OnVisibilityChanged += HandleRangeSliderVisibilityChanged;
     }
 
     private void HandleStateChanged()
@@ -250,7 +250,15 @@
         _ = InvokeAsync(StateHasChanged);
     }
 
-    private void HandleRangeSliderChanged() => InvokeAsync(StateHasChanged);
+    private void HandleRangeSliderVisibilityChanged()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _ = InvokeAsync(StateHasChanged);
+    }
 
     public void Dispose()
     {
@@ -258,6 +266,6 @@
         SubscriptionState.OnStateChanged -= HandleStateChanged;
         ConnectionState.ConnectionStateChanged -= HandleConnectionChanged;
         TestCompletionUiState.OnStateChanged -= HandleTestCompletionChanged;
-        RangeSliderUiState.OnStateChanged -= HandleRangeSliderChanged;
+        RangeSliderUiState.OnVisibilityChanged -= HandleRangeSliderVisibilityChanged;
     }
 }

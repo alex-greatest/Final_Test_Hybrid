@@ -13,7 +13,6 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Completion;
 public class RangeSliderUiState
 {
     private const int ColumnCount = 4;
-    private const int DefaultMin = 0;
     private const int DefaultMax = 100;
     private const int ThrottleIntervalMs = 100;
 
@@ -78,6 +77,12 @@ public class RangeSliderUiState
     public event Action? OnStateChanged;
 
     /// <summary>
+    /// Событие изменения видимости блока слайдеров.
+    /// Используется родительским экраном для переключения layout без реакции на каждый тик значения.
+    /// </summary>
+    public event Action? OnVisibilityChanged;
+
+    /// <summary>
     /// Получает состояния всех активных слайдеров.
     /// </summary>
     public IReadOnlyDictionary<int, RangeSliderDisplayData> GetActiveSliders()
@@ -123,9 +128,11 @@ public class RangeSliderUiState
 
         // Читаем начальное значение с датчика
         var initialValue = await ReadInitialValueAsync(config.ValueTag, limits.Min, ct).ConfigureAwait(false);
+        bool visibilityChanged;
 
         lock (_lock)
         {
+            var wasVisible = _states.Count > 0;
             var step = config.Step > 0 ? config.Step : 1;
             var tickCount = (int)Math.Round((limits.Max - limits.Min) / step);
             _states[columnIndex] = new RangeSliderState
@@ -140,6 +147,12 @@ public class RangeSliderUiState
                 Value = initialValue,
                 TickCount = tickCount > 0 ? tickCount : 10
             };
+            visibilityChanged = !wasVisible;
+        }
+
+        if (visibilityChanged)
+        {
+            NotifyVisibilityChanged();
         }
 
         ThrottledNotify();
@@ -154,6 +167,7 @@ public class RangeSliderUiState
 
         Func<object?, Task>? callback;
         string? valueTag;
+        bool visibilityChanged;
 
         lock (_lock)
         {
@@ -165,9 +179,15 @@ public class RangeSliderUiState
             callback = state.Callback;
             valueTag = state.Config.ValueTag;
             _states.Remove(columnIndex);
+            visibilityChanged = _states.Count == 0;
         }
 
         await _opcUaSubscription.UnsubscribeAsync(valueTag, callback, removeTag: false, ct).ConfigureAwait(false);
+
+        if (visibilityChanged)
+        {
+            NotifyVisibilityChanged();
+        }
 
         ThrottledNotify();
     }
@@ -178,9 +198,11 @@ public class RangeSliderUiState
     public void HideAll()
     {
         List<(string ValueTag, Func<object?, Task> Callback)> toUnsubscribe;
+        bool visibilityChanged;
 
         lock (_lock)
         {
+            visibilityChanged = _states.Count > 0;
             toUnsubscribe = _states
                 .Select(kvp => (kvp.Value.Config.ValueTag, kvp.Value.Callback))
                 .ToList();
@@ -193,6 +215,11 @@ public class RangeSliderUiState
             _ = _opcUaSubscription.UnsubscribeAsync(valueTag, callback, removeTag: false, CancellationToken.None);
         }
 
+        if (visibilityChanged)
+        {
+            NotifyVisibilityChanged();
+        }
+
         ThrottledNotify();
     }
 
@@ -200,7 +227,7 @@ public class RangeSliderUiState
     {
         if (columnIndex is < 0 or >= ColumnCount)
         {
-            throw new ArgumentOutOfRangeException(nameof(columnIndex), $"Column index must be between 0 and {ColumnCount - 1}");
+            throw new ArgumentOutOfRangeException(nameof(columnIndex));
         }
     }
 
@@ -310,6 +337,11 @@ public class RangeSliderUiState
                 OnStateChanged?.Invoke();
             }, TaskScheduler.Default);
         }
+    }
+
+    private void NotifyVisibilityChanged()
+    {
+        OnVisibilityChanged?.Invoke();
     }
 
     /// <summary>

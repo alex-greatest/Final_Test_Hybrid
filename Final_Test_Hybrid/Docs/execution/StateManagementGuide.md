@@ -856,7 +856,7 @@ private void HandleHardReset()
 
 `BlockBoilerAdapterStep` в pre-execution retry больше не пишет `Start=false` перед повторным запуском.
 Сброс `Start` остаётся только в success-ветке самого шага; retry повторно запускает блок без промежуточной записи `Start=false` со стороны PC.
-Перед повторным запуском pre-execution retry обязан дождаться `Req_Repeat=false`, а затем отфильтровать stale `Block.Error/End` через freshness guard.
+Перед повторным запуском pre-execution retry обязан дождаться `Req_Repeat=false`; дополнительной stale-проверки `Block.Error/End` нет.
 Перед запуском и повторным запуском `BlockBoilerAdapterStep` pre-start ожидание `End=false` не выполняется.
 
 ---

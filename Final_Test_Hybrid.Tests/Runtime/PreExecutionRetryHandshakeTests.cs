@@ -18,7 +18,7 @@ namespace Final_Test_Hybrid.Tests.Runtime;
 public sealed class PreExecutionRetryHandshakeTests
 {
     [Fact]
-    public async Task PrepareRetryStartAsync_WaitsForReqRepeatReset_BeforeFreshnessGuard()
+    public async Task PrepareRetryStartAsync_WaitsForReqRepeatReset_BeforeRetry()
     {
         var subscription = TestInfrastructure.CreateSubscription();
         var coordinator = CreateCoordinator(subscription, out var errorCoordinator);

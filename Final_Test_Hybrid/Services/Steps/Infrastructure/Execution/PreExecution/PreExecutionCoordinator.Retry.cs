@@ -9,8 +9,6 @@ namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution
 
 public partial class PreExecutionCoordinator
 {
-    private static readonly TimeSpan RetrySignalFreshnessTimeout = TimeSpan.FromSeconds(60);
-
     #region Retry Loop
 
     private async Task<PreExecutionResult> ExecuteRetryLoopAsync(
@@ -231,23 +229,6 @@ public partial class PreExecutionCoordinator
         await coordinators.ErrorCoordinator.SendAskRepeatAsync(ct);
         infra.Logger.LogDebug("Ожидание сброса Req_Repeat перед retry блока {StepName}", step.Name);
         await coordinators.ErrorCoordinator.WaitForRetrySignalResetAsync(ct);
-        await EnsureRetrySignalsFreshAsync(step, ct);
-    }
-
-    private Task EnsureRetrySignalsFreshAsync(BlockBoilerAdapterStep step, CancellationToken ct)
-    {
-        return PlcRetrySignalFreshnessGuard.EnsureSignalsFreshAsync(
-            step,
-            infra.OpcSubscription,
-            infra.TagWaiter.WaitForFalseAsync,
-            RetrySignalFreshnessTimeout,
-            (signalName, operation, tag) => infra.Logger.LogDebug(
-                "Ожидание сброса stale {SignalName} перед {Operation}: {Tag}",
-                signalName,
-                operation,
-                tag),
-            "retry pre-execution PLC-блока",
-            ct);
     }
 
     #endregion

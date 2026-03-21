@@ -10,7 +10,6 @@ public partial class TestExecutionCoordinator
 {
     private const int FaultWriteMaxAttempts = 3;
     private const int FaultWriteRetryDelayMs = 250;
-    private static readonly TimeSpan RetrySignalFreshnessTimeout = TimeSpan.FromSeconds(60);
 
     /// <summary>
     /// Устанавливает тег Selected для PLC-блока.
@@ -159,22 +158,6 @@ public partial class TestExecutionCoordinator
     private static string? GetBlockErrorTag(ITestStep? step)
     {
         return PlcBlockTagHelper.GetErrorTag(step as IHasPlcBlockPath);
-    }
-
-    private Task EnsureRetrySignalsFreshAsync(ITestStep? step, CancellationToken ct)
-    {
-        return PlcRetrySignalFreshnessGuard.EnsureSignalsFreshAsync(
-            step as IHasPlcBlockPath,
-            _opcSubscription,
-            _tagWaiter.WaitForFalseAsync,
-            RetrySignalFreshnessTimeout,
-            (signalName, operation, tag) => _logger.LogDebug(
-                "Ожидание сброса stale {SignalName} перед {Operation}: {Tag}",
-                signalName,
-                operation,
-                tag),
-            "retry execution PLC-шага",
-            ct);
     }
 }
 

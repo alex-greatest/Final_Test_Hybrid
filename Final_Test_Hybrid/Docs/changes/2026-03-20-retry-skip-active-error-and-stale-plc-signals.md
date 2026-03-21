@@ -19,15 +19,10 @@
 
 ## Resolution
 
-- Добавлен coordinator-level freshness guard для retry PLC-шага:
-  - после `Req_Repeat=false`;
-  - ждёт только known stale `Block.Error=true` и затем `Block.End=true`;
-  - не пишет `Start=false`;
-  - при timeout переводит execution в тот же fail-fast `TagTimeout` path.
-- Для pre-execution retry `BlockBoilerAdapterStep` восстановлен полный handshake:
+- Для execution retry и pre-execution retry `BlockBoilerAdapterStep` сохранён только обязательный handshake:
   - `SendAskRepeatAsync(...)`;
   - ожидание `WaitForRetrySignalResetAsync(...)`;
-  - затем freshness guard и только после этого повторный `ExecuteAsync(...)`.
+  - затем повторный запуск без freshness guard по stale `Block.Error/End`.
 - `Retry/Skip` теперь снимают из очереди именно active error context через адресное удаление, а не через blind `DequeueError()` головы FIFO.
 - Для execution retry добавлено подавление повторного enqueue по колонке на окно `RetryRequested -> RetryCompleted`, чтобы active error не возвращалась в очередь до фактического исхода retry.
 - Stable guides синхронизированы с новым контрактом retry/skip и queue ownership.
@@ -36,7 +31,6 @@
 
 - Добавлены регрессии на:
   - `ExecutionStateManager.TryRemoveError(...)` с сохранением порядка остальных ошибок;
-  - `PlcRetrySignalFreshnessGuard` для known true / unknown / cancellation path;
   - suppression состояния execution retry до `RetryCompleted`;
   - pre-execution retry handshake c обязательным `Req_Repeat=false`;
   - `TagWaiter.WaitAnyAsync(...)` на already-active `Block.End/Block.Error`.
@@ -46,6 +40,6 @@
 
 ## Notes
 
-- Глобальный cache-first контракт `TagWaiter` не менялся; fix сделан точечно на уровне coordinator/guard.
+- Глобальный cache-first контракт `TagWaiter` не менялся; retry по-прежнему может увидеть already-active `Block.End/Error` из OPC cache.
 - `Skip` по-прежнему остаётся единственным путём, который пишет `Start=false`.
 - Отдельного incident-registry в репозитории не обнаружено; данный change-doc используется как явная фиксация нового failure mode и должен упоминаться из impact.

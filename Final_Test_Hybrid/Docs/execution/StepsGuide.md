@@ -352,7 +352,7 @@ var writeResult = await context.PacedDiagWriter.WriteUInt32Async(address, value,
 
 **Start тег сбрасывается ТОЛЬКО при успехе (End от PLC).** При ошибке шаг возвращает `Fail(...)` без записи `Start=false`. Координатор сбрасывает `Start` только в skip-ветке.
 Перед запуском PLC-шага общий execution/pre-execution path не ждёт `Block.End=false`; `Start=true` пишется сразу.
-Перед retry координатор тоже не делает безусловный pre-start wait по `Block.End=false`, но обязан сначала дождаться `Req_Repeat=false`, а затем отфильтровать stale `Block.Error/End`: если known cache ещё держит `true`, retry ждёт `false` перед повторным запуском.
+Перед retry координатор тоже не делает безусловный pre-start wait по `Block.End=false`: после `Req_Repeat=false` повторный запуск идёт сразу, без дополнительной проверки stale `Block.Error/End`.
 
 ```csharp
 // ✅ ПРАВИЛЬНО — сброс только при успехе
@@ -391,7 +391,7 @@ public async Task<TestStepResult> ExecuteAsync(...)
 - При Skip — координатор вызывает `ResetBlockStartAsync(step)` через `PlcBlockTagHelper.GetStartTag()`
 - При Retry — шаг перезапускается, `Start=true` запишется заново без промежуточного `Start=false` от PC
 - Отдельного безусловного pre-start guard по `Block.End=false` нет ни для первого запуска, ни для retry
-- Перед retry есть обязательный handshake `Req_Repeat=false`, а затем freshness guard по stale `Block.Error/End`, если они уже active в known cache
+- Перед retry есть обязательный handshake `Req_Repeat=false`; дополнительной stale-проверки `Block.Error/End` перед повторным запуском нет
 
 **См. также:** `TestExecutionCoordinator.ErrorResolution.cs` — `ProcessSkipAsync`
 

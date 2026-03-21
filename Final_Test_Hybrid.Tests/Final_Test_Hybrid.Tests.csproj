@@ -22,4 +22,12 @@
     <ProjectReference Include="..\Final_Test_Hybrid\Final_Test_Hybrid.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="artifacts\obj\Final_Test_Hybrid.Tests.csproj.nuget.g.targets" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="artifacts\obj\Debug\net10.0-windows\" />
+  </ItemGroup>
+
 </Project>

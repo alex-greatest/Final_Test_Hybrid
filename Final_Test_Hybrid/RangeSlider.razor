@@ -89,7 +89,7 @@
     private double ClampedValue => ClampToScale(Value);
     private double ValuePercent => MapToVisualPercent(ClampedValue);
     private int LabelPrecision => DisplayPrecision ?? GetLabelPrecision();
-    private int ValuePrecision => DisplayPrecision ?? GetValuePrecision();
+    private int ValuePrecision => LabelPrecision;
 
     private List<double> TickMarks
     {
@@ -170,13 +170,6 @@
     private int GetLabelPrecision()
     {
         return GetPrecision(TickLabelValues);
-    }
-
-    private int GetValuePrecision()
-    {
-        var values = new List<double>(TickLabelValues);
-        AddUniqueValue(values, Value);
-        return GetPrecision(values);
     }
 
     private static int GetPrecision(IEnumerable<double> sourceValues)
