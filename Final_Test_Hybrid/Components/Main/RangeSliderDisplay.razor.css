@@ -3,6 +3,7 @@
     flex-direction: column;
     justify-content: center;
     gap: 16px;
+    position: relative;
     padding: 20px;
     background-color: #fff;
     border-radius: 4px;
@@ -13,10 +14,45 @@
 }
 
 .range-slider-title {
+    position: relative;
+    top: -8px;
     font-size: 34px;
     font-weight: bold;
     color: #333;
     text-align: center;
     margin-bottom: 10px;
     font-family: Arial, sans-serif;
+}
+
+.range-slider-alert {
+    position: absolute;
+    top: 55px;
+    left: 20px;
+    right: 20px;
+    z-index: 5;
+    pointer-events: none;
+    font-size: 40px;
+    font-weight: bold;
+    color: #c62828;
+    text-align: center;
+    font-family: Arial, sans-serif;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.85);
+    animation: range-slider-alert-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes range-slider-alert-blink {
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.25;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .range-slider-alert {
+        animation: none;
+    }
 }

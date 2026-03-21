@@ -62,6 +62,10 @@ ExecuteCycleAsync:
   - `_skipNextScan = true`
   - scan-step пропускается на следующем цикле.
 - На старте repeat используется сохранённый контекст (`ExecuteRepeatPipelineAsync`), без повторного scan-step.
+- Перед `StartTimer1`, `BlockBoilerAdapterStep` и стартом `TestExecution`
+  repeat/pre-execution обязан снова пройти normal AutoReady gate.
+- Если PLC-связь жива, но `AutoReady=false`, pipeline поднимает существующий
+  `AutoModeDisabled` interrupt и ждёт resume вместо тихого продолжения по сохранённому контексту.
 
 ### Что читается заново
 

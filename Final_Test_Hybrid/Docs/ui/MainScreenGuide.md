@@ -49,6 +49,11 @@
    Показывается итоговое изображение результата с подсказкой по кнопкам завершения/повтора. Разметка result-image живёт в `ResultImagePanel`, а `MyComponent` сохраняет только приоритет этой ветки относительно slider/grid. В этом режиме `MessageHelper` не рендерится, но внутренняя семантика нижней строки продолжает жить в `MessageService` и должна оставаться консистентной для момента, когда helper снова станет видимым.
 2. `RangeSliderUiState.HasActiveSliders == true`  
    Показывается `RangeSliderDisplay`.
+   Для шагов `Gas/Set_Gas_and_P_Burner_Max_Levels` и
+   `Gas/Set_Gas_and_P_Burner_Min_Levels` компонент дополнительно может
+   отрисовать красную operator-hint строку
+   `Не подключена трубка газового клапана`, если
+   `GasValveTubeDeferredErrorService.IsMessageActive == true`.
 3. Иначе  
    Показываются `MessageHelper` + `TestSequenseGrid`.
 

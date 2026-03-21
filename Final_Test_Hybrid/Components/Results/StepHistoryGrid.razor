@@ -8,7 +8,7 @@
 
 @implements IAsyncDisposable
 
-<div class="step-history-grid grid-unified-host">
+<div class="step-history-grid grid-unified-host grid-wide-view-host">
     @if (!string.IsNullOrEmpty(BoilerState.LastSerialNumber))
     {
         <div class="last-test-header">
@@ -28,41 +28,42 @@
 
     <RadzenDataGrid TItem="TestSequenseData"
         Data="_data"
-        class="grid-unified"
+        class="grid-unified grid-wide-view"
         ColumnWidth="150px"
         AllowPaging="false"
+        AllowColumnResize="true"
         AllowSorting="false"
         EmptyText="Нет данных">
         <Columns>
-            <RadzenDataGridColumn TItem="TestSequenseData" Property="Module" Title="Модуль">
+            <RadzenDataGridColumn TItem="TestSequenseData" Property="Module" Title="Модуль" MinWidth="160px">
                 <Template Context="data">
                     <div class="cell-container @GetCellClass(data)">
                         <span class="cell-text" title="@data.Module">@data.Module</span>
                     </div>
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="TestSequenseData" Property="Description" Title="Описание">
+            <RadzenDataGridColumn TItem="TestSequenseData" Property="Description" Title="Описание" MinWidth="220px">
                 <Template Context="data">
                     <div class="cell-container @GetCellClass(data)">
                         <span class="cell-text" title="@data.Description">@data.Description</span>
                     </div>
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="TestSequenseData" Property="Status" Title="Статус" Width="50px">
+            <RadzenDataGridColumn TItem="TestSequenseData" Property="Status" Title="Статус" Width="80px" MinWidth="80px">
                 <Template Context="data">
                     <div class="cell-container @GetCellClass(data)">
                         <span class="cell-text" title="@data.Status">@data.Status</span>
                     </div>
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="TestSequenseData" Property="Result" Title="Результаты">
+            <RadzenDataGridColumn TItem="TestSequenseData" Property="Result" Title="Результаты" MinWidth="220px">
                 <Template Context="data">
                     <div class="cell-container @GetCellClass(data)">
                         <span class="cell-text" title="@data.Result">@(string.IsNullOrEmpty(data.Result) ? "\u00A0" : data.Result)</span>
                     </div>
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="TestSequenseData" Property="Range" Title="Пределы">
+            <RadzenDataGridColumn TItem="TestSequenseData" Property="Range" Title="Пределы" MinWidth="180px">
                 <Template Context="data">
                     <div class="cell-container @GetCellClass(data)">
                         <span class="cell-text" title="@data.Range">@(string.IsNullOrEmpty(data.Range) ? "\u00A0" : data.Range)</span>

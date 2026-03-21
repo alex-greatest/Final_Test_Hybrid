@@ -1,5 +1,6 @@
 namespace Final_Test_Hybrid.Services.Main.Messages;
 
+using Errors;
 using Models;
 using OpcUa.Connection;
 using SpringBoot.Operator;
@@ -23,6 +24,7 @@ public class MessageService
     private readonly PreExecutionCoordinator _preExecutionCoord;
     private readonly RuntimeTerminalState _runtimeTerminalState;
     private readonly BoilerState _boilerState;
+    private readonly GasValveTubeDeferredErrorService _gasValveTubeDeferredErrorService;
 
     public event Action? OnChange;
 
@@ -36,7 +38,8 @@ public class MessageService
         PlcResetCoordinator resetCoord,
         PreExecutionCoordinator preExecutionCoord,
         RuntimeTerminalState runtimeTerminalState,
-        BoilerState boilerState)
+        BoilerState boilerState,
+        GasValveTubeDeferredErrorService gasValveTubeDeferredErrorService)
     {
         _operator = operatorState;
         _autoReady = autoReady;
@@ -48,6 +51,7 @@ public class MessageService
         _preExecutionCoord = preExecutionCoord;
         _runtimeTerminalState = runtimeTerminalState;
         _boilerState = boilerState;
+        _gasValveTubeDeferredErrorService = gasValveTubeDeferredErrorService;
         SubscribeToChanges();
     }
 
@@ -68,7 +72,8 @@ public class MessageService
             _errorCoord.CurrentInterrupt,
             IsResetUiBusy(),
             _runtimeTerminalState.IsCompletionActive,
-            _runtimeTerminalState.IsPostAskEndActive);
+            _runtimeTerminalState.IsPostAskEndActive,
+            _gasValveTubeDeferredErrorService.IsMessageActive);
     }
 
     private void SubscribeToChanges()
@@ -83,6 +88,7 @@ public class MessageService
         _preExecutionCoord.OnStateChanged += NotifyChanged;
         _runtimeTerminalState.OnChanged += NotifyChanged;
         _boilerState.OnChanged += NotifyChanged;
+        _gasValveTubeDeferredErrorService.OnStateChanged += NotifyChanged;
     }
 
     public string CurrentMessage

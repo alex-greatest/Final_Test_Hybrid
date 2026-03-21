@@ -8,11 +8,12 @@ using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Export;
+using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.Main.PlcReset;
+using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.Results;
-using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.SpringBoot.Operation.Interrupt;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
@@ -52,8 +53,16 @@ internal static class PreExecutionTestContextFactory
         var scanStep = CreateUninitialized<ScanBarcodeStep>();
         var scanBarcodeMesStep = CreateUninitialized<ScanBarcodeMesStep>();
         var statusReporter = new StepStatusReporter(sequenceService, appSettings, scanStep, scanBarcodeMesStep);
+        var connectionState = new OpcUaConnectionState(loggerFactory.CreateLogger<OpcUaConnectionState>());
         var stepTimingService = new StepTimingService();
-        var subscription = TestInfrastructure.CreateSubscription();
+        var subscription = new OpcUaSubscription(
+            connectionState,
+            TestInfrastructure.CreateOpcUaOptions(),
+            TestInfrastructure.CreateDualLogger<OpcUaSubscription>());
+        var autoReady = new AutoReadySubscription(
+            subscription,
+            connectionState,
+            loggerFactory.CreateLogger<AutoReadySubscription>());
         var testCoordinator = CreateTestCoordinator();
         var errorCoordinator = new StubErrorCoordinator();
         var plcResetCoordinator = CreateUninitialized<PlcResetCoordinator>();
@@ -62,6 +71,8 @@ internal static class PreExecutionTestContextFactory
             null!,
             null!,
             subscription,
+            connectionState,
+            autoReady,
             null!,
             new PauseTokenSource(),
             stepTimingService,
@@ -110,9 +121,7 @@ internal static class PreExecutionTestContextFactory
         return new PreExecutionTestContext(
             coordinator,
             boilerState,
-            stepTimingService,
-            subscription,
-            loggerFactory);
+            stepTimingService);
     }
 
     private static TestExecutionCoordinator CreateTestCoordinator()
@@ -268,6 +277,4 @@ internal static class PreExecutionTestContextFactory
 internal sealed record PreExecutionTestContext(
     PreExecutionCoordinator Coordinator,
     BoilerState BoilerState,
-    StepTimingService StepTimingService,
-    OpcUaSubscription Subscription,
-    ILoggerFactory LoggerFactory);
+    StepTimingService StepTimingService);

@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Models.Steps;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.PreExecution;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
@@ -59,6 +60,7 @@ public partial class PreExecutionCoordinator
                 return HandleNonContinueResult(blockResult);
             }
 
+            await EnsurePreExecutionInputReadyAsync(ct);
             return !StartTestExecution(context) ? PreExecutionResult.Fail("Test execution did not start") : PreExecutionResult.TestStarted();
         }
         finally
@@ -104,6 +106,7 @@ public partial class PreExecutionCoordinator
                 return HandleNonContinueResult(blockResult);
             }
 
+            await EnsurePreExecutionInputReadyAsync(ct);
             return !StartTestExecution(context) ? PreExecutionResult.Fail("Test execution did not start") : PreExecutionResult.TestStarted();
         }
         finally
@@ -181,6 +184,7 @@ public partial class PreExecutionCoordinator
         var stepId = infra.StatusReporter.ReportStepStarted(steps.StartTimer1);
         try
         {
+            await EnsurePreExecutionInputReadyAsync(ct);
             await infra.PauseToken.WaitWhilePausedAsync(ct);
             var result = await steps.StartTimer1.ExecuteAsync(context, ct);
             infra.StatusReporter.ReportSuccess(stepId, result.SuccessMessage ?? "");
@@ -203,6 +207,7 @@ public partial class PreExecutionCoordinator
         var stepId = infra.StatusReporter.ReportStepStarted(steps.BlockBoilerAdapter);
         try
         {
+            await EnsurePreExecutionInputReadyAsync(ct);
             await infra.PauseToken.WaitWhilePausedAsync(ct);
             infra.StepTimingService.StartCurrentStepTiming(steps.BlockBoilerAdapter.Name, steps.BlockBoilerAdapter.Description);
             var result = await steps.BlockBoilerAdapter.ExecuteAsync(context, ct);
@@ -228,5 +233,46 @@ public partial class PreExecutionCoordinator
             infra.StepTimingService.StopCurrentStepTiming();
             return HandleStepException(steps.BlockBoilerAdapter, stepId, ex);
         }
+    }
+
+    private async Task EnsurePreExecutionInputReadyAsync(CancellationToken ct)
+    {
+        if (!infra.ConnectionState.IsConnected)
+        {
+            return;
+        }
+
+        await TryRaiseAutoModeDisabledAsync(ct);
+        if (!infra.ConnectionState.IsConnected)
+        {
+            return;
+        }
+
+        await infra.PauseToken.WaitWhilePausedAsync(ct);
+    }
+
+    private async Task TryRaiseAutoModeDisabledAsync(CancellationToken ct)
+    {
+        if (!ShouldRaiseAutoModeDisabled())
+        {
+            return;
+        }
+
+        await coordinators.ErrorCoordinator.HandleInterruptAsync(InterruptReason.AutoModeDisabled, ct);
+    }
+
+    private bool ShouldRaiseAutoModeDisabled()
+    {
+        if (!infra.ConnectionState.IsConnected)
+        {
+            return false;
+        }
+
+        if (infra.AutoReady.IsReady)
+        {
+            return false;
+        }
+
+        return coordinators.ErrorCoordinator.CurrentInterrupt == null;
     }
 }

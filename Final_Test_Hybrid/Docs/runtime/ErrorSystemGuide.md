@@ -5,7 +5,7 @@
 ## Обзор
 
 Система мониторинга и отображения ошибок:
-- **ПЛК-ошибки** — мониторятся автоматически через `PlcErrorMonitorService`
+- **ПЛК-ошибки** — мониторятся автоматически через `PlcErrorMonitorService`, кроме deferred-исключений `П-403-03` / `П-407-03`
 - **Программные ошибки** — поднимаются/снимаются из кода через `IErrorService`
 - **UI** — `ActiveErrorsGrid` (текущие) + `ErrorHistoryGrid` (журнал) + `ErrorResetButton`
 
@@ -71,8 +71,23 @@ public static IReadOnlyList<ErrorDefinition> All => [
 
 ### PlcErrorMonitorService
 
-Автоматически подписывается на все `ErrorDefinitions.PlcErrors` при старте.
+Автоматически подписывается на все `ErrorDefinitions.PlcErrors` при старте,
+кроме deferred-исключений `П-403-03` и `П-407-03`.
 При изменении тега вызывает `RaisePlc` / `ClearPlc`.
+
+### GasValveTubeDeferredErrorService
+
+Для ошибок `П-403-03` (`Gas/Set_Gas_and_P_Burner_Max_Levels`) и
+`П-407-03` (`Gas/Set_Gas_and_P_Burner_Min_Levels`) используется отдельный deferred-path:
+
+- при `Al_NotConnectSensorPGB=true` нижняя строка сразу показывает
+  `Не подключена трубка газового клапана`, но только пока активен
+  соответствующий gas-step;
+- `RaisePlc(...)` выполняется только если тот же тег остаётся активным 30 секунд;
+- при `false` main message очищается сразу;
+- при выходе из соответствующего шага active message-state и pending 30-секундный
+  defer тоже снимаются сразу;
+- если ошибка уже была поднята, `ClearPlc(...)` вызывается сразу на `false`.
 
 ### ErrorCoordinator
 
@@ -213,7 +228,9 @@ Services/Errors/
 ├── IErrorService.cs        # Интерфейс
 ├── ErrorService.cs         # Реализация (singleton, thread-safe)
 ├── IPlcErrorMonitorService.cs
-└── PlcErrorMonitorService.cs
+├── PlcErrorMonitorService.cs
+├── GasValveTubeDeferredErrorService.cs
+└── PlcErrorValueNormalizer.cs
 
 Components/Errors/
 ├── ErrorsTab.razor         # Вкладка с табами Active/History
@@ -240,7 +257,15 @@ public static IReadOnlyList<ErrorDefinition> All => [
 ];
 ```
 
-3. Готово! `PlcErrorMonitorService` автоматически подпишется при старте.
+3. Если ошибка не требует deferred-поведения, готово:
+   `PlcErrorMonitorService` автоматически подпишется при старте.
+
+### Исключение: deferred PLC-ошибка
+
+Если оператор должен сначала увидеть low-priority main message, а сама PLC-ошибка
+должна подниматься только после выдержки времени, такую ошибку нельзя оставлять
+в generic immediate-path `PlcErrorMonitorService`.
+Нужно выделять отдельный owner-service по аналогии с `GasValveTubeDeferredErrorService`.
 
 ## История ошибок (IsHistoryEnabled)
 

@@ -153,6 +153,9 @@
   <data name="ScanPrompt" xml:space="preserve">
     <value>Отсканируйте серийный номер котла</value>
   </data>
+  <data name="GasValveTubeNotConnected" xml:space="preserve">
+    <value>Не подключена трубка газового клапана</value>
+  </data>
   <data name="PhaseBarcodeReceived" xml:space="preserve">
     <value>Штрихкод получен</value>
   </data>

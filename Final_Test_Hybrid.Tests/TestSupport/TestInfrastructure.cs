@@ -53,6 +53,8 @@ internal sealed class TestStepLoggerStub : ITestStepLogger
 internal sealed class TestErrorService : IErrorService
 {
     public List<string> ClearedCodes { get; } = [];
+    public List<string> ClearedPlcCodes { get; } = [];
+    public List<string> RaisedPlcCodes { get; } = [];
 
     public event Action? OnActiveErrorsChanged
     {
@@ -95,10 +97,12 @@ internal sealed class TestErrorService : IErrorService
 
     public void RaisePlc(ErrorDefinition error, string? stepId = null, string? stepName = null)
     {
+        RaisedPlcCodes.Add(error.Code);
     }
 
     public void ClearPlc(string errorCode)
     {
+        ClearedPlcCodes.Add(errorCode);
     }
 
     public void ClearAllActiveErrors()

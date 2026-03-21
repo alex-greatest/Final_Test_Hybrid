@@ -15,6 +15,7 @@
 - `Final_Test_Hybrid/Services/Main/Messages/MessageService.cs`
 - `Final_Test_Hybrid/Services/Main/Messages/MessageServiceResolver.cs`
 - `Final_Test_Hybrid/Services/Main/Messages/MessageTextResources.cs`
+- `Final_Test_Hybrid/Services/Errors/GasValveTubeDeferredErrorService.cs`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/RuntimeTerminalState.cs`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/ErrorCoordinator/ErrorCoordinator.cs`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/ErrorCoordinator/Behaviors/PlcConnectionLostBehavior.cs`
@@ -25,7 +26,7 @@
 ## Контракт слоя сообщений
 
 - `MessageService` является source-of-truth только для main message нижней строки.
-- `MessageService` собирает snapshot из `OperatorState`, `AutoReadySubscription`, `OpcUaConnectionState`, `ScanModeController`, `ExecutionPhaseState`, `ErrorCoordinator`, `PlcResetCoordinator`, `PreExecutionCoordinator`, `RuntimeTerminalState`, `BoilerState`.
+- `MessageService` собирает snapshot из `OperatorState`, `AutoReadySubscription`, `OpcUaConnectionState`, `ScanModeController`, `ExecutionPhaseState`, `ErrorCoordinator`, `PlcResetCoordinator`, `PreExecutionCoordinator`, `RuntimeTerminalState`, `BoilerState`, `GasValveTubeDeferredErrorService`.
 - Тексты main message и `PlcConnectionLost` toast читаются через `MessageTextResources` из `Form1.resx`; новые операторские строки в этом контуре нельзя добавлять только literal-ами в C#.
 - Terminal ownership приходит из `RuntimeTerminalState`:
   - `IsCompletionActive` — completion-handshake после result image;
@@ -54,7 +55,8 @@
 | 13 | `!IsAuthenticated` | `Войдите в систему` |
 | 14 | `ScanModeEnabled && !IsTestRunning && Phase == null` | `Отсканируйте серийный номер котла` |
 | 15 | `Phase != null` | Сообщение фазы выполнения |
-| 16 | Иначе | `""` |
+| 16 | `GasValveTubeDeferredErrorService.IsMessageActive && IsTestRunning` | `Не подключена трубка газового клапана` |
+| 17 | Иначе | `""` |
 
 ## Обязательные сценарии
 
@@ -63,6 +65,10 @@
 - Во время active post-AskEnd окна raw `!AutoReady` не должен производить auto-message.
 - Ожидаемый текст: `Сброс подтверждён. Ожидание решения PLC...`
 - Текст `Нет автомата. Выполняется сброс...` для этого окна запрещён.
+- Как только post-AskEnd окно завершено и repeat/pre-execution возвращается в normal runtime ownership,
+  raw `!AutoReady` при живой PLC-связи снова обязан приводить к `Ожидание автомата`.
+- В этой фазе повторный старт подготовки блокируется до восстановления `AutoReady=true`;
+  `StartTimer1`, `BlockBoilerAdapterStep` и запуск `TestExecution` не должны продолжаться молча.
 
 ### PlcConnectionLost + brief reconnect before delayed reset
 
@@ -85,7 +91,24 @@
   - terminal window нет;
   - reset busy нет;
   - фазы выполнения нет;
-  - тест не идёт.
+- тест не идёт.
+
+### Deferred gas valve tube message
+
+- Сообщение `Не подключена трубка газового клапана` является low-priority operator hint.
+- Оно не должно перебивать interrupt/reset/terminal/disconnected narrative.
+- Оно не должно жить как literal в `MessageService`; источник текста — `Form1.resx`.
+- Owner состояния — `GasValveTubeDeferredErrorService`, а не generic `IErrorService`.
+- Оно допускается только внутри активных шагов
+  `Gas/Set_Gas_and_P_Burner_Max_Levels` и
+  `Gas/Set_Gas_and_P_Burner_Min_Levels`.
+- Если в главном экране активна slider-ветка (`RangeSliderDisplay`),
+  тот же текст дополнительно дублируется красной строкой над слайдерами.
+  Этот UI не имеет своего отдельного owner-state и обязан читать
+  `GasValveTubeDeferredErrorService.IsMessageActive`.
+- Если target gas-step перестал быть active, pending 30-секундный defer обязан
+  отменяться сразу, а main message — исчезать немедленно.
+- При `Al_NotConnectSensorPGB=false` сообщение обязано исчезать немедленно, не дожидаясь истечения 30 секунд и не дожидаясь cleanup шага.
 
 ## Toast и main message
 

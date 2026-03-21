@@ -7,6 +7,7 @@ public interface IStepTimingService
     event Action? OnChanged;
 
     IReadOnlyList<StepTimingRecord> GetAll();
+    bool HasActiveStep(string name);
     void Clear(bool preserveScanState = false);
 
     // Методы для шага сканирования (таймер в реальном времени)
@@ -68,6 +69,20 @@ public partial class StepTimingService : IStepTimingService, IDisposable
             result.AddRange(_records);
             result.AddRange(_columnStates.Where(state => state.IsActive).Select(CreateRecord));
             return result;
+        }
+    }
+
+    public bool HasActiveStep(string name)
+    {
+        lock (_lock)
+        {
+            if (_scanState.IsActive && string.Equals(_scanState.Name, name, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            return _columnStates.Any(
+                state => state.IsActive && string.Equals(state.Name, name, StringComparison.Ordinal));
         }
     }
 

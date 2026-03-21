@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Models;
 using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.Common;
+using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
@@ -57,6 +58,10 @@ public sealed class PreExecutionRetryHandshakeTests
     {
         var pauseToken = new PauseTokenSource();
         var connectionState = new OpcUaConnectionState(TestInfrastructure.CreateLogger<OpcUaConnectionState>());
+        var autoReady = new AutoReadySubscription(
+            subscription,
+            connectionState,
+            TestInfrastructure.CreateLogger<AutoReadySubscription>());
         var tagWaiter = new TagWaiter(
             subscription,
             connectionState,
@@ -69,6 +74,8 @@ public sealed class PreExecutionRetryHandshakeTests
             null!,
             null!,
             subscription,
+            connectionState,
+            autoReady,
             pausableTagWaiter,
             pauseToken,
             null!,

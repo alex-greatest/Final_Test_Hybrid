@@ -3,9 +3,11 @@ using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.Settings;
 using Final_Test_Hybrid.Services.Errors;
+using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
+using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.Results;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
@@ -43,6 +45,8 @@ public class PreExecutionInfrastructure(
     PausableOpcUaTagService opcUa,
     OpcUaTagService plcService,
     OpcUaSubscription opcSubscription,
+    OpcUaConnectionState connectionState,
+    AutoReadySubscription autoReady,
     PausableTagWaiter tagWaiter,
     PauseTokenSource pauseToken,
     IStepTimingService stepTimingService,
@@ -60,6 +64,8 @@ public class PreExecutionInfrastructure(
     public PausableOpcUaTagService OpcUa => opcUa;
     public OpcUaTagService PlcService => plcService;
     public OpcUaSubscription OpcSubscription => opcSubscription;
+    public OpcUaConnectionState ConnectionState => connectionState;
+    public AutoReadySubscription AutoReady => autoReady;
     public PausableTagWaiter TagWaiter => tagWaiter;
     public PauseTokenSource PauseToken => pauseToken;
     public IStepTimingService StepTimingService => stepTimingService;

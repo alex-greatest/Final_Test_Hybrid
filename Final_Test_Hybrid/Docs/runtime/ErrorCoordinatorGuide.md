@@ -123,6 +123,11 @@ _errorCoordinator.OnInterruptChanged -= HandleInterruptChanged;
 - `HandleConnectionChanged()` считает runtime активным, когда истинно `ActivityTracker.IsAnyActive || RuntimeTerminalState.HasTerminalHandshake`.
 - `completion` и `post-AskEnd` не расширяют `ExecutionActivityTracker`: их owner хранится отдельно в `RuntimeTerminalState`.
 - Во время terminal handshake `AutoReady OFF` не должен поднимать `AutoModeDisabled`.
+- После завершения terminal handshake repeat/pre-execution обязаны возвращаться в normal `AutoModeDisabled` semantics:
+  перед `StartTimer1`, `BlockBoilerAdapterStep` и стартом `TestExecution` pipeline заново проверяет `AutoReady`.
+- Этот pre-execution gate не вводит новый interrupt type:
+  при `OpcUaConnectionState.IsConnected && !AutoReady.IsReady && CurrentInterrupt == null`
+  он повторно использует `HandleInterruptAsync(InterruptReason.AutoModeDisabled)`.
 - `AutoReady ON` запускает resume-path только если `CurrentInterrupt == AutoModeDisabled`.
 - `BoilerLock`, `PlcConnectionLost`, `TagTimeout` и любой другой non-`AutoModeDisabled` interrupt не снимаются broad-resume от `AutoReady ON`.
 - `MessageService` использует тот же ownership-контур для main message: terminal window и active interrupt должны побеждать raw `AutoReady`/raw connection narrative.

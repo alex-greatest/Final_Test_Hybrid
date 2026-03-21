@@ -16,6 +16,7 @@ public class PlcInitializationCoordinator(
     PreExecutionPlcValidator preExecutionValidator,
     IPreExecutionStepRegistry preExecutionStepRegistry,
     IPlcErrorMonitorService plcErrorMonitor,
+    GasValveTubeDeferredErrorService gasValveTubeDeferredErrorService,
     PlcSubscriptionState subscriptionState,
     ITestStepRegistry stepRegistry,
     ILogger<PlcInitializationCoordinator> logger)
@@ -50,6 +51,9 @@ public class PlcInitializationCoordinator(
 
             // 3. Подписка на теги ПЛК-ошибок
             await plcErrorMonitor.StartMonitoringAsync(ct);
+
+            // 4. Подписка на delayed PGB-ошибки газового клапана
+            await gasValveTubeDeferredErrorService.StartMonitoringAsync(ct);
         }
         finally
         {

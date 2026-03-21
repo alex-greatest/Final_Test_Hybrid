@@ -658,6 +658,23 @@ svg {
     z-index: 5;
 }
 
+/* ===== WIDE VIEW GRID ===== */
+.grid-wide-view-host {
+    min-height: 0;
+}
+
+.grid-wide-view .rz-grid-table tbody td {
+    min-width: 0;
+}
+
+.grid-wide-view .rz-grid-table tbody td .rz-cell-data {
+    display: block;
+    max-width: 100%;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
 /* Overview: типографика таблиц как в IoEditorDialog */
 .overview-grid-io {
     font-size: 19px;

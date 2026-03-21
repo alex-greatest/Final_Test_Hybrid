@@ -142,6 +142,33 @@ public sealed class MessageServiceResolverTests
         Assert.Equal("Нет ответа от ПЛК. Выполняется сброс...", message);
     }
 
+    [Fact]
+    public void GasValveTubeMessageDuringRuntime_ReturnsLowPriorityMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            IsGasValveTubeMessageActive = true
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Не подключена трубка газового клапана", message);
+    }
+
+    [Fact]
+    public void Disconnected_BeatsGasValveTubeMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            IsConnected = false,
+            IsGasValveTubeMessageActive = true
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Нет связи с PLC", message);
+    }
+
     private static MessageSnapshot CreateSnapshot()
     {
         return new MessageSnapshot(
@@ -154,6 +181,7 @@ public sealed class MessageServiceResolverTests
             CurrentInterrupt: null,
             IsResetUiBusy: false,
             IsCompletionActive: false,
-            IsPostAskEndActive: false);
+            IsPostAskEndActive: false,
+            IsGasValveTubeMessageActive: false);
     }
 }

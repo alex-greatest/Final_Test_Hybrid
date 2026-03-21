@@ -21,6 +21,7 @@ internal static class MessageTextResources
     internal static string WaitForAuto => GetString(nameof(WaitForAuto));
     internal static string LoginRequired => GetString(nameof(LoginRequired));
     internal static string ScanPrompt => GetString(nameof(ScanPrompt));
+    internal static string GasValveTubeNotConnected => GetString(nameof(GasValveTubeNotConnected));
     internal static string PhaseBarcodeReceived => GetString(nameof(PhaseBarcodeReceived));
     internal static string PhaseValidatingSteps => GetString(nameof(PhaseValidatingSteps));
     internal static string PhaseValidatingRecipes => GetString(nameof(PhaseValidatingRecipes));

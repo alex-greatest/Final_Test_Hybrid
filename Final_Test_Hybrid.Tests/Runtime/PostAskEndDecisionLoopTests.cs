@@ -1,6 +1,8 @@
 using Final_Test_Hybrid.Models.Plc.Tags;
 using Final_Test_Hybrid.Services.Common;
+using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.Messages;
+using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
@@ -56,11 +58,18 @@ public sealed class PostAskEndDecisionLoopTests
 
     private static PreExecutionCoordinator CreateCoordinator(OpcUaSubscription subscription)
     {
+        var connectionState = new OpcUaConnectionState(TestInfrastructure.CreateLogger<OpcUaConnectionState>());
+        var autoReady = new AutoReadySubscription(
+            subscription,
+            connectionState,
+            TestInfrastructure.CreateLogger<AutoReadySubscription>());
         var steps = new PreExecutionSteps(null!, null!, null!, null!, null!);
         var infra = new PreExecutionInfrastructure(
             null!,
             null!,
             subscription,
+            connectionState,
+            autoReady,
             null!,
             new PauseTokenSource(),
             null!,

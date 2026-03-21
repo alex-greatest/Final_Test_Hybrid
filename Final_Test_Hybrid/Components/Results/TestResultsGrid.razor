@@ -6,7 +6,7 @@
 
 @implements IDisposable
 
-<div class="test-results-grid grid-unified-host">
+<div class="test-results-grid grid-unified-host grid-wide-view-host">
     @if (_isLoading)
     {
         <div class="loading-container">
@@ -25,8 +25,9 @@
                 <div>Серийный номер: @BoilerState.LastSerialNumber</div>
             </div>
         }
-        <RadzenDataGrid Data="@_results" TItem="TestResultItem" class="grid-unified"
+        <RadzenDataGrid Data="@_results" TItem="TestResultItem" class="grid-unified grid-wide-view"
                         AllowFiltering="true" AllowSorting="true"
+                        AllowColumnResize="true"
                         AllowPaging="false"
                         FilterText="@DataGridRu.Filter"
                         ApplyFilterText="@DataGridRu.ApplyFilter"
@@ -49,22 +50,22 @@
                         OrOperatorText="@DataGridRu.Or"
                         EmptyText="Нет данных">
             <Columns>
-                <RadzenDataGridColumn TItem="TestResultItem" Property="Time" Title="Время" Width="180px">
+                <RadzenDataGridColumn TItem="TestResultItem" Property="Time" Title="Время" Width="180px" MinWidth="180px">
                     <Template Context="item">
                         @item.Time.ToString("dd.MM.yyyy HH:mm:ss")
                     </Template>
                 </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="TestResultItem" Property="Test" Title="Название шага" Width="220px" />
-                <RadzenDataGridColumn TItem="TestResultItem" Property="ParameterName" Title="Параметр" />
-                <RadzenDataGridColumn TItem="TestResultItem" Property="Min" Title="Мин" Width="100px" />
-                <RadzenDataGridColumn TItem="TestResultItem" Property="Value" Title="Значение" Width="150px" />
-                <RadzenDataGridColumn TItem="TestResultItem" Property="Max" Title="Макс" Width="100px" />
-                <RadzenDataGridColumn TItem="TestResultItem" Property="IsRanged" Title="Тип" Width="120px">
+                <RadzenDataGridColumn TItem="TestResultItem" Property="Test" Title="Название шага" Width="220px" MinWidth="220px" />
+                <RadzenDataGridColumn TItem="TestResultItem" Property="ParameterName" Title="Параметр" MinWidth="220px" />
+                <RadzenDataGridColumn TItem="TestResultItem" Property="Min" Title="Мин" Width="100px" MinWidth="100px" />
+                <RadzenDataGridColumn TItem="TestResultItem" Property="Value" Title="Значение" Width="150px" MinWidth="150px" />
+                <RadzenDataGridColumn TItem="TestResultItem" Property="Max" Title="Макс" Width="100px" MinWidth="100px" />
+                <RadzenDataGridColumn TItem="TestResultItem" Property="IsRanged" Title="Тип" Width="120px" MinWidth="120px">
                     <Template Context="item">
                         @(item.IsRanged ? "с диапазоном" : "без диапазона")
                     </Template>
                 </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="TestResultItem" Property="Status" Title="Статус" Width="80px">
+                <RadzenDataGridColumn TItem="TestResultItem" Property="Status" Title="Статус" Width="80px" MinWidth="80px">
                     <Template Context="item">
                         @if (TryGetStatusView(item.Status, out var badgeStyle, out var statusText))
                         {
@@ -78,7 +79,7 @@
                         }
                     </Template>
                 </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="TestResultItem" Property="Unit" Title="Ед. изм." Width="100px" />
+                <RadzenDataGridColumn TItem="TestResultItem" Property="Unit" Title="Ед. изм." Width="100px" MinWidth="100px" />
             </Columns>
         </RadzenDataGrid>
     }

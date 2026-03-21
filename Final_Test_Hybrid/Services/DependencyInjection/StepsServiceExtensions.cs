@@ -145,6 +145,7 @@ public static class StepsServiceExtensions
         // Errors
         services.AddSingleton<IErrorService, ErrorService>();
         services.AddSingleton<IPlcErrorMonitorService, PlcErrorMonitorService>();
+        services.AddSingleton<GasValveTubeDeferredErrorService>();
 
         // Results
         services.AddSingleton<ITestResultsService, TestResultsService>();

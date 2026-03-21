@@ -7,7 +7,7 @@
 
 @implements IAsyncDisposable
 
-<div class="error-history-grid grid-unified-host">
+<div class="error-history-grid grid-unified-host grid-wide-view-host">
     @if (!string.IsNullOrEmpty(BoilerState.LastSerialNumber))
     {
         <div class="last-test-header">
@@ -19,8 +19,9 @@
         </div>
     }
 
-    <RadzenDataGrid Data="@_history" TItem="ErrorHistoryItem" class="grid-unified"
+    <RadzenDataGrid Data="@_history" TItem="ErrorHistoryItem" class="grid-unified grid-wide-view"
                     AllowFiltering="true" AllowSorting="true"
+                    AllowColumnResize="true"
                     FilterText="@DataGridRu.Filter"
                     ApplyFilterText="@DataGridRu.ApplyFilter"
                     ClearFilterText="@DataGridRu.ClearFilter"
@@ -42,12 +43,12 @@
                     OrOperatorText="@DataGridRu.Or"
                     EmptyText="Нет данных">
         <Columns>
-            <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="StartTime" Title="Начало" Width="100px">
+            <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="StartTime" Title="Начало" Width="100px" MinWidth="100px">
                 <Template Context="item">
                     @item.StartTime.ToString("HH:mm:ss")
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="EndTime" Title="Конец" Width="100px">
+            <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="EndTime" Title="Конец" Width="100px" MinWidth="100px">
                 <Template Context="item">
                     @if (item.EndTime.HasValue)
                     {
@@ -59,13 +60,13 @@
                     }
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="ErrorHistoryItem" Title="Длительность" Width="100px" Sortable="false" Filterable="false">
+            <RadzenDataGridColumn TItem="ErrorHistoryItem" Title="Длительность" Width="100px" MinWidth="100px" Sortable="false" Filterable="false">
                 <Template Context="item">
                     @FormatDuration(item)
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="Code" Title="Код" Width="80px" />
-            <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="Severity" Title="Тип" Width="120px">
+            <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="Code" Title="Код" Width="80px" MinWidth="80px" />
+            <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="Severity" Title="Тип" Width="120px" MinWidth="120px">
                 <Template Context="item">
                     @switch (item.Severity)
                     {
@@ -81,8 +82,8 @@
                     }
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="Description" Title="Описание" />
-            <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="StepName" Title="Шаг" Width="200px">
+            <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="Description" Title="Описание" MinWidth="240px" />
+            <RadzenDataGridColumn TItem="ErrorHistoryItem" Property="StepName" Title="Шаг" Width="200px" MinWidth="200px">
                 <Template Context="item">
                     @(item.StepName ?? "-")
                 </Template>

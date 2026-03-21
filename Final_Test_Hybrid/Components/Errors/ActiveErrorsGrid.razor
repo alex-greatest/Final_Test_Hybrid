@@ -5,9 +5,10 @@
 
 @implements IAsyncDisposable
 
-<div class="errors-grid-wrapper grid-unified-host">
-    <RadzenDataGrid Data="@_activeErrors" TItem="ActiveErrorGridRow" class="grid-unified"
+<div class="errors-grid-wrapper grid-unified-host grid-wide-view-host">
+    <RadzenDataGrid Data="@_activeErrors" TItem="ActiveErrorGridRow" class="grid-unified grid-wide-view"
                 AllowFiltering="true" AllowSorting="true"
+                AllowColumnResize="true"
                 FilterText="@DataGridRu.Filter"
                 ApplyFilterText="@DataGridRu.ApplyFilter"
                 ClearFilterText="@DataGridRu.ClearFilter"
@@ -29,8 +30,8 @@
                 OrOperatorText="@DataGridRu.Or"
                 EmptyText="Нет данных">
     <Columns>
-        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="Code" Title="Код" Width="80px" />
-        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="Severity" Title="Тип" Width="120px">
+        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="Code" Title="Код" Width="80px" MinWidth="80px" />
+        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="Severity" Title="Тип" Width="120px" MinWidth="120px">
             <Template Context="item">
                 @switch (item.Severity)
                 {
@@ -46,18 +47,18 @@
                 }
             </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="Time" Title="Время" Width="100px">
+        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="Time" Title="Время" Width="100px" MinWidth="100px">
             <Template Context="item">
                 @item.Time.ToString("HH:mm:ss")
             </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="StepName" Title="Шаг" Width="200px">
+        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="StepName" Title="Шаг" Width="200px" MinWidth="200px">
             <Template Context="item">
                 @(item.StepName ?? "-")
             </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="Description" Title="Описание"/>
-        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="SourceLabel" Title="Источник" Width="100px">
+        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="Description" Title="Описание" MinWidth="240px" />
+        <RadzenDataGridColumn TItem="ActiveErrorGridRow" Property="SourceLabel" Title="Источник" Width="100px" MinWidth="100px">
             <Template Context="item">
                 @item.SourceLabel
             </Template>
