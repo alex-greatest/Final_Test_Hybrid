@@ -1,9 +1,10 @@
 using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Errors;
+using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
+using TestStepContext = Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator.TestStepContext;
+using TestStepResult = Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator.TestStepResult;
 
 namespace Final_Test_Hybrid.Services.Steps.Steps.Elec;
 
@@ -12,7 +13,8 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Elec;
 /// </summary>
 public class ConnectEarthClipStep(
     DualLogger<ConnectEarthClipStep> logger,
-    IErrorService errorService) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
+    IErrorService errorService,
+    EarthClipStepMessageService earthClipStepMessageService) : IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.Elec.Connect_Earth_Clip";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"Elec\".\"Connect_Earth_Clip\".\"Start\"";
@@ -63,9 +65,23 @@ public class ConnectEarthClipStep(
         {
             Phase1Result.End => await HandleSuccessAsync(context, ct),
             Phase1Result.Error => TestStepResult.Fail(""),
-            Phase1Result.Ready1 => await WaitPhase2WithTimeoutAsync(context, ct),
+            Phase1Result.Ready1 => await HandleReady1Async(context, ct),
             _ => TestStepResult.Fail("Неизвестный результат")
         };
+    }
+
+    private async Task<TestStepResult> HandleReady1Async(TestStepContext context, CancellationToken ct)
+    {
+        earthClipStepMessageService.Activate();
+
+        try
+        {
+            return await WaitPhase2WithTimeoutAsync(context, ct);
+        }
+        finally
+        {
+            earthClipStepMessageService.Deactivate();
+        }
     }
 
     /// <summary>

@@ -13,7 +13,8 @@ internal readonly record struct MessageSnapshot(
     bool IsResetUiBusy,
     bool IsCompletionActive,
     bool IsPostAskEndActive,
-    bool IsGasValveTubeMessageActive);
+    bool IsGasValveTubeMessageActive,
+    bool IsEarthClipMessageActive);
 
 internal enum MessageScenario
 {
@@ -32,7 +33,8 @@ internal enum MessageScenario
     WaitForAuto,
     ScanPrompt,
     ExecutionPhase,
-    GasValveTubeNotConnected
+    GasValveTubeNotConnected,
+    EarthClipNotConnected
 }
 
 internal static class MessageServiceResolver
@@ -56,6 +58,7 @@ internal static class MessageServiceResolver
             MessageScenario.ScanPrompt => MessageTextResources.ScanPrompt,
             MessageScenario.ExecutionPhase => GetPhaseMessage(snapshot.Phase),
             MessageScenario.GasValveTubeNotConnected => MessageTextResources.GasValveTubeNotConnected,
+            MessageScenario.EarthClipNotConnected => MessageTextResources.EarthClipNotConnected,
             _ => ""
         };
     }
@@ -140,6 +143,11 @@ internal static class MessageServiceResolver
         if (snapshot.IsGasValveTubeMessageActive && snapshot.IsTestRunning)
         {
             return MessageScenario.GasValveTubeNotConnected;
+        }
+
+        if (snapshot.IsEarthClipMessageActive && snapshot.IsTestRunning)
+        {
+            return MessageScenario.EarthClipNotConnected;
         }
 
         return MessageScenario.None;

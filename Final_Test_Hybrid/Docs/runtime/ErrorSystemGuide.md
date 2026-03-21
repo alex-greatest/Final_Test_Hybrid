@@ -89,6 +89,15 @@ public static IReadOnlyList<ErrorDefinition> All => [
   defer тоже снимаются сразу;
 - если ошибка уже была поднята, `ClearPlc(...)` вызывается сразу на `false`.
 
+### EarthClipStepMessageService
+
+Для `Elec/Connect_Earth_Clip` используется отдельный owner только для нижней строки:
+
+- после `Ready_1` нижняя строка сразу показывает `Подключите клипсу заземления`;
+- message-state живёт только пока active step = `Elec/Connect_Earth_Clip`;
+- при выходе из шага, отмене, reset cleanup и потере связи сообщение скрывается сразу;
+- `RaisePlc(ErrorDefinitions.EarthClipNotConnected)` не переносится в этот сервис и остаётся в `ConnectEarthClipStep` с текущим условием `Ready_1 + 30 секунд`.
+
 ### ErrorCoordinator
 
 | Событие | Действие |
@@ -231,6 +240,12 @@ Services/Errors/
 ├── PlcErrorMonitorService.cs
 ├── GasValveTubeDeferredErrorService.cs
 └── PlcErrorValueNormalizer.cs
+
+Services/Main/Messages/
+├── MessageService.cs
+├── EarthClipStepMessageService.cs
+├── MessageServiceResolver.cs
+└── MessageTextResources.cs
 
 Components/Errors/
 ├── ErrorsTab.razor         # Вкладка с табами Active/History

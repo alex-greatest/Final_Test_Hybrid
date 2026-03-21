@@ -129,7 +129,9 @@ _errorCoordinator.OnInterruptChanged -= HandleInterruptChanged;
   при `OpcUaConnectionState.IsConnected && !AutoReady.IsReady && CurrentInterrupt == null`
   он повторно использует `HandleInterruptAsync(InterruptReason.AutoModeDisabled)`.
 - `AutoReady ON` запускает resume-path только если `CurrentInterrupt == AutoModeDisabled`.
-- `BoilerLock`, `PlcConnectionLost`, `TagTimeout` и любой другой non-`AutoModeDisabled` interrupt не снимаются broad-resume от `AutoReady ON`.
+- Сам `TryResumeFromPauseAsync()` ownership-aware: direct resume-path не снимает `BoilerLock`, `PlcConnectionLost`, `TagTimeout` и любой другой non-`AutoModeDisabled` interrupt.
+- В обычном active pre-execution/test execution `AutoReady OFF` пока не имеет общего guard по already-active interrupt и может перезаписать `CurrentInterrupt` на `AutoModeDisabled`.
+- Из-за этого остаётся residual gap: сценарий `BoilerLock -> AutoReady OFF -> AutoReady ON` потенциально может снять общий `PauseToken`, если `AutoReady OFF` успел перехватить ownership interrupt'а до следующего ping-цикла `BoilerLock`.
 - `MessageService` использует тот же ownership-контур для main message: terminal window и active interrupt должны побеждать raw `AutoReady`/raw connection narrative.
 
 ### Дополнительно: аварийный retry-flow

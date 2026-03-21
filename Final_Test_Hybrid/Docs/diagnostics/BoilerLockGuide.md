@@ -91,6 +91,8 @@
 - Попытка `1153=0` выполняется только если текущий interrupt действительно `BoilerLock`.
 - При активном другом interrupt (`TagTimeout`, `AutoModeDisabled`, и т.д.) ветка записи не исполняется.
 - В лог пишутся оба адреса: `Doc=1153` и `Modbus=1152` (при `BaseAddressOffset=1`), чтобы не путать диагностику.
+- `BoilerLock` не имеет собственного pause-token и делит ownership паузы с `ErrorCoordinator.CurrentInterrupt`.
+- Поэтому runtime-изоляция от `AutoReady` неполная: если `AutoReady OFF` перезаписал `CurrentInterrupt` значением `AutoModeDisabled`, последующий `AutoReady ON` может временно снять общую паузу до следующего ping-цикла `BoilerLock`.
 
 ## Ветка `1005 == 2` (PLC signal stub)
 
@@ -115,6 +117,11 @@
 Если `CurrentInterrupt == BoilerLock`, но условие паузы больше не выполняется, вызывается `ForceStop()` и interrupt очищается.
 
 Это предотвращает сценарий «условие ушло между опросами, а пауза осталась навсегда».
+
+Ограничение текущего ownership:
+
+- recovery-check срабатывает только пока `CurrentInterrupt == BoilerLock`;
+- если ownership уже перехвачен другим interrupt, `BoilerLockRuntimeService` не снимает чужой interrupt и ждёт следующий ping-цикл для повторной оценки условия.
 
 ### Принудительная очистка
 

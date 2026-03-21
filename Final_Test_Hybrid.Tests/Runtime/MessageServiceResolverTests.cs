@@ -156,6 +156,19 @@ public sealed class MessageServiceResolverTests
     }
 
     [Fact]
+    public void EarthClipMessageDuringRuntime_ReturnsLowPriorityMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            IsEarthClipMessageActive = true
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Подключите клипсу заземления", message);
+    }
+
+    [Fact]
     public void Disconnected_BeatsGasValveTubeMessage()
     {
         var snapshot = CreateSnapshot() with
@@ -167,6 +180,76 @@ public sealed class MessageServiceResolverTests
         var message = MessageServiceResolver.Resolve(snapshot);
 
         Assert.Equal("Нет связи с PLC", message);
+    }
+
+    [Fact]
+    public void GenericReset_BeatsEarthClipMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            IsResetUiBusy = true,
+            IsEarthClipMessageActive = true
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Сброс теста...", message);
+    }
+
+    [Fact]
+    public void CompletionActive_BeatsEarthClipMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            IsCompletionActive = true,
+            IsEarthClipMessageActive = true
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Тест завершён. Ожидание решения PLC...", message);
+    }
+
+    [Fact]
+    public void PostAskEndActive_BeatsEarthClipMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            IsPostAskEndActive = true,
+            IsEarthClipMessageActive = true
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Сброс подтверждён. Ожидание решения PLC...", message);
+    }
+
+    [Fact]
+    public void PlcConnectionLost_BeatsEarthClipMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            CurrentInterrupt = InterruptReason.PlcConnectionLost,
+            IsEarthClipMessageActive = true
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Потеря связи с PLC. Ожидание сброса...", message);
+    }
+
+    [Fact]
+    public void TagTimeout_BeatsEarthClipMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            CurrentInterrupt = InterruptReason.TagTimeout,
+            IsEarthClipMessageActive = true
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Нет ответа от ПЛК", message);
     }
 
     private static MessageSnapshot CreateSnapshot()
@@ -182,6 +265,7 @@ public sealed class MessageServiceResolverTests
             IsResetUiBusy: false,
             IsCompletionActive: false,
             IsPostAskEndActive: false,
-            IsGasValveTubeMessageActive: false);
+            IsGasValveTubeMessageActive: false,
+            IsEarthClipMessageActive: false);
     }
 }

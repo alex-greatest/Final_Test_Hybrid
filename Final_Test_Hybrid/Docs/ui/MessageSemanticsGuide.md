@@ -13,6 +13,7 @@
 ## Источники истины в коде
 
 - `Final_Test_Hybrid/Services/Main/Messages/MessageService.cs`
+- `Final_Test_Hybrid/Services/Main/Messages/EarthClipStepMessageService.cs`
 - `Final_Test_Hybrid/Services/Main/Messages/MessageServiceResolver.cs`
 - `Final_Test_Hybrid/Services/Main/Messages/MessageTextResources.cs`
 - `Final_Test_Hybrid/Services/Errors/GasValveTubeDeferredErrorService.cs`
@@ -26,7 +27,7 @@
 ## Контракт слоя сообщений
 
 - `MessageService` является source-of-truth только для main message нижней строки.
-- `MessageService` собирает snapshot из `OperatorState`, `AutoReadySubscription`, `OpcUaConnectionState`, `ScanModeController`, `ExecutionPhaseState`, `ErrorCoordinator`, `PlcResetCoordinator`, `PreExecutionCoordinator`, `RuntimeTerminalState`, `BoilerState`, `GasValveTubeDeferredErrorService`.
+- `MessageService` собирает snapshot из `OperatorState`, `AutoReadySubscription`, `OpcUaConnectionState`, `ScanModeController`, `ExecutionPhaseState`, `ErrorCoordinator`, `PlcResetCoordinator`, `PreExecutionCoordinator`, `RuntimeTerminalState`, `BoilerState`, `GasValveTubeDeferredErrorService`, `EarthClipStepMessageService`.
 - Тексты main message и `PlcConnectionLost` toast читаются через `MessageTextResources` из `Form1.resx`; новые операторские строки в этом контуре нельзя добавлять только literal-ами в C#.
 - Terminal ownership приходит из `RuntimeTerminalState`:
   - `IsCompletionActive` — completion-handshake после result image;
@@ -56,7 +57,8 @@
 | 14 | `ScanModeEnabled && !IsTestRunning && Phase == null` | `Отсканируйте серийный номер котла` |
 | 15 | `Phase != null` | Сообщение фазы выполнения |
 | 16 | `GasValveTubeDeferredErrorService.IsMessageActive && IsTestRunning` | `Не подключена трубка газового клапана` |
-| 17 | Иначе | `""` |
+| 17 | `EarthClipStepMessageService.IsMessageActive && IsTestRunning` | `Подключите клипсу заземления` |
+| 18 | Иначе | `""` |
 
 ## Обязательные сценарии
 
@@ -109,6 +111,17 @@
 - Если target gas-step перестал быть active, pending 30-секундный defer обязан
   отменяться сразу, а main message — исчезать немедленно.
 - При `Al_NotConnectSensorPGB=false` сообщение обязано исчезать немедленно, не дожидаясь истечения 30 секунд и не дожидаясь cleanup шага.
+
+### Earth clip phase2 message
+
+- Сообщение `Подключите клипсу заземления` является low-priority operator hint.
+- Оно не должно перебивать interrupt/reset/terminal/disconnected narrative.
+- Оно не должно жить как literal в `MessageService`; источник текста — `Form1.resx`.
+- Owner состояния — `EarthClipStepMessageService`, а не `IErrorService` и не raw OPC подписка внутри `MessageService`.
+- Сообщение включается только после входа шага `Elec/Connect_Earth_Clip` в окно phase2 (`Ready_1` уже получен).
+- Если шаг `Elec/Connect_Earth_Clip` перестал быть active, сообщение обязано исчезать немедленно.
+- Потеря OPC-связи и любой cleanup reset/stop/cancel должны немедленно скрывать это сообщение.
+- 30-секундная эскалация в `ActiveErrors` не принадлежит message owner и остаётся в `ConnectEarthClipStep`.
 
 ## Toast и main message
 

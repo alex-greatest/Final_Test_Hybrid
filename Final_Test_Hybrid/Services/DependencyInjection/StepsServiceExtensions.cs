@@ -55,6 +55,7 @@ public static class StepsServiceExtensions
 
         // Message service
         services.AddSingleton<MessageService>();
+        services.AddSingleton<EarthClipStepMessageService>();
         services.AddSingleton<AutoReadySubscription>();
         services.AddSingleton<IChangeoverStartGate, ChangeoverStartGate>();
         services.AddSingleton<MessageServiceInitializer>();

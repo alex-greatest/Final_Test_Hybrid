@@ -73,8 +73,13 @@
 
 - Новый gate не вводит generic blocking по любому `CurrentInterrupt != null`; он закрывает именно зазор `AutoReady=false` после post-AskEnd.
 - Hint про неполный `switch` в `ExecutePreExecutionPipelineAsync` остался без изменения, потому что этот пакет не меняет старую матрицу `ScanStep`-статусов и не должен расширять поведение вне целевого AutoReady-gap.
+- Документальный follow-up после сверки с кодом:
+  сценарий `BoilerLock -> AutoReady OFF -> AutoReady ON` остаётся незакрытым.
+  `TryResumeFromPauseAsync()` действительно резюмит только `AutoModeDisabled`, но `AutoReady OFF` вне terminal handshake всё ещё может перезаписать уже активный `BoilerLock` на `AutoModeDisabled`.
+  Поэтому прежняя формулировка `BoilerLock recovery` как полностью исправленного ownership-кейса была слишком сильной и скорректирована в stable docs.
 
 ## Инциденты
 
-- `no new incident`
-- Пакет закрывает уже подтверждённый runtime-gap между terminal repeat path и normal `AutoReady` gating, не вводя новый failure mode.
+- Новый failure mode зафиксирован в change-doc [2026-03-21-boilerlock-autoready-interrupt-overwrite-gap.md](/D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Docs/changes/2026-03-21-boilerlock-autoready-interrupt-overwrite-gap.md).
+- Сам пакет по-прежнему закрывает runtime-gap между terminal repeat path и normal `AutoReady` gating.
+- Документальный follow-up не меняет уже внесённый код и не заявляет исправление residual gap `BoilerLock -> AutoReady OFF -> AutoReady ON`.
