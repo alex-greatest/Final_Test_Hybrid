@@ -27,6 +27,7 @@
 @inject ExecutionStateManager ExecutionStateManager
 @inject TestExecutionCoordinator TestCoordinator
 @inject TestCompletionCoordinator CompletionCoordinator
+@inject ScannerInputOwnershipService ScannerInputOwnership
 @inject NotificationService NotificationService
 @inject OpcUaConnectionState OpcUaConnectionState
 @inject ILogger<BoilerInfo> Logger
@@ -78,11 +79,13 @@
     private string? _errorSourceTitle;
     private bool _isSaveProgressDialogOpen;
     private bool? _desiredSaveProgressState;
+    private bool HasPreExecutionScannerOwner => ScannerInputOwnership.IsPreExecutionOwnerActive;
 
     private bool IsOnActiveScanStep => TestSequenseService.IsOnActiveScanStep;
     private bool IsFieldReadOnly => !PreExecution.IsAcceptingInput
         || !OpcUaConnectionState.IsConnected
         || !ScanModeController.IsScanModeEnabled
+        || !HasPreExecutionScannerOwner
         || !IsOnActiveScanStep
         || PlcResetCoordinator.IsActive
         || ErrorCoordinator.CurrentInterrupt != null;
@@ -114,15 +117,18 @@
         CompletionCoordinator.OnPrepareErrorDialogRequested += HandlePrepareErrorDialogAsync;
         CompletionCoordinator.OnSaveProgressChanged += HandleSaveProgressChanged;
         ScanModeController.OnStateChanged += OnScanModeStateChanged;
+        ScannerInputOwnership.OnStateChanged += OnScannerOwnershipStateChanged;
         SyncSerialInputDraft();
     }
 
     private void OnScanModeStateChanged() => InvokeIfNotDisposed(StateHasChanged);
+    private void OnScannerOwnershipStateChanged() => InvokeIfNotDisposed(StateHasChanged);
 
     private void CloseDialogs()
     {
         _ = InvokeAsync(() =>
         {
+            ScannerInputOwnership.ReleaseDialogOwners();
             DialogService.Close();
             CloseErrorPanel();
         });
@@ -541,5 +547,6 @@
         CompletionCoordinator.OnPrepareErrorDialogRequested -= HandlePrepareErrorDialogAsync;
         CompletionCoordinator.OnSaveProgressChanged -= HandleSaveProgressChanged;
         ScanModeController.OnStateChanged -= OnScanModeStateChanged;
+        ScannerInputOwnership.OnStateChanged -= OnScannerOwnershipStateChanged;
     }
 }

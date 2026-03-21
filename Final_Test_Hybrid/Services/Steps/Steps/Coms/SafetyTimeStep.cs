@@ -65,12 +65,12 @@ public class SafetyTimeStep(
         RemoveOldResult();
 
         var coilsOnResult = await WaitForCoilsOnAsync(context, ct);
-        if (coilsOnResult != null)
+        if (coilsOnResult.FailureResult != null)
         {
-            return coilsOnResult;
+            return coilsOnResult.FailureResult;
         }
 
-        var safetyTimeResult = await MeasureSafetyTimeAsync(context, ct);
+        var safetyTimeResult = await MeasureSafetyTimeAsync(context, coilsOnResult.CoilsOnSample!, ct);
         if (!safetyTimeResult.Success)
         {
             return TestStepResult.Fail(
@@ -105,7 +105,7 @@ public class SafetyTimeStep(
     /// <summary>
     /// Фаза 1: Ожидание включения катушек EV1/EV2 (ток >= 200 мА).
     /// </summary>
-    private async Task<TestStepResult?> WaitForCoilsOnAsync(
+    private async Task<CoilsOnWaitResult> WaitForCoilsOnAsync(
         TestStepContext context,
         CancellationToken ct)
     {
@@ -121,23 +121,25 @@ public class SafetyTimeStep(
             var readResult = await ReadCoilCurrentsAsync(context, ct);
             if (!readResult.Success)
             {
-                return TestStepResult.Fail(
-                    $"Ошибка чтения тока катушек: {readResult.Error}",
-                    canSkip: readResult.CanSkip);
+                return new CoilsOnWaitResult(
+                    TestStepResult.Fail(
+                        $"Ошибка чтения тока катушек: {readResult.Error}",
+                        canSkip: readResult.CanSkip),
+                    null);
             }
 
             if (readResult is { Ev1Current: >= CurrentThresholdMa, Ev2Current: >= CurrentThresholdMa })
             {
                 logger.LogInformation("Катушки включены: EV1={Ev1} мА, EV2={Ev2} мА",
                     readResult.Ev1Current, readResult.Ev2Current);
-                return null;
+                return new CoilsOnWaitResult(null, readResult);
             }
 
             context.ReportProgress($"Ожидание катушек: EV1={readResult.Ev1Current} мА, EV2={readResult.Ev2Current} мА");
             await context.DelayAsync(TimeSpan.FromMilliseconds(PollingIntervalMs), ct);
         }
 
-        return TestStepResult.Fail("Таймаут ожидания включения катушек (30 сек)");
+        return new CoilsOnWaitResult(TestStepResult.Fail("Таймаут ожидания включения катушек (30 сек)"), null);
     }
 
     /// <summary>
@@ -145,10 +147,11 @@ public class SafetyTimeStep(
     /// </summary>
     private async Task<SafetyTimeResult> MeasureSafetyTimeAsync(
         TestStepContext context,
+        CoilCurrentsResult coilsOnSample,
         CancellationToken ct)
     {
         logger.LogInformation("Измерение времени отключения катушек...");
-        context.ReportProgress("Измерение времени отключения...");
+        context.ReportProgress(BuildCoilsTurnedOnProgressMessage(coilsOnSample));
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -172,6 +175,7 @@ public class SafetyTimeStep(
                 var safetyTime = (float)(stopwatch.ElapsedMilliseconds / 1000.0);
                 logger.LogInformation("Катушки выключены за {SafetyTime:F2} сек: EV1={Ev1} мА, EV2={Ev2} мА",
                     safetyTime, readResult.Ev1Current, readResult.Ev2Current);
+                context.ReportProgress(BuildCoilsTurnedOffProgressMessage(safetyTime, readResult));
                 return new SafetyTimeResult(true, safetyTime, null, true);
             }
 
@@ -316,6 +320,21 @@ public class SafetyTimeStep(
     {
         return $"Измерение: {elapsedMilliseconds / 1000.0:F1} сек, EV1={readResult.Ev1Current} мА, EV2={readResult.Ev2Current} мА";
     }
+
+    private static string BuildCoilsTurnedOnProgressMessage(CoilCurrentsResult readResult)
+    {
+        return $"Катушки включены: EV1={readResult.Ev1Current} мА, EV2={readResult.Ev2Current} мА, t=0.0 сек";
+    }
+
+    private static string BuildCoilsTurnedOffProgressMessage(float safetyTime, CoilCurrentsResult readResult)
+    {
+        return $"Катушки выключены: EV1={readResult.Ev1Current} мА, EV2={readResult.Ev2Current} мА, t={safetyTime:F1} сек";
+    }
+
+    /// <summary>
+    /// Результат чтения токов катушек.
+    /// </summary>
+    private sealed record CoilsOnWaitResult(TestStepResult? FailureResult, CoilCurrentsResult? CoilsOnSample);
 
     /// <summary>
     /// Результат чтения токов катушек.

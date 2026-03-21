@@ -74,7 +74,7 @@
     private const double SafeZonePercent = 70;
     private const double RightDangerZonePercent = 15;
     private const double FullScalePercent = 100;
-    private const int BaseLabelPrecision = 1;
+    private const int BaseLabelPrecision = 2;
     private const int MaxLabelPrecision = 4;
 
     private double Range => Max - Min;
@@ -116,17 +116,16 @@
     {
         get
         {
-            var labels = new List<SliderLabel>();
-
-            AddUniqueLabel(labels, Min, LabelAlignment.Start);
-            AddUniqueLabel(labels, EffectiveGreenZoneStart, LabelAlignment.Center);
-            AddUniqueLabel(labels, GreenZoneCenter, LabelAlignment.Center);
-            AddUniqueLabel(labels, EffectiveGreenZoneEnd, LabelAlignment.Center);
-            AddUniqueLabel(labels, Max, LabelAlignment.End);
-
-            return labels
-                .OrderBy(label => label.Value)
-                .ToList();
+            return
+            [
+                new SliderLabel(Min, LabelAlignment.Start),
+                new SliderLabel(EffectiveGreenZoneStart, LabelAlignment.Center),
+                new SliderLabel(GreenZoneLeftInnerTick, LabelAlignment.Center),
+                new SliderLabel(GreenZoneCenter, LabelAlignment.Center),
+                new SliderLabel(GreenZoneRightInnerTick, LabelAlignment.Center),
+                new SliderLabel(EffectiveGreenZoneEnd, LabelAlignment.Center),
+                new SliderLabel(Max, LabelAlignment.End)
+            ];
         }
     }
 
@@ -200,7 +199,9 @@
     [
         Min,
         EffectiveGreenZoneStart,
+        GreenZoneLeftInnerTick,
         GreenZoneCenter,
+        GreenZoneRightInnerTick,
         EffectiveGreenZoneEnd,
         Max
     ];
@@ -221,16 +222,6 @@
         }
 
         AddUniqueValue(values, start + ((end - start) / 2));
-    }
-
-    private static void AddUniqueLabel(List<SliderLabel> labels, double value, LabelAlignment alignment)
-    {
-        if (labels.Any(label => AreClose(label.Value, value)))
-        {
-            return;
-        }
-
-        labels.Add(new SliderLabel(value, alignment));
     }
 
     private string GetLabelStyle(SliderLabel label)

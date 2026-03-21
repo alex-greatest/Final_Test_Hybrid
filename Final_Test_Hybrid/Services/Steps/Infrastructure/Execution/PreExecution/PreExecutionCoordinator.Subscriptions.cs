@@ -342,7 +342,13 @@ public partial class PreExecutionCoordinator
         Volatile.Write(ref _lastHardResetOrigin, origin);
         if (origin == ResetOriginNonPlc)
         {
-            BeginResetCycle(ResetOriginNonPlc, ensureAskEndWindow: false);
+            var barcodeWaitActive = HasActiveBarcodeWait();
+            var resetSequence = BeginResetCycle(ResetOriginNonPlc, ensureAskEndWindow: false);
+            infra.Logger.LogDebug(
+                "non_plc_hard_reset_cancel_barcode_wait: origin={ResetSource}, seq={ResetSequence}, barcodeWaitActive={BarcodeWaitActive}",
+                DescribeResetOrigin(origin),
+                resetSequence,
+                barcodeWaitActive);
         }
         HandleStopSignal(PreExecutionResolution.HardReset);
     }

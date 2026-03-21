@@ -2,6 +2,7 @@ using Final_Test_Hybrid.Models.Steps;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
+using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 
@@ -9,7 +10,8 @@ public sealed class BarcodeDebounceHandler(
     BarcodeScanService barcodeScanService,
     StepStatusReporter statusReporter,
     PreExecutionCoordinator preExecutionCoordinator,
-    OpcUaConnectionState connectionState)
+    OpcUaConnectionState connectionState,
+    ILogger<BarcodeDebounceHandler> logger)
 {
     private static readonly TimeSpan DebounceWindow = TimeSpan.FromMilliseconds(250);
     private readonly Lock _lock = new();
@@ -81,7 +83,21 @@ public sealed class BarcodeDebounceHandler(
 
     private Task DispatchBarcodeAsync(string barcode)
     {
-        return !CanAcceptBarcode() ? Task.CompletedTask : HandleBarcodeAsync(barcode);
+        var dropReason = GetDropReason();
+        if (dropReason == null)
+        {
+            return HandleBarcodeAsync(barcode);
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug(
+                "barcode_drop: reason={DropReason}, isAcceptingInput={IsAcceptingInput}, isConnected={IsConnected}",
+                dropReason,
+                preExecutionCoordinator.IsAcceptingInput,
+                connectionState.IsConnected);
+        }
+        return Task.CompletedTask;
     }
 
     private Task HandleBarcodeAsync(string barcode)
@@ -96,9 +112,14 @@ public sealed class BarcodeDebounceHandler(
         return Task.CompletedTask;
     }
 
-    private bool CanAcceptBarcode()
+    private string? GetDropReason()
     {
-        return preExecutionCoordinator.IsAcceptingInput && connectionState.IsConnected;
+        if (!preExecutionCoordinator.IsAcceptingInput)
+        {
+            return "not_accepting_input";
+        }
+
+        return !connectionState.IsConnected ? "opc_disconnected" : null;
     }
 
     private readonly record struct DebounceState(int Sequence, CancellationToken Token);

@@ -278,6 +278,13 @@ public string? GetLimits(LimitsContext context)
 - При `AutoReady = false` и отсутствии диагностической связи шаг возвращает `NoDiagnosticConnection`; рабочий путь продолжения — восстановить автомат и выполнить `Retry`.
 - После захвата runtime-lease шаг ждёт именно свежий runtime ping; stale `LastPingData` от ручной панели не считается успешной проверкой связи.
 
+**Примечание по execution stand-write (`SetStandModeAsync`)**
+- Execution-шаги, которые на retry возвращают котёл в режим Стенд, не должны писать ключ во время `dispatcher.IsReconnecting`.
+- Перед фактической записью такой шаг обязан дождаться ready-state диагностики: `IsStarted=true`, `IsConnected=true`, `IsReconnecting=false`, `LastPingData!=null`.
+- Ожидание выполняется boundedly (`20 c`, polling `100 мс`) через `context.DelayAsync(...)`, поэтому остаётся pause-aware и cancellation-aware.
+- Если ready-state не восстановился за это окно, шаг завершается communication-fail своего текущего fail-path; локальный multi-write retry по умолчанию не используется.
+- После фактического старта записи/чтения собственный error-handling шага не меняется: любая реальная ошибка операции завершает попытку так же, как раньше.
+
 **Примечание по `Coms/Safety_Time`:**
 - Шаг измерения `Safety time` использует только фактические step-level Modbus операции как источник истины по связи.
 - Любой read/write fail текущей попытки завершает шаг ошибкой без отдельного diagnostic connection latch.

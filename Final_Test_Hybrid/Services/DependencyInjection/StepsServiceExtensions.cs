@@ -105,6 +105,7 @@ public static class StepsServiceExtensions
         services.AddSingleton<OrderState>();
 
         // Scanning
+        services.AddSingleton<ScannerInputOwnershipService>();
         services.AddSingleton<BarcodeScanService>();
         services.AddSingleton<BarcodeDebounceHandler>();
         services.AddSingleton<ScanSessionManager>();

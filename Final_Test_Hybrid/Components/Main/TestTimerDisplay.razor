@@ -1,4 +1,4 @@
-@implements IDisposable
+@implements IAsyncDisposable
 @inject BoilerState BoilerState
 
 <RadzenCard Class="rz-p-2" Style="background-color: #e0e0e0; min-width: 220px;">
@@ -9,33 +9,110 @@
 </RadzenCard>
 
 @code {
+    private static readonly TimeSpan DisplayRefreshInterval = TimeSpan.FromMilliseconds(250);
     private string _displayTime = "00:00:00";
+    private CancellationTokenSource? _refreshLoopCts;
+    private Task? _refreshLoopTask;
     private bool _disposed;
 
     protected override void OnInitialized()
     {
         BoilerState.OnTestTimerTick += OnTimerTick;
         BoilerState.OnCleared += OnCleared;
+        UpdateDisplay();
+        StartRefreshLoop();
     }
 
     private void OnTimerTick()
     {
-        if (_disposed) return;
-        _displayTime = BoilerState.GetTestDurationFormatted();
-        _ = InvokeAsync(StateHasChanged);
+        if (_disposed)
+        {
+            return;
+        }
+
+        _ = InvokeAsync(UpdateDisplayAsync);
     }
 
     private void OnCleared()
     {
-        if (_disposed) return;
-        _displayTime = "00:00:00";
-        _ = InvokeAsync(StateHasChanged);
+        if (_disposed)
+        {
+            return;
+        }
+
+        _ = InvokeAsync(UpdateDisplayAsync);
     }
 
-    public void Dispose()
+    private void StartRefreshLoop()
+    {
+        _refreshLoopCts?.Dispose();
+        _refreshLoopCts = new CancellationTokenSource();
+        _refreshLoopTask = RunRefreshLoopAsync(_refreshLoopCts.Token);
+    }
+
+    private async Task RunRefreshLoopAsync(CancellationToken ct)
+    {
+        using var timer = new PeriodicTimer(DisplayRefreshInterval);
+        try
+        {
+            while (await timer.WaitForNextTickAsync(ct))
+            {
+                await InvokeAsync(UpdateDisplayAsync);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Нормальная остановка при Dispose.
+        }
+    }
+
+    private Task UpdateDisplayAsync()
+    {
+        if (_disposed)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (!UpdateDisplay())
+        {
+            return Task.CompletedTask;
+        }
+
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private bool UpdateDisplay()
+    {
+        var nextDisplay = BoilerState.GetTestDurationFormatted();
+        if (nextDisplay == _displayTime)
+        {
+            return false;
+        }
+
+        _displayTime = nextDisplay;
+        return true;
+    }
+
+    public async ValueTask DisposeAsync()
     {
         _disposed = true;
         BoilerState.OnTestTimerTick -= OnTimerTick;
         BoilerState.OnCleared -= OnCleared;
+        _refreshLoopCts?.Cancel();
+
+        if (_refreshLoopTask != null)
+        {
+            try
+            {
+                await _refreshLoopTask;
+            }
+            catch (OperationCanceledException)
+            {
+                // Нормальная остановка при Dispose.
+            }
+        }
+
+        _refreshLoopCts?.Dispose();
     }
 }

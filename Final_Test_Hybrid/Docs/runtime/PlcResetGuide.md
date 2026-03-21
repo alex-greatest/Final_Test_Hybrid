@@ -27,8 +27,8 @@
 
 - Любой новый reset-cycle (PLC и non-PLC) обязан увеличивать `_resetSequence`.
 - Старт reset-cycle выполняется через `BeginResetCycle(origin, ensureAskEndWindow)`:
-  - PLC-путь: `BeginResetCycle(ResetOriginPlc, true)` — `seq++`, повторное вооружение one-shot cleanup, открытие нового `ResetAskEndWindow(seq)`.
-  - non-PLC HardReset-путь: `BeginResetCycle(ResetOriginNonPlc, false)` — `seq++`, повторное вооружение one-shot cleanup, **без** открытия AskEnd-окна.
+  - PLC-путь: `BeginResetCycle(ResetOriginPlc, true)` — `seq++`, повторное вооружение one-shot cleanup, открытие нового `ResetAskEndWindow(seq)` и немедленная отмена текущего barcode-wait/reset-token.
+  - non-PLC HardReset-путь: `BeginResetCycle(ResetOriginNonPlc, false)` — `seq++`, повторное вооружение one-shot cleanup, **без** открытия AskEnd-окна, но с той же немедленной отменой текущего barcode-wait/reset-token.
 - Лог `Старт reset-цикла: seq=..., source=..., cleanupArmed=true` формируется только в `BeginResetCycle(...)`.
 - AskEnd-window хранится в `_currentAskEndWindow` и всегда привязан к конкретному `seq`.
 - `CompletePlcReset(seq)` завершает только окно того же `seq`; stale-окна не завершают текущий цикл.
@@ -146,6 +146,7 @@ private void ClearStateOnReset()
 PreExecutionCoordinator:
 - ждёт AskEnd перед стартом нового цикла;
 - отменяет ожидание штрихкода при reset;
+- для non-PLC HardReset перевооружает barcode-wait сразу в момент старта reset-cycle, без ожидания `AskEnd`;
 - после AskEnd запускает post-AskEnd decision flow: показывает `red_smile`, ждёт `Req_Repeat` или `AskEnd=false`, и только после финального решения завершает cleanup/reset-window.
 - защита post-AskEnd flow поднимается синхронно в `HandleGridClear()` до первого `await`, чтобы ранний `OnResetCompleted` не успел выполнить `ClearStateOnReset()` между `AskEnd` и post-AskEnd веткой.
 - для HardReset допускает fallback-очистку в `HandleHardResetExit`, если AskEnd путь не завершил cleanup.
@@ -312,7 +313,7 @@ private bool HandleResetStarting()
             || _resetReadyTransitionPending;
         _isResetting = true;
         _stepTimingService.PauseAllColumnsTiming();  // Паузим все таймеры
-        _sessionManager.ReleaseSession();
+        _scannerOwnership.ReleaseAllForReset();
         return shouldUseSoftResetPath;
     }
 }
@@ -357,6 +358,8 @@ private void TransitionToReadyInternal()
 - Для PLC soft reset `OnResetCompleted` больше не означает немедленный возврат scanner-ready состояния.
 - Если `PreExecutionCoordinator` ещё держит активный post-AskEnd flow, `ScanModeController` откладывает `TransitionToReadyInternal()`.
 - Возврат scanner session, restart scan timing и catch-up активация выполняются только после завершения post-AskEnd ветки.
+- PLC reset всегда снимает весь scanner ownership, включая активные scanner-диалоги.
+- Non-PLC hard reset обязан немедленно закрыть активный scanner-dialog и снять `Dialog` owner, но ordinary `PreExecution` ownership не должен перескакивать в ready сам по себе от одного закрытия окна; фактический допуск barcode по-прежнему определяется `IsAcceptingInput`/reset lifecycle.
 - `BoilerState.IsTestRunning` в repeat-сценариях сбрасывается только после финального PLC outcome:
   - normal completion repeat -> в `HandleRepeatRequestedExit` / `HandleNokRepeatRequestedExit`;
   - reset repeat -> в `StartRepeatAfterReset`;

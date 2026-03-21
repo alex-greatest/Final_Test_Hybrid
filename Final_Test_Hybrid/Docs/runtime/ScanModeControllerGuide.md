@@ -4,6 +4,8 @@
 
 `ScanModeController` управляет режимом сканирования: активация/деактивация на основе состояния оператора и автомата. Координирует управление сессией сканера, синхронизирует Scan-таймер с входной готовностью (AutoReady + PLC-связь) в фазе ожидания barcode и уведомляет подписчиков об изменении состояния.
 
+С версии unified scanner ownership `ScanModeController` владеет только ordinary `PreExecution` owner. Scanner-диалоги переводятся в отдельный `dialog-mode` через `ScannerInputOwnershipService`.
+
 ## Условия активации
 
 Режим сканирования активен когда:
@@ -67,7 +69,7 @@ TryActivateScanMode()
 
 **PerformInitialActivation:**
 1. `_isActivated = true`
-2. `AcquireSession()` — захват сканера
+2. `AcquireSession()` — поднятие `PreExecution` owner
 3. `AddScanStepToGrid()` — добавление в UI
 4. `StartScanTiming()` — запуск таймера
 5. `StartMainLoop()` — запуск цикла обработки
@@ -90,6 +92,7 @@ TryDeactivateScanMode()
 - AutoMode потерян, но оператор авторизован
 - Выполняется тест (`IsAnyActive`)
 - Ожидание сканирования (`IsAcceptingInput`)
+- `PreExecution` owner снимается, но `dialog-mode` этим путём не поднимается и не пересчитывается
 
 **Полная деактивация:**
 - Отмена main loop
@@ -109,10 +112,16 @@ private bool HandleResetStarting()
     var wasInScanPhase = IsInScanningPhaseUnsafe;
     _isResetting = true;
     _stepTimingService.PauseAllColumnsTiming();
-    _sessionManager.ReleaseSession();
+    _scannerOwnership.ReleaseAllForReset();
     return wasInScanPhase;  // → тип сброса
 }
 ```
+
+Контракт:
+
+- PLC reset снимает **весь** scanner ownership (`Dialog` + `PreExecution`);
+- UI-close/reset hooks вне `ScanModeController` снимают только `Dialog` owner;
+- `PreExecution` owner не должен возвращаться от одного факта закрытия диалога, если reset lifecycle ещё не завершён.
 
 ### OnResetCompleted
 
@@ -130,6 +139,8 @@ private void HandleResetCompleted()
 4. Иначе:
    - если активен `InterruptReasonDialog` в `PreExecutionCoordinator`, restart scan-таймера блокируется (`ScanTimingRestartBlockedByInterruptDialog`);
    - если диалог не активен — `ResetScanTiming()` + `AcquireSession()` + синхронизация Scan-таймера с текущей входной готовностью.
+
+`AcquireSession()` здесь возвращает только ordinary `PreExecution` owner. Если активен scanner-dialog, `BoilerInfo` не должен считаться ordinary-ready.
 ## Синхронизация Scan-таймера по входной готовности
 
 `ScanModeController` синхронизирует тик Scan-таймера только для сценария ожидания barcode:
@@ -175,6 +186,7 @@ private void HandleResetCompleted()
 | Сервис | Назначение |
 |--------|------------|
 | `ScanSessionManager` | Управление сессией сканера |
+| `ScannerInputOwnershipService` | Единый ownership raw scanner между `PreExecution` и scanner-диалогами |
 | `OperatorState` | Состояние авторизации оператора |
 | `AutoReadySubscription` | Состояние готовности автомата |
 | `OpcUaConnectionState` | Состояние PLC-связи для синхронизации Scan-таймера |

@@ -25,6 +25,7 @@ public class BoilerState
     private bool _isTestRunning;
     private int _testResult;
     private DateTime? _testStartTime;
+    private TimeSpan? _testStoppedDuration;
     private System.Threading.Timer? _testTimer;
     private DateTime? _changeoverStartTime;
     private TimeSpan? _changeoverStoppedDuration;
@@ -165,6 +166,7 @@ public class BoilerState
         lock (_lock)
         {
             _testStartTime = DateTime.Now;
+            _testStoppedDuration = null;
             _testTimer?.Dispose();
             _testTimer = new System.Threading.Timer(OnTimerTick, null, 0, 1000);
         }
@@ -174,6 +176,10 @@ public class BoilerState
     {
         lock (_lock)
         {
+            if (_testStartTime.HasValue && _testStoppedDuration == null)
+            {
+                _testStoppedDuration = DateTime.Now - _testStartTime.Value;
+            }
             _testTimer?.Change(Timeout.Infinite, Timeout.Infinite);
         }
     }
@@ -182,6 +188,11 @@ public class BoilerState
     {
         lock (_lock)
         {
+            if (_testStoppedDuration.HasValue)
+            {
+                return _testStoppedDuration.Value;
+            }
+
             return _testStartTime.HasValue
                 ? DateTime.Now - _testStartTime.Value
                 : TimeSpan.Zero;
@@ -297,6 +308,7 @@ public class BoilerState
             _testTimer?.Dispose();
             _testTimer = null;
             _testStartTime = null;
+            _testStoppedDuration = null;
         }
         UpdateState(serialNumber: null, article: null, isValid: false, boilerTypeCycle: null, recipes: null);
         _recipeProvider.Clear();

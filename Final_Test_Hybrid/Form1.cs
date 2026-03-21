@@ -316,6 +316,7 @@ public partial class Form1 : Form
             _springBootHealthService?.Stop();
             _shiftService?.Stop();
             _databaseConnectionService?.Stop();
+            await WritePlcAutoFalseOnShutdownAsync();
 
             // Dispose PLC Reset components before OPC UA disconnection
             var plcResetCoordinator = _serviceProvider?.GetService<PlcResetCoordinator>();
@@ -351,5 +352,17 @@ public partial class Form1 : Form
         {
             //ignored
         }
+    }
+
+    private async Task WritePlcAutoFalseOnShutdownAsync()
+    {
+        var plcAutoWriter = _serviceProvider?.GetService<PlcAutoWriterService>();
+        if (plcAutoWriter == null)
+        {
+            return;
+        }
+
+        using var shutdownWriteCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        await plcAutoWriter.WriteAutoFalseOnShutdownAsync(shutdownWriteCts.Token);
     }
 }

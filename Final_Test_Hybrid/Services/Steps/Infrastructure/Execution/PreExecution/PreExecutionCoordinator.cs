@@ -200,8 +200,8 @@ public partial class PreExecutionCoordinator(
         if (ensureAskEndWindow)
         {
             EnsureAskEndWindow(resetSequence);
-            CancelResetToken();
         }
+        CancelAndRearmResetToken();
         return resetSequence;
     }
 
@@ -312,6 +312,18 @@ public partial class PreExecutionCoordinator(
         {
             // Expected during shutdown
         }
+    }
+
+    private void CancelAndRearmResetToken()
+    {
+        CancelResetToken();
+        ReplaceResetToken();
+    }
+
+    private bool HasActiveBarcodeWait()
+    {
+        var barcodeSource = Volatile.Read(ref _barcodeSource);
+        return barcodeSource != null && !barcodeSource.Task.IsCompleted;
     }
 
     /// <summary>

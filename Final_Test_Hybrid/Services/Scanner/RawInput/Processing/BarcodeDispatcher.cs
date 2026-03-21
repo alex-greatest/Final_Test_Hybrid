@@ -29,6 +29,7 @@ public sealed class BarcodeDispatcher(ScanSessionHandler sessionHandler, ILogger
         {
             return;
         }
+
         DispatchToFallback(barcode);
     }
 
@@ -43,5 +44,14 @@ public sealed class BarcodeDispatcher(ScanSessionHandler sessionHandler, ILogger
         return true;
     }
 
-    private void DispatchToFallback(string barcode) => _fallbackHandler?.Invoke(barcode);
+    private void DispatchToFallback(string barcode)
+    {
+        if (_fallbackHandler == null)
+        {
+            logger.LogWarning("barcode_rejected_no_owner: raw dispatcher has no session or fallback handler");
+            return;
+        }
+
+        _fallbackHandler.Invoke(barcode);
+    }
 }

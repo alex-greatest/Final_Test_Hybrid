@@ -23,6 +23,7 @@ public class ScanModeController : IDisposable
     private readonly BarcodeDebounceHandler _barcodeDebounceHandler;
     private readonly PreExecutionCoordinator _preExecutionCoordinator;
     private readonly PlcResetCoordinator _plcResetCoordinator;
+    private readonly ScannerInputOwnershipService _scannerOwnership;
     private readonly IStepTimingService _stepTimingService;
     private readonly ExecutionActivityTracker _activityTracker;
     private readonly DualLogger<ScanModeController> _logger;
@@ -88,6 +89,7 @@ public class ScanModeController : IDisposable
         BarcodeDebounceHandler barcodeDebounceHandler,
         PreExecutionCoordinator preExecutionCoordinator,
         PlcResetCoordinator plcResetCoordinator,
+        ScannerInputOwnershipService scannerOwnership,
         IStepTimingService stepTimingService,
         ExecutionActivityTracker activityTracker,
         DualLogger<ScanModeController> logger)
@@ -100,6 +102,7 @@ public class ScanModeController : IDisposable
         _barcodeDebounceHandler = barcodeDebounceHandler;
         _preExecutionCoordinator = preExecutionCoordinator;
         _plcResetCoordinator = plcResetCoordinator;
+        _scannerOwnership = scannerOwnership;
         _stepTimingService = stepTimingService;
         _activityTracker = activityTracker;
         _logger = logger;
@@ -158,7 +161,7 @@ public class ScanModeController : IDisposable
             _isResetting = true;
             _scanPausedByInputReadiness = false;
             _stepTimingService.PauseAllColumnsTiming();
-            _sessionManager.ReleaseSession();
+            _scannerOwnership.ReleaseAllForReset();
             return shouldUseSoftResetPath;
         }
     }

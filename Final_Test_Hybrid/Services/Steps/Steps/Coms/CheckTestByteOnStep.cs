@@ -3,6 +3,7 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Access;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
+using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Options;
@@ -16,6 +17,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
 /// </summary>
 public class CheckTestByteOnStep(
     AccessLevelManager accessLevelManager,
+    IModbusDispatcher dispatcher,
     IOptions<DiagnosticSettings> settings,
     DualLogger<CheckTestByteOnStep> logger) : ITestStep, INonSkippable
 {
@@ -52,7 +54,12 @@ public class CheckTestByteOnStep(
     {
         logger.LogInformation("Retry: пытаемся установить режим Стенд");
 
-        var setResult = await accessLevelManager.SetStandModeAsync(context.PacedDiagWriter, ct);
+        var setResult = await StandModeWriteExecutionHelper.ExecuteAsync(
+            context,
+            dispatcher,
+            innerCt => accessLevelManager.SetStandModeAsync(context.PacedDiagWriter, innerCt),
+            logger,
+            ct);
         if (!setResult.Success)
         {
             return CreateWriteError(setResult);

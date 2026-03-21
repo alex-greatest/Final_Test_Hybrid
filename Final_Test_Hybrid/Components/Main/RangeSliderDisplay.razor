@@ -27,7 +27,7 @@
 </div>
 
 @code {
-    private const int BasePrecision = 1;
+    private const int BasePrecision = 2;
     private const int MaxPrecision = 4;
 
     /// <summary>
@@ -69,10 +69,16 @@
     private static int GetRequiredPrecision(RangeSliderDisplayData slider)
     {
         var values = new List<double>();
+        var greenStart = Math.Min(slider.GreenZoneStart, slider.GreenZoneEnd);
+        var greenEnd = Math.Max(slider.GreenZoneStart, slider.GreenZoneEnd);
+        var greenCenter = GetGreenZoneCenter(slider);
+
         AddUniqueValue(values, slider.Min);
-        AddUniqueValue(values, Math.Min(slider.GreenZoneStart, slider.GreenZoneEnd));
-        AddUniqueValue(values, GetGreenZoneCenter(slider));
-        AddUniqueValue(values, Math.Max(slider.GreenZoneStart, slider.GreenZoneEnd));
+        AddUniqueValue(values, greenStart);
+        AddUniqueValue(values, greenStart + ((greenCenter - greenStart) / 2));
+        AddUniqueValue(values, greenCenter);
+        AddUniqueValue(values, greenCenter + ((greenEnd - greenCenter) / 2));
+        AddUniqueValue(values, greenEnd);
         AddUniqueValue(values, slider.Max);
 
         for (var precision = BasePrecision; precision <= MaxPrecision; precision++)

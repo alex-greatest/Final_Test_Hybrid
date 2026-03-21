@@ -1,6 +1,7 @@
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Access;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
+using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
@@ -14,6 +15,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
 /// </summary>
 public class ChStartMaxHeatoutStep(
     AccessLevelManager accessLevelManager,
+    IModbusDispatcher dispatcher,
     IOptions<DiagnosticSettings> settings,
     DualLogger<ChStartMaxHeatoutStep> logger) : IHasPlcBlockPath, IRequiresPlcSubscriptions, INonSkippable
 {
@@ -64,7 +66,12 @@ public class ChStartMaxHeatoutStep(
     {
         logger.LogInformation("Retry: переводим котёл в режим Стенд перед повторным запуском Max Heatout");
 
-        var setResult = await accessLevelManager.SetStandModeAsync(context.PacedDiagWriter, ct);
+        var setResult = await StandModeWriteExecutionHelper.ExecuteAsync(
+            context,
+            dispatcher,
+            innerCt => accessLevelManager.SetStandModeAsync(context.PacedDiagWriter, innerCt),
+            logger,
+            ct);
         if (!setResult.Success)
         {
             var message = ComsStepFailureHelper.BuildWriteMessage(setResult, "установке режима Стенд", $"Ошибка установки режима Стенд. {setResult.Error}");
@@ -240,16 +247,12 @@ public class ChStartMaxHeatoutStep(
         string errorMessage,
         CancellationToken ct)
     {
-        var result = await context.TagWaiter.WaitAnyAsync(
+        await context.TagWaiter.WaitAnyAsync(
             context.TagWaiter.CreateWaitGroup<FaultSignal>()
                 .WaitForTrue(ErrorTag, () => FaultSignal.Error, "Error"),
             ct);
 
-        return result.Result switch
-        {
-            FaultSignal.Error => TestStepResult.Fail(errorMessage),
-            _ => TestStepResult.Fail(errorMessage)
-        };
+        return TestStepResult.Fail(errorMessage);
     }
 
     /// <summary>

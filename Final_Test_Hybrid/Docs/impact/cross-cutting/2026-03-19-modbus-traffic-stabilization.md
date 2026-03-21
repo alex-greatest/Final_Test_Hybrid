@@ -38,10 +38,12 @@
   - stale `LastPingData` от ручной панели не считается успешной проверкой связи;
   - fail-path `NoDiagnosticConnection` теперь всегда пытается остановить dispatcher, включая shared-session reuse.
 - Для selected `Coms/*` шагов введён единый helper communication-vs-functional сообщений без добавления новых error codes.
-- `Coms/Write_Test_Byte_ON` усилен локальным bounded retry записи режима стенда:
-  - шаг делает до `3` попыток записи;
-  - повторные попытки идут без отдельной локальной задержки, только через существующий global pacing `PacedDiagWriter`;
-  - общий `AccessLevelManager` не менялся, чтобы новый retry не распространился на остальные шаги без отдельного решения.
+- Для execution stand-write введён общий reconnect-ready gate:
+  - retry-ветки `Coms/*`, которые перед своей основной операцией вызывают `SetStandModeAsync(...)`, теперь не пишут ключ стенда в active reconnect-window;
+  - перед фактической записью helper boundedly ждёт `IsStarted=true`, `IsConnected=true`, `IsReconnecting=false`, `LastPingData!=null`;
+  - ожидание ограничено `20 c`, идёт через `context.DelayAsync(...)` и остаётся pause-aware/cancellation-aware;
+  - после ready-state выполняется одна реальная запись через прежний `PacedDiagWriter`, без локального multi-write retry по умолчанию;
+  - fail-path самих шагов после фактического старта записи/чтения не менялся.
 - `ConnectionTestPanel` normal-mode reset больше не маскирует реальный результат записи: UI получает фактический `bool` от `AccessLevelManager.ResetToNormalModeAsync()`.
 - `Coms/Safety_Time` переведён на прямой runtime-контракт по фактическому step-level Modbus IO:
   - отдельный `DiagnosticConnectionState`/connection-latch удалён как неиспользуемый источник истины;
@@ -54,6 +56,10 @@
   - токи EV1/EV2 читаются одним batch-read на диапазон документных регистров `1023..1028` (Modbus `1022..1027` при `BaseAddressOffset=1`);
   - EV1 и EV2 теперь берутся из одного Modbus-среза вместо двух разнесённых paced-read;
   - progress в фазе измерения показывает elapsed time вместе с актуальными EV1/EV2, чтобы UI не создавал ложный скачок `ожидание -> измерение`.
+- Для `Coms/Safety_Time` дополнительно защёлкнуты operator-facing phase-boundary samples без изменения safety-логики:
+  - при входе в фазу измерения progress фиксирует последний raw-sample `Катушки включены: EV1=..., EV2=..., t=0.0 сек`;
+  - во время измерения остаётся динамический progress `Измерение: t, EV1, EV2`;
+  - при фактическом отпускании катушек progress фиксирует последний raw-sample `Катушки выключены: EV1=..., EV2=..., t=... сек`.
 - `Read_Soft_Code_Plug` для mismatch `1054` возвращён к операторской диагностике по котлу/жгуту и не деградирует до generic boiler wording.
 - `EcuErrorSyncService` теперь очищает ECU-state не только на `Disconnecting`, но и на `Stopped`, чтобы неожиданный stop worker'а не оставлял активную ECU-ошибку залипшей.
 - `CH.razor` и `DHW.razor` переведены на guarded polling:
@@ -85,6 +91,7 @@
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Registrator/TestStepContext.cs`
 - `Final_Test_Hybrid/Services/Steps/Infrastructure/Registrator/TestStepModbusPacing.cs`
 - `Final_Test_Hybrid/Services/Steps/Steps/Coms/ComsStepFailureHelper.cs`
+- `Final_Test_Hybrid/Services/Steps/Steps/Coms/StandModeWriteExecutionHelper.cs`
 - `Final_Test_Hybrid/Services/Steps/Steps/Coms/WriteTestByteOnStep.cs`
 - `Final_Test_Hybrid/Services/Steps/Steps/Coms/WriteTestByteOffStep.cs`
 - `Final_Test_Hybrid/Services/Steps/Steps/Coms/CheckTestByteOnStep.cs`
@@ -125,10 +132,12 @@
 - `Final_Test_Hybrid.Tests/Runtime/EcuErrorSyncServiceTests.cs`
 - `Final_Test_Hybrid.Tests/Runtime/ModbusDispatcherReconnectTests.cs`
 - `Final_Test_Hybrid.Tests/Runtime/SafetyTimeStepTests.cs`
+- `Final_Test_Hybrid.Tests/Runtime/StandModeWriteExecutionHelperTests.cs`
 - `Final_Test_Hybrid/Docs/execution/StepsGuide.md`
 - `Final_Test_Hybrid/Docs/diagnostics/DiagnosticGuide.md`
 - `Final_Test_Hybrid/Docs/changes/2026-03-20-modbus-reconnect-pending-hang.md`
 - `Final_Test_Hybrid/Docs/changes/2026-03-20-modbus-runtime-handoff-stale-state.md`
+- `Final_Test_Hybrid/Docs/changes/2026-03-20-execution-stand-write-reconnect-gate.md`
 - `Final_Test_Hybrid/Docs/diagnostics/BoilerLockGuide.md`
 - `Final_Test_Hybrid/appsettings.json`
 
@@ -155,12 +164,6 @@
 - После введения reconnect fail-fast для всей очереди дополнительно выполнены:
   - `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --filter "FullyQualifiedName~ModbusDispatcherReconnectTests"` — успешно, `4/4`.
   - Полный `build/format/inspectcode` см. в текущем change-set.
-- После локального bounded retry в `Coms/Write_Test_Byte_ON` дополнительно выполнены:
-  - `dotnet build Final_Test_Hybrid.slnx` — успешно.
-  - `dotnet format analyzers Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
-  - `dotnet format style Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
-  - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/WriteTestByteOnStep.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-warning-write-test-byte-on.txt" -e=WARNING` — отчёт пуст (`Solution Final_Test_Hybrid.slnx`).
-  - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/WriteTestByteOnStep.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-hint-write-test-byte-on.txt" -e=HINT` — остался только reflection false-positive `Class 'WriteTestByteOnStep' is never used`, потому что шаг поднимается runtime-регистратором через рефлексию.
 - После локального batch-read/progress fix в `Coms/Safety_Time` дополнительно выполнены:
   - `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --filter SafetyTimeStepTests` — успешно, `5/5`; остаются baseline warning `MSB3277` по `WindowsBase`.
   - `dotnet build Final_Test_Hybrid.slnx` — успешно; остаются те же baseline warning `MSB3277` по `WindowsBase`.
@@ -168,6 +171,13 @@
   - `dotnet format style Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
   - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/SafetyTimeStep.cs;Final_Test_Hybrid.Tests/Runtime/SafetyTimeStepTests.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-warning-safetytime-batch-read.txt" -e=WARNING` — отчёт пуст (`Solution Final_Test_Hybrid.slnx`).
   - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/SafetyTimeStep.cs;Final_Test_Hybrid.Tests/Runtime/SafetyTimeStepTests.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-hint-safetytime-batch-read.txt" -e=HINT` — остались только cleanup-подсказки (`Merge into pattern`, `Convert into 'return' statement`), новых safety/regression замечаний по batch-read не найдено.
+- После phase-boundary progress latch в `Coms/Safety_Time` дополнительно выполнены:
+  - `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --filter SafetyTimeStepTests` — успешно, `5/5`; остаются baseline warning `MSB3277` по `WindowsBase`.
+  - `dotnet build Final_Test_Hybrid.slnx` — успешно; остаются те же baseline warning `MSB3277` по `WindowsBase`.
+  - `dotnet format analyzers Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
+  - `dotnet format style Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
+  - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/SafetyTimeStep.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-warning-safetytime-progress-latch.txt" -e=WARNING` — отчёт пуст.
+  - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/SafetyTimeStep.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-hint-safetytime-progress-latch.txt" -e=HINT` — отчёт пуст.
 - После полного review/fix пакета дополнительно выполнены:
   - `dotnet build Final_Test_Hybrid.slnx` — успешно; остаются baseline warning `MSB3277` по `WindowsBase`.
   - `dotnet format analyzers Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
@@ -175,6 +185,13 @@
   - `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --filter "FullyQualifiedName~ModbusDispatcherReconnectTests|FullyQualifiedName~SafetyTimeStepTests|FullyQualifiedName~CheckCommsStepTests|FullyQualifiedName~EcuErrorSyncServiceTests|FullyQualifiedName~AccessLevelManagerTests"` — успешно, `15/15`.
   - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/DependencyInjection/DiagnosticServiceExtensions.cs;Final_Test_Hybrid/Services/Diagnostic/Access/AccessLevelManager.cs;Final_Test_Hybrid/Services/Diagnostic/Protocol/CommandQueue/Internal/ModbusCommandQueue.cs;Final_Test_Hybrid/Services/Diagnostic/Protocol/CommandQueue/Internal/ModbusWorkerLoop.cs;Final_Test_Hybrid/Services/Diagnostic/Protocol/CommandQueue/Internal/ModbusReconnectExceptionFactory.cs;Final_Test_Hybrid/Services/Diagnostic/Protocol/CommandQueue/ModbusDispatcher.cs;Final_Test_Hybrid/Services/Diagnostic/Services/EcuErrorSyncService.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/CheckCommsStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Table.Part1.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/SafetyTimeStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/WriteTestByteOnStep.cs;Final_Test_Hybrid.Tests/Runtime/AccessLevelManagerTests.cs;Final_Test_Hybrid.Tests/Runtime/CheckCommsStepTests.cs;Final_Test_Hybrid.Tests/Runtime/EcuErrorSyncServiceTests.cs;Final_Test_Hybrid.Tests/Runtime/ModbusDispatcherReconnectTests.cs;Final_Test_Hybrid.Tests/Runtime/SafetyTimeStepTests.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-warning-modbus-review.txt" -e=WARNING` — отчёт пуст (`Solution Final_Test_Hybrid.slnx`).
   - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/DependencyInjection/DiagnosticServiceExtensions.cs;Final_Test_Hybrid/Services/Diagnostic/Access/AccessLevelManager.cs;Final_Test_Hybrid/Services/Diagnostic/Protocol/CommandQueue/Internal/ModbusCommandQueue.cs;Final_Test_Hybrid/Services/Diagnostic/Protocol/CommandQueue/Internal/ModbusWorkerLoop.cs;Final_Test_Hybrid/Services/Diagnostic/Protocol/CommandQueue/Internal/ModbusReconnectExceptionFactory.cs;Final_Test_Hybrid/Services/Diagnostic/Protocol/CommandQueue/ModbusDispatcher.cs;Final_Test_Hybrid/Services/Diagnostic/Services/EcuErrorSyncService.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/CheckCommsStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Table.Part1.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/SafetyTimeStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/WriteTestByteOnStep.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-hint-modbus-review.txt" -e=HINT` — остались только non-blocking cleanup/reflection hints (`Use object initializer`, `Invert if`, reflection false-positive по шагам, `AccessLevelManager` style/log suggestions); новых пропущенных runtime-веток по review-пакету не найдено.
+- После введения execution stand-write reconnect-gate дополнительно выполнены:
+  - `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --filter "FullyQualifiedName~StandModeWriteExecutionHelperTests|FullyQualifiedName~CheckCommsStepTests|FullyQualifiedName~ModbusDispatcherReconnectTests"` — успешно, `12/12`; остаются baseline warning `MSB3277` по `WindowsBase`.
+  - `dotnet build Final_Test_Hybrid.slnx` — успешно; остаются те же baseline warning `MSB3277` по `WindowsBase`.
+  - `dotnet format analyzers Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
+  - `dotnet format style Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
+  - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/StandModeWriteExecutionHelper.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/WriteTestByteOnStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/CheckTestByteOnStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChPumpStartStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChResetStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMaxHeatoutStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMinHeatoutStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/PumpStartFuncResetStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/SetDhwTankModeStep.cs;Final_Test_Hybrid.Tests/Runtime/StandModeWriteExecutionHelperTests.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-warning-stand-mode-gate.txt" -e=WARNING` — отчёт пуст (`Solution Final_Test_Hybrid.slnx`).
+  - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/StandModeWriteExecutionHelper.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/WriteTestByteOnStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/CheckTestByteOnStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChPumpStartStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChResetStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMaxHeatoutStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMinHeatoutStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/PumpStartFuncResetStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/SetDhwTankModeStep.cs;Final_Test_Hybrid.Tests/Runtime/StandModeWriteExecutionHelperTests.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-hint-stand-mode-gate.txt" -e=HINT` — остались только non-blocking reflection/style hints (`Class ... is never used` для шагов, `Convert into constant`, `Invert if`, `can be made static`, `Merge into pattern`); новых safety-регрессий по reconnect-gate не найдено.
 
 ## Residual Risks
 
@@ -185,4 +202,5 @@
 
 - Новый failure mode зафиксирован в `Docs/changes/2026-03-20-modbus-reconnect-pending-hang.md`.
 - Новый failure mode runtime handoff/stale state зафиксирован в `Docs/changes/2026-03-20-modbus-runtime-handoff-stale-state.md`.
+- Новый failure mode execution stand-write during reconnect зафиксирован в `Docs/changes/2026-03-20-execution-stand-write-reconnect-gate.md`.
 - Для локального batch-read/progress fix в `Coms/Safety_Time` новый incident не выявлен.

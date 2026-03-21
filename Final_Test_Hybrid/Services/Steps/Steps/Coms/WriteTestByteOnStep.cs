@@ -1,7 +1,7 @@
 using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Access;
-using Final_Test_Hybrid.Services.Diagnostic.Models;
+using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
@@ -13,10 +13,9 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
 /// </summary>
 public class WriteTestByteOnStep(
     AccessLevelManager accessLevelManager,
+    IModbusDispatcher dispatcher,
     DualLogger<WriteTestByteOnStep> logger) : ITestStep
 {
-    private const int MaxWriteAttempts = 3;
-
     public string Id => "coms-write-test-byte-on";
     public string Name => "Coms/Write_Test_Byte_ON";
     public string Description => "Установка котла в режим \"Стенд\"";
@@ -25,7 +24,12 @@ public class WriteTestByteOnStep(
     {
         logger.LogInformation("Установка режима Стенд");
 
-        var result = await TrySetStandModeAsync(context, ct);
+        var result = await StandModeWriteExecutionHelper.ExecuteAsync(
+            context,
+            dispatcher,
+            innerCt => accessLevelManager.SetStandModeAsync(context.PacedDiagWriter, innerCt),
+            logger,
+            ct);
 
         if (!result.Success)
         {
@@ -39,38 +43,5 @@ public class WriteTestByteOnStep(
 
         logger.LogInformation("Режим Стенд установлен успешно");
         return TestStepResult.Pass();
-    }
-
-    private async Task<DiagnosticWriteResult> TrySetStandModeAsync(
-        TestStepContext context,
-        CancellationToken ct)
-    {
-        DiagnosticWriteResult? lastResult = null;
-
-        for (var attempt = 1; attempt <= MaxWriteAttempts; attempt++)
-        {
-            ct.ThrowIfCancellationRequested();
-
-            var result = await accessLevelManager.SetStandModeAsync(context.PacedDiagWriter, ct);
-            if (result.Success)
-            {
-                return result;
-            }
-
-            lastResult = result;
-            if (attempt == MaxWriteAttempts)
-            {
-                break;
-            }
-
-            logger.LogWarning(
-                "Не удалось установить режим Стенд. Попытка {Attempt}/{MaxAttempts} завершилась ошибкой: {Error}. Выполняем повторную запись",
-                attempt,
-                MaxWriteAttempts,
-                result.Error);
-        }
-
-        return lastResult
-            ?? throw new InvalidOperationException("Запись режима Стенд завершилась без результата.");
     }
 }

@@ -49,6 +49,22 @@ public sealed class PlcAutoWriterService : IDisposable
             _logger.LogError(ex, "Ошибка автозаписи PLC тега Test.Auto"));
     }
 
+    public async Task WriteAutoFalseOnShutdownAsync(CancellationToken ct = default)
+    {
+        await _writeGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            await WriteAutoFalseBestEffortAsync(ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            _writeGate.Release();
+        }
+    }
+
     private async Task WriteAutoTrueOnConnectedSafeAsync(CancellationToken ct)
     {
         await _writeGate.WaitAsync(ct).ConfigureAwait(false);
@@ -104,6 +120,56 @@ public sealed class PlcAutoWriterService : IDisposable
 
         _logger.LogWarning(
             "PLC тег {Tag} = true не записан после {MaxAttempts} попыток",
+            BaseTags.TestAuto,
+            MaxWriteAttempts);
+    }
+
+    private async Task WriteAutoFalseBestEffortAsync(CancellationToken ct)
+    {
+        if (!_connectionState.IsConnected)
+        {
+            _logger.LogInformation(
+                "Пропуск shutdown-записи PLC тега {Tag} = false: OPC UA уже не подключён",
+                BaseTags.TestAuto);
+            return;
+        }
+
+        for (var attempt = 1; attempt <= MaxWriteAttempts; attempt++)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var result = await _tagService.WriteAsync(BaseTags.TestAuto, false, ct, silent: true)
+                .ConfigureAwait(false);
+            if (result.Success)
+            {
+                _logger.LogInformation(
+                    "PLC тег {Tag} записан: false при закрытии приложения (попытка {Attempt}/{MaxAttempts})",
+                    BaseTags.TestAuto,
+                    attempt,
+                    MaxWriteAttempts);
+                return;
+            }
+
+            if (!ShouldRetry(result, attempt))
+            {
+                _logger.LogWarning(
+                    "Не удалось записать PLC тег {Tag} = false при закрытии приложения: {Error}",
+                    BaseTags.TestAuto,
+                    result.Error ?? "неизвестная ошибка");
+                return;
+            }
+
+            _logger.LogWarning(
+                "Не удалось записать PLC тег {Tag} = false при закрытии приложения. Попытка {Attempt}/{MaxAttempts}. Ошибка: {Error}",
+                BaseTags.TestAuto,
+                attempt,
+                MaxWriteAttempts,
+                result.Error ?? "неизвестная ошибка");
+            await Task.Delay(RetryDelay, ct).ConfigureAwait(false);
+        }
+
+        _logger.LogWarning(
+            "PLC тег {Tag} = false не записан при закрытии приложения после {MaxAttempts} попыток",
             BaseTags.TestAuto,
             MaxWriteAttempts);
     }

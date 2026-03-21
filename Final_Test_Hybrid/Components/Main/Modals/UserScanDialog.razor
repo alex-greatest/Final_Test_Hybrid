@@ -1,8 +1,8 @@
-@using Final_Test_Hybrid.Services.Scanner.RawInput
+@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning
 @using Final_Test_Hybrid.Services.SpringBoot.Operator
 @inject DialogService DialogService
 @inject NotificationService NotificationService
-@inject RawInputService ScannerService
+@inject ScannerInputOwnershipService ScannerInputOwnership
 @inject OperatorAuthService OperatorAuthService
 @implements IDisposable
 
@@ -30,13 +30,13 @@
     [Parameter]
     public string Text { get; set; } = "Отсканируйте код";
 
-    private IDisposable? _scanSession;
+    private readonly string _dialogKey = $"user-scan-dialog:{Guid.NewGuid():N}";
     private bool _disposed;
     private bool _isLoading;
 
     protected override void OnInitialized()
     {
-        _scanSession = ScannerService.RequestScan(OnBarcodeScanned);
+        ScannerInputOwnership.AcquireDialogOwner(_dialogKey, OnBarcodeScanned);
     }
 
     private async void OnBarcodeScanned(string barcode)
@@ -82,7 +82,7 @@
         if (result.Success)
         {
             NotificationService.Notify(NotificationSeverity.Success, "Авторизация успешна");
-            DialogService.Close(true);
+            CloseDialog(true);
             return;
         }
         NotificationService.Notify(NotificationSeverity.Error, result.ErrorMessage ?? "Неизвестная ошибка");
@@ -91,12 +91,18 @@
 
     private void OnCancel()
     {
-        DialogService.Close(null);
+        CloseDialog(null);
     }
 
     public void Dispose()
     {
         _disposed = true;
-        _scanSession?.Dispose();
+        ScannerInputOwnership.ReleaseDialogOwner(_dialogKey);
+    }
+
+    private void CloseDialog(object? result)
+    {
+        ScannerInputOwnership.ReleaseDialogOwner(_dialogKey);
+        DialogService.Close(result);
     }
 }

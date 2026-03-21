@@ -1,26 +1,25 @@
-using Final_Test_Hybrid.Services.Scanner.RawInput;
 using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 
 public class ScanSessionManager(
-    RawInputService rawInputService,
+    ScannerInputOwnershipService scannerOwnership,
     ILogger<ScanSessionManager> logger)
     : IDisposable
 {
     private readonly Lock _sessionLock = new();
-    private IDisposable? _scanSession;
-    public bool HasActiveSession => _scanSession != null;
+    private Action<string>? _barcodeHandler;
 
     public void AcquireSession(Action<string> barcodeHandler)
     {
         lock (_sessionLock)
         {
-            if (_scanSession != null)
+            if (_barcodeHandler != null && ReferenceEquals(_barcodeHandler, barcodeHandler))
             {
                 return;
             }
-            _scanSession = rawInputService.RequestScan(barcodeHandler, takeOver: false);
+            _barcodeHandler = barcodeHandler;
+            scannerOwnership.EnsurePreExecutionOwner(barcodeHandler);
             logger.LogDebug("Scan session acquired");
         }
     }
@@ -29,12 +28,12 @@ public class ScanSessionManager(
     {
         lock (_sessionLock)
         {
-            if (_scanSession == null)
+            if (_barcodeHandler == null)
             {
                 return;
             }
-            _scanSession.Dispose();
-            _scanSession = null;
+            _barcodeHandler = null;
+            scannerOwnership.ReleasePreExecutionOwner();
             logger.LogDebug("Scan session released");
         }
     }

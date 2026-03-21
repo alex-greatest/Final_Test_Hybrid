@@ -1,7 +1,7 @@
 using Final_Test_Hybrid.Components.Main.Modals.Rework;
 using Final_Test_Hybrid.Services.Main.PlcReset;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
 using Radzen;
 
 namespace Final_Test_Hybrid.Services.SpringBoot.Operation;
@@ -11,23 +11,35 @@ public class ReworkDialogService : IDisposable
     private readonly DialogService _dialogService;
     private readonly PlcResetCoordinator _plcReset;
     private readonly IErrorCoordinator _errorCoordinator;
+    private readonly ScannerInputOwnershipService _scannerInputOwnership;
     private string? _lastError;
 
     public ReworkDialogService(
         DialogService dialogService,
         PlcResetCoordinator plcReset,
-        IErrorCoordinator errorCoordinator)
+        IErrorCoordinator errorCoordinator,
+        ScannerInputOwnershipService scannerInputOwnership)
     {
         _dialogService = dialogService;
         _plcReset = plcReset;
         _errorCoordinator = errorCoordinator;
+        _scannerInputOwnership = scannerInputOwnership;
 
         _plcReset.OnForceStop += HandleForceStop;
         _errorCoordinator.OnReset += HandleReset;
     }
 
-    private void HandleForceStop() => _dialogService.Close();
-    private void HandleReset() => _dialogService.Close();
+    private void HandleForceStop()
+    {
+        _scannerInputOwnership.ReleaseDialogOwners();
+        _dialogService.Close();
+    }
+
+    private void HandleReset()
+    {
+        _scannerInputOwnership.ReleaseDialogOwners();
+        _dialogService.Close();
+    }
 
     public async Task<bool> ShowRouteErrorAsync(string message)
     {

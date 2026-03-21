@@ -1,9 +1,9 @@
-@using Final_Test_Hybrid.Services.Scanner.RawInput
+@using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning
 @using Final_Test_Hybrid.Services.SpringBoot.Operator
 @using Final_Test_Hybrid.Services.Common.Settings
 @inject DialogService DialogService
 @inject NotificationService NotificationService
-@inject RawInputService ScannerService
+@inject ScannerInputOwnershipService ScannerInputOwnership
 @inject OperatorAuthService OperatorAuthService
 @inject AppSettingsService AppSettingsService
 @implements IDisposable
@@ -50,7 +50,7 @@
 
 @code {
     private bool UseQrAuth => AppSettingsService.UseAdminQrAuth;
-    private IDisposable? _scanSession;
+    private readonly string _dialogKey = $"admin-auth-dialog:{Guid.NewGuid():N}";
     private bool _disposed;
     private bool _isLoading;
     private string _login = string.Empty;
@@ -61,7 +61,7 @@
     {
         if (UseQrAuth)
         {
-            _scanSession = ScannerService.RequestScan(OnBarcodeScanned);
+            ScannerInputOwnership.AcquireDialogOwner(_dialogKey, OnBarcodeScanned);
         }
     }
 
@@ -142,6 +142,7 @@
     private void CloseWithSuccess(OperatorAuthResult result)
     {
         NotificationService.Notify(NotificationSeverity.Success, "Авторизация успешна");
+        ScannerInputOwnership.ReleaseDialogOwner(_dialogKey);
         DialogService.Close(new AdminAuthResult { Success = true, Username = result.Username ?? _login });
     }
 
@@ -154,6 +155,6 @@
     public void Dispose()
     {
         _disposed = true;
-        _scanSession?.Dispose();
+        ScannerInputOwnership.ReleaseDialogOwner(_dialogKey);
     }
 }

@@ -160,6 +160,7 @@ private static void ConfigureDiagnosticEvents(ServiceProvider serviceProvider)
 - во время `IsReconnecting = true` любые новые Modbus-команды fail-fast и не ставятся в очередь;
 - pending queued команды, которые уже стояли в очереди до входа в reconnect, завершаются communication-fail и не дожидаются восстановления;
 - writer, который ждал место в заполненном bounded channel и попал в тот же reconnect-period, тоже завершается communication-fail этого периода;
+- execution-шаги, которым нужно вернуть котёл в режим Стенд перед retry, не должны слать `SetStandModeAsync(...)` в active reconnect-window: они сначала boundedly ждут ready-state (`IsStarted && IsConnected && !IsReconnecting && LastPingData != null`), а потом делают одну реальную запись;
 - `CH.razor` и `DHW.razor` перезапускают polling только после `Connected`;
 - stale ping не считается подтверждением живой связи.
 - display-only polling для `CH/DHW` работает с профилем:
@@ -910,6 +911,7 @@ Reconnect-policy:
 - pending queued команды любого источника завершаются communication-fail до начала выполнения;
 - in-flight команда не меняется и падает по transport exception path;
 - после восстановления исполняются только новые команды.
+- execution stand-write retry-path не меняет этот queue-contract: он не снимает reject во время reconnect, а только пережидает ready-state bounded wait'ом до новой попытки записи.
 
 ## Потокобезопасность
 
