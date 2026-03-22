@@ -39,8 +39,7 @@ public partial class TagWaiter(
     {
         if (pauseGate?.IsPaused != true)
         {
-            var raw = subscription.GetValue(nodeId);
-            if (raw is T current && condition(current))
+            if (TryGetCurrentValue<T>(nodeId, out var current) && condition(current))
             {
                 return current;
             }
@@ -48,9 +47,12 @@ public partial class TagWaiter(
 
         var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        Task OnValueChanged(object? value)
+        Task OnValueChanged(SubscriptionValueEntry entry)
         {
-            if (pauseGate?.IsPaused == true || value is not T typed || !condition(typed))
+            if (pauseGate?.IsPaused == true
+                || !IsFreshEnough(nodeId, entry.UpdateSequence)
+                || entry.Value is not T typed
+                || !condition(typed))
             {
                 return Task.CompletedTask;
             }
@@ -80,7 +82,7 @@ public partial class TagWaiter(
             {
                 pauseGate!.OnResumed -= onResumed;
             }
-            await subscription.UnsubscribeAsync(nodeId, OnValueChanged, removeTag: false, ct: CancellationToken.None);
+            await subscription.UnsubscribeEntryAsync(nodeId, OnValueChanged, removeTag: false, ct: CancellationToken.None);
         }
     }
 
@@ -108,13 +110,13 @@ public partial class TagWaiter(
     {
         var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        Task OnValueChanged(object? value)
+        Task OnValueChanged(SubscriptionValueEntry entry)
         {
             if (pauseGate?.IsPaused == true)
             {
                 return Task.CompletedTask;
             }
-            if (value is T typed)
+            if (entry.Value is T typed)
             {
                 tcs.TrySetResult(typed);
             }
@@ -129,7 +131,7 @@ public partial class TagWaiter(
         }
         finally
         {
-            await subscription.UnsubscribeAsync(nodeId, OnValueChanged, removeTag: false, ct: CancellationToken.None);
+            await subscription.UnsubscribeEntryAsync(nodeId, OnValueChanged, removeTag: false, ct: CancellationToken.None);
         }
     }
 
@@ -175,16 +177,19 @@ public partial class TagWaiter(
         TimeSpan? timeout,
         CancellationToken ct)
     {
-        if (pauseGate?.IsPaused != true && subscription.GetValue(nodeId) is bool current && !current)
+        if (pauseGate?.IsPaused != true && TryGetCurrentValue<bool>(nodeId, out var current) && !current)
         {
             return;
         }
 
         var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        Task OnValueChanged(object? value)
+        Task OnValueChanged(SubscriptionValueEntry entry)
         {
-            if (pauseGate?.IsPaused == true || value is not bool typed || typed)
+            if (pauseGate?.IsPaused == true
+                || !IsFreshEnough(nodeId, entry.UpdateSequence)
+                || entry.Value is not bool typed
+                || typed)
             {
                 return Task.CompletedTask;
             }
@@ -215,7 +220,7 @@ public partial class TagWaiter(
                 pauseGate!.OnResumed -= onResumed;
             }
 
-            await subscription.UnsubscribeAsync(nodeId, OnValueChanged, removeTag: false, ct: CancellationToken.None);
+            await subscription.UnsubscribeEntryAsync(nodeId, OnValueChanged, removeTag: false, ct: CancellationToken.None);
         }
     }
 

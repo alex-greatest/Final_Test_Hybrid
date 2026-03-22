@@ -53,6 +53,15 @@ builder.WaitForAllTrue([tag1, tag2], () => Result.Both, "Both");
 - Для `WaitForFalseAsync` raw-cache семантика обязательна не только на входе, но и в recheck после `SubscribeAsync()`/`Resume()`: используется `subscription.GetValue(nodeId) is bool current && !current`.
 - `WaitGroup/WaitForAllTrue` этим пакетом не меняются: safe-read локализован только в `WaitForFalseAsync` и safety-critical decision-loop'ах completion/post-AskEnd.
 
+## Execution Fresh Barrier для PLC-block шагов
+
+- Для execution PLC-block шагов `TagWaiter` сохраняет обычный cache-first контракт для всех тегов, кроме terminal `Block.End` / `Block.Error` текущего шага.
+- `ColumnExecutor` открывает execution-scoped runtime-context для текущего PLC-блока.
+- Перед записью `Start=true` pausable OPC service снимает sequence snapshot и фиксирует его только после успешной записи.
+- Начиная с этого момента ожидания `End/Error` текущего execution шага принимают только OPC updates со `sequence > barrier`.
+- Это убирает stale `End/Error` от прошлой попытки на retry, но не требует очистки cache и не ломает уже пришедший свежий `End/Error`.
+- Pre-execution и все wait'ы вне execution PLC-block scope продолжают работать по прежнему cache-first контракту.
+
 ## Pause-Aware поведение
 
 | Событие | Поведение |

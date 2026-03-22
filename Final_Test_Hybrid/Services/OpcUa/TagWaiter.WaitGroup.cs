@@ -132,7 +132,10 @@ public partial class TagWaiter
         for (var i = 0; i < builder.Conditions.Count; i++)
         {
             var condition = builder.Conditions[i];
-            var current = subscription.GetValue(condition.NodeId);
+            if (!TryGetCurrentValue(condition.NodeId, out var current))
+            {
+                continue;
+            }
             if (condition.AdditionalNodeIds != null)
             {
                 if (!CheckAllConditionTags(condition))
@@ -179,8 +182,7 @@ public partial class TagWaiter
         }
         foreach (var additionalNodeId in condition.AdditionalNodeIds)
         {
-            var value = subscription.GetValue<bool>(additionalNodeId);
-            if (value != true)
+            if (!TryGetCurrentValue<bool>(additionalNodeId, out var value) || !value)
             {
                 return false;
             }
@@ -190,8 +192,7 @@ public partial class TagWaiter
 
     private bool CheckAllConditionTags(TagWaitCondition condition)
     {
-        var mainValue = subscription.GetValue<bool>(condition.NodeId);
-        if (mainValue != true)
+        if (!TryGetCurrentValue<bool>(condition.NodeId, out var mainValue) || !mainValue)
         {
             return false;
         }
@@ -224,8 +225,7 @@ public partial class TagWaiter
         {
             return;
         }
-        var current = subscription.GetValue<T>(nodeId);
-        if (current != null && condition(current))
+        if (TryGetCurrentValue<T>(nodeId, out var current) && condition(current))
         {
             tcs.TrySetResult(current);
         }
@@ -241,7 +241,7 @@ public partial class TagWaiter
             return;
         }
 
-        if (subscription.GetValue(nodeId) is bool current && !current)
+        if (TryGetCurrentValue<bool>(nodeId, out var current) && !current)
         {
             tcs.TrySetResult(current);
         }

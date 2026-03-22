@@ -22,13 +22,21 @@ public partial class OpcUaSubscription(
     private readonly OpcUaSubscriptionSettings _settings = settingsOptions.Value.Subscription;
     private readonly OpcUaSubscriptionDiagnosticsSettings _diagnosticsSettings = settingsOptions.Value.SubscriptionDiagnostics;
     private readonly ConcurrentDictionary<string, object?> _values = new();
+    private readonly ConcurrentDictionary<string, ulong> _valueUpdateSequences = new();
     private readonly Dictionary<string, List<Func<object?, Task>>> _callbacks = new();
+    private readonly Dictionary<string, List<Func<SubscriptionValueEntry, Task>>> _entryCallbacks = new();
     private readonly Lock _callbacksLock = new();
+    private readonly Lock _updateSequenceLock = new();
     private readonly ConcurrentDictionary<string, MonitoredItem> _monitoredItems = new();
     private readonly SemaphoreSlim _subscriptionLock = new(1, 1);
     private Opc.Ua.Client.Subscription? _subscription;
+    private ulong _updateSequenceCounter;
 
-    public void InvalidateValuesCache() => _values.Clear();
+    public void InvalidateValuesCache()
+    {
+        _values.Clear();
+        _valueUpdateSequences.Clear();
+    }
 
     public async Task CreateAsync(ISession session, CancellationToken ct = default)
     {
@@ -102,6 +110,7 @@ public partial class OpcUaSubscription(
     {
         _monitoredItems.TryRemove(nodeId, out _);
         _values.TryRemove(nodeId, out _);
+        _valueUpdateSequences.TryRemove(nodeId, out _);
         item.Notification -= OnNotification;
     }
 

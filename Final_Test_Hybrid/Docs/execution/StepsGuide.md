@@ -322,6 +322,11 @@ return result.Result switch
 };
 ```
 
+**Примечание для execution PLC-block шагов:**
+- Внутри `ColumnExecutor` для текущего PLC-блока автоматически открывается fresh-signal scope.
+- После успешного `Start=true` terminal `End/Error` этого блока в `context.TagWaiter` принимаются только как свежие runtime updates текущей попытки.
+- Специально очищать cache, добавлять polling или писать per-step stale-guard не нужно.
+
 ### 4.2 Чтение/запись тегов
 
 ```csharp
@@ -360,7 +365,8 @@ var writeResult = await context.PacedDiagWriter.WriteUInt32Async(address, value,
 
 **Start тег сбрасывается ТОЛЬКО при успехе (End от PLC).** При ошибке шаг возвращает `Fail(...)` без записи `Start=false`. Координатор сбрасывает `Start` только в skip-ветке.
 Перед запуском PLC-шага общий execution/pre-execution path не ждёт `Block.End=false`; `Start=true` пишется сразу.
-Перед retry координатор тоже не делает безусловный pre-start wait по `Block.End=false`: после `Req_Repeat=false` повторный запуск идёт сразу, без дополнительной проверки stale `Block.Error/End`.
+Перед retry координатор тоже не делает безусловный pre-start wait по `Block.End=false`: после `Req_Repeat=false` повторный запуск идёт сразу.
+Для execution PLC-block шага stale cached `Block.Error/End` от прошлой попытки не принимаются автоматически: после нового `Start=true` terminal wait использует fresh runtime barrier текущего запуска.
 
 ```csharp
 // ✅ ПРАВИЛЬНО — сброс только при успехе
@@ -399,7 +405,8 @@ public async Task<TestStepResult> ExecuteAsync(...)
 - При Skip — координатор вызывает `ResetBlockStartAsync(step)` через `PlcBlockTagHelper.GetStartTag()`
 - При Retry — шаг перезапускается, `Start=true` запишется заново без промежуточного `Start=false` от PC
 - Отдельного безусловного pre-start guard по `Block.End=false` нет ни для первого запуска, ни для retry
-- Перед retry есть обязательный handshake `Req_Repeat=false`; дополнительной stale-проверки `Block.Error/End` перед повторным запуском нет
+- Перед retry есть обязательный handshake `Req_Repeat=false`
+- Для execution PLC-block шага terminal `Block.End/Error` после нового `Start=true` должны быть свежими относительно текущей попытки; stale cached сигнал прошлой попытки шаг не принимает
 
 **См. также:** `TestExecutionCoordinator.ErrorResolution.cs` — `ProcessSkipAsync`
 

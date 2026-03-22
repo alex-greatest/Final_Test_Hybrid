@@ -1,4 +1,5 @@
 using Final_Test_Hybrid.Services.Common;
+using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.OpcUa.WaitGroup;
 using Microsoft.Extensions.Logging;
 
@@ -6,12 +7,12 @@ namespace Final_Test_Hybrid.Services.OpcUa;
 
 public partial class TagWaiter
 {
-    private List<Func<object?, Task>> CreateHandlers<TResult>(
+    private List<Func<SubscriptionValueEntry, Task>> CreateHandlers<TResult>(
         WaitGroupBuilder<TResult> builder,
         TaskCompletionSource<TagWaitResult<TResult>> tcs,
         PauseTokenSource? pauseGate)
     {
-        var handlers = new List<Func<object?, Task>>();
+        var handlers = new List<Func<SubscriptionValueEntry, Task>>();
         for (var i = 0; i < builder.Conditions.Count; i++)
         {
             var condition = builder.Conditions[i];
@@ -21,19 +22,25 @@ public partial class TagWaiter
         return handlers;
     }
 
-    private Func<object?, Task> CreateHandler<TResult>(
+    private Func<SubscriptionValueEntry, Task> CreateHandler<TResult>(
         TaskCompletionSource<TagWaitResult<TResult>> tcs,
         TagWaitCondition condition,
         int index,
         Func<object?, TResult> resultCallback,
         PauseTokenSource? pauseGate)
     {
-        return value =>
+        return entry =>
         {
             if (pauseGate?.IsPaused == true)
             {
                 return Task.CompletedTask;
             }
+            if (!IsFreshEnough(condition.NodeId, entry.UpdateSequence))
+            {
+                return Task.CompletedTask;
+            }
+
+            var value = entry.Value;
             if (condition.AdditionalNodeIds != null)
             {
                 if (!CheckAllConditionTags(condition))
@@ -75,7 +82,7 @@ public partial class TagWaiter
 
     private async Task SubscribeAllAsync(
         IReadOnlyList<TagWaitCondition> conditions,
-        List<Func<object?, Task>> handlers,
+        List<Func<SubscriptionValueEntry, Task>> handlers,
         CancellationToken ct)
     {
         for (var i = 0; i < conditions.Count; i++)
@@ -86,10 +93,10 @@ public partial class TagWaiter
 
     private async Task SubscribeConditionAsync(
         TagWaitCondition condition,
-        Func<object?, Task> handler,
+        Func<SubscriptionValueEntry, Task> handler,
         CancellationToken ct)
     {
-        await subscription.SubscribeAsync(condition.NodeId, handler, ct);
+        await subscription.SubscribeEntryAsync(condition.NodeId, handler, ct);
         if (condition.AdditionalNodeIds is not { } additionalNodeIds)
         {
             return;
@@ -99,18 +106,18 @@ public partial class TagWaiter
 
     private async Task SubscribeAdditionalNodeIdsAsync(
         IReadOnlyList<string> additionalNodeIds,
-        Func<object?, Task> handler,
+        Func<SubscriptionValueEntry, Task> handler,
         CancellationToken ct)
     {
         foreach (var additionalNodeId in additionalNodeIds)
         {
-            await subscription.SubscribeAsync(additionalNodeId, handler, ct);
+            await subscription.SubscribeEntryAsync(additionalNodeId, handler, ct);
         }
     }
 
     private async Task SubscribeAllWithReconnectRetryAsync(
         IReadOnlyList<TagWaitCondition> conditions,
-        List<Func<object?, Task>> handlers,
+        List<Func<SubscriptionValueEntry, Task>> handlers,
         CancellationToken ct)
     {
         for (var attempt = 1; ; attempt++)
@@ -136,14 +143,14 @@ public partial class TagWaiter
 
     private async Task SubscribeWithReconnectRetryAsync(
         string nodeId,
-        Func<object?, Task> handler,
+        Func<SubscriptionValueEntry, Task> handler,
         CancellationToken ct)
     {
         for (var attempt = 1; ; attempt++)
         {
             try
             {
-                await subscription.SubscribeAsync(nodeId, handler, ct);
+                await subscription.SubscribeEntryAsync(nodeId, handler, ct);
                 return;
             }
             catch (Exception ex) when (ShouldRetrySubscribe(ex, attempt))
@@ -168,7 +175,7 @@ public partial class TagWaiter
 
     private async Task TryUnsubscribeAllAsync(
         IReadOnlyList<TagWaitCondition> conditions,
-        List<Func<object?, Task>> handlers)
+        List<Func<SubscriptionValueEntry, Task>> handlers)
     {
         try
         {
@@ -182,12 +189,12 @@ public partial class TagWaiter
 
     private async Task UnsubscribeAllAsync(
         IReadOnlyList<TagWaitCondition> conditions,
-        List<Func<object?, Task>> handlers)
+        List<Func<SubscriptionValueEntry, Task>> handlers)
     {
         for (var i = 0; i < conditions.Count; i++)
         {
             var condition = conditions[i];
-            await subscription.UnsubscribeAsync(
+            await subscription.UnsubscribeEntryAsync(
                 condition.NodeId,
                 handlers[i],
                 removeTag: false,
@@ -199,7 +206,7 @@ public partial class TagWaiter
             }
             foreach (var additionalNodeId in additionalNodeIds)
             {
-                await subscription.UnsubscribeAsync(
+                await subscription.UnsubscribeEntryAsync(
                     additionalNodeId,
                     handlers[i],
                     removeTag: false,

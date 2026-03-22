@@ -4,8 +4,11 @@ using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
 using Final_Test_Hybrid.Services.Errors;
+using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Limits;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 
@@ -171,6 +174,7 @@ public class ColumnExecutor(
 
     private async Task ExecuteStepCoreAsync(ITestStep step, CancellationToken ct)
     {
+        using var freshSignalScope = CreateFreshSignalScope(step);
         try
         {
             stepTimingService.StartColumnStepTiming(ColumnIndex, step.Name, step.Description);
@@ -191,6 +195,24 @@ public class ColumnExecutor(
             SetErrorState(step, ex.Message, null, canSkip: step is not INonSkippable);
             LogError(step, ex.Message, ex);
         }
+    }
+
+    private static IDisposable? CreateFreshSignalScope(ITestStep step)
+    {
+        if (step is not IHasPlcBlockPath plcStep)
+        {
+            return null;
+        }
+
+        var startTag = PlcBlockTagHelper.GetStartTag(plcStep);
+        var endTag = PlcBlockTagHelper.GetEndTag(plcStep);
+        var errorTag = PlcBlockTagHelper.GetErrorTag(plcStep);
+        if (startTag == null || endTag == null || errorTag == null)
+        {
+            return null;
+        }
+
+        return ExecutionFreshSignalContext.Enter(startTag, endTag, errorTag);
     }
 
     /// <summary>

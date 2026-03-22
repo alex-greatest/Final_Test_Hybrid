@@ -42,7 +42,9 @@ public sealed class GasValveTubeDeferredErrorServiceTests
 
         await service.ProcessTagChangedAsync(ErrorDefinitions.AlNotConnectSensorPgbSetGasBurnerMin, true);
         delayTcs.SetResult();
-        await Task.Yield();
+        await WaitForAsync(
+            () => errorService.RaisedPlcCodes.Contains(
+                ErrorDefinitions.AlNotConnectSensorPgbSetGasBurnerMin.Code));
 
         Assert.True(service.IsMessageActive);
         Assert.Contains(

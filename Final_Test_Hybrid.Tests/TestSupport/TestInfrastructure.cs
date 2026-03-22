@@ -210,6 +210,24 @@ internal static class TestInfrastructure
         return GetPrivateField<ConcurrentDictionary<string, object?>>(subscription, "_values");
     }
 
+    public static ConcurrentDictionary<string, ulong> GetSubscriptionValueSequences(object subscription)
+    {
+        return GetPrivateField<ConcurrentDictionary<string, ulong>>(subscription, "_valueUpdateSequences");
+    }
+
+    public static void SetSubscriptionValue(
+        object subscription,
+        string nodeId,
+        object? value,
+        ulong updateSequence)
+    {
+        var values = GetSubscriptionValues(subscription);
+        var sequences = GetSubscriptionValueSequences(subscription);
+        values[nodeId] = value;
+        sequences[nodeId] = updateSequence;
+        SetPrivateField(subscription, "_updateSequenceCounter", updateSequence);
+    }
+
     public static OpcUaSubscription CreateSubscription()
     {
         var connectionState = new OpcUaConnectionState(CreateLogger<OpcUaConnectionState>());

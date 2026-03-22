@@ -1,5 +1,6 @@
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
+using Final_Test_Hybrid.Services.OpcUa.WaitGroup;
 using Final_Test_Hybrid.Services.Results;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Limits;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
@@ -19,6 +20,7 @@ public class CompareFlowNtcTemperatureColdStep(
     DualLogger<CompareFlowNtcTemperatureColdStep> logger,
     ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions, IRequiresRecipes, IProvideLimits
 {
+    private static readonly TimeSpan ErrorConfirmationWindow = TimeSpan.FromMilliseconds(150);
     private const string BlockPath = "DB_VI.CH.Compare_Flow_NTC_Temperature_Cold";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Cold\".\"Start\"";
     private const string EndTag = "ns=3;s=\"DB_VI\".\"CH\".\"Compare_Flow_NTC_Temperature_Cold\".\"End\"";
@@ -40,23 +42,12 @@ public class CompareFlowNtcTemperatureColdStep(
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, Ready1Tag, Continua1Tag, FaultTag, ChTmrTag];
     public IReadOnlyList<string> RequiredRecipeAddresses => [TFlowDeltaMaxRecipe];
 
-    /// <summary>
-    /// Возвращает пределы для отображения в гриде.
-    /// </summary>
-    /// <param name="context">Контекст с индексом колонки и провайдером рецептов.</param>
-    /// <returns>Строка с пределами или null, если пределы недоступны.</returns>
     public string? GetLimits(LimitsContext context)
     {
         var maxDelta = context.RecipeProvider.GetValue<float>(TFlowDeltaMaxRecipe);
         return maxDelta != null ? $"<= {maxDelta:F1}" : "<= 3.0";
     }
 
-    /// <summary>
-    /// Выполняет шаг сравнения температуры NTC (холодная вода).
-    /// </summary>
-    /// <param name="context">Контекст выполнения шага.</param>
-    /// <param name="ct">Токен отмены.</param>
-    /// <returns>Результат выполнения шага.</returns>
     public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
     {
         logger.LogInformation("Запуск сравнения температуры NTC (холодная вода)");
@@ -71,19 +62,10 @@ public class CompareFlowNtcTemperatureColdStep(
         return await WaitPhase1Async(context, ct);
     }
 
-    /// <summary>
-    /// Фаза 1: Ожидание End/Error/Ready_1.
-    /// </summary>
     private async Task<TestStepResult> WaitPhase1Async(TestStepContext context, CancellationToken ct)
     {
-        var result = await context.TagWaiter.WaitAnyAsync(
-            context.TagWaiter.CreateWaitGroup<Phase1Result>()
-                .WaitForTrue(EndTag, () => Phase1Result.End, "End")
-                .WaitForTrue(ErrorTag, () => Phase1Result.Error, "Error")
-                .WaitForTrue(Ready1Tag, () => Phase1Result.Ready1, "Ready_1"),
-            ct);
-
-        return result.Result switch
+        var result = await WaitForPhase1SignalAsync(context, ct);
+        return result switch
         {
             Phase1Result.End => await HandleCompletionAsync(context, null, isSuccess: true, ct),
             Phase1Result.Error => await HandleCompletionAsync(context, null, isSuccess: false, ct),
@@ -92,14 +74,10 @@ public class CompareFlowNtcTemperatureColdStep(
         };
     }
 
-    /// <summary>
-    /// Обрабатывает Ready_1: читает температуры, вычисляет дельту, записывает Continua_1 или Fault.
-    /// </summary>
     private async Task<TestStepResult> HandleReady1Async(TestStepContext context, CancellationToken ct)
     {
         logger.LogInformation("Ready_1 получен, начинаю чтение температур");
 
-        // Читаем температуру из стенда (OPC-UA)
         var (_, chTmr, opcError) = await context.OpcUa.ReadAsync<float>(ChTmrTag, ct);
         if (opcError != null)
         {
@@ -109,7 +87,6 @@ public class CompareFlowNtcTemperatureColdStep(
             return TestStepResult.Fail(msg);
         }
 
-        // Читаем температуру из котла (Modbus)
         var address = (ushort)(RegisterChTemperature - _settings.BaseAddressOffset);
         var modbusResult = await context.PacedDiagReader.ReadInt16Async(address, ct);
         if (!modbusResult.Success)
@@ -123,16 +100,12 @@ public class CompareFlowNtcTemperatureColdStep(
         var modbusTemp = modbusResult.Value;
         var delta = Math.Abs(chTmr - modbusTemp);
 
-        // Получаем максимально допустимую дельту из рецепта
         var maxDelta = context.RecipeProvider.GetValue<float>(TFlowDeltaMaxRecipe) ?? 3.0f;
-
         var measurement = new DeltaMeasurement(delta, chTmr, modbusTemp, maxDelta);
-
         logger.LogInformation(
             "Дельта: {Delta:F3}, TMR (из ПЛК): {ChTmr:F3}, котёл (регистр): {ModbusTemp}",
             delta, chTmr, modbusTemp);
 
-        // Записываем Continua_1 или Fault в зависимости от дельты
         if (delta <= maxDelta)
         {
             var writeResult = await context.OpcUa.WriteAsync(Continua1Tag, true, ct);
@@ -151,18 +124,10 @@ public class CompareFlowNtcTemperatureColdStep(
         return await WaitPhase2Async(context, measurement, ct);
     }
 
-    /// <summary>
-    /// Фаза 2: Ожидание End/Error после Ready_1.
-    /// </summary>
     private async Task<TestStepResult> WaitPhase2Async(TestStepContext context, DeltaMeasurement? measurement, CancellationToken ct)
     {
-        var result = await context.TagWaiter.WaitAnyAsync(
-            context.TagWaiter.CreateWaitGroup<Phase2Result>()
-                .WaitForTrue(EndTag, () => Phase2Result.End, "End")
-                .WaitForTrue(ErrorTag, () => Phase2Result.Error, "Error"),
-            ct);
-
-        return result.Result switch
+        var result = await WaitForPhase2SignalAsync(context, ct);
+        return result switch
         {
             Phase2Result.End => await HandleCompletionAsync(context, measurement, isSuccess: true, ct),
             Phase2Result.Error => await HandleCompletionAsync(context, measurement, isSuccess: false, ct),
@@ -170,9 +135,6 @@ public class CompareFlowNtcTemperatureColdStep(
         };
     }
 
-    /// <summary>
-    /// Обрабатывает завершение шага: сохраняет результат, возвращает Pass/Fail.
-    /// </summary>
     private async Task<TestStepResult> HandleCompletionAsync(
         TestStepContext context,
         DeltaMeasurement? measurement,
@@ -214,9 +176,6 @@ public class CompareFlowNtcTemperatureColdStep(
         return TestStepResult.Fail(msg);
     }
 
-    /// <summary>
-    /// Записывает Fault=true в PLC.
-    /// </summary>
     private async Task WriteFaultAsync(TestStepContext context, CancellationToken ct)
     {
         var writeResult = await context.OpcUa.WriteAsync(FaultTag, true, ct);
@@ -226,11 +185,164 @@ public class CompareFlowNtcTemperatureColdStep(
         }
     }
 
+    private async Task<Phase1Result> WaitForPhase1SignalAsync(
+        TestStepContext context,
+        CancellationToken ct)
+    {
+        while (true)
+        {
+            var result = await context.TagWaiter.WaitAnyAsync(CreatePhase1WaitGroup(context), ct);
+            var resolved = await ResolvePhase1SignalAsync(context, result.Result, ct);
+            if (resolved != null)
+            {
+                return resolved.Value;
+            }
+        }
+    }
+
+    private async Task<Phase2Result> WaitForPhase2SignalAsync(
+        TestStepContext context,
+        CancellationToken ct)
+    {
+        while (true)
+        {
+            var result = await context.TagWaiter.WaitAnyAsync(CreatePhase2WaitGroup(context), ct);
+            var resolved = await ResolvePhase2SignalAsync(context, result.Result, ct);
+            if (resolved != null)
+            {
+                return resolved.Value;
+            }
+        }
+    }
+
+    private WaitGroupBuilder<Phase1Result> CreatePhase1WaitGroup(TestStepContext context)
+    {
+        return context.TagWaiter.CreateWaitGroup<Phase1Result>()
+            .WaitForTrue(EndTag, () => Phase1Result.End, "End")
+            .WaitForTrue(ErrorTag, () => Phase1Result.Error, "Error")
+            .WaitForTrue(Ready1Tag, () => Phase1Result.Ready1, "Ready_1");
+    }
+
+    private WaitGroupBuilder<Phase2Result> CreatePhase2WaitGroup(TestStepContext context)
+    {
+        return context.TagWaiter.CreateWaitGroup<Phase2Result>()
+            .WaitForTrue(EndTag, () => Phase2Result.End, "End")
+            .WaitForTrue(ErrorTag, () => Phase2Result.Error, "Error");
+    }
+
+    private async Task<Phase1Result?> ResolvePhase1SignalAsync(
+        TestStepContext context,
+        Phase1Result result,
+        CancellationToken ct)
+    {
+        if (result == Phase1Result.End)
+        {
+            return Phase1Result.End;
+        }
+
+        if (result == Phase1Result.Ready1)
+        {
+            var terminalSignal = await TryGetTerminalSignalAsync(context, ct);
+            return terminalSignal switch
+            {
+                null => Phase1Result.Ready1,
+                TerminalSignal.End => Phase1Result.End,
+                _ => await ConfirmErrorSignalAsync(context, ct) switch
+                {
+                    TerminalSignal.End => Phase1Result.End,
+                    TerminalSignal.Error => Phase1Result.Error,
+                    _ => null
+                }
+            };
+        }
+
+        return await ConfirmErrorSignalAsync(context, ct) switch
+        {
+            TerminalSignal.End => Phase1Result.End,
+            TerminalSignal.Error => Phase1Result.Error,
+            _ => null
+        };
+    }
+
+    private async Task<Phase2Result?> ResolvePhase2SignalAsync(
+        TestStepContext context,
+        Phase2Result result,
+        CancellationToken ct)
+    {
+        if (result == Phase2Result.End)
+        {
+            return Phase2Result.End;
+        }
+
+        return await ConfirmErrorSignalAsync(context, ct) switch
+        {
+            TerminalSignal.End => Phase2Result.End,
+            TerminalSignal.Error => Phase2Result.Error,
+            _ => null
+        };
+    }
+
+    private async Task<TerminalSignal?> TryGetTerminalSignalAsync(
+        TestStepContext context,
+        CancellationToken ct)
+    {
+        try
+        {
+            var result = await context.TagWaiter.WaitAnyAsync(
+                context.TagWaiter.CreateWaitGroup<TerminalSignal>()
+                    .WaitForTrue(EndTag, () => TerminalSignal.End, "End")
+                    .WaitForTrue(ErrorTag, () => TerminalSignal.Error, "Error")
+                    .WithTimeout(TimeSpan.Zero),
+                ct);
+
+            return result.Result;
+        }
+        catch (TimeoutException)
+        {
+            return null;
+        }
+    }
+
+    private async Task<TerminalSignal?> ConfirmErrorSignalAsync(
+        TestStepContext context,
+        CancellationToken ct)
+    {
+        try
+        {
+            var result = await context.TagWaiter.WaitAnyAsync(
+                context.TagWaiter.CreateWaitGroup<ErrorConfirmationResult>()
+                    .WaitForTrue(EndTag, () => ErrorConfirmationResult.End, "End")
+                    .WaitForFalse(ErrorTag, () => ErrorConfirmationResult.Cleared, "ErrorCleared")
+                    .WithTimeout(ErrorConfirmationWindow),
+                ct);
+
+            if (result.Result == ErrorConfirmationResult.End)
+            {
+                logger.LogInformation("End получен в окне подтверждения Error");
+                return TerminalSignal.End;
+            }
+
+            logger.LogInformation("Error сброшен в окне подтверждения, продолжаю ожидание");
+            return null;
+        }
+        catch (TimeoutException)
+        {
+            var terminalSignal = await TryGetTerminalSignalAsync(context, ct);
+            if (terminalSignal == TerminalSignal.End)
+            {
+                logger.LogInformation("End получил приоритет над Error на границе окна подтверждения");
+                return TerminalSignal.End;
+            }
+
+            logger.LogWarning("Error удерживается {Duration} мс, фиксирую ошибку", ErrorConfirmationWindow.TotalMilliseconds);
+            return TerminalSignal.Error;
+        }
+    }
+
     private enum Phase1Result { End, Error, Ready1 }
     private enum Phase2Result { End, Error }
+    private enum TerminalSignal { End, Error }
+    private enum ErrorConfirmationResult { End, Cleared }
 
-    /// <summary>
-    /// Запись измерения дельты температур.
-    /// </summary>
     private sealed record DeltaMeasurement(float Delta, float ChTmr, short ModbusTemp, float MaxDelta);
 }

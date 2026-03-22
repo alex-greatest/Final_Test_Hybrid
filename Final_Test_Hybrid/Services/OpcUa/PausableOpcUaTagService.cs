@@ -8,6 +8,7 @@ namespace Final_Test_Hybrid.Services.OpcUa;
 /// </summary>
 public class PausableOpcUaTagService(
     OpcUaTagService inner,
+    Subscription.OpcUaSubscription subscription,
     PauseTokenSource pauseToken)
 {
     /// <summary>
@@ -25,7 +26,10 @@ public class PausableOpcUaTagService(
     public async Task<WriteResult> WriteAsync<T>(string nodeId, T value, CancellationToken ct = default)
     {
         await pauseToken.WaitWhilePausedAsync(ct);
-        return await inner.WriteAsync(nodeId, value, ct);
+        var pendingBarrier = CaptureFreshBarrier(value);
+        var result = await inner.WriteAsync(nodeId, value, ct);
+        TryMarkFreshBarrier(nodeId, value, result, pendingBarrier);
+        return result;
     }
 
     /// <summary>
@@ -40,5 +44,27 @@ public class PausableOpcUaTagService(
     {
         await pauseToken.WaitWhilePausedAsync(ct);
         return await inner.WriteBatchAsync(items, ct);
+    }
+
+    private ulong? CaptureFreshBarrier<T>(T value)
+    {
+        return value is bool
+            ? subscription.GetCurrentUpdateSequence()
+            : null;
+    }
+
+    private static void TryMarkFreshBarrier<T>(string nodeId, T value, WriteResult result, ulong? pendingBarrier)
+    {
+        if (result.Error != null || value is not bool boolValue || pendingBarrier is not { } barrier)
+        {
+            return;
+        }
+
+        // Барьер фиксируем по snapshot до записи Start=true, чтобы не потерять
+        // terminal-сигнал, который PLC успел выдать сразу после успешного старта.
+        ExecutionFreshSignalContext.MarkAttemptStarted(
+            nodeId,
+            boolValue,
+            barrier);
     }
 }

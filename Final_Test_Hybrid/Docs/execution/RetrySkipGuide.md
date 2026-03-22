@@ -40,6 +40,7 @@
     PC: После Req_Repeat=false сразу переходит к rerun
     PC: Не пишет Start = false для PLC-блока
     PC: Не делает безусловный pre-start wait по Block.End = false
+    PC: После нового Start=true execution PLC-block шаг принимает только свежие Block.End/Error
     PLC: Сам держит состояние блока до повторного запуска
                 ↓
 [6] Фоновый retry (tracked task)
@@ -297,8 +298,10 @@ private async Task ExecuteRetryInBackgroundAsync(StepError error, ColumnExecutor
 ### Таймаут Req_Repeat (60 сек)
 
 - Если PLC не сбросит `Req_Repeat` за 60 секунд → `HandleTagTimeoutAsync()` → жёсткий стоп теста.
-- После `Req_Repeat=false` retry сразу переходит к повторному запуску, даже если OPC cache ещё держит старые `Block.Error` или `Block.End`.
-- Это осознанный runtime-компромисс: stale block-сигналы на retry больше не фильтруются со стороны PC.
+- После `Req_Repeat=false` retry сразу переходит к повторному запуску без pre-wait по `Block.End=false`.
+- Для execution PLC-block шага stale `Block.Error/End` от прошлой попытки не принимаются:
+  после успешного `Start=true` terminal сигналы должны быть свежими относительно текущего runtime barrier.
+- Cache не очищается: если новый `Block.End/Error` уже успел прийти после текущего `Start=true`, execution шаг увидит его сразу из runtime-cache.
 
 ### `CheckCommsStep` при `AutoReady OFF`
 

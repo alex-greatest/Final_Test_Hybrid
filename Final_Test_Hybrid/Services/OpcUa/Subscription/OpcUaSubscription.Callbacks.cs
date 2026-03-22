@@ -23,6 +23,22 @@ public partial class OpcUaSubscription
         EmitCachedValueIfNeeded(nodeId, callback, emitCachedValueImmediately);
     }
 
+    internal async Task SubscribeEntryAsync(
+        string nodeId,
+        Func<SubscriptionValueEntry, Task> callback,
+        CancellationToken ct = default,
+        bool emitCachedValueImmediately = false)
+    {
+        var error = await EnsureTagExistsAsync(nodeId, ct).ConfigureAwait(false);
+        if (error != null)
+        {
+            throw new InvalidOperationException($"Не удалось подписаться на тег {nodeId}: {error.Message}");
+        }
+
+        AddEntryCallback(nodeId, callback);
+        EmitCachedEntryIfNeeded(nodeId, callback, emitCachedValueImmediately);
+    }
+
     private void EmitCachedValueIfNeeded(string nodeId, Func<object?, Task> callback, bool emitCachedValueImmediately)
     {
         if (!emitCachedValueImmediately || !_values.TryGetValue(nodeId, out var cachedValue))
@@ -30,8 +46,20 @@ public partial class OpcUaSubscription
             return;
         }
 
-        callback(cachedValue).SafeFireAndForget(ex =>
-            logger.LogError(ex, "Ошибка в callback для тега {NodeId}", nodeId));
+        InvokeValueCallbackSafely(nodeId, callback, cachedValue);
+    }
+
+    private void EmitCachedEntryIfNeeded(
+        string nodeId,
+        Func<SubscriptionValueEntry, Task> callback,
+        bool emitCachedValueImmediately)
+    {
+        if (!emitCachedValueImmediately || !TryGetValueEntry(nodeId, out var entry))
+        {
+            return;
+        }
+
+        InvokeEntryCallbackSafely(nodeId, callback, entry);
     }
 
     private Task<TagError?> EnsureTagExistsAsync(string nodeId, CancellationToken ct)
@@ -39,6 +67,37 @@ public partial class OpcUaSubscription
         return _monitoredItems.ContainsKey(nodeId)
             ? Task.FromResult<TagError?>(null)
             : AddTagAsync(nodeId, ct);
+    }
+
+    private void InvokeValueCallbackSafely(string nodeId, Func<object?, Task> callback, object? value)
+    {
+        try
+        {
+            var task = callback(value);
+            task.SafeFireAndForget(ex =>
+                logger.LogError(ex, "Ошибка в callback для тега {NodeId}", nodeId));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка в callback для тега {NodeId}", nodeId);
+        }
+    }
+
+    private void InvokeEntryCallbackSafely(
+        string nodeId,
+        Func<SubscriptionValueEntry, Task> callback,
+        SubscriptionValueEntry entry)
+    {
+        try
+        {
+            var task = callback(entry);
+            task.SafeFireAndForget(ex =>
+                logger.LogError(ex, "Ошибка в callback для тега {NodeId}", nodeId));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка в callback для тега {NodeId}", nodeId);
+        }
     }
 
     private void AddCallback(string nodeId, Func<object?, Task> callback)
@@ -49,6 +108,22 @@ public partial class OpcUaSubscription
             {
                 _callbacks[nodeId] = list = [];
             }
+            if (!list.Contains(callback))
+            {
+                list.Add(callback);
+            }
+        }
+    }
+
+    private void AddEntryCallback(string nodeId, Func<SubscriptionValueEntry, Task> callback)
+    {
+        lock (_callbacksLock)
+        {
+            if (!_entryCallbacks.TryGetValue(nodeId, out var list))
+            {
+                _entryCallbacks[nodeId] = list = [];
+            }
+
             if (!list.Contains(callback))
             {
                 list.Add(callback);
@@ -71,6 +146,22 @@ public partial class OpcUaSubscription
         LogDiagnosticsForUnsubscribe(nodeId, removeTag, callbackRemoved);
     }
 
+    internal async Task UnsubscribeEntryAsync(
+        string nodeId,
+        Func<SubscriptionValueEntry, Task> callback,
+        bool removeTag = false,
+        CancellationToken ct = default)
+    {
+        var callbackRemoved = TryRemoveEntryCallback(nodeId, callback);
+        if (!callbackRemoved)
+        {
+            return;
+        }
+
+        await TryRemoveTagIfEmptyAsync(nodeId, removeTag, ct).ConfigureAwait(false);
+        LogDiagnosticsForUnsubscribe(nodeId, removeTag, callbackRemoved);
+    }
+
     private bool TryRemoveCallback(string nodeId, Func<object?, Task> callback)
     {
         lock (_callbacksLock)
@@ -84,6 +175,25 @@ public partial class OpcUaSubscription
             {
                 _callbacks.Remove(nodeId);
             }
+            return removed;
+        }
+    }
+
+    private bool TryRemoveEntryCallback(string nodeId, Func<SubscriptionValueEntry, Task> callback)
+    {
+        lock (_callbacksLock)
+        {
+            if (!_entryCallbacks.TryGetValue(nodeId, out var list))
+            {
+                return false;
+            }
+
+            var removed = list.Remove(callback);
+            if (list.Count == 0)
+            {
+                _entryCallbacks.Remove(nodeId);
+            }
+
             return removed;
         }
     }
@@ -105,7 +215,9 @@ public partial class OpcUaSubscription
     {
         lock (_callbacksLock)
         {
-            return _callbacks.TryGetValue(nodeId, out var list) && list.Count > 0;
+            var hasValueCallbacks = _callbacks.TryGetValue(nodeId, out var valueCallbacks) && valueCallbacks.Count > 0;
+            var hasEntryCallbacks = _entryCallbacks.TryGetValue(nodeId, out var entryCallbacks) && entryCallbacks.Count > 0;
+            return hasValueCallbacks || hasEntryCallbacks;
         }
     }
 
@@ -122,14 +234,36 @@ public partial class OpcUaSubscription
             await _subscription.ApplyChangesAsync(ct).ConfigureAwait(false);
         }
         _values.TryRemove(nodeId, out _);
+        _valueUpdateSequences.TryRemove(nodeId, out _);
         lock (_callbacksLock)
         {
             _callbacks.Remove(nodeId);
+            _entryCallbacks.Remove(nodeId);
         }
         LogDiagnosticsForMonitoredChange("remove", nodeId);
     }
 
     public object? GetValue(string nodeId) => _values.GetValueOrDefault(nodeId);
+
+    public ulong GetCurrentUpdateSequence()
+    {
+        lock (_updateSequenceLock)
+        {
+            return _updateSequenceCounter;
+        }
+    }
+
+    public bool TryGetValueEntry(string nodeId, out SubscriptionValueEntry entry)
+    {
+        if (_values.TryGetValue(nodeId, out var value) && _valueUpdateSequences.TryGetValue(nodeId, out var updateSequence))
+        {
+            entry = new SubscriptionValueEntry(value, updateSequence);
+            return true;
+        }
+
+        entry = default;
+        return false;
+    }
 
     /// <summary>
     /// Возвращает типизированное значение из runtime-cache только если оно реально присутствует.
@@ -245,32 +379,60 @@ public partial class OpcUaSubscription
         if (dataValue == null || StatusCode.IsBad(dataValue.StatusCode))
         {
             _values.TryRemove(nodeId, out _);
+            _valueUpdateSequences.TryRemove(nodeId, out _);
             logger.LogDebug("Игнорируем bad quality для тега {NodeId}", nodeId);
 
             return;
         }
 
         var value = dataValue.Value;
+        var updateSequence = GetNextUpdateSequence();
         _values[nodeId] = value;
+        _valueUpdateSequences[nodeId] = updateSequence;
         InvokeCallbacks(nodeId, value);
+    }
+
+    private ulong GetNextUpdateSequence()
+    {
+        lock (_updateSequenceLock)
+        {
+            _updateSequenceCounter++;
+            return _updateSequenceCounter;
+        }
     }
 
     private void InvokeCallbacks(string nodeId, object? value)
     {
         Func<object?, Task>[] callbacks;
+        Func<SubscriptionValueEntry, Task>[] entryCallbacks;
         lock (_callbacksLock)
         {
-            if (!_callbacks.TryGetValue(nodeId, out var list))
+            _callbacks.TryGetValue(nodeId, out var list);
+            _entryCallbacks.TryGetValue(nodeId, out var entryList);
+            var hasValueCallbacks = list is { Count: > 0 };
+            var hasEntryCallbacks = entryList is { Count: > 0 };
+            if (!hasValueCallbacks && !hasEntryCallbacks)
             {
                 return;
             }
-            callbacks = [.. list];
+
+            callbacks = hasValueCallbacks ? [.. list!] : [];
+            entryCallbacks = hasEntryCallbacks ? [.. entryList!] : [];
         }
 
         foreach (var callback in callbacks)
         {
-            callback(value).SafeFireAndForget(ex =>
-                logger.LogError(ex, "Ошибка в callback для тега {NodeId}", nodeId));
+            InvokeValueCallbackSafely(nodeId, callback, value);
+        }
+
+        if (!TryGetValueEntry(nodeId, out var entry))
+        {
+            return;
+        }
+
+        foreach (var callback in entryCallbacks)
+        {
+            InvokeEntryCallbackSafely(nodeId, callback, entry);
         }
     }
 }

@@ -98,8 +98,19 @@ public sealed class TagWaiterWaitAnyAsyncTests
 
     private static void PublishValue(OpcUaSubscription subscription, string nodeId, bool value)
     {
-        var values = TestInfrastructure.GetSubscriptionValues(subscription);
-        values[nodeId] = value;
+        var nextSequence = GetNextSequence(subscription);
+        TestInfrastructure.SetSubscriptionValue(subscription, nodeId, value, nextSequence);
         TestInfrastructure.InvokePrivate(subscription, "InvokeCallbacks", nodeId, value);
+    }
+
+    private static ulong GetNextSequence(OpcUaSubscription subscription)
+    {
+        var nextSequence = 1UL;
+        foreach (var sequence in TestInfrastructure.GetSubscriptionValueSequences(subscription).Values)
+        {
+            nextSequence = Math.Max(nextSequence, sequence + 1);
+        }
+
+        return nextSequence;
     }
 }
