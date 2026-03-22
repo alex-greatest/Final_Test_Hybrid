@@ -70,6 +70,9 @@ public partial class PreExecutionCoordinator(
     private const string TesterNoResult = "Tester_No";
     private const string PresAtmosphResult = "Pres_atmosph.";
     private const string PresInGasResult = "Pres_in_gas";
+    private const int PostAskEndScanModeDecisionNone = 0;
+    private const int PostAskEndScanModeDecisionTransitionToReady = 1;
+    private const int PostAskEndScanModeDecisionRepeat = 2;
 
     // === Отслеживание источника reset ===
     private const int ResetOriginPlc = 1;

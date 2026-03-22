@@ -67,6 +67,7 @@ internal static class PreExecutionTestContextFactory
         var testCoordinator = CreateTestCoordinator();
         var errorCoordinator = new StubErrorCoordinator();
         var plcResetCoordinator = CreateUninitialized<PlcResetCoordinator>();
+        var completionUiState = new TestCompletionUiState(plcResetCoordinator, errorCoordinator);
         var changeoverStartGate = new StubChangeoverStartGate();
         var infra = new PreExecutionInfrastructure(
             null!,
@@ -96,7 +97,7 @@ internal static class PreExecutionTestContextFactory
             CreateUninitialized<ScanDialogCoordinator>(),
             changeoverStartGate,
             CreateUninitialized<TestCompletionCoordinator>(),
-            CreateUninitialized<TestCompletionUiState>());
+            completionUiState);
         var state = new PreExecutionState(
             boilerState,
             new OperatorState(),

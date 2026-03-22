@@ -95,6 +95,61 @@ public sealed class ErrorCoordinatorOwnershipTests
     }
 
     [Fact]
+    public async Task AutoReadyOn_RepeatedTrueAfterRecovery_DoesNotRepeatRecoverySideEffects()
+    {
+        var context = CreateContext(
+        [
+            new InterruptBehaviorStub(InterruptReason.AutoModeDisabled, (interruptContext, _) =>
+            {
+                interruptContext.Pause();
+                return Task.CompletedTask;
+            })
+        ]);
+        var recoveredCounter = new InvocationCounter();
+        context.Coordinator.OnRecovered += recoveredCounter.Increment;
+
+        await context.Coordinator.HandleInterruptAsync(InterruptReason.AutoModeDisabled);
+        Assert.True(context.PauseToken.IsPaused);
+
+        await SetAutoReadyAsync(context.AutoReady, true);
+        await WaitForRecoveredCountAsync(recoveredCounter);
+
+        await SetAutoReadyAsync(context.AutoReady, true);
+        await Task.Delay(100);
+
+        Assert.Equal(1, recoveredCounter.Value);
+        Assert.Equal(1, context.ErrorService.ClearedCodes.Count(code => code == ErrorDefinitions.OpcConnectionLost.Code));
+        Assert.Equal(1, context.ErrorService.ClearedCodes.Count(code => code == ErrorDefinitions.TagReadTimeout.Code));
+    }
+
+    [Fact]
+    public async Task AutoReadyOff_RepeatedFalseDuringAutoModeDisabled_DoesNotRepeatInterruptHandling()
+    {
+        var executionCounter = new InvocationCounter();
+        var executed = new TaskCompletionSource<InterruptReason>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var context = CreateContext(
+        [
+            new InterruptBehaviorStub(InterruptReason.AutoModeDisabled, (interruptContext, _) =>
+            {
+                executionCounter.Increment();
+                interruptContext.Pause();
+                return Task.CompletedTask;
+            }, executed)
+        ]);
+        context.ActivityTracker.SetPreExecutionActive(true);
+
+        await SetAutoReadyAsync(context.AutoReady, false);
+        await executed.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        await SetAutoReadyAsync(context.AutoReady, false);
+        await Task.Delay(100);
+
+        Assert.Equal(1, executionCounter.Value);
+        Assert.True(context.PauseToken.IsPaused);
+        Assert.Equal(InterruptReason.AutoModeDisabled, context.Coordinator.CurrentInterrupt);
+    }
+
+    [Fact]
     public async Task AutoReadyOn_DoesNotResumeBoilerLock()
     {
         var context = CreateContext(
@@ -114,6 +169,20 @@ public sealed class ErrorCoordinatorOwnershipTests
 
         Assert.True(context.PauseToken.IsPaused);
         Assert.Equal(InterruptReason.BoilerLock, context.Coordinator.CurrentInterrupt);
+    }
+
+    private static async Task WaitForRecoveredCountAsync(InvocationCounter counter)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(1);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (counter.Value >= 1)
+            {
+                return;
+            }
+            await Task.Delay(10);
+        }
+        throw new TimeoutException("OnRecovered не был вызван.");
     }
 
     private static async Task SetAutoReadyAsync(AutoReadySubscription autoReady, bool isReady)
@@ -143,14 +212,27 @@ public sealed class ErrorCoordinatorOwnershipTests
             new InterruptBehaviorRegistry(behaviors),
             TestInfrastructure.CreateDualLogger<ErrorCoordinator>());
 
-        return new TestContext(coordinator, autoReady, connectionState, runtimeTerminalState, pauseToken, errorService);
+        return new TestContext(coordinator, autoReady, connectionState, activityTracker, runtimeTerminalState, pauseToken, errorService);
     }
 
     private sealed record TestContext(
         ErrorCoordinator Coordinator,
         AutoReadySubscription AutoReady,
         OpcUaConnectionState ConnectionState,
+        ExecutionActivityTracker ActivityTracker,
         RuntimeTerminalState RuntimeTerminalState,
         PauseTokenSource PauseToken,
         TestErrorService ErrorService);
+
+    private sealed class InvocationCounter
+    {
+        private int _value;
+
+        public int Value => Volatile.Read(ref _value);
+
+        public void Increment()
+        {
+            Interlocked.Increment(ref _value);
+        }
+    }
 }

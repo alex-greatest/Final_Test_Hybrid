@@ -330,12 +330,19 @@ public partial class PreExecutionCoordinator
     private void HandleHardReset()
     {
         CancelActiveDialog();
-        CancelPostAskEndFlow();
-        TryCompletePlcReset();
         // Атомарно читаем и сбрасываем - определяем источник
         var isPending = Interlocked.Exchange(ref coordinators.PlcResetCoordinator.PlcHardResetPending, 0);
         var origin = isPending == 1 ? ResetOriginPlc : ResetOriginNonPlc;
         Volatile.Write(ref _lastHardResetOrigin, origin);
+        if (origin == ResetOriginNonPlc && IsPostAskEndFlowActive())
+        {
+            AbortPostAskEndFlowForHardReset();
+        }
+        else
+        {
+            CancelPostAskEndFlow();
+        }
+        TryCompletePlcReset();
         if (origin == ResetOriginNonPlc)
         {
             var barcodeWaitActive = HasActiveBarcodeWait();

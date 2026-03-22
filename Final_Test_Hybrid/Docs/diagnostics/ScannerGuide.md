@@ -83,6 +83,9 @@
 - После восстановления PLC-связи Scan-таймер продолжает тикать только если scan-mode остаётся активным и нет reset-фазы.
 - После `PlcConnectionLost -> HardReset -> Reconnect` barcode re-arm должен происходить через новый цикл `WaitForBarcodeAsync`; визуальная активность `BoilerInfo` не является достаточным доказательством готовности raw scanner pipeline.
 - При PLC reset scanner ownership снимается централизованно; при non-PLC hard reset активный dialog-owner должен сниматься немедленно, но возврат в обычный `PreExecution` flow всё равно определяется `IsAcceptingInput`/reset lifecycle, а не фактом закрытия окна.
+- Если non-PLC `HardReset` приходит во время active `post-AskEnd` окна после `AskEnd`, ordinary scanner-ready не должен зависать:
+  после reconnect controller обязан доесть deferred `full cleanup` outcome и вернуть `PreExecution` owner только при `AutoReady=true`;
+  при `AutoReady=false` и `BoilerInfo`, и raw scanner обязаны оставаться заблокированными.
 
 ## Конфигурация
 

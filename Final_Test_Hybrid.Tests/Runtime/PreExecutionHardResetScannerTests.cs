@@ -1,6 +1,21 @@
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 using Final_Test_Hybrid.Tests.TestSupport;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using Final_Test_Hybrid.Services.Common;
+using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Main;
+using Final_Test_Hybrid.Services.Main.PlcReset;
+using Final_Test_Hybrid.Services.OpcUa.Connection;
+using Final_Test_Hybrid.Services.OpcUa.Subscription;
+using Final_Test_Hybrid.Services.Scanner;
+using Final_Test_Hybrid.Services.Scanner.RawInput;
+using Final_Test_Hybrid.Services.SpringBoot.Operator;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning;
+using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
+using Microsoft.Extensions.Configuration;
 
 namespace Final_Test_Hybrid.Tests.Runtime;
 
@@ -36,6 +51,87 @@ public sealed class PreExecutionHardResetScannerTests
         }
         finally
         {
+            context.BoilerState.StopChangeoverTimer();
+            context.StepTimingService.Dispose();
+        }
+    }
+
+    [Fact]
+    public void HandleHardReset_WhenPostAskEndActive_PublishesTransitionToReadyDecision()
+    {
+        using var loggerFactory = CreateLoggerFactory(out _);
+        var context = PreExecutionTestContextFactory.Create(loggerFactory);
+        var postAskEndCts = new CancellationTokenSource();
+
+        try
+        {
+            TestInfrastructure.SetPrivateField(context.Coordinator, "_postAskEndCts", postAskEndCts);
+            TestInfrastructure.SetPrivateField(context.Coordinator, "_postAskEndActive", 1);
+
+            TestInfrastructure.InvokePrivate(context.Coordinator, "HandleHardReset");
+
+            var consumed = TryConsumePostAskEndScanModeDecision(context.Coordinator);
+
+            Assert.True(consumed.HasDecision);
+            Assert.True(consumed.ShouldTransitionToReady);
+            Assert.Equal(0, TestInfrastructure.GetPrivateField<int>(context.Coordinator, "_postAskEndActive"));
+        }
+        finally
+        {
+            context.BoilerState.StopChangeoverTimer();
+            context.StepTimingService.Dispose();
+        }
+    }
+
+    [Fact]
+    public void TryCompleteDeferredResetTransitionUnsafe_RearmsScannerOwner_AfterHardResetAbortDecision()
+    {
+        using var loggerFactory = CreateLoggerFactory(out _);
+        var context = PreExecutionTestContextFactory.Create(loggerFactory);
+        var operatorState = new OperatorState();
+        var connectionState = new OpcUaConnectionState(loggerFactory.CreateLogger<OpcUaConnectionState>());
+        var subscription = new OpcUaSubscription(
+            connectionState,
+            TestInfrastructure.CreateOpcUaOptions(),
+            new DualLogger<OpcUaSubscription>(
+                loggerFactory.CreateLogger<OpcUaSubscription>(),
+                new TestStepLoggerStub()));
+        var autoReady = new AutoReadySubscription(
+            subscription,
+            connectionState,
+            loggerFactory.CreateLogger<AutoReadySubscription>());
+        var scannerOwnership = CreateOwnershipService(loggerFactory);
+        var sessionManager = new ScanSessionManager(
+            scannerOwnership,
+            loggerFactory.CreateLogger<ScanSessionManager>());
+        var controller = CreateController(
+            sessionManager,
+            scannerOwnership,
+            operatorState,
+            autoReady,
+            connectionState,
+            context.Coordinator,
+            context.StepTimingService,
+            loggerFactory);
+
+        try
+        {
+            operatorState.SetManualAuth("tester");
+            connectionState.SetConnected(true, "test");
+            TestInfrastructure.SetPrivateField(autoReady, "_isReady", true);
+            TestInfrastructure.SetPrivateField(context.Coordinator, "_postAskEndScanModeDecision", 1);
+
+            var transitioned = Assert.IsType<bool>(
+                TestInfrastructure.InvokePrivate(controller, "TryCompleteDeferredResetTransitionUnsafe"));
+
+            Assert.True(transitioned);
+            Assert.True(scannerOwnership.IsPreExecutionOwnerActive);
+            Assert.False(TestInfrastructure.GetPrivateField<bool>(controller, "_resetReadyTransitionPending"));
+            Assert.False(TestInfrastructure.GetPrivateField<bool>(controller, "_isResetting"));
+        }
+        finally
+        {
+            scannerOwnership.Dispose();
             context.BoilerState.StopChangeoverTimer();
             context.StepTimingService.Dispose();
         }
@@ -106,5 +202,71 @@ public sealed class PreExecutionHardResetScannerTests
         }
 
         throw new TimeoutException("Условие теста не выполнилось вовремя.");
+    }
+
+    private static (bool HasDecision, bool ShouldTransitionToReady) TryConsumePostAskEndScanModeDecision(
+        PreExecutionCoordinator coordinator)
+    {
+        var method = typeof(PreExecutionCoordinator).GetMethod(
+            "TryConsumePostAskEndScanModeDecision",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+        object?[] args = [false];
+
+        var hasDecision = Assert.IsType<bool>(method.Invoke(coordinator, args));
+        var shouldTransitionToReady = Assert.IsType<bool>(args[0]);
+        return (hasDecision, shouldTransitionToReady);
+    }
+
+    private static ScannerInputOwnershipService CreateOwnershipService(ILoggerFactory loggerFactory)
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Scanner:VendorId"] = "1FBB",
+                ["Scanner:ProductId"] = "3681"
+            })
+            .Build();
+        var connectionState = (ScannerConnectionState)RuntimeHelpers.GetUninitializedObject(typeof(ScannerConnectionState));
+        var detector = new ScannerDeviceDetector(configuration, loggerFactory.CreateLogger<ScannerDeviceDetector>());
+        var rawInputService = new RawInputService(
+            loggerFactory.CreateLogger<RawInputService>(),
+            connectionState,
+            detector);
+        return new ScannerInputOwnershipService(
+            rawInputService,
+            loggerFactory.CreateLogger<ScannerInputOwnershipService>());
+    }
+
+    private static ScanModeController CreateController(
+        ScanSessionManager sessionManager,
+        ScannerInputOwnershipService scannerOwnership,
+        OperatorState operatorState,
+        AutoReadySubscription autoReady,
+        OpcUaConnectionState connectionState,
+        PreExecutionCoordinator coordinator,
+        IStepTimingService stepTimingService,
+        ILoggerFactory loggerFactory)
+    {
+        var controller = new ScanModeController(
+            sessionManager,
+            operatorState,
+            autoReady,
+            connectionState,
+            (StepStatusReporter)RuntimeHelpers.GetUninitializedObject(typeof(StepStatusReporter)),
+            (BarcodeDebounceHandler)RuntimeHelpers.GetUninitializedObject(typeof(BarcodeDebounceHandler)),
+            coordinator,
+            (PlcResetCoordinator)RuntimeHelpers.GetUninitializedObject(typeof(PlcResetCoordinator)),
+            scannerOwnership,
+            stepTimingService,
+            new ExecutionActivityTracker(),
+            new DualLogger<ScanModeController>(
+                loggerFactory.CreateLogger<ScanModeController>(),
+                new TestStepLoggerStub()));
+        TestInfrastructure.SetPrivateField(controller, "_isActivated", true);
+        TestInfrastructure.SetPrivateField(controller, "_isResetting", true);
+        TestInfrastructure.SetPrivateField(controller, "_resetReadyTransitionPending", true);
+        TestInfrastructure.SetPrivateField(controller, "_cachedIsAutoReady", true);
+        return controller;
     }
 }

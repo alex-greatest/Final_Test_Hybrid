@@ -76,25 +76,26 @@ public sealed partial class ErrorCoordinator : IErrorCoordinator, IInterruptCont
         var isReady = _subscriptions.AutoReady.IsReady;
         var isActive = _subscriptions.ActivityTracker.IsAnyActive;
         var hasTerminalHandshake = _subscriptions.RuntimeTerminalState.HasTerminalHandshake;
+        var hasAutoModePause = _pauseToken.IsPaused && CurrentInterrupt == InterruptReason.AutoModeDisabled;
 
         if (isReady)
         {
+            if (!hasAutoModePause) { return; }
             _logger.LogInformation("AutoReady ON → resume");
             FireAndForgetResume();
             return;
         }
 
-        _logger.LogInformation("AutoReady OFF → pause");
         if (hasTerminalHandshake)
         {
             _logger.LogInformation("AutoReady OFF во время terminal handshake: AutoModeDisabled не поднимается");
             return;
         }
 
-        if (isActive)
-        {
-            FireAndForgetInterrupt(InterruptReason.AutoModeDisabled);
-        }
+        if (!isActive || hasAutoModePause) { return; }
+
+        _logger.LogInformation("AutoReady OFF → pause");
+        FireAndForgetInterrupt(InterruptReason.AutoModeDisabled);
     }
 
     private void FireAndForgetInterrupt(InterruptReason reason)

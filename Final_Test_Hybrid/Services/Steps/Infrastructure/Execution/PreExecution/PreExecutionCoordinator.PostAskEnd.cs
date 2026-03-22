@@ -99,7 +99,7 @@ public partial class PreExecutionCoordinator
         state.BoilerState.SetTestRunning(false);
         ClearForRepeat();
         _skipNextScan = true;
-        Volatile.Write(ref _postAskEndScanModeDecision, 2);
+        SetPostAskEndScanModeDecision(PostAskEndScanModeDecisionRepeat);
 
         try
         {
@@ -161,7 +161,7 @@ public partial class PreExecutionCoordinator
                 HandleChangeoverAfterInterrupt(interruptResult);
             }
 
-            Volatile.Write(ref _postAskEndScanModeDecision, 1);
+            SetPostAskEndScanModeDecision(PostAskEndScanModeDecisionTransitionToReady);
         }
         finally
         {
@@ -182,7 +182,7 @@ public partial class PreExecutionCoordinator
 
         var cts = new CancellationTokenSource();
         _postAskEndCts = cts;
-        Volatile.Write(ref _postAskEndScanModeDecision, 0);
+        SetPostAskEndScanModeDecision(PostAskEndScanModeDecisionNone);
         Volatile.Write(ref _postAskEndActive, 1);
         _runtimeTerminalState.SetPostAskEndActive(true);
         OnStateChanged?.Invoke();
@@ -206,6 +206,11 @@ public partial class PreExecutionCoordinator
 
     private void CancelPostAskEndFlow()
     {
+        CancelPostAskEndFlow(PostAskEndScanModeDecisionNone);
+    }
+
+    private void CancelPostAskEndFlow(int scanModeDecision)
+    {
         var cts = Interlocked.Exchange(ref _postAskEndCts, null);
         if (cts == null)
         {
@@ -223,10 +228,20 @@ public partial class PreExecutionCoordinator
         cts.Dispose();
         coordinators.CompletionUiState.HideImage();
         CancelActiveDialog();
-        Volatile.Write(ref _postAskEndScanModeDecision, 0);
+        SetPostAskEndScanModeDecision(scanModeDecision);
         Volatile.Write(ref _postAskEndActive, 0);
         _runtimeTerminalState.SetPostAskEndActive(false);
         OnStateChanged?.Invoke();
+    }
+
+    private void AbortPostAskEndFlowForHardReset()
+    {
+        CancelPostAskEndFlow(PostAskEndScanModeDecisionTransitionToReady);
+    }
+
+    private void SetPostAskEndScanModeDecision(int decision)
+    {
+        Volatile.Write(ref _postAskEndScanModeDecision, decision);
     }
 
     private void EnsurePostAskEndFlowReleased(int expectedSequence)

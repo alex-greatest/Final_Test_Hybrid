@@ -50,6 +50,8 @@ IsInScanningPhase = _isActivated && !_isResetting
 - Если `PreExecutionCoordinator.IsPostAskEndFlowActive()` ещё true, controller удерживает reset-state до финального PLC outcome.
 - `full cleanup` возвращает scan timing/session после завершения post-AskEnd ветки.
 - `repeat` не поднимает scan timing/session, потому что следующий цикл уходит в существующий repeat path с `_skipNextScan`.
+- Если active `post-AskEnd` оборван non-PLC `HardReset`, `PreExecutionCoordinator` публикует для deferred transition тот же outcome `full cleanup`.
+  Это нужно только для завершения зависшего catch-up от старого PLC reset; broad fallback "любой abort = ready" запрещён.
 
 ## Жизненный цикл
 
@@ -141,6 +143,11 @@ private void HandleResetCompleted()
    - если диалог не активен — `ResetScanTiming()` + `AcquireSession()` + синхронизация Scan-таймера с текущей входной готовностью.
 
 `AcquireSession()` здесь возвращает только ordinary `PreExecution` owner. Если активен scanner-dialog, `BoilerInfo` не должен считаться ordinary-ready.
+
+Deferred completion contract:
+- explicit outcome `full cleanup` снимает `_resetReadyTransitionPending` и завершает reset-state;
+- ordinary scanner owner возвращается только если на момент catch-up актуальны `IsScanModeEnabled = true` и `OpcUaConnectionState.IsConnected = true`;
+- при `AutoReady = false` или отсутствии PLC-связи deferred transition не делает `BoilerInfo` editable и не переводит raw scanner в ordinary-ready.
 ## Синхронизация Scan-таймера по входной готовности
 
 `ScanModeController` синхронизирует тик Scan-таймера только для сценария ожидания barcode:

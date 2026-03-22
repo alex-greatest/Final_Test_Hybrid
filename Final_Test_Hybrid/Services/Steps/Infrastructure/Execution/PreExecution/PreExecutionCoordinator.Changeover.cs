@@ -84,13 +84,13 @@ public partial class PreExecutionCoordinator
             return false;
         }
 
-        var decision = Interlocked.Exchange(ref _postAskEndScanModeDecision, 0);
-        if (decision == 0)
+        var decision = Interlocked.Exchange(ref _postAskEndScanModeDecision, PostAskEndScanModeDecisionNone);
+        if (decision == PostAskEndScanModeDecisionNone)
         {
             return false;
         }
 
-        shouldTransitionToReady = decision == 1;
+        shouldTransitionToReady = decision == PostAskEndScanModeDecisionTransitionToReady;
         return true;
     }
 
