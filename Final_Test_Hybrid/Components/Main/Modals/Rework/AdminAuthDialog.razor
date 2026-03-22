@@ -1,6 +1,7 @@
 @using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.Scanning
 @using Final_Test_Hybrid.Services.SpringBoot.Operator
 @using Final_Test_Hybrid.Services.Common.Settings
+@using Final_Test_Hybrid.Components.Engineer.Modals
 @inject DialogService DialogService
 @inject NotificationService NotificationService
 @inject ScannerInputOwnershipService ScannerInputOwnership
@@ -35,20 +36,38 @@
         <div class="loading-text">Авторизация...</div>
     }
 
-    @if (!UseQrAuth)
+    @if (!UseQrAuth || ShowCancelButton)
     {
         <div class="dialog-buttons">
-            <RadzenButton Text="Подтвердить"
-                          Icon="check"
-                          Click="@OnConfirm"
-                          ButtonStyle="ButtonStyle.Primary"
-                          IsBusy="_isLoading"
-                          class="confirm-button" />
+            @if (!UseQrAuth)
+            {
+                <RadzenButton Text="Подтвердить"
+                              Icon="check"
+                              Click="@OnConfirm"
+                              ButtonStyle="ButtonStyle.Primary"
+                              IsBusy="_isLoading"
+                              class="confirm-button" />
+            }
+            @if (ShowCancelButton)
+            {
+                <RadzenButton Text="Отмена"
+                              Icon="close"
+                              Click="@OnCancelAsync"
+                              ButtonStyle="ButtonStyle.Light"
+                              Disabled="_isLoading"
+                              class="cancel-button" />
+            }
         </div>
     }
 </div>
 
 @code {
+    [Parameter]
+    public bool ShowCancelButton { get; set; }
+
+    [Parameter]
+    public bool RequireProtectedCancel { get; set; }
+
     private bool UseQrAuth => AppSettingsService.UseAdminQrAuth;
     private readonly string _dialogKey = $"admin-auth-dialog:{Guid.NewGuid():N}";
     private bool _disposed;
@@ -92,7 +111,7 @@
         {
             return;
         }
-        await ExecuteWithLoadingAsync(() => OperatorAuthService.AuthenticateByQrAsync(barcode));
+        await ExecuteWithLoadingAsync(() => OperatorAuthService.AuthenticateAdminByQrAsync(barcode));
     }
 
     private async Task OnConfirm()
@@ -102,7 +121,22 @@
         {
             return;
         }
-        await ExecuteWithLoadingAsync(() => OperatorAuthService.AuthenticateAsync(_login, _password));
+        await ExecuteWithLoadingAsync(() => OperatorAuthService.AuthenticateAdminAsync(_login, _password));
+    }
+
+    private async Task OnCancelAsync()
+    {
+        if (_disposed || _isLoading)
+        {
+            return;
+        }
+
+        if (!await CanCancelAsync())
+        {
+            return;
+        }
+
+        CloseDialog();
     }
 
     private bool ValidateFields()
@@ -113,6 +147,27 @@
         }
         _validationError = "Заполните все поля";
         return false;
+    }
+
+    private Task<bool> CanCancelAsync()
+    {
+        return RequireProtectedCancel
+            ? ShowPasswordDialogAsync()
+            : Task.FromResult(true);
+    }
+
+    private async Task<bool> ShowPasswordDialogAsync()
+    {
+        var result = await DialogService.OpenAsync<PasswordDialog>(
+            "Введите пароль",
+            new Dictionary<string, object>(),
+            new DialogOptions
+            {
+                Width = "350px",
+                CloseDialogOnOverlayClick = false
+            });
+
+        return result is true;
     }
 
     private async Task ExecuteWithLoadingAsync(Func<Task<OperatorAuthResult>> action)
@@ -142,14 +197,19 @@
     private void CloseWithSuccess(OperatorAuthResult result)
     {
         NotificationService.Notify(NotificationSeverity.Success, "Авторизация успешна");
-        ScannerInputOwnership.ReleaseDialogOwner(_dialogKey);
-        DialogService.Close(new AdminAuthResult { Success = true, Username = result.Username ?? _login });
+        CloseDialog(new AdminAuthResult { Success = true, Username = result.Username ?? _login });
     }
 
     private void ShowAuthError(OperatorAuthResult result)
     {
         var error = result.ErrorMessage ?? "Ошибка авторизации";
         NotificationService.Notify(NotificationSeverity.Error, error);
+    }
+
+    private void CloseDialog(object? result = null)
+    {
+        ScannerInputOwnership.ReleaseDialogOwner(_dialogKey);
+        DialogService.Close(result);
     }
 
     public void Dispose()

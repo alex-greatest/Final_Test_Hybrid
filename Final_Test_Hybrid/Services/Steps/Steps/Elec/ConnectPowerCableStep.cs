@@ -1,8 +1,8 @@
 using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Errors;
+using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
 namespace Final_Test_Hybrid.Services.Steps.Steps.Elec;
@@ -12,7 +12,8 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Elec;
 /// </summary>
 public class ConnectPowerCableStep(
     DualLogger<ConnectPowerCableStep> logger,
-    IErrorService errorService) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
+    IErrorService errorService,
+    PowerCableStepMessageService powerCableStepMessageService) : IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.Elec.Connect_Power_Cable";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"Elec\".\"Connect_Power_Cable\".\"Start\"";
@@ -43,7 +44,21 @@ public class ConnectPowerCableStep(
             return TestStepResult.Fail($"Ошибка записи Start: {writeResult.Error}");
         }
 
-        return await WaitForCompletionWithTimeoutAsync(context, ct);
+        return await WaitForCompletionWithMainMessageAsync(context, ct);
+    }
+
+    private async Task<TestStepResult> WaitForCompletionWithMainMessageAsync(TestStepContext context, CancellationToken ct)
+    {
+        powerCableStepMessageService.Activate();
+
+        try
+        {
+            return await WaitForCompletionWithTimeoutAsync(context, ct);
+        }
+        finally
+        {
+            powerCableStepMessageService.Deactivate();
+        }
     }
 
     /// <summary>

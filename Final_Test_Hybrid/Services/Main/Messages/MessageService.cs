@@ -26,6 +26,7 @@ public class MessageService
     private readonly BoilerState _boilerState;
     private readonly GasValveTubeDeferredErrorService _gasValveTubeDeferredErrorService;
     private readonly EarthClipStepMessageService _earthClipStepMessageService;
+    private readonly PowerCableStepMessageService _powerCableStepMessageService;
 
     public event Action? OnChange;
 
@@ -41,7 +42,8 @@ public class MessageService
         RuntimeTerminalState runtimeTerminalState,
         BoilerState boilerState,
         GasValveTubeDeferredErrorService gasValveTubeDeferredErrorService,
-        EarthClipStepMessageService earthClipStepMessageService)
+        EarthClipStepMessageService earthClipStepMessageService,
+        PowerCableStepMessageService powerCableStepMessageService)
     {
         _operator = operatorState;
         _autoReady = autoReady;
@@ -55,6 +57,7 @@ public class MessageService
         _boilerState = boilerState;
         _gasValveTubeDeferredErrorService = gasValveTubeDeferredErrorService;
         _earthClipStepMessageService = earthClipStepMessageService;
+        _powerCableStepMessageService = powerCableStepMessageService;
         SubscribeToChanges();
     }
 
@@ -77,7 +80,8 @@ public class MessageService
             _runtimeTerminalState.IsCompletionActive,
             _runtimeTerminalState.IsPostAskEndActive,
             _gasValveTubeDeferredErrorService.IsMessageActive,
-            _earthClipStepMessageService.IsMessageActive);
+            _earthClipStepMessageService.IsMessageActive,
+            _powerCableStepMessageService.IsMessageActive);
     }
 
     private void SubscribeToChanges()
@@ -94,6 +98,7 @@ public class MessageService
         _boilerState.OnChanged += NotifyChanged;
         _gasValveTubeDeferredErrorService.OnStateChanged += NotifyChanged;
         _earthClipStepMessageService.OnStateChanged += NotifyChanged;
+        _powerCableStepMessageService.OnStateChanged += NotifyChanged;
     }
 
     public string CurrentMessage

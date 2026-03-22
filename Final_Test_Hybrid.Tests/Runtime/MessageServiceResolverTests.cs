@@ -169,12 +169,39 @@ public sealed class MessageServiceResolverTests
     }
 
     [Fact]
+    public void PowerCableMessageDuringRuntime_ReturnsLowPriorityMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            IsPowerCableMessageActive = true
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Подключите силовой кабель", message);
+    }
+
+    [Fact]
     public void Disconnected_BeatsGasValveTubeMessage()
     {
         var snapshot = CreateSnapshot() with
         {
             IsConnected = false,
             IsGasValveTubeMessageActive = true
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Нет связи с PLC", message);
+    }
+
+    [Fact]
+    public void Disconnected_BeatsPowerCableMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            IsConnected = false,
+            IsPowerCableMessageActive = true
         };
 
         var message = MessageServiceResolver.Resolve(snapshot);
@@ -197,12 +224,40 @@ public sealed class MessageServiceResolverTests
     }
 
     [Fact]
+    public void GenericReset_BeatsPowerCableMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            IsResetUiBusy = true,
+            IsPowerCableMessageActive = true
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Сброс теста...", message);
+    }
+
+    [Fact]
     public void CompletionActive_BeatsEarthClipMessage()
     {
         var snapshot = CreateSnapshot() with
         {
             IsCompletionActive = true,
             IsEarthClipMessageActive = true
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Тест завершён. Ожидание решения PLC...", message);
+    }
+
+    [Fact]
+    public void CompletionActive_BeatsPowerCableMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            IsCompletionActive = true,
+            IsPowerCableMessageActive = true
         };
 
         var message = MessageServiceResolver.Resolve(snapshot);
@@ -225,12 +280,40 @@ public sealed class MessageServiceResolverTests
     }
 
     [Fact]
+    public void PostAskEndActive_BeatsPowerCableMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            IsPostAskEndActive = true,
+            IsPowerCableMessageActive = true
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Сброс подтверждён. Ожидание решения PLC...", message);
+    }
+
+    [Fact]
     public void PlcConnectionLost_BeatsEarthClipMessage()
     {
         var snapshot = CreateSnapshot() with
         {
             CurrentInterrupt = InterruptReason.PlcConnectionLost,
             IsEarthClipMessageActive = true
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Потеря связи с PLC. Ожидание сброса...", message);
+    }
+
+    [Fact]
+    public void PlcConnectionLost_BeatsPowerCableMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            CurrentInterrupt = InterruptReason.PlcConnectionLost,
+            IsPowerCableMessageActive = true
         };
 
         var message = MessageServiceResolver.Resolve(snapshot);
@@ -252,6 +335,20 @@ public sealed class MessageServiceResolverTests
         Assert.Equal("Нет ответа от ПЛК", message);
     }
 
+    [Fact]
+    public void TagTimeout_BeatsPowerCableMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            CurrentInterrupt = InterruptReason.TagTimeout,
+            IsPowerCableMessageActive = true
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Нет ответа от ПЛК", message);
+    }
+
     private static MessageSnapshot CreateSnapshot()
     {
         return new MessageSnapshot(
@@ -266,6 +363,7 @@ public sealed class MessageServiceResolverTests
             IsCompletionActive: false,
             IsPostAskEndActive: false,
             IsGasValveTubeMessageActive: false,
-            IsEarthClipMessageActive: false);
+            IsEarthClipMessageActive: false,
+            IsPowerCableMessageActive: false);
     }
 }

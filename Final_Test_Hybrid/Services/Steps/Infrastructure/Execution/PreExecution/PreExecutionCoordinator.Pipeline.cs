@@ -187,6 +187,13 @@ public partial class PreExecutionCoordinator
             await EnsurePreExecutionInputReadyAsync(ct);
             await infra.PauseToken.WaitWhilePausedAsync(ct);
             var result = await steps.StartTimer1.ExecuteAsync(context, ct);
+            if (result.Status == PreExecutionStatus.Continue)
+            {
+                infra.StepTimingService.AddCompletedStepTiming(
+                    steps.StartTimer1.Name,
+                    steps.StartTimer1.Description,
+                    TimeSpan.Zero);
+            }
             infra.StatusReporter.ReportSuccess(stepId, result.SuccessMessage ?? "");
             return result;
         }

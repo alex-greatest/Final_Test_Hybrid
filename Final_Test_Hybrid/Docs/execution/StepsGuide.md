@@ -16,7 +16,7 @@
 ```
 PRE-EXECUTION STEPS (последовательно)
 ├─ ScanBarcodeStep / ScanBarcodeMesStep (выбор по UseMes)
-├─ StartTimer1Step
+├─ StartTimer1Step (фиксируется в StepTimingService как completed-step с `00.00`)
 ├─ BlockBoilerAdapterStep
 └─ StartTestExecution()
 
@@ -282,7 +282,8 @@ public string? GetLimits(LimitsContext context)
 - Execution-шаги, которые на retry возвращают котёл в режим Стенд, не должны писать ключ во время `dispatcher.IsReconnecting`.
 - Перед фактической записью такой шаг обязан дождаться ready-state диагностики: `IsStarted=true`, `IsConnected=true`, `IsReconnecting=false`, `LastPingData!=null`.
 - Ожидание выполняется boundedly (`20 c`, polling `100 мс`) через `context.DelayAsync(...)`, поэтому остаётся pause-aware и cancellation-aware.
-- Если ready-state не восстановился за это окно, шаг завершается communication-fail своего текущего fail-path; локальный multi-write retry по умолчанию не используется.
+- Если запись после ready-check упала reconnect-reject ошибкой класса `State=pending / начато переподключение Modbus до начала выполнения`, helper считает это race-window, повторно ждёт ready-state и делает ещё одну попытку только в пределах того же общего дедлайна.
+- Если ready-state не восстановился за это окно, шаг завершается communication-fail своего текущего fail-path; generic multi-write retry по другим ошибкам не используется.
 - После фактического старта записи/чтения собственный error-handling шага не меняется: любая реальная ошибка операции завершает попытку так же, как раньше.
 
 **Примечание по `Coms/Safety_Time`:**

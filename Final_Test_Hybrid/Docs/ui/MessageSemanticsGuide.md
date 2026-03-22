@@ -14,6 +14,7 @@
 
 - `Final_Test_Hybrid/Services/Main/Messages/MessageService.cs`
 - `Final_Test_Hybrid/Services/Main/Messages/EarthClipStepMessageService.cs`
+- `Final_Test_Hybrid/Services/Main/Messages/PowerCableStepMessageService.cs`
 - `Final_Test_Hybrid/Services/Main/Messages/MessageServiceResolver.cs`
 - `Final_Test_Hybrid/Services/Main/Messages/MessageTextResources.cs`
 - `Final_Test_Hybrid/Services/Errors/GasValveTubeDeferredErrorService.cs`
@@ -27,7 +28,7 @@
 ## Контракт слоя сообщений
 
 - `MessageService` является source-of-truth только для main message нижней строки.
-- `MessageService` собирает snapshot из `OperatorState`, `AutoReadySubscription`, `OpcUaConnectionState`, `ScanModeController`, `ExecutionPhaseState`, `ErrorCoordinator`, `PlcResetCoordinator`, `PreExecutionCoordinator`, `RuntimeTerminalState`, `BoilerState`, `GasValveTubeDeferredErrorService`, `EarthClipStepMessageService`.
+- `MessageService` собирает snapshot из `OperatorState`, `AutoReadySubscription`, `OpcUaConnectionState`, `ScanModeController`, `ExecutionPhaseState`, `ErrorCoordinator`, `PlcResetCoordinator`, `PreExecutionCoordinator`, `RuntimeTerminalState`, `BoilerState`, `GasValveTubeDeferredErrorService`, `EarthClipStepMessageService`, `PowerCableStepMessageService`.
 - Тексты main message и `PlcConnectionLost` toast читаются через `MessageTextResources` из `Form1.resx`; новые операторские строки в этом контуре нельзя добавлять только literal-ами в C#.
 - Terminal ownership приходит из `RuntimeTerminalState`:
   - `IsCompletionActive` — completion-handshake после result image;
@@ -58,7 +59,8 @@
 | 15 | `Phase != null` | Сообщение фазы выполнения |
 | 16 | `GasValveTubeDeferredErrorService.IsMessageActive && IsTestRunning` | `Не подключена трубка газового клапана` |
 | 17 | `EarthClipStepMessageService.IsMessageActive && IsTestRunning` | `Подключите клипсу заземления` |
-| 18 | Иначе | `""` |
+| 18 | `PowerCableStepMessageService.IsMessageActive && IsTestRunning` | `Подключите силовой кабель` |
+| 19 | Иначе | `""` |
 
 ## Обязательные сценарии
 
@@ -122,6 +124,17 @@
 - Если шаг `Elec/Connect_Earth_Clip` перестал быть active, сообщение обязано исчезать немедленно.
 - Потеря OPC-связи и любой cleanup reset/stop/cancel должны немедленно скрывать это сообщение.
 - 30-секундная эскалация в `ActiveErrors` не принадлежит message owner и остаётся в `ConnectEarthClipStep`.
+
+### Power cable step message
+
+- Сообщение `Подключите силовой кабель` является low-priority operator hint.
+- Оно не должно перебивать interrupt/reset/terminal/disconnected narrative.
+- Оно не должно жить как literal в `MessageService`; источник текста — `Form1.resx`.
+- Owner состояния — `PowerCableStepMessageService`, а не `IErrorService` и не raw OPC подписка внутри `MessageService`.
+- Сообщение включается сразу после успешного входа шага `Elec/Connect_Power_Cable`.
+- Если шаг `Elec/Connect_Power_Cable` перестал быть active, сообщение обязано исчезать немедленно.
+- Потеря OPC-связи и любой cleanup reset/stop/cancel должны немедленно скрывать это сообщение.
+- 30-секундная эскалация в `ActiveErrors` не принадлежит message owner и остаётся в `ConnectPowerCableStep`.
 
 ## Toast и main message
 

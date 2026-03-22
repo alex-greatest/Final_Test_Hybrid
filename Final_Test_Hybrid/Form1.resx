@@ -159,6 +159,9 @@
   <data name="EarthClipNotConnected" xml:space="preserve">
     <value>Подключите клипсу заземления</value>
   </data>
+  <data name="PowerCableNotConnected" xml:space="preserve">
+    <value>Подключите силовой кабель</value>
+  </data>
   <data name="PhaseBarcodeReceived" xml:space="preserve">
     <value>Штрихкод получен</value>
   </data>

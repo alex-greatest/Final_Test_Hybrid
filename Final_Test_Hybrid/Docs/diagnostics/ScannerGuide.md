@@ -45,6 +45,7 @@
 - raw scanner больше не должен молча зависеть от случайного активного handler-а;
 - barcode маршрутизируется только через `ScannerInputOwnershipService`;
 - при отсутствии owner barcode не теряется молча: пишется диагностика `barcode_rejected_no_owner`.
+- `AdminAuthDialog` обязан явно отпускать `Dialog` owner не только на success/Dispose, но и на штатной protected-cancel ветке interrupt-flow.
 
 ## Гейтинг ввода barcode
 

@@ -12,13 +12,19 @@ namespace Final_Test_Hybrid.Services.SpringBoot.Operation.Interrupt;
 public class InterruptDialogService(DialogService dialogService, Action? closeOverride = null)
 {
     private readonly Action _closeAction = closeOverride ?? (() => dialogService.Close());
-    public Task<AdminAuthResult?> ShowAdminAuthAsync()
+
+    public virtual Task<AdminAuthResult?> ShowAdminAuthAsync()
     {
+        var parameters = new Dictionary<string, object>
+        {
+            ["ShowCancelButton"] = true,
+            ["RequireProtectedCancel"] = true
+        };
         return ShowDialogAsync<AdminAuthDialog, AdminAuthResult>(
-            "Авторизация администратора", "450px");
+            "Авторизация администратора", "450px", parameters);
     }
 
-    public Task<SaveResult?> ShowInterruptReasonAsync(
+    public virtual Task<SaveResult?> ShowInterruptReasonAsync(
         Func<string, CancellationToken, Task<SaveResult>> onSubmit,
         CancellationToken ct)
     {
@@ -31,7 +37,7 @@ public class InterruptDialogService(DialogService dialogService, Action? closeOv
             "Причина прерывания", "85vw", parameters);
     }
 
-    public void CloseDialog()
+    public virtual void CloseDialog()
     {
         _closeAction();
     }

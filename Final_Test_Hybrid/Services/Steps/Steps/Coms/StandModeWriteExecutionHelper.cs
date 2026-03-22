@@ -13,6 +13,8 @@ internal static class StandModeWriteExecutionHelper
     private const ushort FailureAddress = 0;
     private static readonly TimeSpan ReadyWaitTimeout = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(100);
+    private const string ReconnectRejectedMessage = "начато переподключение Modbus до начала выполнения";
+    private const string PendingStateMarker = "State=pending";
 
     public static Task<DiagnosticWriteResult> ExecuteAsync(
         TestStepContext context,
@@ -40,30 +42,52 @@ internal static class StandModeWriteExecutionHelper
         TimeSpan pollInterval,
         CancellationToken ct)
     {
-        var readinessError = await WaitForDispatcherReadyAsync(
-            context,
-            dispatcher,
-            logger,
-            readyWaitTimeout,
-            pollInterval,
-            ct);
+        var deadline = DateTime.UtcNow + readyWaitTimeout;
 
-        if (readinessError != null)
+        while (true)
         {
-            return DiagnosticWriteResult.Fail(
-                FailureAddress,
-                readinessError,
-                DiagnosticFailureKind.Communication);
-        }
+            var readinessError = await WaitForDispatcherReadyAsync(
+                context,
+                dispatcher,
+                logger,
+                GetRemainingTimeout(deadline),
+                readyWaitTimeout,
+                pollInterval,
+                ct);
 
-        return await writeAsync(ct);
+            if (readinessError != null)
+            {
+                return DiagnosticWriteResult.Fail(
+                    FailureAddress,
+                    readinessError,
+                    DiagnosticFailureKind.Communication);
+            }
+
+            var writeResult = await writeAsync(ct);
+            if (!IsReconnectRaceRejected(writeResult))
+            {
+                return writeResult;
+            }
+
+            if (DateTime.UtcNow >= deadline)
+            {
+                logger.LogWarning(
+                    "Повторное ожидание готовности Modbus после reconnect-race не выполнено: общий дедлайн {TimeoutMs} мс исчерпан",
+                    readyWaitTimeout.TotalMilliseconds);
+                return writeResult;
+            }
+
+            logger.LogWarning(
+                "Поймана reconnect-race при записи режима Стенд. Повторно ждём готовность Modbus и выполняем ещё одну попытку");
+        }
     }
 
     private static async Task<string?> WaitForDispatcherReadyAsync(
         TestStepContext context,
         IModbusDispatcher dispatcher,
         IDualLogger logger,
-        TimeSpan readyWaitTimeout,
+        TimeSpan remainingTimeout,
+        TimeSpan totalTimeout,
         TimeSpan pollInterval,
         CancellationToken ct)
     {
@@ -78,14 +102,20 @@ internal static class StandModeWriteExecutionHelper
             return null;
         }
 
+        if (remainingTimeout <= TimeSpan.Zero)
+        {
+            LogReadyTimeout(logger, totalTimeout);
+            return BuildReadyTimeoutMessage(totalTimeout);
+        }
+
         logger.LogInformation("Ожидание готовности Modbus после reconnect перед записью режима Стенд");
 
         var waited = TimeSpan.Zero;
-        while (waited < readyWaitTimeout)
+        while (waited < remainingTimeout)
         {
             ct.ThrowIfCancellationRequested();
 
-            var delay = GetDelayChunk(readyWaitTimeout, pollInterval, waited);
+            var delay = GetDelayChunk(remainingTimeout, pollInterval, waited);
             await context.DelayAsync(delay, ct);
             waited += delay;
 
@@ -106,20 +136,35 @@ internal static class StandModeWriteExecutionHelper
             return null;
         }
 
-        logger.LogWarning(
-            "Готовность Modbus не восстановлена за {TimeoutMs} мс перед записью режима Стенд",
-            readyWaitTimeout.TotalMilliseconds);
-
-        return $"Готовность Modbus для записи режима Стенд не восстановлена за {readyWaitTimeout.TotalSeconds:F0} с.";
+        LogReadyTimeout(logger, totalTimeout);
+        return BuildReadyTimeoutMessage(totalTimeout);
     }
 
     private static TimeSpan GetDelayChunk(
-        TimeSpan readyWaitTimeout,
+        TimeSpan remainingTimeout,
         TimeSpan pollInterval,
         TimeSpan waited)
     {
-        var remaining = readyWaitTimeout - waited;
+        var remaining = remainingTimeout - waited;
         return remaining <= pollInterval ? remaining : pollInterval;
+    }
+
+    private static TimeSpan GetRemainingTimeout(DateTime deadline)
+    {
+        var remaining = deadline - DateTime.UtcNow;
+        return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+    }
+
+    private static void LogReadyTimeout(IDualLogger logger, TimeSpan totalTimeout)
+    {
+        logger.LogWarning(
+            "Готовность Modbus не восстановлена за {TimeoutMs} мс перед записью режима Стенд",
+            totalTimeout.TotalMilliseconds);
+    }
+
+    private static string BuildReadyTimeoutMessage(TimeSpan totalTimeout)
+    {
+        return $"Готовность Modbus для записи режима Стенд не восстановлена за {totalTimeout.TotalSeconds:F0} с.";
     }
 
     private static string? GetStoppedDispatcherMessage(
@@ -134,5 +179,17 @@ internal static class StandModeWriteExecutionHelper
     private static bool IsDispatcherReady(IModbusDispatcher dispatcher)
     {
         return dispatcher is { IsStarted: true, IsConnected: true, IsReconnecting: false, LastPingData: not null };
+    }
+
+    private static bool IsReconnectRaceRejected(DiagnosticWriteResult result)
+    {
+        if (result is not { Success: false, FailureKind: DiagnosticFailureKind.Communication, Error: not null })
+        {
+            return false;
+        }
+
+        return result.Error.Contains(ReconnectRejectedMessage, StringComparison.OrdinalIgnoreCase)
+               || (result.Error.Contains(PendingStateMarker, StringComparison.OrdinalIgnoreCase)
+                   && result.Error.Contains("переподключ", StringComparison.OrdinalIgnoreCase));
     }
 }

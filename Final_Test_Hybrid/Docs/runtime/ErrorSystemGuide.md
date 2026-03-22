@@ -98,6 +98,15 @@ public static IReadOnlyList<ErrorDefinition> All => [
 - при выходе из шага, отмене, reset cleanup и потере связи сообщение скрывается сразу;
 - `RaisePlc(ErrorDefinitions.EarthClipNotConnected)` не переносится в этот сервис и остаётся в `ConnectEarthClipStep` с текущим условием `Ready_1 + 30 секунд`.
 
+### PowerCableStepMessageService
+
+Для `Elec/Connect_Power_Cable` используется отдельный owner только для нижней строки:
+
+- после `Start=true` нижняя строка сразу показывает `Подключите силовой кабель`;
+- message-state живёт только пока active step = `Elec/Connect_Power_Cable`;
+- при выходе из шага, отмене, reset cleanup и потере связи сообщение скрывается сразу;
+- `RaisePlc(ErrorDefinitions.PowerCableNotConnected)` не переносится в этот сервис и остаётся в `ConnectPowerCableStep` с текущим условием `30 секунд ожидания после входа в шаг`.
+
 ### ErrorCoordinator
 
 | Событие | Действие |
@@ -244,6 +253,7 @@ Services/Errors/
 Services/Main/Messages/
 ├── MessageService.cs
 ├── EarthClipStepMessageService.cs
+├── PowerCableStepMessageService.cs
 ├── MessageServiceResolver.cs
 └── MessageTextResources.cs
 

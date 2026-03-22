@@ -55,6 +55,7 @@ internal static class PreExecutionTestContextFactory
         var statusReporter = new StepStatusReporter(sequenceService, appSettings, scanStep, scanBarcodeMesStep);
         var connectionState = new OpcUaConnectionState(loggerFactory.CreateLogger<OpcUaConnectionState>());
         var stepTimingService = new StepTimingService();
+        var timerService = new TestTimerServiceStub();
         var subscription = new OpcUaSubscription(
             connectionState,
             TestInfrastructure.CreateOpcUaOptions(),
@@ -82,7 +83,7 @@ internal static class PreExecutionTestContextFactory
             new TestResultsServiceStub(),
             recipeProvider,
             stepHistory,
-            new TestTimerServiceStub(),
+            timerService,
             new DualLogger<PreExecutionCoordinator>(
                 loggerFactory.CreateLogger<PreExecutionCoordinator>(),
                 new TestStepLoggerStub()),
@@ -111,7 +112,11 @@ internal static class PreExecutionTestContextFactory
                 appSettings,
                 scanStep,
                 scanBarcodeMesStep,
-                CreateUninitialized<StartTimer1Step>(),
+                new StartTimer1Step(
+                    timerService,
+                    new DualLogger<StartTimer1Step>(
+                        loggerFactory.CreateLogger<StartTimer1Step>(),
+                        new TestStepLoggerStub())),
                 CreateUninitialized<BlockBoilerAdapterStep>()),
             infra,
             coordinators,

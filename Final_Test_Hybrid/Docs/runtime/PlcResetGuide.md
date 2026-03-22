@@ -216,13 +216,23 @@ RunSingleCycleAsync:
 - Попытка restart scan-таймера из `OnResetCompleted` в этом окне блокируется (`ScanTimingRestartBlockedByInterruptDialog`).
 - В UX диалога есть явная кнопка `Отмена`; она завершает серию так же, как и успешное сохранение причины.
 
-- Текущий UX: **без** окна `Авторизация администратора`, сразу ввод причины.
+- Для `UseMes=true` soft-reset interrupt-flow использует два окна подряд:
+  - `Авторизация администратора`;
+  - `Причина прерывания`.
+- Для `UseMes=false` поведение остаётся прежним: сразу открывается ввод причины без admin-auth шага.
 - Маршрут сохранения не меняется:
   - `UseMes=true` → MES;
   - `UseMes=false` → локальная БД.
-- Обратимость зафиксирована в коде флагом `bypassAdminAuthInSoftResetInterrupt`:
-  `Final_Test_Hybrid/Services/Steps/Infrastructure/Execution/PreExecution/PreExecutionCoordinator.Subscriptions.cs`.
-- Rework-flow (`ReworkDialogService`) не затрагивается и по-прежнему использует отдельную admin-авторизацию.
+- Для отдельной admin-авторизации rework-flow и interrupt-flow используется только ответ сервера:
+  - запросы идут в `/api/admin/auth` и `/api/admin/auth/Qr`, а не в operator auth routes;
+  - `200 OK` открывает ввод причины;
+  - `404 NotFound` оставляет окно авторизации открытым и показывает `ErrorResponse.Message`;
+  - любой другой статус оставляет окно авторизации открытым и показывает `Неизвестная ошибка`.
+- Этот gate одинаков для пароля и QR-ветки `AdminAuthDialog` и не должен менять `OperatorState` обычного scan-mode.
+- `operator username` в MES interrupt-path не используется как submit identity: после успешной admin-auth причина отправляется на сервер с `username` администратора.
+- Повторный запуск interrupt-flow после `Cancel` всегда начинает цепочку заново с admin-auth окна.
+- Для interrupt-path окно `Авторизация администратора` имеет защищённую отмену:
+  закрытие разрешено только после инженерного пароля, как и у окна причины прерывания.
 
 ## Changeover ownership в reset-сценариях
 

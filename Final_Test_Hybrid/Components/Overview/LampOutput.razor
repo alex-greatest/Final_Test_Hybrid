@@ -33,8 +33,6 @@
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
-        Logger.LogInformation("LampOutput init: Label={Label}, Tag={Tag}", Label, Tag);
-
         if (string.IsNullOrEmpty(Tag))
         {
             Logger.LogWarning("LampOutput: Tag is empty for Label={Label}, skipping subscription", Label);
@@ -42,7 +40,6 @@
         }
 
         _subscribedTag = Tag;
-        Logger.LogInformation("LampOutput: Subscribing to {Tag}", _subscribedTag);
         await Subscription.SubscribeAsync(_subscribedTag, OnValueChanged);
     }
 
@@ -56,8 +53,6 @@
             return;
         }
 
-        Logger.LogInformation("LampOutput callback: Tag={Tag}, Value={Value}, Type={Type}",
-            _subscribedTag, value, value?.GetType().Name ?? "null");
         _isOn = value is true;
         await InvokeAsync(StateHasChanged);
     }

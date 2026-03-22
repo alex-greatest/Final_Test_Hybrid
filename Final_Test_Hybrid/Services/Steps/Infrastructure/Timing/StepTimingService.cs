@@ -9,6 +9,7 @@ public interface IStepTimingService
     IReadOnlyList<StepTimingRecord> GetAll();
     bool HasActiveStep(string name);
     void Clear(bool preserveScanState = false);
+    void AddCompletedStepTiming(string name, string description, TimeSpan duration);
 
     // Методы для шага сканирования (таймер в реальном времени)
     void StartScanTiming(string name, string description);

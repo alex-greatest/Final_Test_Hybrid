@@ -42,7 +42,9 @@
   - retry-ветки `Coms/*`, которые перед своей основной операцией вызывают `SetStandModeAsync(...)`, теперь не пишут ключ стенда в active reconnect-window;
   - перед фактической записью helper boundedly ждёт `IsStarted=true`, `IsConnected=true`, `IsReconnecting=false`, `LastPingData!=null`;
   - ожидание ограничено `20 c`, идёт через `context.DelayAsync(...)` и остаётся pause-aware/cancellation-aware;
-  - после ready-state выполняется одна реальная запись через прежний `PacedDiagWriter`, без локального multi-write retry по умолчанию;
+  - после ready-state выполняется одна реальная запись через прежний `PacedDiagWriter`;
+  - если reconnect стартовал уже после ready-check, но до фактического enqueue, helper распознаёт reconnect-reject race (`State=pending` / `начато переподключение Modbus до начала выполнения`), повторно ждёт ready-state и пробует ещё раз только в пределах того же общего дедлайна;
+  - generic multi-write retry по остальным write/read ошибкам не добавлялся;
   - fail-path самих шагов после фактического старта записи/чтения не менялся.
 - `ConnectionTestPanel` normal-mode reset больше не маскирует реальный результат записи: UI получает фактический `bool` от `AccessLevelManager.ResetToNormalModeAsync()`.
 - `Coms/Safety_Time` переведён на прямой runtime-контракт по фактическому step-level Modbus IO:
@@ -192,6 +194,13 @@
   - `dotnet format style Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
   - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/StandModeWriteExecutionHelper.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/WriteTestByteOnStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/CheckTestByteOnStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChPumpStartStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChResetStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMaxHeatoutStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMinHeatoutStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/PumpStartFuncResetStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/SetDhwTankModeStep.cs;Final_Test_Hybrid.Tests/Runtime/StandModeWriteExecutionHelperTests.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-warning-stand-mode-gate.txt" -e=WARNING` — отчёт пуст (`Solution Final_Test_Hybrid.slnx`).
   - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/StandModeWriteExecutionHelper.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/WriteTestByteOnStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/CheckTestByteOnStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChPumpStartStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChResetStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMaxHeatoutStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMinHeatoutStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/PumpStartFuncResetStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/SetDhwTankModeStep.cs;Final_Test_Hybrid.Tests/Runtime/StandModeWriteExecutionHelperTests.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-hint-stand-mode-gate.txt" -e=HINT` — остались только non-blocking reflection/style hints (`Class ... is never used` для шагов, `Convert into constant`, `Invert if`, `can be made static`, `Merge into pattern`); новых safety-регрессий по reconnect-gate не найдено.
+- После закрытия race-window между ready-check и enqueue дополнительно выполнены:
+  - `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --filter "FullyQualifiedName~StandModeWriteExecutionHelperTests|FullyQualifiedName~CheckCommsStepTests|FullyQualifiedName~ModbusDispatcherReconnectTests"` — успешно, `14/14`; остаются baseline warning `MSB3277` по `WindowsBase`.
+  - `dotnet build Final_Test_Hybrid.slnx` — успешно; остаются те же baseline warning `MSB3277` по `WindowsBase`.
+  - `dotnet format analyzers Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
+  - `dotnet format style Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
+  - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/StandModeWriteExecutionHelper.cs;Final_Test_Hybrid.Tests/Runtime/StandModeWriteExecutionHelperTests.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-warning-stand-mode-race.txt" -e=WARNING` — отчёт пуст (`Solution Final_Test_Hybrid.slnx`).
+  - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/StandModeWriteExecutionHelper.cs;Final_Test_Hybrid.Tests/Runtime/StandModeWriteExecutionHelperTests.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-hint-stand-mode-race.txt" -e=HINT` — отчёт пуст (`Solution Final_Test_Hybrid.slnx`).
 
 ## Residual Risks
 
@@ -204,3 +213,4 @@
 - Новый failure mode runtime handoff/stale state зафиксирован в `Docs/changes/2026-03-20-modbus-runtime-handoff-stale-state.md`.
 - Новый failure mode execution stand-write during reconnect зафиксирован в `Docs/changes/2026-03-20-execution-stand-write-reconnect-gate.md`.
 - Для локального batch-read/progress fix в `Coms/Safety_Time` новый incident не выявлен.
+- Текущая доработка stand-write helper уточняет уже зафиксированный incident про execution stand-write during reconnect; нового incident-document не добавлялось.

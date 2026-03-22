@@ -24,8 +24,9 @@ public sealed class StandModeWriteExecutionHelperTests
         var result = await StandModeWriteExecutionHelper.ExecuteAsync(
             CreateContext(),
             dispatcher,
-            _ =>
+            ct =>
             {
+                _ = ct;
                 writeCalls++;
                 return Task.FromResult(DiagnosticWriteResult.Ok(1000));
             },
@@ -39,23 +40,34 @@ public sealed class StandModeWriteExecutionHelperTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_WaitsForReadyState_ThenWritesOnce()
+    public async Task ExecuteAsync_RetriesAfterReconnectRace_ThenWritesAfterReadyStateRestored()
     {
         var dispatcher = new TestModbusDispatcher
         {
             IsStarted = true,
-            IsConnected = false,
-            IsReconnecting = true
+            IsConnected = true,
+            IsReconnecting = false,
+            LastPingData = new DiagnosticPingData()
         };
         var writeCalls = 0;
 
         var task = StandModeWriteExecutionHelper.ExecuteAsync(
             CreateContext(),
             dispatcher,
-            _ =>
+            ct =>
             {
+                _ = ct;
                 writeCalls++;
-                return Task.FromResult(DiagnosticWriteResult.Ok(1000));
+
+                if (writeCalls != 1)
+                {
+                    return Task.FromResult(DiagnosticWriteResult.Ok(1000));
+                }
+
+                dispatcher.IsConnected = false;
+                dispatcher.IsReconnecting = true;
+                dispatcher.LastPingData = null;
+                return Task.FromResult(CreateReconnectRejectedResult());
             },
             TestInfrastructure.CreateDualLogger<StandModeWriteExecutionHelperTests>(),
             TimeSpan.FromSeconds(1),
@@ -70,6 +82,39 @@ public sealed class StandModeWriteExecutionHelperTests
         var result = await task.WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.True(result.Success);
+        Assert.Equal(2, writeCalls);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DoesNotRetry_WhenWriteFailedForNonReconnectReason()
+    {
+        var dispatcher = new TestModbusDispatcher
+        {
+            IsStarted = true,
+            IsConnected = true,
+            IsReconnecting = false,
+            LastPingData = new DiagnosticPingData()
+        };
+        var writeCalls = 0;
+        const string error = "The operation has timed out.";
+
+        var result = await StandModeWriteExecutionHelper.ExecuteAsync(
+            CreateContext(),
+            dispatcher,
+            ct =>
+            {
+                _ = ct;
+                writeCalls++;
+                return Task.FromResult(DiagnosticWriteResult.Fail(1000, error, DiagnosticFailureKind.Communication));
+            },
+            TestInfrastructure.CreateDualLogger<StandModeWriteExecutionHelperTests>(),
+            TimeSpan.FromMilliseconds(200),
+            TimeSpan.FromMilliseconds(20),
+            CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal(DiagnosticFailureKind.Communication, result.FailureKind);
+        Assert.Equal(error, result.Error);
         Assert.Equal(1, writeCalls);
     }
 
@@ -87,8 +132,9 @@ public sealed class StandModeWriteExecutionHelperTests
         var result = await StandModeWriteExecutionHelper.ExecuteAsync(
             CreateContext(),
             dispatcher,
-            _ =>
+            ct =>
             {
+                _ = ct;
                 writeCalls++;
                 return Task.FromResult(DiagnosticWriteResult.Ok(1000));
             },
@@ -101,6 +147,53 @@ public sealed class StandModeWriteExecutionHelperTests
         Assert.Equal(DiagnosticFailureKind.Communication, result.FailureKind);
         Assert.Contains("не восстановлена", result.Error, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, writeCalls);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ReturnsCommunicationFail_WhenReconnectRaceConsumesWholeDeadline()
+    {
+        var dispatcher = new TestModbusDispatcher
+        {
+            IsStarted = true,
+            IsConnected = true,
+            IsReconnecting = false,
+            LastPingData = new DiagnosticPingData()
+        };
+        var writeCalls = 0;
+
+        var result = await StandModeWriteExecutionHelper.ExecuteAsync(
+            CreateContext(),
+            dispatcher,
+            ct =>
+            {
+                _ = ct;
+                writeCalls++;
+                dispatcher.IsConnected = false;
+                dispatcher.IsReconnecting = true;
+                dispatcher.LastPingData = null;
+
+                if (writeCalls == 1)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(40, CancellationToken.None);
+                        dispatcher.IsConnected = true;
+                        dispatcher.IsReconnecting = false;
+                        dispatcher.LastPingData = new DiagnosticPingData();
+                    }, CancellationToken.None);
+                }
+
+                return Task.FromResult(CreateReconnectRejectedResult());
+            },
+            TestInfrastructure.CreateDualLogger<StandModeWriteExecutionHelperTests>(),
+            TimeSpan.FromMilliseconds(180),
+            TimeSpan.FromMilliseconds(20),
+            CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal(DiagnosticFailureKind.Communication, result.FailureKind);
+        Assert.Contains("не восстановлена", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(2, writeCalls);
     }
 
     [Fact]
@@ -118,8 +211,9 @@ public sealed class StandModeWriteExecutionHelperTests
         var task = StandModeWriteExecutionHelper.ExecuteAsync(
             CreateContext(),
             dispatcher,
-            _ =>
+            ct =>
             {
+                _ = ct;
                 writeCalls++;
                 return Task.FromResult(DiagnosticWriteResult.Ok(1000));
             },
@@ -146,8 +240,9 @@ public sealed class StandModeWriteExecutionHelperTests
         var result = await StandModeWriteExecutionHelper.ExecuteAsync(
             CreateContext(),
             dispatcher,
-            _ =>
+            ct =>
             {
+                _ = ct;
                 writeCalls++;
                 return Task.FromResult(DiagnosticWriteResult.Ok(1000));
             },
@@ -175,6 +270,14 @@ public sealed class StandModeWriteExecutionHelperTests
             diagWriter: null!,
             tagWaiter: null!,
             rangeSliderUiState: null!);
+    }
+
+    private static DiagnosticWriteResult CreateReconnectRejectedResult()
+    {
+        return DiagnosticWriteResult.Fail(
+            1000,
+            "Команда прервана: начато переподключение Modbus до начала выполнения. State=pending",
+            DiagnosticFailureKind.Communication);
     }
 
     private sealed class TestModbusDispatcher : IModbusDispatcher

@@ -110,6 +110,16 @@ public void ResetScanTiming()
 
 ## Методы API
 
+### Completed Timing
+
+- Для мгновенно завершающихся шагов допускается completed-запись без active timer lifecycle.
+- Такой шаг сразу попадает в `_records` как завершённый `StepTimingRecord` с `IsRunning = false`.
+- Это поведение используется для `Misc/StartTimer1`: шаг фиксируется в `StepTimingService` с длительностью `00.00`.
+- Completed-запись не должна:
+  - активировать `HasActiveStep(...)`;
+  - участвовать в `PauseAllColumnsTiming` / `ResumeAllColumnsTiming`;
+  - менять ownership runtime-логики, которая опирается на active-step.
+
 ### Scan Timing
 
 | Метод | Когда вызывать |

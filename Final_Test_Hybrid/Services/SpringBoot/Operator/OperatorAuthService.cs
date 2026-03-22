@@ -16,31 +16,44 @@ public class OperatorAuthService(
 {
     private const string AuthEndpoint = "/api/operator/auth";
     private const string QrAuthEndpoint = "/api/operator/auth/Qr";
+    private const string AdminAuthEndpoint = "/api/admin/auth";
+    private const string AdminQrAuthEndpoint = "/api/admin/auth/Qr";
     private const string LogoutEndpoint = "/api/operator/logout";
 
     public Task<OperatorAuthResult> AuthenticateAsync(string login, string password, CancellationToken ct = default)
     {
         var request = CreateRequest(login, password);
-        return ExecuteAsync(() => SendRequestAsync(request, ct), "Аутентификация", login, ct);
+        return ExecuteAsync(() => SendRequestAsync(request, ct), "Аутентификация", login);
+    }
+
+    public Task<OperatorAuthResult> AuthenticateAdminAsync(string login, string password, CancellationToken ct = default)
+    {
+        var request = CreateRequest(login, password);
+        return ExecuteAsync(() => SendAdminRequestAsync(request, ct), "Аутентификация администратора", login);
     }
 
     public Task<OperatorAuthResult> AuthenticateByQrAsync(string qrCode, CancellationToken ct = default)
     {
         var request = CreateQrRequest(qrCode);
-        return ExecuteAsync(() => SendQrRequestAsync(request, ct), "QR-аутентификация", null, ct);
+        return ExecuteAsync(() => SendQrRequestAsync(request, ct), "QR-аутентификация", null);
+    }
+
+    public Task<OperatorAuthResult> AuthenticateAdminByQrAsync(string qrCode, CancellationToken ct = default)
+    {
+        var request = CreateQrRequest(qrCode);
+        return ExecuteAsync(() => SendAdminQrRequestAsync(request, ct), "QR-аутентификация администратора", null);
     }
 
     public Task<OperatorAuthResult> LogoutAsync(CancellationToken ct = default)
     {
         var request = CreateLogoutRequest();
-        return ExecuteAsync(() => SendLogoutRequestAsync(request, ct), "Выход", request.Username, ct);
+        return ExecuteAsync(() => SendLogoutRequestAsync(request, ct), "Выход", request.Username);
     }
 
     private async Task<OperatorAuthResult> ExecuteAsync(
         Func<Task<OperatorAuthResult>> action,
         string operation,
-        string? context,
-        CancellationToken ct)
+        string? context)
     {
         try
         {
@@ -108,6 +121,18 @@ public class OperatorAuthService(
         };
     }
 
+    private async Task<OperatorAuthResult> SendAdminRequestAsync(OperatorAuthRequest request, CancellationToken ct)
+    {
+        var response = await httpClient.PostWithResponseAsync(AdminAuthEndpoint, request, ct);
+        return await HandleAdminResponseAsync(response, "Аутентификация администратора", request.Login, ct);
+    }
+
+    private async Task<OperatorAuthResult> SendAdminQrRequestAsync(OperatorQrAuthRequest request, CancellationToken ct)
+    {
+        var response = await httpClient.PostWithResponseAsync(AdminQrAuthEndpoint, request, ct);
+        return await HandleAdminResponseAsync(response, "QR-аутентификация администратора", null, ct);
+    }
+
     private async Task<OperatorAuthResult> SendLogoutRequestAsync(OperatorLogoutRequest request, CancellationToken ct)
     {
         var response = await httpClient.PostWithResponseAsync(LogoutEndpoint, request, ct);
@@ -136,6 +161,26 @@ public class OperatorAuthService(
         return OperatorAuthResult.Ok();
     }
 
+    private async Task<OperatorAuthResult> HandleAdminResponseAsync(
+        HttpResponseMessage response,
+        string operation,
+        string? context,
+        CancellationToken ct)
+    {
+        var result = await AdminAuthResponseParser.ParseAsync(response, ct);
+        if (result.Success)
+        {
+            return result;
+        }
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            LogWarning(operation, context, result.ErrorMessage ?? "Неизвестная ошибка");
+            return result;
+        }
+        logger.LogError("Неожиданный код статуса {StatusCode} при {Operation}", response.StatusCode, operation);
+        return result;
+    }
+
     private async Task<OperatorAuthResult> HandleNotFoundAsync(
         HttpResponseMessage response,
         string operation,
@@ -144,9 +189,14 @@ public class OperatorAuthService(
     {
         var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>(ct);
         var message = errorResponse?.Message ?? "Неизвестная ошибка";
+        LogWarning(operation, context, message);
+        return OperatorAuthResult.Fail(message, isKnownError: true);
+    }
+
+    private void LogWarning(string operation, string? context, string message)
+    {
         var contextPart = context != null ? $" для {context}" : "";
         logger.LogWarning("{Operation} не удалась{Context}: {Message}", operation, contextPart, message);
-        return OperatorAuthResult.Fail(message, isKnownError: true);
     }
 
     private OperatorAuthResult HandleUnexpectedStatus(HttpStatusCode statusCode, string operation)
