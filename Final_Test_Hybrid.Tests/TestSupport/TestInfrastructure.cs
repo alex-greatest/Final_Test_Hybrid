@@ -4,7 +4,9 @@ using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.UI;
 using Final_Test_Hybrid.Services.Errors;
+using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
+using Final_Test_Hybrid.Services.OpcUa.Heartbeat;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.ErrorCoordinator.Behaviors;
@@ -161,9 +163,13 @@ internal static class TestInfrastructure
 {
     private static readonly ILoggerFactory SharedLoggerFactory = LoggerFactory.Create(_ => { });
 
-    public static DualLogger<T> CreateDualLogger<T>()
+    public static DualLogger<T> CreateDualLogger<T>(
+        ILoggerFactory? loggerFactory = null,
+        ITestStepLogger? testStepLogger = null)
     {
-        return new DualLogger<T>(SharedLoggerFactory.CreateLogger<T>(), new TestStepLoggerStub());
+        loggerFactory ??= SharedLoggerFactory;
+        testStepLogger ??= new TestStepLoggerStub();
+        return new DualLogger<T>(loggerFactory.CreateLogger<T>(), testStepLogger);
     }
 
     public static ILogger<T> CreateLogger<T>()
@@ -180,6 +186,31 @@ internal static class TestInfrastructure
             ReconnectIntervalMs = 1000,
             SessionTimeoutMs = 10000
         });
+    }
+
+    public static HmiHeartbeatHealthMonitor CreateHeartbeatHealthMonitor(TimeProvider? timeProvider = null)
+    {
+        return new HmiHeartbeatHealthMonitor(timeProvider ?? TimeProvider.System);
+    }
+
+    public static AutoReadySubscription CreateAutoReadySubscription(
+        OpcUaSubscription? subscription = null,
+        OpcUaConnectionState? connectionState = null,
+        TimeProvider? timeProvider = null,
+        ILoggerFactory? loggerFactory = null)
+    {
+        loggerFactory ??= SharedLoggerFactory;
+        connectionState ??= new OpcUaConnectionState(loggerFactory.CreateLogger<OpcUaConnectionState>());
+        subscription ??= new OpcUaSubscription(
+            connectionState,
+            CreateOpcUaOptions(),
+            CreateDualLogger<OpcUaSubscription>(loggerFactory));
+
+        return new AutoReadySubscription(
+            subscription,
+            connectionState,
+            CreateHeartbeatHealthMonitor(timeProvider),
+            CreateDualLogger<AutoReadySubscription>(loggerFactory));
     }
 
     public static TField GetPrivateField<TField>(object instance, string name)

@@ -62,7 +62,8 @@ public sealed class PostAskEndDecisionLoopTests
         var autoReady = new AutoReadySubscription(
             subscription,
             connectionState,
-            TestInfrastructure.CreateLogger<AutoReadySubscription>());
+            TestInfrastructure.CreateHeartbeatHealthMonitor(),
+            TestInfrastructure.CreateDualLogger<AutoReadySubscription>());
         var steps = new PreExecutionSteps(null!, null!, null!, null!, null!);
         var infra = new PreExecutionInfrastructure(
             null!,

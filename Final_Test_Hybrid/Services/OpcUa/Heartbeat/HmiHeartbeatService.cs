@@ -1,6 +1,6 @@
 using Final_Test_Hybrid.Models.Plc.Tags;
+using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
-using Microsoft.Extensions.Logging;
 
 namespace Final_Test_Hybrid.Services.OpcUa.Heartbeat;
 
@@ -12,7 +12,8 @@ public class HmiHeartbeatService : IDisposable
 {
     private readonly OpcUaConnectionState _connectionState;
     private readonly OpcUaTagService _tagService;
-    private readonly ILogger<HmiHeartbeatService> _logger;
+    private readonly HmiHeartbeatHealthMonitor _healthMonitor;
+    private readonly DualLogger<HmiHeartbeatService> _logger;
     private readonly Lock _lock = new();
     private PeriodicTimer? _timer;
     private CancellationTokenSource? _cts;
@@ -24,10 +25,12 @@ public class HmiHeartbeatService : IDisposable
     public HmiHeartbeatService(
         OpcUaConnectionState connectionState,
         OpcUaTagService tagService,
-        ILogger<HmiHeartbeatService> logger)
+        HmiHeartbeatHealthMonitor healthMonitor,
+        DualLogger<HmiHeartbeatService> logger)
     {
         _connectionState = connectionState;
         _tagService = tagService;
+        _healthMonitor = healthMonitor;
         _logger = logger;
 
         connectionState.ConnectionStateChanged += OnConnectionStateChanged;
@@ -59,6 +62,7 @@ public class HmiHeartbeatService : IDisposable
                 return;
             }
             _isRunning = true;
+            _healthMonitor.MarkMonitoringStarted();
             _cts = new CancellationTokenSource();
             _timer = new PeriodicTimer(TimeSpan.FromMilliseconds(HeartbeatIntervalMs));
             _heartbeatTask = HeartbeatLoopAsync(_timer, _cts.Token);
@@ -92,14 +96,17 @@ public class HmiHeartbeatService : IDisposable
         try
         {
             var result = await _tagService.WriteAsync(BaseTags.HmiHeartbeat, true, ct, silent: true);
-            if (!result.Success)
+            if (result.Success)
             {
-                _logger.LogWarning("Не удалось записать HMI Heartbeat: {Error}", result.Error);
+                LogHeartbeatTransition(_healthMonitor.RecordWriteSuccess());
+                return;
             }
+
+            LogHeartbeatTransition(_healthMonitor.RecordWriteFailure(result.Error ?? "Неизвестная ошибка записи"));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogWarning(ex, "Ошибка при записи HMI Heartbeat");
+            LogHeartbeatTransition(_healthMonitor.RecordWriteFailure($"Exception: {ex.Message}"));
         }
     }
 
@@ -127,6 +134,7 @@ public class HmiHeartbeatService : IDisposable
             _heartbeatTask = null;
         }
 
+        _healthMonitor.MarkMonitoringStopped();
         oldCts?.Cancel();
 
         if (oldTask != null)
@@ -147,6 +155,40 @@ public class HmiHeartbeatService : IDisposable
         _logger.LogInformation("HMI Heartbeat остановлен");
     }
 
+    private void LogHeartbeatTransition(HmiHeartbeatHealthTransition? transition)
+    {
+        if (transition is null)
+        {
+            return;
+        }
+
+        if (transition.Value.CurrentState == HeartbeatHealthState.Healthy)
+        {
+            _logger.LogInformation(
+                "Heartbeat восстановлен. Предыдущее состояние={PreviousState}. Возраст heartbeat, мс={HeartbeatAgeMs}. Результат последней записи={LastHeartbeatWriteResult}",
+                transition.Value.PreviousState,
+                transition.Value.AgeMs?.ToString() ?? "n/a",
+                transition.Value.LastWriteResult);
+            return;
+        }
+
+        if (transition.Value.CurrentState == HeartbeatHealthState.WriteFailed)
+        {
+            _logger.LogWarning(
+                "Heartbeat: ошибка записи. Предыдущее состояние={PreviousState}. Возраст heartbeat, мс={HeartbeatAgeMs}. Результат последней записи={LastHeartbeatWriteResult}",
+                transition.Value.PreviousState,
+                transition.Value.AgeMs?.ToString() ?? "n/a",
+                transition.Value.LastWriteResult);
+            return;
+        }
+
+        _logger.LogWarning(
+            "Heartbeat: превышен допустимый интервал. Предыдущее состояние={PreviousState}. Возраст heartbeat, мс={HeartbeatAgeMs}. Результат последней записи={LastHeartbeatWriteResult}",
+            transition.Value.PreviousState,
+            transition.Value.AgeMs?.ToString() ?? "n/a",
+            transition.Value.LastWriteResult);
+    }
+
     public void Dispose()
     {
         if (_disposed)
@@ -156,5 +198,6 @@ public class HmiHeartbeatService : IDisposable
         _disposed = true;
         _connectionState.ConnectionStateChanged -= OnConnectionStateChanged;
         StopHeartbeat();
+        GC.SuppressFinalize(this);
     }
 }

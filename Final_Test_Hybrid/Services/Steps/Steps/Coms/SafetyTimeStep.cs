@@ -217,12 +217,7 @@ public class SafetyTimeStep(
         logger.LogInformation("Safety time: {SafetyTime:F2} сек, пределы: [{Min:F2} .. {Max:F2}], статус: {Status}",
             safetyTime, min, max, isInRange ? "OK" : "NOK");
 
-        if (!isInRange)
-        {
-            return TestStepResult.Fail($"Safety time {safetyTime:F2} сек вне пределов [{min:F2} .. {max:F2}]");
-        }
-
-        return null;
+        return !isInRange ? TestStepResult.Fail($"Safety time {safetyTime:F2} сек вне пределов [{min:F2} .. {max:F2}]") : null;
     }
 
     /// <summary>

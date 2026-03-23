@@ -11,8 +11,8 @@ public partial class ReadSoftCodePlugStep
             Title: "Проверка типа подключения к котлу (1054)",
             Register: RegisterConnectionType,
             ExpectedRecipeKey: NumberOfContoursRecipe,
-            ReadLogMessage: $"Чтение типа подключения к котлу из регистра {RegisterConnectionType}",
-            ReadErrorPrefix: $"Ошибка при чтении типа подключения к котлу из регистра {RegisterConnectionType}. ",
+            ReadLogMessage: $"Чтение типа (по кол-ву контуров) из регистра {RegisterConnectionType}",
+            ReadErrorPrefix: $"Ошибка при чтении типа котла (по кол-ву контуров) из регистра {RegisterConnectionType}. ",
             MismatchMessage: "1. Отсканированный код на котле не соответствует котлу;\n2. На котёл установлен неправильный жгут;\n3. Жгут повреждён.",
             MismatchError: ErrorDefinitions.EcuConnectionTypeMismatch);
     }

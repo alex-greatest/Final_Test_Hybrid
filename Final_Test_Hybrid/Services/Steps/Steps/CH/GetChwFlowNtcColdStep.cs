@@ -12,7 +12,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.CH;
 /// </summary>
 public class GetChwFlowNtcColdStep(
     DualLogger<GetChwFlowNtcColdStep> logger,
-    ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions, IProvideLimits
+    ITestResultsService testResultsService) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.CH.Get_CHW_Flow_NTC_Cold";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"CH\".\"Get_CHW_Flow_NTC_Cold\".\"Start\"";
@@ -25,15 +25,7 @@ public class GetChwFlowNtcColdStep(
     public string Description => "Контур Отопление. Замер температуры холодной воды";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, FlwTempColdTag];
-
-    /// <summary>
-    /// Возвращает пределы для отображения в гриде.
-    /// </summary>
-    public string? GetLimits(LimitsContext context)
-    {
-        return "<= 3.000";
-    }
-
+    
     /// <summary>
     /// Выполняет шаг замера температуры холодной воды.
     /// </summary>

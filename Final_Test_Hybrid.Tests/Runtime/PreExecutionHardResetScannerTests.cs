@@ -99,7 +99,8 @@ public sealed class PreExecutionHardResetScannerTests
         var autoReady = new AutoReadySubscription(
             subscription,
             connectionState,
-            loggerFactory.CreateLogger<AutoReadySubscription>());
+            TestInfrastructure.CreateHeartbeatHealthMonitor(),
+            TestInfrastructure.CreateDualLogger<AutoReadySubscription>(loggerFactory));
         var scannerOwnership = CreateOwnershipService(loggerFactory);
         var sessionManager = new ScanSessionManager(
             scannerOwnership,

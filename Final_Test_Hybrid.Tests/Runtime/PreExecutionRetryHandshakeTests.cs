@@ -61,7 +61,8 @@ public sealed class PreExecutionRetryHandshakeTests
         var autoReady = new AutoReadySubscription(
             subscription,
             connectionState,
-            TestInfrastructure.CreateLogger<AutoReadySubscription>());
+            TestInfrastructure.CreateHeartbeatHealthMonitor(),
+            TestInfrastructure.CreateDualLogger<AutoReadySubscription>());
         var tagWaiter = new TagWaiter(
             subscription,
             connectionState,

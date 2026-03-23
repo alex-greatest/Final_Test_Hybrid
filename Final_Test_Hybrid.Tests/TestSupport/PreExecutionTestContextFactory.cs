@@ -12,6 +12,7 @@ using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
+using Final_Test_Hybrid.Services.OpcUa.Heartbeat;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.Results;
 using Final_Test_Hybrid.Services.SpringBoot.Operation.Interrupt;
@@ -63,7 +64,8 @@ internal static class PreExecutionTestContextFactory
         var autoReady = new AutoReadySubscription(
             subscription,
             connectionState,
-            loggerFactory.CreateLogger<AutoReadySubscription>());
+            new HmiHeartbeatHealthMonitor(TimeProvider.System),
+            TestInfrastructure.CreateDualLogger<AutoReadySubscription>(loggerFactory));
         var testCoordinator = CreateTestCoordinator();
         var errorCoordinator = new StubErrorCoordinator();
         var plcResetCoordinator = CreateUninitialized<PlcResetCoordinator>();

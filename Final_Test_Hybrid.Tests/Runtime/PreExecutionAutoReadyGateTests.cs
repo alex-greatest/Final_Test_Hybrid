@@ -130,7 +130,8 @@ public sealed class PreExecutionAutoReadyGateTests
         var autoReady = new AutoReadySubscription(
             subscription,
             connectionState,
-            TestInfrastructure.CreateLogger<AutoReadySubscription>());
+            TestInfrastructure.CreateHeartbeatHealthMonitor(),
+            TestInfrastructure.CreateDualLogger<AutoReadySubscription>());
         var errorCoordinator = new RecordingErrorCoordinator(pauseToken);
         var infra = new PreExecutionInfrastructure(
             null!,

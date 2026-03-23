@@ -16,6 +16,7 @@ public static class OpcUaServiceExtensions
         IConfiguration config)
     {
         services.Configure<OpcUaSettings>(config.GetSection("OpcUa"));
+        services.AddSingleton(TimeProvider.System);
         services.AddSingleton<OpcUaConnectionState>();
         services.AddSingleton<OpcUaSubscription>();
         services.AddSingleton<OpcUaSubscriptionDiagnosticsService>();
@@ -29,6 +30,7 @@ public static class OpcUaServiceExtensions
 
         // HMI Heartbeat - периодическое взведение флага для контроля связи с PLC
         // Сервис автоматически подписывается на ConnectionStateChanged при создании
+        services.AddSingleton<HmiHeartbeatHealthMonitor>();
         services.AddSingleton<HmiHeartbeatService>();
 
         return services;

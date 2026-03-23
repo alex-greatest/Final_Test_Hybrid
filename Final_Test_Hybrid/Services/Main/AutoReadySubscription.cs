@@ -1,15 +1,17 @@
 namespace Final_Test_Hybrid.Services.Main;
 
 using Common;
+using Common.Logging;
 using Models.Plc.Tags;
-using Microsoft.Extensions.Logging;
 using OpcUa.Connection;
+using OpcUa.Heartbeat;
 using OpcUa.Subscription;
 
 public class AutoReadySubscription(
     OpcUaSubscription opcUaSubscription,
     OpcUaConnectionState connectionState,
-    ILogger<AutoReadySubscription> logger) : INotifyStateChanged
+    HmiHeartbeatHealthMonitor heartbeatHealthMonitor,
+    DualLogger<AutoReadySubscription> logger) : INotifyStateChanged
 {
     private readonly Lock _subscriptionLock = new();
     private Func<object?, Task>? _callback;
@@ -102,11 +104,15 @@ public class AutoReadySubscription(
 
     private void LogAutoReadyTransition(bool isReady, object? value)
     {
+        var heartbeat = heartbeatHealthMonitor.GetSnapshot();
         logger.LogInformation(
-            "AutoReady {State}. OpcConnected={OpcConnected}. RawValue={RawValue}",
+            "AutoReady {State}. OpcConnected={OpcConnected}. RawValue={RawValue}. HeartbeatState={HeartbeatState}. HeartbeatAgeMs={HeartbeatAgeMs}. LastHeartbeatWriteResult={LastHeartbeatWriteResult}",
             isReady ? "ON" : "OFF",
             connectionState.IsConnected,
-            value);
+            value,
+            heartbeat.State,
+            heartbeat.AgeMs?.ToString() ?? "n/a",
+            heartbeat.LastWriteResult);
     }
 
     private void InvokeActionSafe(Action? handler, string eventName)

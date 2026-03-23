@@ -200,7 +200,8 @@ public sealed class ErrorCoordinatorOwnershipTests
         var autoReady = new AutoReadySubscription(
             subscription,
             connectionState,
-            TestInfrastructure.CreateLogger<AutoReadySubscription>());
+            TestInfrastructure.CreateHeartbeatHealthMonitor(),
+            TestInfrastructure.CreateDualLogger<AutoReadySubscription>());
         var activityTracker = new ExecutionActivityTracker();
         var runtimeTerminalState = new RuntimeTerminalState(TestInfrastructure.CreateDualLogger<RuntimeTerminalState>());
         var errorService = new TestErrorService();

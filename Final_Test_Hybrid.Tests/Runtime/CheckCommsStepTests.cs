@@ -90,11 +90,7 @@ public sealed class CheckCommsStepTests
             connectionState,
             TestInfrastructure.CreateOpcUaOptions(),
             TestInfrastructure.CreateDualLogger<OpcUaSubscription>());
-
-        return new AutoReadySubscription(
-            subscription,
-            connectionState,
-            TestInfrastructure.CreateLogger<AutoReadySubscription>());
+        return TestInfrastructure.CreateAutoReadySubscription(subscription, connectionState);
     }
 
     private static async Task SetAutoReadyAsync(AutoReadySubscription autoReady, bool isReady)
