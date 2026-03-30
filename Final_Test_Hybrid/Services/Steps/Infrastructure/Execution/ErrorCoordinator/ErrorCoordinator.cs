@@ -77,6 +77,8 @@ public sealed partial class ErrorCoordinator : IErrorCoordinator, IInterruptCont
         var isActive = _subscriptions.ActivityTracker.IsAnyActive;
         var hasTerminalHandshake = _subscriptions.RuntimeTerminalState.HasTerminalHandshake;
         var hasAutoModePause = _pauseToken.IsPaused && CurrentInterrupt == InterruptReason.AutoModeDisabled;
+        var hasBoilerLockPause = _pauseToken.IsPaused && CurrentInterrupt == InterruptReason.BoilerLock;
+        var hasBlockAPause = _pauseToken.IsPaused && CurrentInterrupt == InterruptReason.BoilerBlockA;
 
         if (isReady)
         {
@@ -92,7 +94,7 @@ public sealed partial class ErrorCoordinator : IErrorCoordinator, IInterruptCont
             return;
         }
 
-        if (!isActive || hasAutoModePause) { return; }
+        if (!isActive || hasAutoModePause || hasBoilerLockPause || hasBlockAPause) { return; }
 
         _logger.LogInformation("AutoReady OFF → pause");
         FireAndForgetInterrupt(InterruptReason.AutoModeDisabled);
@@ -171,5 +173,6 @@ public enum InterruptReason
     PlcConnectionLost,
     AutoModeDisabled,
     BoilerLock,
+    BoilerBlockA,
     TagTimeout
 }

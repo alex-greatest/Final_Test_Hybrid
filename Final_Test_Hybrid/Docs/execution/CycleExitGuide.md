@@ -72,8 +72,11 @@ ExecuteCycleAsync:
 При любом старте теста (включая repeat) `InitializeTestRunningAsync()` вызывает
 `WriteScanServiceResultsAsync()` сразу после `ClearForNewTestStart()`:
 
-- Из `ScanServiceContext` (кэш): `App_Version`, `Plant_ID`, `Shift_No`, `Tester_No`.
+- Из `ScanServiceContext` (кэш): `App_Version`, `Shift_No`, `Tester_No`.
 - Из OPC (reread каждый старт): `Pres_atmosph.`, `Pres_in_gas`.
+
+`Plant_ID` остаётся в сохранённом scan-контексте для внутреннего использования,
+но больше не пишется в `TestResultsService` на старте теста и на repeat.
 
 ### Что происходит при ошибке OPC на repeat
 

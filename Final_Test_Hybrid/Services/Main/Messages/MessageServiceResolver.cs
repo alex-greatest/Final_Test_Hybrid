@@ -25,6 +25,7 @@ internal enum MessageScenario
     PlcConnectionLostPendingReset,
     TagTimeout,
     BoilerLock,
+    BoilerBlockA,
     Disconnected,
     CompletionActive,
     PostAskEndActive,
@@ -50,6 +51,7 @@ internal static class MessageServiceResolver
             MessageScenario.PlcConnectionLostPendingReset => MessageTextResources.PlcConnectionLostPendingReset,
             MessageScenario.TagTimeout => MessageTextResources.TagTimeout,
             MessageScenario.BoilerLock => MessageTextResources.BoilerLock,
+            MessageScenario.BoilerBlockA => MessageTextResources.BoilerBlockA,
             MessageScenario.Disconnected => MessageTextResources.Disconnected,
             MessageScenario.CompletionActive => MessageTextResources.CompletionActive,
             MessageScenario.PostAskEndActive => MessageTextResources.PostAskEndActive,
@@ -93,11 +95,6 @@ internal static class MessageServiceResolver
             return MessageScenario.TagTimeout;
         }
 
-        if (snapshot.CurrentInterrupt == InterruptReason.BoilerLock)
-        {
-            return MessageScenario.BoilerLock;
-        }
-
         if (snapshot.IsCompletionActive)
         {
             return MessageScenario.CompletionActive;
@@ -118,9 +115,19 @@ internal static class MessageServiceResolver
             return MessageScenario.Disconnected;
         }
 
-        if (snapshot.CurrentInterrupt == InterruptReason.AutoModeDisabled)
+        if (ShouldShowAutoModeDisabled(snapshot))
         {
             return MessageScenario.AutoModeDisabled;
+        }
+
+        if (snapshot.CurrentInterrupt == InterruptReason.BoilerLock)
+        {
+            return MessageScenario.BoilerLock;
+        }
+
+        if (snapshot.CurrentInterrupt == InterruptReason.BoilerBlockA)
+        {
+            return MessageScenario.BoilerBlockA;
         }
 
         if (!snapshot.IsAuthenticated)
@@ -171,6 +178,12 @@ internal static class MessageServiceResolver
             && !snapshot.IsResetUiBusy
             && !snapshot.IsCompletionActive
             && !snapshot.IsPostAskEndActive;
+    }
+
+    private static bool ShouldShowAutoModeDisabled(MessageSnapshot snapshot)
+    {
+        return snapshot.CurrentInterrupt == InterruptReason.AutoModeDisabled
+            || (snapshot.CurrentInterrupt == InterruptReason.BoilerBlockA && !snapshot.IsAutoReady);
     }
 
     private static string GetPhaseMessage(ExecutionPhase? phase)

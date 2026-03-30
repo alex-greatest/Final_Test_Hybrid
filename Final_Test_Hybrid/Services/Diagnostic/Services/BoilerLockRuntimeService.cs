@@ -44,7 +44,7 @@ public sealed class BoilerLockRuntimeService : IDisposable
     private DateTime _lastSuppressLogUtc = DateTime.MinValue;
     private int _modeSwitchFailureStreak;
     private int _resetFailureStreak;
-    private bool _status2SignalSent;
+    private bool _status2PauseLatched;
     private volatile bool _disposed;
 
     public BoilerLockRuntimeService(
@@ -145,7 +145,7 @@ public sealed class BoilerLockRuntimeService : IDisposable
             ResetStatus1AttemptState();
         }
 
-        HandleStatus2Branch(data);
+        await HandleStatus2BranchAsync(data, ct);
         await HandleStatus1BranchAsync(data, ct);
     }
 
@@ -168,7 +168,7 @@ public sealed class BoilerLockRuntimeService : IDisposable
                && BoilerLockCriteria.IsTargetErrorId(errorId);
     }
 
-    private bool ShouldSignalOnStatus2(DiagnosticPingData data)
+    private bool ShouldPauseOnStatus2(DiagnosticPingData data)
     {
         var config = _settings.BoilerLock;
         return config is { Enabled: true, PlcSignalOnStatus2Enabled: true }
@@ -179,20 +179,26 @@ public sealed class BoilerLockRuntimeService : IDisposable
                && BoilerLockCriteria.IsTargetErrorId(errorId);
     }
 
-    private void HandleStatus2Branch(DiagnosticPingData data)
+    private async Task HandleStatus2BranchAsync(DiagnosticPingData data, CancellationToken ct)
     {
-        if (!ShouldSignalOnStatus2(data))
+        if (!ShouldPauseOnStatus2(data))
         {
-            _status2SignalSent = false;
             return;
         }
-        if (_status2SignalSent)
+        if (_status2PauseLatched)
         {
             return;
         }
 
-        SendStatus2SignalStub(data.LastErrorId!.Value);
-        _status2SignalSent = true;
+        if (!await EnsureStatus2PauseAsync(ct))
+        {
+            return;
+        }
+
+        _logger.LogInformation(
+            "BoilerLock(status=2): pause-only interrupt. ErrorId={ErrorId}. Автосброс блокировки не выполняется.",
+            data.LastErrorId!.Value);
+        _status2PauseLatched = true;
     }
 
     private async Task HandleStatus1BranchAsync(DiagnosticPingData data, CancellationToken ct)
@@ -239,6 +245,22 @@ public sealed class BoilerLockRuntimeService : IDisposable
 
         await _errorCoordinator.HandleInterruptAsync(InterruptReason.BoilerLock, ct);
         return _errorCoordinator.CurrentInterrupt == InterruptReason.BoilerLock;
+    }
+
+    private async Task<bool> EnsureStatus2PauseAsync(CancellationToken ct)
+    {
+        var currentInterrupt = _errorCoordinator.CurrentInterrupt;
+        if (currentInterrupt == InterruptReason.BoilerBlockA)
+        {
+            return true;
+        }
+        if (currentInterrupt != null)
+        {
+            return false;
+        }
+
+        await _errorCoordinator.HandleInterruptAsync(InterruptReason.BoilerBlockA, ct);
+        return _errorCoordinator.CurrentInterrupt == InterruptReason.BoilerBlockA;
     }
 
     private async Task<StandModeCheckResult> EnsureStandModeAsync(uint currentModeKey, CancellationToken ct)
@@ -458,13 +480,6 @@ public sealed class BoilerLockRuntimeService : IDisposable
         _errorCoordinator.ForceStop();
     }
 
-    private void SendStatus2SignalStub(ushort errorId)
-    {
-        _logger.LogInformation(
-            "BoilerLock(status=2): PLC signal stub. ErrorId={ErrorId}. Реальный PLC-триггер будет добавлен отдельно.",
-            errorId);
-    }
-
     private void ResetStateAndRelease(string reason)
     {
         ResetRuntimeState();
@@ -473,7 +488,7 @@ public sealed class BoilerLockRuntimeService : IDisposable
 
     private void ResetRuntimeState()
     {
-        _status2SignalSent = false;
+        _status2PauseLatched = false;
         ResetStatus1AttemptState();
     }
 

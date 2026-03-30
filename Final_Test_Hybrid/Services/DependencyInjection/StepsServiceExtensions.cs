@@ -133,6 +133,7 @@ public static class StepsServiceExtensions
         services.AddSingleton<IInterruptBehavior, PlcConnectionLostBehavior>();
         services.AddSingleton<IInterruptBehavior, AutoModeDisabledBehavior>();
         services.AddSingleton<IInterruptBehavior, BoilerLockBehavior>();
+        services.AddSingleton<IInterruptBehavior, BoilerBlockABehavior>();
         services.AddSingleton<IInterruptBehavior, TagTimeoutBehavior>();
         services.AddSingleton<InterruptBehaviorRegistry>();
 

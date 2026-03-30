@@ -129,6 +129,47 @@ public sealed class MessageServiceResolverTests
     }
 
     [Fact]
+    public void BoilerBlockAInterrupt_ReturnsBlockAMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            CurrentInterrupt = InterruptReason.BoilerBlockA
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Блокировка А. Остановите тест", message);
+    }
+
+    [Fact]
+    public void BoilerBlockAWithAutoReadyOff_ReturnsAutoMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            IsAutoReady = false,
+            CurrentInterrupt = InterruptReason.BoilerBlockA
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Ожидание автомата", message);
+    }
+
+    [Fact]
+    public void BoilerBlockAWithDisconnectedState_ReturnsDisconnectedMessage()
+    {
+        var snapshot = CreateSnapshot() with
+        {
+            IsConnected = false,
+            CurrentInterrupt = InterruptReason.BoilerBlockA
+        };
+
+        var message = MessageServiceResolver.Resolve(snapshot);
+
+        Assert.Equal("Нет связи с PLC", message);
+    }
+
+    [Fact]
     public void TagTimeoutResetting_KeepsResetTimeoutMessage()
     {
         var snapshot = CreateSnapshot() with

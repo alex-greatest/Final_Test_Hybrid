@@ -171,6 +171,84 @@ public sealed class ErrorCoordinatorOwnershipTests
         Assert.Equal(InterruptReason.BoilerLock, context.Coordinator.CurrentInterrupt);
     }
 
+    [Fact]
+    public async Task AutoReadyOff_DoesNotOverrideBoilerLock()
+    {
+        var executionCounter = new InvocationCounter();
+        var executed = new TaskCompletionSource<InterruptReason>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var context = CreateContext(
+        [
+            new InterruptBehaviorStub(InterruptReason.BoilerLock, (interruptContext, _) =>
+            {
+                executionCounter.Increment();
+                interruptContext.Pause();
+                return Task.CompletedTask;
+            }, executed),
+            new InterruptBehaviorStub(InterruptReason.AutoModeDisabled, (_, _) => Task.CompletedTask)
+        ]);
+        context.ActivityTracker.SetTestExecutionActive(true);
+
+        await context.Coordinator.HandleInterruptAsync(InterruptReason.BoilerLock);
+        await executed.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        await SetAutoReadyAsync(context.AutoReady, false);
+        await Task.Delay(100);
+
+        Assert.Equal(1, executionCounter.Value);
+        Assert.True(context.PauseToken.IsPaused);
+        Assert.Equal(InterruptReason.BoilerLock, context.Coordinator.CurrentInterrupt);
+    }
+
+    [Fact]
+    public async Task AutoReadyOff_DoesNotOverrideBoilerBlockA()
+    {
+        var executionCounter = new InvocationCounter();
+        var executed = new TaskCompletionSource<InterruptReason>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var context = CreateContext(
+        [
+            new InterruptBehaviorStub(InterruptReason.BoilerBlockA, (interruptContext, _) =>
+            {
+                executionCounter.Increment();
+                interruptContext.Pause();
+                return Task.CompletedTask;
+            }, executed),
+            new InterruptBehaviorStub(InterruptReason.AutoModeDisabled, (_, _) => Task.CompletedTask)
+        ]);
+        context.ActivityTracker.SetTestExecutionActive(true);
+
+        await context.Coordinator.HandleInterruptAsync(InterruptReason.BoilerBlockA);
+        await executed.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        await SetAutoReadyAsync(context.AutoReady, false);
+        await Task.Delay(100);
+
+        Assert.Equal(1, executionCounter.Value);
+        Assert.True(context.PauseToken.IsPaused);
+        Assert.Equal(InterruptReason.BoilerBlockA, context.Coordinator.CurrentInterrupt);
+    }
+
+    [Fact]
+    public async Task AutoReadyOn_DoesNotResumeBoilerBlockA()
+    {
+        var context = CreateContext(
+        [
+            new InterruptBehaviorStub(InterruptReason.BoilerBlockA, (interruptContext, _) =>
+            {
+                interruptContext.Pause();
+                return Task.CompletedTask;
+            })
+        ]);
+
+        await context.Coordinator.HandleInterruptAsync(InterruptReason.BoilerBlockA);
+        Assert.True(context.PauseToken.IsPaused);
+
+        await SetAutoReadyAsync(context.AutoReady, true);
+        await Task.Delay(100);
+
+        Assert.True(context.PauseToken.IsPaused);
+        Assert.Equal(InterruptReason.BoilerBlockA, context.Coordinator.CurrentInterrupt);
+    }
+
     private static async Task WaitForRecoveredCountAsync(InvocationCounter counter)
     {
         var deadline = DateTime.UtcNow.AddSeconds(1);

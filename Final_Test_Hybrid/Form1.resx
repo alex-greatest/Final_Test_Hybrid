@@ -132,6 +132,9 @@
   <data name="BoilerLock" xml:space="preserve">
     <value>Блокировка котла. Ожидание восстановления</value>
   </data>
+  <data name="BoilerBlockA" xml:space="preserve">
+    <value>Блокировка А. Остановите тест</value>
+  </data>
   <data name="Disconnected" xml:space="preserve">
     <value>Нет связи с PLC</value>
   </data>

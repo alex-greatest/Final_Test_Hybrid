@@ -29,7 +29,7 @@ public sealed class PlcErrorMonitorServiceTests
             .OfType<string>()
             .ToHashSet();
         var expectedTags = ErrorDefinitions.PlcErrors
-            .Where(error => !ErrorDefinitions.DeferredPlcErrors.Any(deferred => deferred.Code == error.Code))
+            .Where(error => ErrorDefinitions.DeferredPlcErrors.All(deferred => deferred.Code != error.Code))
             .Select(error => error.PlcTag)
             .OfType<string>()
             .ToHashSet();
@@ -60,6 +60,52 @@ public sealed class PlcErrorMonitorServiceTests
 
         Assert.Contains(error.Code, errorService.RaisedPlcCodes);
         Assert.Contains(error.Code, errorService.ClearedPlcCodes);
+    }
+
+    [Fact]
+    public async Task DuplicateTrueCallback_RaisesPlcErrorOnlyOnce()
+    {
+        var subscription = TestInfrastructure.CreateSubscription();
+        SeedMonitoredItems(subscription);
+        var errorService = new TestErrorService();
+        var service = new PlcErrorMonitorService(
+            subscription,
+            errorService,
+            TestInfrastructure.CreateLogger<PlcErrorMonitorService>());
+
+        await service.StartMonitoringAsync();
+
+        var error = ErrorDefinitions.Message_NoMode;
+        TestInfrastructure.InvokePrivate(subscription, "InvokeCallbacks", error.PlcTag!, true);
+        await Task.Delay(20);
+        TestInfrastructure.InvokePrivate(subscription, "InvokeCallbacks", error.PlcTag!, true);
+        await Task.Delay(20);
+
+        Assert.Equal(1, errorService.RaisedPlcCodes.Count(code => code == error.Code));
+    }
+
+    [Fact]
+    public async Task DuplicateFalseCallback_ClearsPlcErrorOnlyOnce()
+    {
+        var subscription = TestInfrastructure.CreateSubscription();
+        SeedMonitoredItems(subscription);
+        var errorService = new TestErrorService();
+        var service = new PlcErrorMonitorService(
+            subscription,
+            errorService,
+            TestInfrastructure.CreateLogger<PlcErrorMonitorService>());
+
+        await service.StartMonitoringAsync();
+
+        var error = ErrorDefinitions.Message_NoMode;
+        TestInfrastructure.InvokePrivate(subscription, "InvokeCallbacks", error.PlcTag!, true);
+        await Task.Delay(20);
+        TestInfrastructure.InvokePrivate(subscription, "InvokeCallbacks", error.PlcTag!, false);
+        await Task.Delay(20);
+        TestInfrastructure.InvokePrivate(subscription, "InvokeCallbacks", error.PlcTag!, false);
+        await Task.Delay(20);
+
+        Assert.Equal(1, errorService.ClearedPlcCodes.Count(code => code == error.Code));
     }
 
     private static void SeedMonitoredItems(OpcUaSubscription subscription)

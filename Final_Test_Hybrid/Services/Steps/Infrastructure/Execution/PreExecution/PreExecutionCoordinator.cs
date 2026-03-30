@@ -65,7 +65,6 @@ public partial class PreExecutionCoordinator(
     private PreExecutionContext? _lastSuccessfulContext;
     private const string ScanBarcodeTestName = "ScanBarcode";
     private const string AppVersionResult = "App_Version";
-    private const string PlantIdResult = "Plant_ID";
     private const string ShiftNoResult = "Shift_No";
     private const string TesterNoResult = "Tester_No";
     private const string PresAtmosphResult = "Pres_atmosph.";
@@ -357,7 +356,6 @@ public partial class PreExecutionCoordinator(
         }
 
         SaveScanServiceResult(AppVersionResult, scanContext.AppVersion, "");
-        SaveScanServiceResult(PlantIdResult, scanContext.PlantId, "");
         SaveScanServiceResult(ShiftNoResult, scanContext.ShiftNo, "");
         SaveScanServiceResult(TesterNoResult, scanContext.TesterNo, "");
 

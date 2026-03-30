@@ -14,6 +14,7 @@ internal static class MessageTextResources
     internal static string PlcConnectionLostPendingReset => GetString(nameof(PlcConnectionLostPendingReset));
     internal static string TagTimeout => GetString(nameof(TagTimeout));
     internal static string BoilerLock => GetString(nameof(BoilerLock));
+    internal static string BoilerBlockA => GetString(nameof(BoilerBlockA));
     internal static string Disconnected => GetString(nameof(Disconnected));
     internal static string CompletionActive => GetString(nameof(CompletionActive));
     internal static string PostAskEndActive => GetString(nameof(PostAskEndActive));

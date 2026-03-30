@@ -71,11 +71,13 @@ PreExecutionResult.FailRetryable(error, canSkip: false, userMessage: "...", erro
 `ScanStepBase` в scan-фазе только собирает кэшируемый scan-контекст.
 Прямая запись scan-служебных результатов из scan-step в `ITestResultsService` не используется.
 
+`Plant_ID` остаётся частью внутреннего `ScanServiceContext`, но больше не пишется
+в `TestResultsService` и не входит в набор scan-служебных результатов UI/storage.
+
 Фактическая запись выполняется централизованно в `PreExecutionCoordinator.InitializeTestRunningAsync()` сразу после `ClearForNewTestStart()`:
 
 1. Кэшируемые поля берутся из `context.ScanServiceContext`:
    - `App_Version`
-   - `Plant_ID`
    - `Shift_No`
    - `Tester_No`
 2. Давления читаются из OPC каждый старт теста (включая repeat):

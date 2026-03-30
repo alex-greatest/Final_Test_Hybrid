@@ -12,6 +12,7 @@ public partial class TestExecutionCoordinator
     private bool ShouldFreezeIdleTimeout()
     {
         return _errorCoordinator.CurrentInterrupt == InterruptReason.AutoModeDisabled
+            || _errorCoordinator.CurrentInterrupt == InterruptReason.BoilerBlockA
             || (StateManager.State == ExecutionState.PausedOnError && StateManager.HasPendingErrors);
     }
 

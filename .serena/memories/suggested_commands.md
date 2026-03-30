@@ -1,0 +1,1 @@
+Основные команды Windows/PowerShell: `dotnet build Final_Test_Hybrid.slnx`, `dotnet run --project Final_Test_Hybrid`, `dotnet format analyzers --verify-no-changes`, `dotnet format style --verify-no-changes`. Для поиска по репо предпочтителен `rg`, но в этой среде он может быть недоступен/заблокирован, поэтому допустимы `Get-ChildItem ... | Select-String ...`.

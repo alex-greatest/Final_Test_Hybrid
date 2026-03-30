@@ -15,10 +15,11 @@ Services/Steps/Infrastructure/Execution/ErrorCoordinator/
     ├── IInterruptBehavior.cs         # Интерфейс стратегии
     ├── IInterruptContext.cs          # Контекст для поведений
     ├── InterruptBehaviorRegistry.cs  # DI-based реестр поведений
-    ├── PlcConnectionLostBehavior.cs  # 5 сек задержка + stable toast id → Reset
-    ├── AutoModeDisabledBehavior.cs   # Пауза и ожидание
-    ├── BoilerLockBehavior.cs         # Пауза при блокировке котла
-    └── TagTimeoutBehavior.cs         # 5 сек задержка → Reset
+├── PlcConnectionLostBehavior.cs  # 5 сек задержка + stable toast id → Reset
+├── AutoModeDisabledBehavior.cs   # Пауза и ожидание
+├── BoilerLockBehavior.cs         # Пауза при блокировке котла
+├── BoilerBlockABehavior.cs       # Пауза BlockA до reset
+└── TagTimeoutBehavior.cs         # 5 сек задержка → Reset
 ```
 
 ## Adding New InterruptReason
@@ -31,6 +32,7 @@ public enum InterruptReason
     PlcConnectionLost,
     AutoModeDisabled,
     BoilerLock,
+    BoilerBlockA,
     TagTimeout,
     NewReason  // ← добавить здесь
 }
@@ -130,8 +132,8 @@ _errorCoordinator.OnInterruptChanged -= HandleInterruptChanged;
   он повторно использует `HandleInterruptAsync(InterruptReason.AutoModeDisabled)`.
 - `AutoReady ON` запускает resume-path только если `CurrentInterrupt == AutoModeDisabled`.
 - Сам `TryResumeFromPauseAsync()` ownership-aware: direct resume-path не снимает `BoilerLock`, `PlcConnectionLost`, `TagTimeout` и любой другой non-`AutoModeDisabled` interrupt.
-- В обычном active pre-execution/test execution `AutoReady OFF` пока не имеет общего guard по already-active interrupt и может перезаписать `CurrentInterrupt` на `AutoModeDisabled`.
-- Из-за этого остаётся residual gap: сценарий `BoilerLock -> AutoReady OFF -> AutoReady ON` потенциально может снять общий `PauseToken`, если `AutoReady OFF` успел перехватить ownership interrupt'а до следующего ping-цикла `BoilerLock`.
+- Во время active pre-execution/test execution `AutoReady OFF` не должен перехватывать ownership уже активной pause-ветки `BoilerLock` или `BoilerBlockA`.
+- Поэтому `AutoReady ON` не снимает pause, удерживаемую `BoilerLock` или `BoilerBlockA`: такие ветки выходят только по своему runtime-flow (`BoilerLock`) или через `ForceStop()` / `Reset()` (`BoilerBlockA`).
 - `MessageService` использует тот же ownership-контур для main message: terminal window и active interrupt должны побеждать raw `AutoReady`/raw connection narrative.
 
 ### Дополнительно: аварийный retry-flow
@@ -236,6 +238,13 @@ public interface IInterruptContext
 - **Действие:** Pause
 - **Ошибка:** не поднимается через `AssociatedError` (null)
 - **Источник:** runtime-ветка по `1005` и `LastErrorId` (см. `../diagnostics/BoilerLockGuide.md`)
+
+### BoilerBlockABehavior
+- **Задержка:** нет
+- **Действие:** Pause
+- **Ошибка:** не поднимается через `AssociatedError` (null)
+- **Источник:** runtime-ветка `1005 == 2`
+- **Resume policy:** только `ForceStop()` или `Reset()`
 
 ## Best Practices
 

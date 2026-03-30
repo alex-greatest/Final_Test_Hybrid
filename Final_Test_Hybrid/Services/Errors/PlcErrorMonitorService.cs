@@ -10,6 +10,8 @@ public sealed class PlcErrorMonitorService(
     ILogger<PlcErrorMonitorService> logger) : IPlcErrorMonitorService
 {
     private int _isStarted;
+    private readonly Lock _stateLock = new();
+    private readonly Dictionary<string, bool> _lastStates = [];
 
     public async Task StartMonitoringAsync(CancellationToken ct = default)
     {
@@ -49,6 +51,11 @@ public sealed class PlcErrorMonitorService(
             return Task.CompletedTask;
         }
 
+        if (!TryUpdateState(error.Code, isActive))
+        {
+            return Task.CompletedTask;
+        }
+
         if (isActive)
         {
             errorService.RaisePlc(error, error.RelatedStepId, error.RelatedStepName);
@@ -63,6 +70,21 @@ public sealed class PlcErrorMonitorService(
 
     private static bool ShouldMonitorImmediately(ErrorDefinition error)
     {
-        return !ErrorDefinitions.DeferredPlcErrors.Any(def => def.Code == error.Code);
+        return ErrorDefinitions.DeferredPlcErrors.All(def => def.Code != error.Code);
+    }
+
+    private bool TryUpdateState(string errorCode, bool isActive)
+    {
+        lock (_stateLock)
+        {
+            if (_lastStates.TryGetValue(errorCode, out var previousState)
+                && previousState == isActive)
+            {
+                return false;
+            }
+
+            _lastStates[errorCode] = isActive;
+            return true;
+        }
     }
 }

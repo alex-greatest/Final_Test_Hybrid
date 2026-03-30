@@ -89,7 +89,7 @@
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Лог">
                     <div style="height: 100%; padding: 0 20px;">
-                        <LogViewerTab/>
+                        <LogViewerTab @ref="_logViewerTab" />
                     </div>
                 </RadzenTabsItem>
                 <RadzenTabsItem Text="Параметры">
@@ -207,9 +207,11 @@
 
 @code {
     private const int MainTabIndex = 0;
+    private const int LogTabIndex = 1;
     private int _selectedIndex;
     private int _innerSelectedIndex;
     private TestSequenseGrid? _testSequenseGrid;
+    private LogViewerTab? _logViewerTab;
     private bool _disposed;
 
     protected override void OnInitialized()
@@ -236,6 +238,11 @@
     private async Task OnMainTabChanged(int tabIndex)
     {
         _selectedIndex = tabIndex;
+        if (_logViewerTab != null)
+        {
+            await _logViewerTab.SetActiveAsync(tabIndex == LogTabIndex);
+        }
+
         if (_disposed || tabIndex != MainTabIndex || _testSequenseGrid == null)
         {
             return;

@@ -1,10 +1,5 @@
 @using Microsoft.AspNetCore.Components.Web.Virtualization
 @using Final_Test_Hybrid.Components.Results
-@using Final_Test_Hybrid.Services.Common.Logging
-@implements IDisposable
-
-@inject ITestStepLogger TestStepLogger
-
 <div class="tab-content">
     <div class="app-tabs-shell">
         <RadzenTabs RenderMode="TabRenderMode.Client"
@@ -15,13 +10,14 @@
                 <RadzenTabsItem Text="Лог-файл">
                     <div class="log-viewer-container">
                         <div class="log-toolbar">
-                            @* Временно скрыто по запросу: ручное обновление и очистка лога *@
-                            @* <RadzenButton Icon="refresh" Text="Обновить" Click="@LoadLogAsync" />
-                            <RadzenButton Icon="delete" Text="Очистить" Click="@ClearLog" /> *@
                             <span class="log-info">Строк: @_lines.Count</span>
                         </div>
                         <div class="log-content">
-                            @if (_lines.Count == 0)
+                            @if (!string.IsNullOrEmpty(_statusMessage))
+                            {
+                                <span class="log-empty">@_statusMessage</span>
+                            }
+                            else if (_lines.Count == 0)
                             {
                                 <span class="log-empty">Лог пуст</span>
                             }
@@ -43,71 +39,3 @@
         </RadzenTabs>
     </div>
 </div>
-
-@code {
-    private const int MaxLines = 50_000;
-    private const int RefreshIntervalMs = 3000;
-
-    private int _selectedTabIndex;
-    private List<string> _lines = [];
-    private System.Threading.Timer? _refreshTimer;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadLogAsync();
-        StartAutoRefresh();
-    }
-
-    private void StartAutoRefresh()
-    {
-        _refreshTimer = new System.Threading.Timer(_ =>
-        {
-            InvokeAsync(async () =>
-            {
-                await LoadLogAsync();
-                StateHasChanged();
-            });
-        }, null, RefreshIntervalMs, RefreshIntervalMs);
-    }
-
-    private async Task LoadLogAsync()
-    {
-        var path = TestStepLogger.GetCurrentLogFilePath();
-        if (string.IsNullOrEmpty(path) || !File.Exists(path))
-        {
-            _lines = ["Файл лога не найден"];
-            return;
-        }
-
-        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        using var reader = new StreamReader(stream);
-        var content = await reader.ReadToEndAsync();
-        var allLines = content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
-        _lines = allLines.Length > MaxLines
-            ? allLines.TakeLast(MaxLines).ToList()
-            : allLines.ToList();
-    }
-
-    private void ClearLog()
-    {
-        _lines.Clear();
-    }
-
-    private static string GetLogLevelClass(string line)
-    {
-        if (line.Contains("[ERR]"))
-        {
-            return "log-error";
-        }
-        if (line.Contains("[WRN]"))
-        {
-            return "log-warning";
-        }
-        return line.Contains("[DBG]") ? "log-debug" : "";
-    }
-
-    public void Dispose()
-    {
-        _refreshTimer?.Dispose();
-    }
-}

@@ -74,6 +74,8 @@ public static IReadOnlyList<ErrorDefinition> All => [
 Автоматически подписывается на все `ErrorDefinitions.PlcErrors` при старте,
 кроме deferred-исключений `П-403-03` и `П-407-03`.
 При изменении тега вызывает `RaisePlc` / `ClearPlc`.
+Duplicate callback'и с тем же нормализованным bool-состоянием (`true -> true`,
+`false -> false`) игнорируются и не должны повторно поднимать/снимать ту же PLC-ошибку.
 
 ### GasValveTubeDeferredErrorService
 
