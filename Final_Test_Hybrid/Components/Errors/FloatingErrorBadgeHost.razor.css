@@ -20,6 +20,7 @@
     justify-content: center;
     cursor: pointer;
     user-select: none;
+    touch-action: none;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
     animation: floating-error-badge-blink 1.15s infinite;
     z-index: 10050;
@@ -83,6 +84,7 @@
     justify-content: space-between;
     cursor: move;
     user-select: none;
+    touch-action: none;
 }
 
 .floating-active-errors-title {

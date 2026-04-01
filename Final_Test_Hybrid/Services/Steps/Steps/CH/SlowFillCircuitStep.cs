@@ -20,7 +20,7 @@ public class SlowFillCircuitStep(
     private const string EndTag = "ns=3;s=\"DB_VI\".\"CH\".\"Slow_Fill_Circuit\".\"End\"";
     private const string ErrorTag = "ns=3;s=\"DB_VI\".\"CH\".\"Slow_Fill_Circuit\".\"Error\"";
     private const string FlowPressTag = "ns=3;s=\"DB_Parameter\".\"CH\".\"Flow_Press\"";
-    private const string PressTestValueRecipe = "ns=3;s=\"DB_Recipe\".\"CH\".\"PresTestValue\"";
+    private const string PressTestValueRecipe = "ns=3;s=\"DB_Recipe\".\"CH\".\"Press\".\"Min\"";
     private const float FlowPressMaxLimit = 2.70f;
 
     public string Id => "ch-slow-fill-circuit";

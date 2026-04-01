@@ -18,7 +18,7 @@ public class ReadDhwPotiSetpointStep(
     DualLogger<ReadDhwPotiSetpointStep> logger) : ITestStep, IProvideLimits
 {
     private const ushort RegisterDhwTempSetpoint = 1013;
-    private const ushort MinValue = 35;
+    private const ushort MinValue = 30;
     private const ushort MaxValue = 60;
     private const string ResultName = "DHW_Temp_SP";
     private const string Unit = "°С";

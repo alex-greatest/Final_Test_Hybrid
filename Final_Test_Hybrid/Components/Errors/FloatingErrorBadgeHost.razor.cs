@@ -148,22 +148,24 @@ public partial class FloatingErrorBadgeHost : ComponentBase, IAsyncDisposable
         _isPanelOpen = false;
     }
 
-    private void StartBadgeDrag(Microsoft.AspNetCore.Components.Web.MouseEventArgs e)
+    private void StartBadgeDrag(Microsoft.AspNetCore.Components.Web.PointerEventArgs e)
     {
         if (!ShouldShowBadge)
         {
             return;
         }
-        _ = JsRuntime.InvokeVoidAsync("floatingPanel.startDrag", BadgeElementId, e.ClientX, e.ClientY);
+
+        _ = JsRuntime.InvokeVoidAsync("floatingPanel.startDrag", BadgeElementId, e.PointerId, e.ClientX, e.ClientY);
     }
 
-    private void StartPanelDrag(Microsoft.AspNetCore.Components.Web.MouseEventArgs e)
+    private void StartPanelDrag(Microsoft.AspNetCore.Components.Web.PointerEventArgs e)
     {
         if (!ShouldShowPanel)
         {
             return;
         }
-        _ = JsRuntime.InvokeVoidAsync("floatingPanel.startDrag", PanelElementId, e.ClientX, e.ClientY);
+
+        _ = JsRuntime.InvokeVoidAsync("floatingPanel.startDrag", PanelElementId, e.PointerId, e.ClientX, e.ClientY);
     }
 
     public ValueTask DisposeAsync()

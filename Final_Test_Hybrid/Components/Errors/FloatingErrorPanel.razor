@@ -1,7 +1,10 @@
 @if (IsVisible)
 {
-    <div class="floating-error-panel" id="floating-error-panel" style="@PositionStyle">
-        <div class="floating-error-header" @onmousedown="StartDrag">
+    <div class="floating-error-panel"
+         id="@PanelElementId"
+         style="@PositionStyle"
+         @onpointerdown="StartDrag">
+        <div class="floating-error-header">
             <h2 class="title">Ошибка @GetErrorSourceDisplay()</h2>
             <p class="subtitle">@DisplayStepName</p>
         </div>

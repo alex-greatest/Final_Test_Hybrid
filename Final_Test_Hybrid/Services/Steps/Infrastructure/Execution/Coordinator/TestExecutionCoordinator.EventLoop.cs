@@ -50,7 +50,7 @@ public partial class TestExecutionCoordinator
         await AwaitReaderAsync(readerTask);
         await AwaitPendingRetriesSafelyAsync();
         await AwaitErrorDrainSafelyAsync();
-        Complete();
+        await CompleteAsync();
     }
 
     /// <summary>

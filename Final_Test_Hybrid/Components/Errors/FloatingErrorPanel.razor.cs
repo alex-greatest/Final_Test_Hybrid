@@ -7,6 +7,9 @@ namespace Final_Test_Hybrid.Components.Errors;
 public partial class FloatingErrorPanel : ComponentBase, IAsyncDisposable
 {
     private const string DefaultStepName = "Неизвестный шаг";
+    private const string PanelElementId = "floating-error-panel";
+    private const int DefaultRightOffsetPx = 20;
+    private const int DefaultTopOffsetPx = 72;
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public string? StepName { get; set; }
     [Parameter] public string? ErrorMessage { get; set; }
@@ -27,8 +30,9 @@ public partial class FloatingErrorPanel : ComponentBase, IAsyncDisposable
         {
             if (_posX < 0 || _posY < 0)
             {
-                return "bottom: 20px; right: 20px;";
+                return $"top: {DefaultTopOffsetPx}px; right: {DefaultRightOffsetPx}px;";
             }
+
             return $"left: {_posX}px; top: {_posY}px;";
         }
     }
@@ -82,8 +86,8 @@ public partial class FloatingErrorPanel : ComponentBase, IAsyncDisposable
         return $"[{source}]";
     }
 
-    private void StartDrag(Microsoft.AspNetCore.Components.Web.MouseEventArgs e)
+    private void StartDrag(Microsoft.AspNetCore.Components.Web.PointerEventArgs e)
     {
-        _ = JsRuntime.InvokeVoidAsync("floatingPanel.startDrag", "floating-error-panel", e.ClientX, e.ClientY);
+        _ = JsRuntime.InvokeVoidAsync("floatingPanel.startDrag", PanelElementId, e.PointerId, e.ClientX, e.ClientY);
     }
 }

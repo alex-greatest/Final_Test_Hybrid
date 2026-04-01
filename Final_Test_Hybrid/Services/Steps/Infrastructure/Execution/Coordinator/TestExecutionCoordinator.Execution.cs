@@ -114,7 +114,7 @@ public partial class TestExecutionCoordinator
     /// <summary>
     /// Завершает выполнение и освобождает ресурсы.
     /// </summary>
-    private void Complete()
+    private async Task CompleteAsync()
     {
         var flowSnapshot = _flowState.GetSnapshot();
         var latchedSnapshot = GetLatchedStopSnapshot();
@@ -129,12 +129,24 @@ public partial class TestExecutionCoordinator
         _activityTracker.SetTestExecutionActive(false);
         _errorService.ClearActiveApplicationErrors();
         LogExecutionCompleted(isSuccessful, finalSnapshot);
+        await ClearRetainedModeForOperatorStopAsync(finalSnapshot.Reason);
         DispatchEvent(new ExecutionEvent(ExecutionEventKind.SequenceCompleted));
         lock (_stateLock)
         {
             _cts?.Dispose();
             _cts = null;
         }
+    }
+
+    private Task ClearRetainedModeForOperatorStopAsync(ExecutionStopReason reason)
+    {
+        if (reason != ExecutionStopReason.Operator)
+        {
+            return Task.CompletedTask;
+        }
+
+        return _boilerOperationModeRefreshService
+            .ClearAndDrainAsync("operator stop / завершение execution после ручной остановки");
     }
 
     /// <summary>

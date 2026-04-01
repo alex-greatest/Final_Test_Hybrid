@@ -94,6 +94,7 @@ Services/Diagnostic/Protocol/CommandQueue/
 - `RegisterReader` / `RegisterWriter` — высокоуровневые операции (системные, НЕ паузятся)
 - `PausableRegisterReader` / `PausableRegisterWriter` — базовые операции для тестовых шагов (паузятся)
 - `PacedRegisterReader` / `PacedRegisterWriter` — pacing для step-level Modbus операций в `ITestStep` через `TestStepContext`
+- `BoilerOperationModeRefreshService` — runtime-удержание последнего шагового режима `1036`
 - `PollingService` / `PollingTask` — периодический опрос регистров
 - `PingCommand` — keep-alive команда, читает ModeKey + BoilerStatus
 
@@ -329,7 +330,27 @@ private static void StopDispatcherSafely(IModbusDispatcher dispatcher, ILogger l
 - связь с котлом поднимается только в `Coms/Check_Comms`;
 - после показа `OK/NOK` картинки completion-handshake с PLC (`End/Req_Repeat`) идёт уже без активной Modbus-связи;
 - soft/hard reset path не меняется и по-прежнему останавливает dispatcher через существующие hooks `OnForceStop` / `OnReset`;
+- retained-mode `1036` очищается на normal completion, на operator stop, на любом repeat и на soft/hard reset, поэтому новый цикл всегда стартует без старого latch;
 - repeat/new cycle должен снова поднять связь через `Coms/Check_Comms`.
+
+### Runtime-удержание режима `1036`
+
+`BoilerOperationModeRefreshService` удерживает последний шаговый режим котла, установленный в `1036` (`CH_Start_Max_Heatout`, `CH_Start_Min_Heatout`, `CH_Start_ST_Heatout`).
+
+- Сервис хранит raw `ushort` и не использует `SystemWorkMode`.
+- После `ArmMode(...)` запускается countdown из `Diagnostic:OperationModeRefreshInterval` (по умолчанию `15 минут`).
+- Некорректное значение интервала (`<= 0`) не используется: сервис логирует warning и откатывается к стандартным `15 минутам`.
+- При входе в любой active `CH_Start_*` шаг сервис сначала делает awaited `ClearAndDrainAsync(...)`, чтобы предыдущий retained-mode не мог пережить новый mode-changing сценарий до нового `ArmMode(...)`.
+- По дедлайну сервис ждёт `dispatcher ready` (`IsStarted && IsConnected && !IsReconnecting && LastPingData != null`) и только затем повторно пишет `1036` через системные `RegisterWriter` / `RegisterReader`.
+- Step-level write/read/clear по `1036` и runtime-refresh используют общий mode-change lease, чтобы фоновый refresh не мог вклиниться между шаговым write/read-back и `ArmMode(...)` / `Clear(...)`.
+- `StartAsync()` dispatcher из этого сервиса не вызывается. При потере связи latch остаётся armed и ждёт восстановления ready-state.
+- Новый refresh-интервал считается от фактической успешной записи/verify.
+- При write/read/verify fail сервис не использует `WriteVerifyDelayMs` шагов: повторный failed refresh идёт через отдельный slow retry `5 секунд`, чтобы не заспамить high-priority Modbus очередь.
+- `Coms/CH_Reset` очищает retained-mode только после read-back `1036 == 0`.
+- `Clear(...)` инвалидирует retained-state сразу и запускает coalesced background-drain, не накапливая новые fire-and-forget задачи.
+- `ClearAndDrainAsync(...)` дополнительно ждёт выхода уже начатого refresh из mode-change critical section. Этот путь используется только там, где caller не держит shared lease; текущий runtime-hook: `TestExecutionCoordinator.CompleteAsync()` при `ExecutionStopReason.Operator`.
+- Дополнительные clear hooks: `PlcResetCoordinator.OnForceStop`, `ErrorCoordinator.OnReset`, `BoilerState.OnCleared`, `TestExecutionCoordinator.ResetForRepeat()`, `TestExecutionCoordinator.CompleteAsync()` для operator stop.
+- Ручные диагностические изменения режима и `SetStandModeAsync(...)` retained-state не меняют.
 
 ## Ping Keep-Alive
 

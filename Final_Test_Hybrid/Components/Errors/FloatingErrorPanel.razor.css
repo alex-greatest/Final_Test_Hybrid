@@ -9,12 +9,13 @@
     max-width: 900px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     user-select: none;
+    cursor: move;
+    touch-action: none;
 }
 
 .floating-error-header {
     text-align: center;
     margin-bottom: 40px;
-    cursor: move;
 }
 
 .floating-error-header .title {

@@ -3,11 +3,13 @@ window.floatingPanel = {
     _dragDistanceThresholdPx: 5,
     _recentDragTtlMs: 250,
     _recentDragByElement: {},
-    startDrag: (elementId, startX, startY) => {
+    startDrag: (elementId, pointerId, startX, startY) => {
         const el = document.getElementById(elementId);
         if (!el) {
             return;
         }
+
+        window.floatingPanel._clearDragState(false);
 
         const rect = el.getBoundingClientRect();
         const computedStyle = window.getComputedStyle(el);
@@ -21,6 +23,7 @@ window.floatingPanel = {
 
         window.floatingPanel._dragState = {
             elementId: elementId,
+            pointerId: pointerId,
             startX: startX,
             startY: startY,
             offsetX: startX - rect.left,
@@ -28,8 +31,17 @@ window.floatingPanel = {
             hasMoved: false
         };
 
-        document.addEventListener("mousemove", window.floatingPanel._onMouseMove);
-        document.addEventListener("mouseup", window.floatingPanel._onMouseUp);
+        if (typeof el.setPointerCapture === "function") {
+            try {
+                el.setPointerCapture(pointerId);
+            } catch {
+                // ignore: pointer may no longer be active
+            }
+        }
+
+        document.addEventListener("pointermove", window.floatingPanel._onPointerMove);
+        document.addEventListener("pointerup", window.floatingPanel._onPointerUpOrCancel);
+        document.addEventListener("pointercancel", window.floatingPanel._onPointerUpOrCancel);
     },
     consumeRecentDrag: (elementId) => {
         const dragAt = window.floatingPanel._recentDragByElement[elementId];
@@ -67,14 +79,41 @@ window.floatingPanel = {
         void el.offsetWidth;
         el.style.removeProperty("animation");
     },
-    _onMouseMove: (e) => {
+    _clearDragState: (recordRecentDrag) => {
         const state = window.floatingPanel._dragState;
         if (!state) {
             return;
         }
 
         const el = document.getElementById(state.elementId);
+        if (recordRecentDrag && state.hasMoved) {
+            window.floatingPanel._recentDragByElement[state.elementId] = Date.now();
+        }
+
+        if (el && typeof el.releasePointerCapture === "function") {
+            try {
+                if (el.hasPointerCapture(state.pointerId)) {
+                    el.releasePointerCapture(state.pointerId);
+                }
+            } catch {
+                // ignore: pointer capture may already be released
+            }
+        }
+
+        window.floatingPanel._dragState = null;
+        document.removeEventListener("pointermove", window.floatingPanel._onPointerMove);
+        document.removeEventListener("pointerup", window.floatingPanel._onPointerUpOrCancel);
+        document.removeEventListener("pointercancel", window.floatingPanel._onPointerUpOrCancel);
+    },
+    _onPointerMove: (e) => {
+        const state = window.floatingPanel._dragState;
+        if (!state || e.pointerId !== state.pointerId) {
+            return;
+        }
+
+        const el = document.getElementById(state.elementId);
         if (!el) {
+            window.floatingPanel._clearDragState(false);
             return;
         }
 
@@ -93,14 +132,12 @@ window.floatingPanel = {
         el.style.right = "auto";
         el.style.bottom = "auto";
     },
-    _onMouseUp: () => {
+    _onPointerUpOrCancel: (e) => {
         const state = window.floatingPanel._dragState;
-        if (state && state.hasMoved) {
-            window.floatingPanel._recentDragByElement[state.elementId] = Date.now();
+        if (!state || e.pointerId !== state.pointerId) {
+            return;
         }
 
-        window.floatingPanel._dragState = null;
-        document.removeEventListener("mousemove", window.floatingPanel._onMouseMove);
-        document.removeEventListener("mouseup", window.floatingPanel._onMouseUp);
+        window.floatingPanel._clearDragState(true);
     }
 };

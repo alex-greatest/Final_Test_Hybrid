@@ -134,6 +134,20 @@ context.ReportProgress("Инициализация...");
 - Ручные `DelayAsync(...WriteVerifyDelayMs...)` между соседними Modbus `read/write` в test steps не использовать.
 - Global pacing получает тот же `CancellationToken`, умеет отменяться и pause-aware: ожидание не продолжается во время `Auto OFF`.
 
+#### Контракт удержания режима `1036`
+
+- Шаги `Coms/CH_Start_Max_Heatout`, `Coms/CH_Start_Min_Heatout` и `Coms/CH_Start_ST_Heatout` после успешной записи и read-back `1036` обязаны вызвать `BoilerOperationModeRefreshService.ArmMode(rawModeValue, step.Name)`.
+- При входе в любой active `CH_Start_*` шаг сервис сначала делает `ClearAndDrainAsync(...)`, чтобы предыдущий retained-mode не жил во время retry-path и ожиданий PLC до нового arm.
+- В `1036` хранится raw `ushort`; `SystemWorkMode` для этого контура не использовать.
+- `BoilerOperationModeRefreshService` работает системными `RegisterWriter` / `RegisterReader`, а не `context.PacedDiag*`, потому что удержание режима не должно зависеть от step pause (`Auto OFF`).
+- Step-level write/read-back `1036` и `ChReset` выполняются под shared mode-change lease из `BoilerOperationModeRefreshService`, чтобы фоновый refresh не мог вклиниться между шаговой записью, verify и `ArmMode(...)` / `Clear(...)`.
+- Refresh-цикл использует `Diagnostic:OperationModeRefreshInterval` (по умолчанию `15 минут`) и повторно подтверждает сохранённый режим только при `dispatcher ready` (`IsStarted && IsConnected && !IsReconnecting && LastPingData != null`).
+- Если к моменту refresh диагностика недоступна, сервис не делает `StartAsync()` сам, не очищает latch и ждёт восстановления ready-state.
+- Если refresh уже дошёл до write/read/verify и получил fail при готовом dispatcher, сервис повторяет попытку через отдельный slow retry `5 секунд`, а не через step pacing `WriteVerifyDelayMs`.
+- Успешный `Coms/CH_Reset` очищает latch только после подтверждённого `1036 == 0`.
+- Дополнительные точки очистки latch: `PlcResetCoordinator.OnForceStop`, `ErrorCoordinator.OnReset`, `BoilerState.OnCleared` и `TestExecutionCoordinator.ResetForRepeat()`.
+- Ручные инженерные изменения режима и `SetStandModeAsync(...)` не обновляют retained-state `1036`.
+
 Шаги могут сообщать о прогрессе выполнения через `context.ReportProgress()`. Сообщение отображается в колонке "Результаты" пока шаг выполняется.
 
 ```csharp

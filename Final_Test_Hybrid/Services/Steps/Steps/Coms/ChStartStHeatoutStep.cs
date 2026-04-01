@@ -1,5 +1,6 @@
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
+using Final_Test_Hybrid.Services.Diagnostic.Services;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Options;
@@ -15,6 +16,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
 /// 0 – нормальный режим, 2 – настраиваемый, 3 – мин, 4 – макс.
 /// </remarks>
 public class ChStartStHeatoutStep(
+    BoilerOperationModeRefreshService boilerOperationModeRefreshService,
     IOptions<DiagnosticSettings> settings,
     DualLogger<ChStartStHeatoutStep> logger) : ITestStep
 {
@@ -33,6 +35,8 @@ public class ChStartStHeatoutStep(
     public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
     {
         logger.LogInformation("Запуск шага нагрева котла в режиме максимальной мощности");
+        await boilerOperationModeRefreshService.ClearAndDrainAsync($"вход в шаг смены режима: {Name}", ct);
+        using var modeChangeLease = await boilerOperationModeRefreshService.AcquireModeChangeLeaseAsync(ct);
 
         var writeResult = await WriteOperationModeAsync(context, ct);
         if (!writeResult.Success)
@@ -81,6 +85,7 @@ public class ChStartStHeatoutStep(
 
         if (actualValue == MaxHeatingMode)
         {
+            boilerOperationModeRefreshService.ArmMode(MaxHeatingMode, Name);
             logger.LogInformation("Режим переключен успешно. Регистр {Register} = {Value}",
                 RegisterOperationMode, actualValue);
             return TestStepResult.Pass();

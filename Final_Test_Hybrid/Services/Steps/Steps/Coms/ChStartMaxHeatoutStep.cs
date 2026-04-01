@@ -2,6 +2,7 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Access;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
+using Final_Test_Hybrid.Services.Diagnostic.Services;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
@@ -16,6 +17,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
 public class ChStartMaxHeatoutStep(
     AccessLevelManager accessLevelManager,
     IModbusDispatcher dispatcher,
+    BoilerOperationModeRefreshService boilerOperationModeRefreshService,
     IOptions<DiagnosticSettings> settings,
     DualLogger<ChStartMaxHeatoutStep> logger) : IHasPlcBlockPath, IRequiresPlcSubscriptions, INonSkippable
 {
@@ -51,6 +53,8 @@ public class ChStartMaxHeatoutStep(
     /// </summary>
     public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
     {
+        await boilerOperationModeRefreshService.ClearAndDrainAsync($"вход в шаг смены режима: {Name}", ct);
+
         if (context.Variables.ContainsKey(HadErrorKey))
         {
             return await HandleRetryAsync(context, ct);
@@ -123,26 +127,31 @@ public class ChStartMaxHeatoutStep(
     private async Task<TestStepResult> HandleReady1Async(TestStepContext context, CancellationToken ct)
     {
         var modeAddress = (ushort)(RegisterOperationMode - _settings.BaseAddressOffset);
-        var modeWriteResult = await context.PacedDiagWriter.WriteUInt16Async(modeAddress, MaxHeatingMode, ct);
-
-        if (!modeWriteResult.Success)
         {
-            var message = ComsStepFailureHelper.BuildWriteMessage(modeWriteResult, $"записи режима в регистр {RegisterOperationMode}", $"Ошибка записи режима в регистр {RegisterOperationMode}. {modeWriteResult.Error}");
-            return await FailWithFaultAsync(context, message, ct);
-        }
+            using var modeChangeLease = await boilerOperationModeRefreshService.AcquireModeChangeLeaseAsync(ct);
+            var modeWriteResult = await context.PacedDiagWriter.WriteUInt16Async(modeAddress, MaxHeatingMode, ct);
 
-        var modeReadResult = await context.PacedDiagReader.ReadUInt16Async(modeAddress, ct);
+            if (!modeWriteResult.Success)
+            {
+                var message = ComsStepFailureHelper.BuildWriteMessage(modeWriteResult, $"записи режима в регистр {RegisterOperationMode}", $"Ошибка записи режима в регистр {RegisterOperationMode}. {modeWriteResult.Error}");
+                return await FailWithFaultAsync(context, message, ct);
+            }
 
-        if (!modeReadResult.Success)
-        {
-            var message = ComsStepFailureHelper.BuildReadMessage(modeReadResult, $"чтении регистра {RegisterOperationMode}", $"Ошибка чтения регистра {RegisterOperationMode}. {modeReadResult.Error}");
-            return await FailWithFaultAsync(context, message, ct);
-        }
+            var modeReadResult = await context.PacedDiagReader.ReadUInt16Async(modeAddress, ct);
 
-        if (modeReadResult.Value != MaxHeatingMode)
-        {
-            var message = $"Режим не установлен (прочитано: {modeReadResult.Value}, ожидалось: {MaxHeatingMode})";
-            return await FailWithFaultAsync(context, message, ct);
+            if (!modeReadResult.Success)
+            {
+                var message = ComsStepFailureHelper.BuildReadMessage(modeReadResult, $"чтении регистра {RegisterOperationMode}", $"Ошибка чтения регистра {RegisterOperationMode}. {modeReadResult.Error}");
+                return await FailWithFaultAsync(context, message, ct);
+            }
+
+            if (modeReadResult.Value != MaxHeatingMode)
+            {
+                var message = $"Режим не установлен (прочитано: {modeReadResult.Value}, ожидалось: {MaxHeatingMode})";
+                return await FailWithFaultAsync(context, message, ct);
+            }
+
+            boilerOperationModeRefreshService.ArmMode(MaxHeatingMode, Name);
         }
 
         var continuaResult = await context.OpcUa.WriteAsync(Continua1Tag, true, ct);
@@ -242,7 +251,7 @@ public class ChStartMaxHeatoutStep(
     /// <summary>
     /// После Fault ожидаем только Error от PLC.
     /// </summary>
-    private async Task<TestStepResult> WaitForPlcErrorAfterFaultAsync(
+    private static async Task<TestStepResult> WaitForPlcErrorAfterFaultAsync(
         TestStepContext context,
         string errorMessage,
         CancellationToken ct)

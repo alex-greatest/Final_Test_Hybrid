@@ -4,7 +4,7 @@
          id="@BadgeElementId"
          style="@BadgeCssVariables"
          title="Активные ошибки"
-         @onmousedown="StartBadgeDrag"
+         @onpointerdown="StartBadgeDrag"
          @onclick="TogglePanel">
         <RadzenIcon Icon="warning" class="floating-error-badge-icon" />
         <span class="floating-error-badge-count">@_resettableErrorsCount</span>
@@ -14,11 +14,11 @@
 @if (ShouldShowPanel)
 {
     <div class="floating-active-errors-window" id="@PanelElementId">
-        <div class="floating-active-errors-titlebar" @onmousedown="StartPanelDrag">
+        <div class="floating-active-errors-titlebar" @onpointerdown="StartPanelDrag">
             <span class="floating-active-errors-title">Активные ошибки</span>
             <button type="button"
                     class="floating-active-errors-close"
-                    @onmousedown:stopPropagation="true"
+                    @onpointerdown:stopPropagation="true"
                     @onclick="ClosePanel">
                 <RadzenIcon Icon="close" class="floating-active-errors-close-icon" />
             </button>

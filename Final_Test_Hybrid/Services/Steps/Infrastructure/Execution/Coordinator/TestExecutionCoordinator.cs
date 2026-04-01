@@ -3,6 +3,7 @@ using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol;
+using Final_Test_Hybrid.Services.Diagnostic.Services;
 using Final_Test_Hybrid.Services.Errors;
 using Final_Test_Hybrid.Services.Main.PlcReset;
 using Final_Test_Hybrid.Services.OpcUa;
@@ -36,6 +37,7 @@ public partial class TestExecutionCoordinator : IDisposable
     private readonly ExecutionFlowState _flowState;
     private readonly PausableRegisterReader _pausableRegisterReader;
     private readonly PausableRegisterWriter _pausableRegisterWriter;
+    private readonly BoilerOperationModeRefreshService _boilerOperationModeRefreshService;
     private readonly StepStatusReporter _statusReporter;
     private readonly TimeSpan _stepPacingWindow;
     private readonly Lock _stateLock = new();
@@ -85,6 +87,7 @@ public partial class TestExecutionCoordinator : IDisposable
         ExecutionFlowState flowState,
         PausableRegisterReader pausableRegisterReader,
         PausableRegisterWriter pausableRegisterWriter,
+        BoilerOperationModeRefreshService boilerOperationModeRefreshService,
         RangeSliderUiState rangeSliderUiState,
         IOptions<DiagnosticSettings> diagnosticSettings)
     {
@@ -104,6 +107,7 @@ public partial class TestExecutionCoordinator : IDisposable
         _flowState = flowState;
         _pausableRegisterReader = pausableRegisterReader;
         _pausableRegisterWriter = pausableRegisterWriter;
+        _boilerOperationModeRefreshService = boilerOperationModeRefreshService;
         _statusReporter = statusReporter;
         _stepPacingWindow = TimeSpan.FromMilliseconds(Math.Max(0, diagnosticSettings.Value.WriteVerifyDelayMs));
         _onExecutorStateChanged = HandleExecutorStateChanged;
@@ -132,6 +136,7 @@ public partial class TestExecutionCoordinator : IDisposable
     
     public void ResetForRepeat()
     {
+        _boilerOperationModeRefreshService.Clear("ResetForRepeat / новый цикл выполнения");
         StateManager.ClearErrors();
         StateManager.ResetErrorTracking();
         StateManager.TransitionTo(ExecutionState.Idle);

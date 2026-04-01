@@ -43,6 +43,7 @@ public static class DiagnosticServiceExtensions
         // ECU error sync
         services.AddSingleton<EcuErrorSyncService>();
         services.AddSingleton<BoilerLockRuntimeService>();
+        services.AddSingleton<BoilerOperationModeRefreshService>();
 
         return services;
     }

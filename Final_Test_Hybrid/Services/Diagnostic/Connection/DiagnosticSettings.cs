@@ -68,6 +68,12 @@ public class DiagnosticSettings
     public int WriteVerifyDelayMs { get; set; } = 100;
 
     /// <summary>
+    /// Интервал runtime-подтверждения удерживаемого режима 1036.
+    /// По умолчанию соответствует штатному дедлайну котла около 15 минут.
+    /// </summary>
+    public TimeSpan OperationModeRefreshInterval { get; set; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>
     /// Настройки runtime-обработки блокировок котла по статусу 1005.
     /// </summary>
     public DiagnosticBoilerLockSettings BoilerLock { get; set; } = new();

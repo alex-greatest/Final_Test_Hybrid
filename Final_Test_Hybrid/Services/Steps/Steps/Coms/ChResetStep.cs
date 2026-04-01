@@ -3,6 +3,7 @@ using Final_Test_Hybrid.Services.Diagnostic.Access;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
+using Final_Test_Hybrid.Services.Diagnostic.Services;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Microsoft.Extensions.Options;
@@ -17,6 +18,7 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
 public class ChResetStep(
     AccessLevelManager accessLevelManager,
     IModbusDispatcher dispatcher,
+    BoilerOperationModeRefreshService boilerOperationModeRefreshService,
     IOptions<DiagnosticSettings> settings,
     DualLogger<ChResetStep> logger) : ITestStep, INonSkippable
 {
@@ -75,6 +77,7 @@ public class ChResetStep(
         logger.LogInformation("Перевод котла в летний режим");
 
         var modbusAddress = (ushort)(RegisterChResetDoc - _settings.BaseAddressOffset);
+        using var modeChangeLease = await boilerOperationModeRefreshService.AcquireModeChangeLeaseAsync(ct);
 
         var writeResult = await context.PacedDiagWriter.WriteUInt16Async(modbusAddress, ResetValue, ct);
         if (!writeResult.Success)
@@ -94,6 +97,7 @@ public class ChResetStep(
         {
             logger.LogInformation("Котёл переведён в летний режим");
             context.Variables.Remove(HadErrorKey);
+            boilerOperationModeRefreshService.Clear("Coms/CH_Reset: регистр 1036 подтверждён как 0");
             return TestStepResult.Pass();
         }
 

@@ -867,11 +867,21 @@ private void HandleHardReset()
 |---------|-----------|-------------|-------|
 | **OnForceStop** | PreExecutionCoordinator | Отмена операции, RequestStop | `HandleSoftStop()` |
 | **OnForceStop** | TestExecutionCoordinator | Errors, StopAsFailure | `HandleForceStop()` → `ClearErrors()` |
+| **OnForceStop** | BoilerOperationModeRefreshService | Очистка retained-mode `1036` | `Clear("soft reset / PLC OnForceStop")` |
 | **OnAskEndReceived** | PreExecutionCoordinator | Запуск post-AskEnd decision flow; cleanup и repeat выбираются после PLC outcome | `HandleGridClear()` → `ExecutePostAskEndFlowAsync()` |
 | **OnReset** | PreExecutionCoordinator | Stop-reason, запуск hard-reset path | `HandleHardReset()` → `HandleStopSignal(HardReset)` |
 | **OnReset** | TestExecutionCoordinator | Errors, StopAsFailure | `HandleReset()` → `ClearErrors()` |
+| **OnReset** | BoilerOperationModeRefreshService | Очистка retained-mode `1036` | `Clear("hard reset / ErrorCoordinator.OnReset")` |
 | **Test completion** | PreExecutionCoordinator | Финализация + completed-history через `CompletedTest` | `HandleTestCompletionAsync()` |
+| **Operator stop / SequenceCompleted** | BoilerOperationModeRefreshService | Awaited clear+drain retained-mode `1036` до `SequenceCompleted` | `TestExecutionCoordinator.CompleteAsync()` |
+| **Test completion / BoilerState.Clear()** | BoilerOperationModeRefreshService | Очистка retained-mode `1036` | `HandleBoilerStateCleared()` |
+| **Repeat / ResetForRepeat()** | BoilerOperationModeRefreshService | Очистка retained-mode `1036` перед новым циклом | `TestExecutionCoordinator.ResetForRepeat()` |
 | **ClearStop** | ExecutionFlowState | StopReason, StopAsFailure | Координаторы |
+
+Примечание по retained-mode `1036`:
+
+- `Clear(...)` остаётся sync-path для reset/repeat и lease-held сценариев; он инвалидирует armed-state сразу и запускает coalesced background-drain.
+- `ClearAndDrainAsync(...)` используется только вне shared mode-change lease и даёт awaited barrier: `SequenceCompleted` публикуется уже после выхода активного refresh из critical section.
 
 ### Подробнее о PreExecutionCoordinator handlers
 
@@ -946,10 +956,12 @@ private void HandleHardReset()
 
 - `BoilerState.SaveLastTestInfo()` вызывается только из `CompletedTest`-ветки и фиксирует completed-history контекст перед очисткой sequence.
 - `BoilerState.Clear()` вызывается и при штатном completion, и при operational reset. Поэтому `LastSerialNumber` / `LastTestCompletedAt` отражают последний очищенный контекст котла, а не только строгий факт штатного завершения теста.
+- `BoilerState.OnCleared` остаётся lifecycle-hook для normal completion/full cleanup, а operator stop дополнительно очищает retained-mode `1036` раньше, прямо в `TestExecutionCoordinator.CompleteAsync()` до `SequenceCompleted`.
 - Header во вкладках результатов, истории шагов и таймеров читается из `BoilerState.LastSerialNumber` / `LastTestCompletedAt`; после reset это допустимо может быть контекст последнего сброшенного прогона.
 - При soft/hard reset snapshot остаётся только в UI history. Даже если включена галочка автосохранения Excel, reset-ветка не вызывает `StepHistoryExcelExporter`.
 - Ручной export из `StepHistoryGrid` после reset по-прежнему проходит через guard `StepHistoryExcelExporter.TryValidateContext(...)`; reset-history сам по себе не ослабляет защиту от файла `Unknown`.
 - `BoilerState.ClearLastTestInfo()` вызывается в `ClearForNewTestStart()` и синхронно убирает header-контекст вместе с очисткой `TestResultsService`, `StepHistoryService` и `TimerService`.
+- `TestExecutionCoordinator.ResetForRepeat()` дополнительно очищает retained-mode `1036`, чтобы repeat/new cycle не наследовал режим предыдущего прогона.
 
 ---
 
