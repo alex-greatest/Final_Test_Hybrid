@@ -225,6 +225,18 @@ RunSingleCycleAsync:
 - Маршрут сохранения не меняется:
   - `UseMes=true` → MES;
   - `UseMes=false` → локальная БД.
+- Состав сохранения в interrupt-flow расширен:
+  - вместе с причиной всегда пытаемся сохранить текущий runtime snapshot результатов;
+  - для `UseMes=true` snapshot уходит в MES interrupt payload плоскими полями верхнего уровня:
+    `operator`, `Items`, `Items_limited`, `time`, `errors`, `result`;
+  - для `UseMes=false` тот же runtime snapshot сохраняется в локальные `TB_RESULT`, `TB_ERROR`, `TB_STEP_TIME`,
+    а `TB_OPERATION` переводится в `Interrupted`.
+- Interrupt snapshot использует тот же source of truth, что и штатный finish-flow:
+  - `ITestResultsService`;
+  - `IErrorService.GetHistory()`;
+  - `IStepTimingService.GetAll()`.
+- `operator` в MES interrupt payload остаётся оператором теста, а не администратором.
+- `result` в MES interrupt payload для прерывания фиксируется как `4`.
 - Для отдельной admin-авторизации rework-flow и interrupt-flow используется только ответ сервера:
   - запросы идут в `/api/admin/auth` и `/api/admin/auth/Qr`, а не в operator auth routes;
   - `200 OK` открывает ввод причины;

@@ -50,6 +50,11 @@ IsInScanningPhase = _isActivated && !_isResetting
 - Если `PreExecutionCoordinator.IsPostAskEndFlowActive()` ещё true, controller удерживает reset-state до финального PLC outcome.
 - `full cleanup` возвращает scan timing/session после завершения post-AskEnd ветки.
 - `repeat` не поднимает scan timing/session, потому что следующий цикл уходит в существующий repeat path с `_skipNextScan`.
+- Если тест был запущен через `repeat` после reset и затем завершился штатно, ordinary scanner owner может вернуться не через reset catch-up, а через self-heal в `HandlePreExecutionStateChanged()`:
+  когда `PreExecutionCoordinator` снова входит в `IsAcceptingInput = true`, controller перевооружает ordinary owner только при `owner=None`, `IsScanModeEnabled=true`, `IsConnected=true`, `_isActivated=true` и отсутствии reset.
+- Этот self-heal не перехватывает scanner у dialog-mode и не трогает `StepTimingService`, `BoilerState` timers или changeover.
+- `AcquireSession()` не должен считать cached barcode-handler достаточным признаком живого ordinary session:
+  если reset уже снял ownership через `ReleaseAllForReset()`, повторный `AcquireSession()` обязан заново поднять `PreExecution` owner.
 - Если active `post-AskEnd` оборван non-PLC `HardReset`, `PreExecutionCoordinator` публикует для deferred transition тот же outcome `full cleanup`.
   Это нужно только для завершения зависшего catch-up от старого PLC reset; broad fallback "любой abort = ready" запрещён.
 
@@ -148,6 +153,12 @@ Deferred completion contract:
 - explicit outcome `full cleanup` снимает `_resetReadyTransitionPending` и завершает reset-state;
 - ordinary scanner owner возвращается только если на момент catch-up актуальны `IsScanModeEnabled = true` и `OpcUaConnectionState.IsConnected = true`;
 - при `AutoReady = false` или отсутствии PLC-связи deferred transition не делает `BoilerInfo` editable и не переводит raw scanner в ordinary-ready.
+- Если reset catch-up завершился repeat outcome и owner позже остался `None`, normal completion-path не обязан сам управлять scanner ownership.
+  Возврат ordinary owner выполняет `ScanModeController` при фактическом возврате в ожидание barcode, сохраняя тот же gating-контракт.
+
+Locked regression guard:
+- правки в `HandlePreExecutionStateChanged()`, `TransitionToReadyInternal()` и `AcquireSession()` не должны менять `BoilerState.TestTime`, `BoilerState.ChangeoverTime`, completion-handshake и existing changeover contract;
+- ordinary scanner-ready и `BoilerInfo` editable должны оставаться частью одного runtime-state, а не двух независимых флагов.
 ## Синхронизация Scan-таймера по входной готовности
 
 `ScanModeController` синхронизирует тик Scan-таймера только для сценария ожидания barcode:

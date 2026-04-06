@@ -91,7 +91,7 @@
             <RadzenDataGridColumn TItem="Operation" Width="120px" Sortable="false" Filterable="false">
                 <Template Context="item">
                     <RadzenStack Orientation="Orientation.Horizontal" Gap="4">
-                        @if (item.Status == OperationResultStatus.Ok || item.Status == OperationResultStatus.Nok)
+                        @if (CanOpenArchiveDetails(item.Status))
                         {
                             <RadzenButton Icon="visibility" Size="ButtonSize.Medium"
                                           ButtonStyle="@GetStatusButtonStyle(item.Status)"
@@ -202,6 +202,14 @@
         OperationResultStatus.InWork => "В работе",
         OperationResultStatus.Interrupted => "Прерван",
         _ => "?"
+    };
+
+    private static bool CanOpenArchiveDetails(OperationResultStatus status) => status switch
+    {
+        OperationResultStatus.Ok => true,
+        OperationResultStatus.Nok => true,
+        OperationResultStatus.Interrupted => true,
+        _ => false
     };
 
     /// <summary>

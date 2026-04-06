@@ -85,6 +85,7 @@ public static class StepsServiceExtensions
         services.AddSingleton<IStepTimeStorageService, StepTimeStorageService>();
         services.AddSingleton<DatabaseTestResultStorage>();
         services.AddSingleton<MesTestResultStorage>();
+        services.AddSingleton<FinalTestResultsSnapshotBuilder>();
         services.AddSingleton<TestResultStorageRouter>();
         services.AddSingleton<ITestResultStorage>(sp => sp.GetRequiredService<TestResultStorageRouter>());
 

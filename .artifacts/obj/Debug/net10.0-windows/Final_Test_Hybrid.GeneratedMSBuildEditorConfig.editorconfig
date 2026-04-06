@@ -1,0 +1,462 @@
+is_global = true
+build_property.ApplicationManifest = 
+build_property.StartupObject = 
+build_property.ApplicationDefaultFont = 
+build_property.ApplicationHighDpiMode = 
+build_property.ApplicationUseCompatibleTextRendering = 
+build_property.ApplicationVisualStyles = 
+build_property.TargetFramework = net10.0-windows
+build_property.TargetFramework = net10.0-windows
+build_property.TargetPlatformMinVersion = 7.0
+build_property.TargetPlatformMinVersion = 7.0
+build_property.UsingMicrosoftNETSdkWeb = 
+build_property.UsingMicrosoftNETSdkWeb = 
+build_property.ProjectTypeGuids = 
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = 
+build_property.InvariantGlobalization = 
+build_property.PlatformNeutralAssembly = 
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property.TargetFrameworkIdentifier = .NETCoreApp
+build_property.TargetFrameworkVersion = v10.0
+build_property.RootNamespace = Final_Test_Hybrid
+build_property.RootNamespace = Final_Test_Hybrid
+build_property.ProjectDir = D:\projects\Final_Test_Hybrid\Final_Test_Hybrid\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+build_property.CsWinRTUseWindowsUIXamlProjections = false
+build_property.RazorLangVersion = 9.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = D:\projects\Final_Test_Hybrid\Final_Test_Hybrid
+build_property._RazorSourceGeneratorDebug = 
+build_property.EffectiveAnalysisLevelStyle = 10.0
+build_property.EnableCodeStyleSeverity = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Archive/ArchiveErrorsGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcmNoaXZlXEFyY2hpdmVFcnJvcnNHcmlkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Archive/ArchiveStepTimesGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcmNoaXZlXEFyY2hpdmVTdGVwVGltZXNHcmlkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Errors/ErrorResetButton.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFcnJvcnNcRXJyb3JSZXNldEJ1dHRvbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Indicators/AirOnIndicator.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xJbmRpY2F0b3JzXEFpck9uSW5kaWNhdG9yLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Indicators/DatabaseIndicator.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xJbmRpY2F0b3JzXERhdGFiYXNlSW5kaWNhdG9yLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Indicators/EStopIndicator.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xJbmRpY2F0b3JzXEVTdG9wSW5kaWNhdG9yLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Indicators/GasStopIndicator.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xJbmRpY2F0b3JzXEdhc1N0b3BJbmRpY2F0b3IucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Indicators/PlcIndicator.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xJbmRpY2F0b3JzXFBsY0luZGljYXRvci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Indicators/ScannerIndicator.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xJbmRpY2F0b3JzXFNjYW5uZXJJbmRpY2F0b3IucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Indicators/SpringBootIndicator.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xJbmRpY2F0b3JzXFNwcmluZ0Jvb3RJbmRpY2F0b3IucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/BoilerInfo.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXEJvaWxlckluZm8ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/BoilerStatusDisplay.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXEJvaWxlclN0YXR1c0Rpc3BsYXkucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/ChangeoverTimerDisplay.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXENoYW5nZW92ZXJUaW1lckRpc3BsYXkucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/OperatorInfo.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXE9wZXJhdG9ySW5mby5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Parameter/CH.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXFBhcmFtZXRlclxDSC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Parameter/Delta.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXFBhcmFtZXRlclxEZWx0YS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Parameter/DHW.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXFBhcmFtZXRlclxESFcucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Parameter/Emissions.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXFBhcmFtZXRlclxFbWlzc2lvbnMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Parameter/Gas.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXFBhcmFtZXRlclxHYXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Parameter/GasP.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXFBhcmFtZXRlclxHYXNQLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/ResultImagePanel.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXFJlc3VsdEltYWdlUGFuZWwucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Shift.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXFNoaWZ0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/TestTimerDisplay.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXFRlc3RUaW1lckRpc3BsYXkucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Overview/InputsPanel1.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xPdmVydmlld1xJbnB1dHNQYW5lbDEucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Overview/PneumaticOutputsPanel.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xPdmVydmlld1xQbmV1bWF0aWNPdXRwdXRzUGFuZWwucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Overview/RtdInputsPanel.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xPdmVydmlld1xSdGRJbnB1dHNQYW5lbC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/RangeSlider.razor]
+build_metadata.AdditionalFiles.TargetPath = UmFuZ2VTbGlkZXIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/_Imports.razor]
+build_metadata.AdditionalFiles.TargetPath = X0ltcG9ydHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Archive/ArchiveGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcmNoaXZlXEFyY2hpdmVHcmlkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-mq5kmfjo4k
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Archive/ArchiveResultsGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcmNoaXZlXEFyY2hpdmVSZXN1bHRzR3JpZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-8si1vita3c
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Archive/OperationDetailsDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcmNoaXZlXE9wZXJhdGlvbkRldGFpbHNEaWFsb2cucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-i1drypcmcz
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/AdminAuthorizationQr.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxBZG1pbkF1dGhvcml6YXRpb25Rci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-oq7cey2gax
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/MainEngineering.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxNYWluRW5naW5lZXJpbmcucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-t3uf6b5t0l
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/Modals/HandProgramDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxNb2RhbHNcSGFuZFByb2dyYW1EaWFsb2cucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-peur2336iy
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/Modals/IoEditorDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxNb2RhbHNcSW9FZGl0b3JEaWFsb2cucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-twns1i7wlj
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/Modals/MainSettingsDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxNb2RhbHNcTWFpblNldHRpbmdzRGlhbG9nLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-g4gmsj1aac
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/Modals/PasswordDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxNb2RhbHNcUGFzc3dvcmREaWFsb2cucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-ip9v7rbg3v
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/OperatorAuthorizationQr.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxPcGVyYXRvckF1dGhvcml6YXRpb25Rci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-qy4sqnto43
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/Sequence/TestSequenceEditor.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTZXF1ZW5jZVxUZXN0U2VxdWVuY2VFZGl0b3IucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-fji8szw849
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/StandDatabase/BoilerTypesGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTdGFuZERhdGFiYXNlXEJvaWxlclR5cGVzR3JpZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-lmf6xgapy8
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/StandDatabase/ErrorSettingsTemplatesGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTdGFuZERhdGFiYXNlXEVycm9yU2V0dGluZ3NUZW1wbGF0ZXNHcmlkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-8g8vmwcjcm
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/StandDatabase/Modals/CopyRecipesDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTdGFuZERhdGFiYXNlXE1vZGFsc1xDb3B5UmVjaXBlc0RpYWxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-x3sehavwa1
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/StandDatabase/Modals/CopyResultSettingsDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTdGFuZERhdGFiYXNlXE1vZGFsc1xDb3B5UmVzdWx0U2V0dGluZ3NEaWFsb2cucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-kcooplnaba
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/StandDatabase/Modals/DownloadProgressDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTdGFuZERhdGFiYXNlXE1vZGFsc1xEb3dubG9hZFByb2dyZXNzRGlhbG9nLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-kmk3brg3ns
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/StandDatabase/Modals/FailedCopiesDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTdGFuZERhdGFiYXNlXE1vZGFsc1xGYWlsZWRDb3BpZXNEaWFsb2cucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-h96u794wik
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/StandDatabase/Modals/StepSelectDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTdGFuZERhdGFiYXNlXE1vZGFsc1xTdGVwU2VsZWN0RGlhbG9nLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-7ouzpboid3
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/StandDatabase/Recipe/RecipesGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTdGFuZERhdGFiYXNlXFJlY2lwZVxSZWNpcGVzR3JpZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-n9086nrrpg
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/StandDatabase/ResultSettings/ResultSettingsBoardGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTdGFuZERhdGFiYXNlXFJlc3VsdFNldHRpbmdzXFJlc3VsdFNldHRpbmdzQm9hcmRHcmlkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-7ldf6q7qy2
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/StandDatabase/ResultSettings/ResultSettingsRangeGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTdGFuZERhdGFiYXNlXFJlc3VsdFNldHRpbmdzXFJlc3VsdFNldHRpbmdzUmFuZ2VHcmlkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-a84bsoy5aj
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/StandDatabase/ResultSettings/ResultSettingsSimpleGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTdGFuZERhdGFiYXNlXFJlc3VsdFNldHRpbmdzXFJlc3VsdFNldHRpbmdzU2ltcGxlR3JpZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-ntfi9vjqip
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/StandDatabase/ResultSettings/ResultSettingsTab.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTdGFuZERhdGFiYXNlXFJlc3VsdFNldHRpbmdzXFJlc3VsdFNldHRpbmdzVGFiLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-jlridl9dw7
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/StandDatabase/StandDatabaseDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTdGFuZERhdGFiYXNlXFN0YW5kRGF0YWJhc2VEaWFsb2cucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-6leemtetov
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/StandDatabase/StepFinalTestsGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTdGFuZERhdGFiYXNlXFN0ZXBGaW5hbFRlc3RzR3JpZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-95fpqfarjl
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/SwitchExcelExport.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTd2l0Y2hFeGNlbEV4cG9ydC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-je68j89fjx
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/SwitchInterruptReason.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTd2l0Y2hJbnRlcnJ1cHRSZWFzb24ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-n3p5f91w3o
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Engineer/SwitchMes.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFbmdpbmVlclxTd2l0Y2hNZXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-84q1iw9o0n
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Errors/ActiveErrorsGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFcnJvcnNcQWN0aXZlRXJyb3JzR3JpZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-oviuy09j08
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Errors/ErrorHandlingDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFcnJvcnNcRXJyb3JIYW5kbGluZ0RpYWxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-0ga4byg9b2
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Errors/ErrorHistoryGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFcnJvcnNcRXJyb3JIaXN0b3J5R3JpZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-abnchtma4a
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Errors/ErrorsTab.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFcnJvcnNcRXJyb3JzVGFiLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-lu7zhee68d
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Errors/FloatingErrorBadgeHost.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFcnJvcnNcRmxvYXRpbmdFcnJvckJhZGdlSG9zdC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-aum8bymf1c
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Errors/FloatingErrorPanel.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFcnJvcnNcRmxvYXRpbmdFcnJvclBhbmVsLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-lv1rggxt8x
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Loading/SubscriptionLoadingOverlay.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMb2FkaW5nXFN1YnNjcmlwdGlvbkxvYWRpbmdPdmVybGF5LnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-xa2w3n03eg
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Logs/LogViewerTab.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMb2dzXExvZ1ZpZXdlclRhYi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-l52kpobmyw
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/BoilerOrder.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXEJvaWxlck9yZGVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-cpwe7pn7ps
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/MessageHelper.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXE1lc3NhZ2VIZWxwZXIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-emnu9f7gjw
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Modals/EditSuccessCountDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXE1vZGFsc1xFZGl0U3VjY2Vzc0NvdW50RGlhbG9nLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-je25x633ee
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Modals/Interrupt/InterruptReasonDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXE1vZGFsc1xJbnRlcnJ1cHRcSW50ZXJydXB0UmVhc29uRGlhbG9nLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-giabykytn4
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Modals/MissingRecipesDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXE1vZGFsc1xNaXNzaW5nUmVjaXBlc0RpYWxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-gtuwed98dl
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Modals/MissingTagsDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXE1vZGFsc1xNaXNzaW5nVGFnc0RpYWxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-bmqdtzf5ff
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Modals/OperatorLoginDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXE1vZGFsc1xPcGVyYXRvckxvZ2luRGlhbG9nLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-nqvmfca0w1
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Modals/OperatorManualLoginDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXE1vZGFsc1xPcGVyYXRvck1hbnVhbExvZ2luRGlhbG9nLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-tddhljltcf
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Modals/PrepareErrorDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXE1vZGFsc1xQcmVwYXJlRXJyb3JEaWFsb2cucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-9f8intrass
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Modals/RecipeWriteErrorDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXE1vZGFsc1xSZWNpcGVXcml0ZUVycm9yRGlhbG9nLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-94jc76h712
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Modals/Rework/AdminAuthDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXE1vZGFsc1xSZXdvcmtcQWRtaW5BdXRoRGlhbG9nLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-27h81xuzf3
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Modals/Rework/ReworkReasonDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXE1vZGFsc1xSZXdvcmtcUmV3b3JrUmVhc29uRGlhbG9nLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-d31ul8z8uc
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Modals/Rework/RouteErrorDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXE1vZGFsc1xSZXdvcmtcUm91dGVFcnJvckRpYWxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-2faxboo4qx
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Modals/SaveErrorDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXE1vZGFsc1xTYXZlRXJyb3JEaWFsb2cucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-h2a6jnd7sh
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Modals/SaveProgressDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXE1vZGFsc1xTYXZlUHJvZ3Jlc3NEaWFsb2cucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-u8q306dr1n
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Modals/UnknownStepsDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXE1vZGFsc1xVbmtub3duU3RlcHNEaWFsb2cucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-1j4z5rqikz
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/Modals/UserScanDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXE1vZGFsc1xVc2VyU2NhbkRpYWxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-ul2i6ucyzl
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/RangeSliderDisplay.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXFJhbmdlU2xpZGVyRGlzcGxheS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-36srb4t0qi
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Main/TestSequenseGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNYWluXFRlc3RTZXF1ZW5zZUdyaWQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-jnkx5s980a
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Overview/AiCallCheck.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xPdmVydmlld1xBaUNhbGxDaGVjay5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-qgiae42tzz
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Overview/ConnectionTestPanel.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xPdmVydmlld1xDb25uZWN0aW9uVGVzdFBhbmVsLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-d2vfu0mlfb
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Overview/InputsPanel2.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xPdmVydmlld1xJbnB1dHNQYW5lbDIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-mv0v20xn4b
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Overview/InteractiveLampOutput.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xPdmVydmlld1xJbnRlcmFjdGl2ZUxhbXBPdXRwdXQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-c1u2dvg6mc
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Overview/LampIndicator.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xPdmVydmlld1xMYW1wSW5kaWNhdG9yLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-50yt15vru0
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Overview/LampOutput.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xPdmVydmlld1xMYW1wT3V0cHV0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-4hivqo4tw2
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Overview/OutputsPanel1.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xPdmVydmlld1xPdXRwdXRzUGFuZWwxLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-8rujh4v590
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Overview/OutputsPanel2.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xPdmVydmlld1xPdXRwdXRzUGFuZWwyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-i8iwkigj6a
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Overview/PanelBox.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xPdmVydmlld1xQYW5lbEJveC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-ar7gbng63a
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Overview/PidRegulatorCheck.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xPdmVydmlld1xQaWRSZWd1bGF0b3JDaGVjay5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-j3tetlff3x
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Overview/RtdCalCheck.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xPdmVydmlld1xSdGRDYWxDaGVjay5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-24pga16cyj
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Overview/ValueIndicator.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xPdmVydmlld1xWYWx1ZUluZGljYXRvci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-xhp7ygs1f8
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Parameters/ParametersTab.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYXJhbWV0ZXJzXFBhcmFtZXRlcnNUYWIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-awoyqokwma
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Results/ActiveTimersGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xSZXN1bHRzXEFjdGl2ZVRpbWVyc0dyaWQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-69nqerxzuu
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Results/StepHistoryGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xSZXN1bHRzXFN0ZXBIaXN0b3J5R3JpZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-ty29jjfpjf
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Results/StepTimingsGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xSZXN1bHRzXFN0ZXBUaW1pbmdzR3JpZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-st6s5lugvh
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Results/TestResultsGrid.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xSZXN1bHRzXFRlc3RSZXN1bHRzR3JpZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-aqsmceqswm
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Results/TestResultsTab.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xSZXN1bHRzXFRlc3RSZXN1bHRzVGFiLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-sqd4pgtkij
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Schemes/GasScheme.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTY2hlbWVzXEdhc1NjaGVtZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-8slbfmi7j7
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Schemes/HeatingScheme.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTY2hlbWVzXEhlYXRpbmdTY2hlbWUucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-nyv0tx7t4p
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Components/Schemes/HotWaterScheme.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTY2hlbWVzXEhvdFdhdGVyU2NoZW1lLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-5jnngoa4hi
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/MyComponent.razor]
+build_metadata.AdditionalFiles.TargetPath = TXlDb21wb25lbnQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-4gnb5p6fm6
+
+[D:/projects/Final_Test_Hybrid/Final_Test_Hybrid/Form1.resx]
+build_metadata.AdditionalFiles.TargetPath = Form1.resx
+build_metadata.AdditionalFiles.CssScope = 

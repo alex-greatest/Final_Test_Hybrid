@@ -4,6 +4,23 @@
 
 `StepTimingService` управляет таймерами для отображения времени выполнения шагов в UI.
 
+## Граница ответственности
+
+`StepTimingService` не является владельцем всех runtime-таймеров системы.
+
+Жёсткий контракт:
+
+| Контур | Source of truth | Что запрещено смешивать |
+|--------|-----------------|-------------------------|
+| Scan/step timing UI | `StepTimingService` | Нельзя трактовать как `TestTime` или `ChangeoverTime` |
+| `TestTime` | `BoilerState` | Нельзя перезапускать через scanner ownership / `BoilerInfo` rearm |
+| `ChangeoverTime` | `BoilerState` + `PreExecutionCoordinator` changeover flow | Нельзя менять через scan-mode, reset rearm или `StepTimingService` |
+
+Следствия:
+- правки scanner ownership, `BoilerInfo` gating и ordinary owner rearm не должны вызывать `BoilerState.Start/Stop/Reset` для `TestTime` и `ChangeoverTime`;
+- возврат ordinary scanner-ready после `reset -> repeat -> success` не должен менять semantics test/changeover timers;
+- `StepTimingService` допустимо использовать только для scan/step lifecycle и их pause/resume в runtime-gating.
+
 ## Два типа таймеров
 
 | Таймер | Назначение | Отображение |
@@ -90,6 +107,9 @@ public void ResetScanTiming()
 - scan-mode (`IsScanModeEnabled = true`)
 - контроллер не в reset и уже активирован
 
+Это касается только Scan-таймера `StepTimingService`.
+`TestTime` и `ChangeoverTime` этим pause/resume-контуром не управляются.
+
 ## Пауза таймеров на диалоге причины прерывания
 
 Во время активного `InterruptReasonDialog` (после `AskEnd` в reset-сценарии):
@@ -107,6 +127,10 @@ public void ResetScanTiming()
 При глобальной паузе (`PauseAllColumnsTiming`):
 - Все активные таймеры ставятся на паузу
 - При `ResumeAllColumnsTiming` таймеры возобновляются
+
+Контракт regression-guard:
+- `PauseAllColumnsTiming` / `ResumeAllColumnsTiming` / `ResetScanTiming` нельзя использовать как скрытый способ менять `BoilerState` timers;
+- если правка касается scanner unlock, `BoilerInfo` unlock или reset/repeat rearm, нужно отдельно доказать, что `StepTimingService` по-прежнему не влияет на `TestTime` и `ChangeoverTime`.
 
 ## Методы API
 

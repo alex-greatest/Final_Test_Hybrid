@@ -10,7 +10,7 @@ public partial class ReadSoftCodePlugStep
         return
         [
             BuildConnectionTypeAction(),
-            BuildArticleAction(),
+            BuildSoftCodePlugAction(),
             BuildBoilerTypeAction(),
             BuildPumpTypeAction(),
             BuildPressureSensorTypeAction(),
@@ -27,6 +27,7 @@ public partial class ReadSoftCodePlugStep
             BuildMinPumpAutoPowerAction(),
             BuildComfortHysteresisAction(),
             BuildMaxFlowTemperatureAction(),
+            BuildProductArticleAction(),
             BuildItelmaArticleAction(),
             BuildProductionDateAction(),
             BuildSupplierCodeAction(),

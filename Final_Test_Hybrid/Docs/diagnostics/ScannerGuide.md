@@ -59,6 +59,8 @@
 - если `BoilerInfo` editable и принимает `Enter`, raw scanner обязан идти в тот же `PreExecution` pipeline;
 - если `BoilerInfo` заблокирован, raw scanner не должен запускать `PreExecution`;
 - активный `Dialog` owner делает `BoilerInfo` неготовым для обычного scan-mode.
+- ordinary unlock после `reset -> repeat -> success` считается корректным только если одновременно возвращаются и raw scanner в `PreExecution`, и editable-state `BoilerInfo`;
+  разрешено чинить только ownership/runtime-gating, но не обходить контракт отдельным UI unlock.
 
 Это правило применяется для обоих каналов:
 
@@ -86,6 +88,11 @@
 - Если non-PLC `HardReset` приходит во время active `post-AskEnd` окна после `AskEnd`, ordinary scanner-ready не должен зависать:
   после reconnect controller обязан доесть deferred `full cleanup` outcome и вернуть `PreExecution` owner только при `AutoReady=true`;
   при `AutoReady=false` и `BoilerInfo`, и raw scanner обязаны оставаться заблокированными.
+- Если reset завершился repeat outcome и следующий тест был запущен без нового scan-step, ordinary scanner owner может остаться `None` до момента фактического возврата в ожидание barcode.
+  Когда `PreExecutionCoordinator` снова поднимает `IsAcceptingInput=true`, `ScanModeController` обязан перевооружить ordinary owner только при `owner=None`, `AutoReady=true`, `IsConnected=true` и вне reset.
+  Этот self-heal не должен перехватывать scanner у dialog-mode и не должен менять timing/changeover контуры.
+- Возврат ordinary scanner-ready не должен перезапускать `BoilerState` timers (`TestTime`, `ChangeoverTime`) и не должен менять completion-handshake;
+  для UI-таймеров допускается только существующий `StepTimingService` scan-step lifecycle.
 
 ## Конфигурация
 
@@ -121,4 +128,3 @@
 1. Настроить сканер отключить auto-sleep (через утилиту производителя)
 2. Добавить prefix-символ в настройках сканера (будет потерян при пробуждении)
 3. Использовать сканер без агрессивного power saving
-

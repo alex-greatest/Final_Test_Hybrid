@@ -9,6 +9,12 @@ public class SpringBootHttpClient
     private readonly HttpClient _httpClient;
     private readonly ILogger<SpringBootHttpClient> _logger;
 
+    public SpringBootHttpClient(HttpClient httpClient, ILogger<SpringBootHttpClient> logger)
+    {
+        _httpClient = httpClient;
+        _logger = logger;
+    }
+
     public SpringBootHttpClient(IOptions<SpringBootSettings> options, ILogger<SpringBootHttpClient> logger)
     {
         var settings = options.Value;

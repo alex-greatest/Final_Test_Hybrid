@@ -104,10 +104,10 @@
     private IReadOnlyList<ArchiveStepTimeItem> _stepTimes = [];
 
     /// <summary>
-    /// Экспорт доступен только для завершённых операций (OK/NOK).
+    /// Экспорт доступен для завершённых и прерванных операций.
     /// </summary>
     private bool CanExport => !_isExporting &&
-        (Operation.Status == OperationResultStatus.Ok || Operation.Status == OperationResultStatus.Nok);
+        CanExportArchive(Operation.Status);
 
     /// <summary>
     /// Загружает все данные при инициализации.
@@ -202,4 +202,12 @@
 
         return string.IsNullOrWhiteSpace(sanitized) ? "Export" : sanitized;
     }
+
+    private static bool CanExportArchive(OperationResultStatus status) => status switch
+    {
+        OperationResultStatus.Ok => true,
+        OperationResultStatus.Nok => true,
+        OperationResultStatus.Interrupted => true,
+        _ => false
+    };
 }

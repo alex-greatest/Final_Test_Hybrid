@@ -1,0 +1,11 @@
+D:\projects\Final_Test_Hybrid\.artifacts\obj\Debug\net10.0-windows\EmbeddedAttribute.cs
+D:\projects\Final_Test_Hybrid\.artifacts\obj\Debug\net10.0-windows\ValidatableTypeAttribute.cs
+D:\projects\Final_Test_Hybrid\.artifacts\obj\Debug\net10.0-windows\Final_Test_Hybrid.csproj.AssemblyReference.cache
+D:\projects\Final_Test_Hybrid\.artifacts\obj\Debug\net10.0-windows\rpswa.dswa.cache.json
+D:\projects\Final_Test_Hybrid\.artifacts\obj\Debug\net10.0-windows\Final_Test_Hybrid.Form1.resources
+D:\projects\Final_Test_Hybrid\.artifacts\obj\Debug\net10.0-windows\Final_Test_Hybrid.csproj.GenerateResource.cache
+D:\projects\Final_Test_Hybrid\.artifacts\obj\Debug\net10.0-windows\Final_Test_Hybrid.GeneratedMSBuildEditorConfig.editorconfig
+D:\projects\Final_Test_Hybrid\.artifacts\obj\Debug\net10.0-windows\Final_Test_Hybrid.AssemblyInfoInputs.cache
+D:\projects\Final_Test_Hybrid\.artifacts\obj\Debug\net10.0-windows\Final_Test_Hybrid.AssemblyInfo.cs
+D:\projects\Final_Test_Hybrid\.artifacts\obj\Debug\net10.0-windows\Final_Test_Hybrid.csproj.CoreCompileInputs.cache
+D:\projects\Final_Test_Hybrid\.artifacts\obj\Debug\net10.0-windows\Final_Test_Hybrid.sourcelink.json

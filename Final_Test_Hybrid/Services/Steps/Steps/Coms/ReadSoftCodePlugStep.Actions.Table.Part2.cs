@@ -118,10 +118,24 @@ public partial class ReadSoftCodePlugStep
             mismatchTemplate: "Макс. температура подающей линии в ЭБУ ({0} °С) не совпадает с ожидаемым ({1} °С)");
     }
 
-    private static ReadOnlyStringAction BuildItelmaArticleAction()
+    private static ReadOnlyStringAction BuildProductArticleAction()
     {
         return CreateReadOnlyStringAction(
             stepNo: 19,
+            title: "Чтение артикула изделия",
+            startRegister: RegisterProductArticle,
+            registerCount: 7,
+            maxLength: NomenclatureMaxLength,
+            resultName: ProductArticleResultName,
+            readLogMessage: $"Чтение артикула изделия из регистров {RegisterProductArticle}-{RegisterProductArticle + 6}",
+            readErrorPrefix: $"Ошибка при чтении артикула изделия из регистров {RegisterProductArticle}-{RegisterProductArticle + 6}. ",
+            valueLogTemplate: "Артикул изделия: {0}");
+    }
+
+    private static ReadOnlyStringAction BuildItelmaArticleAction()
+    {
+        return CreateReadOnlyStringAction(
+            stepNo: 20,
             title: "Чтение артикула ИТЭЛМА",
             startRegister: RegisterItelmaArticle,
             registerCount: 7,
@@ -135,7 +149,7 @@ public partial class ReadSoftCodePlugStep
     private static ReadOnlyStringAction BuildProductionDateAction()
     {
         return CreateReadOnlyStringAction(
-            stepNo: 20,
+            stepNo: 21,
             title: "Чтение даты производства",
             startRegister: RegisterProductionDate,
             registerCount: 4,
@@ -149,7 +163,7 @@ public partial class ReadSoftCodePlugStep
     private static ReadOnlyUInt32Action BuildSupplierCodeAction()
     {
         return CreateReadOnlyUInt32Action(
-            stepNo: 21,
+            stepNo: 22,
             title: "Чтение кода поставщика",
             startRegister: RegisterSupplierCodeHi,
             registerCount: 2,
@@ -164,7 +178,7 @@ public partial class ReadSoftCodePlugStep
     private static ReadOnlyUInt32Action BuildCounterNumberAction()
     {
         return CreateReadOnlyUInt32Action(
-            stepNo: 22,
+            stepNo: 23,
             title: "Чтение порядкового номера",
             startRegister: RegisterCounterNumberHi,
             registerCount: 2,
@@ -179,7 +193,7 @@ public partial class ReadSoftCodePlugStep
     private static ThermostatJumperCheckAction BuildThermostatJumperAction()
     {
         return new ThermostatJumperCheckAction(
-            StepNo: 23,
+            StepNo: 24,
             Title: "Проверка перемычки термостата",
             Register: RegisterThermostatJumper,
             ReadLogMessage: $"Проверка перемычки термостата из регистра {RegisterThermostatJumper}",

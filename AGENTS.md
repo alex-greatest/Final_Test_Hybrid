@@ -59,6 +59,8 @@ SCADA-система промышленных тестов с критичным
 - Ошибки `AddTagAsync/ApplyChangesAsync` обрабатывать с rollback runtime-состояния.
 - В `TagWaiter.WaitForFalseAsync` делать первичную cache-проверку через `subscription.GetValue(nodeId) + is bool`.
 - Не-`OperationCanceledException` в фоновом retry переводить в fail-fast `HardReset` + fail-safe `OpenGate()`.
+- Для изменений в scanner ownership / `BoilerInfo` держать единый контракт ready-state: ordinary raw scanner и ручной ввод должны разблокироваться и блокироваться вместе; `Dialog` owner блокирует ordinary-ready для обоих каналов.
+- Перед изменениями в scanner/runtime-gating проверять границу ответственности таймеров: `StepTimingService` владеет только scan/step timers, а `BoilerState` владеет `TestTime` и `ChangeoverTime`.
 
 ### Don't
 
@@ -70,6 +72,7 @@ SCADA-система промышленных тестов с критичным
 - Не включать авто-действия диагностики в ручных сценариях без явного контекста оператора.
 - Не вводить дубли источников списка/сохранения параметров результата (single source of truth обязателен).
 - Не менять reset/reconnect/error-flow точечно без проверки инвариантов completion и changeover.
+- Не использовать rearm scanner ownership или `BoilerInfo` unlock как повод перезапускать `BoilerState` timers (`TestTime`, `ChangeoverTime`) или менять completion-handshake.
 
 ## Зафиксированные инварианты (не пересматривать без нового инцидента)
 
@@ -87,6 +90,10 @@ SCADA-система промышленных тестов с критичным
 - В execution retry-flow ожидание `WaitForConnectionAsync(ct)` не требует локального timeout: безопасность обеспечивается внешним каскадом `PlcConnectionLost -> Reset -> Stop/Cancel`.
 - В pre-execution при потере OPC блокировать оба канала barcode (`BoilerInfo`, `BarcodeDebounceHandler`) и ставить scan-таймер на паузу.
 - Для ECU error flow по ping: ошибка поднимается только в lock-контексте (`1005 in {1,2}` + whitelist), вне lock очищается.
+- `StepTimingService` управляет только scan/step timers UI-контура; `BoilerState` остаётся единственным источником `TestTime` и `ChangeoverTime`.
+- Правки scanner ownership, `BoilerInfo` gating и rearm ordinary owner не должны менять `BoilerState` timers, completion-handshake или semantics changeover.
+- Ordinary raw scanner и `BoilerInfo` должны работать рука об руку: ordinary-ready либо доступен у обоих, либо заблокирован у обоих; активный `Dialog` owner запрещает ordinary-ready.
+- После сценария `reset -> repeat -> success` возврат в ожидание barcode обязан восстановить ordinary `PreExecution` owner без изменения `TestTime`, `ChangeoverTime` и existing changeover logic.
 
 ## UI-инварианты (актуально)
 
@@ -183,6 +190,7 @@ SCADA-система промышленных тестов с критичным
 | Error Handling | `Final_Test_Hybrid/Docs/runtime/ErrorCoordinatorGuide.md` |
 | PLC Reset | `Final_Test_Hybrid/Docs/runtime/PlcResetGuide.md` |
 | Steps | `Final_Test_Hybrid/Docs/execution/StepsGuide.md` |
+| Step Timing | `Final_Test_Hybrid/Docs/execution/StepTimingGuide.md` |
 | Cancellation | `Final_Test_Hybrid/Docs/execution/CancellationGuide.md` |
 | Modbus | `Final_Test_Hybrid/Docs/diagnostics/DiagnosticGuide.md` |
 | TagWaiter | `Final_Test_Hybrid/Docs/runtime/TagWaiterGuide.md` |

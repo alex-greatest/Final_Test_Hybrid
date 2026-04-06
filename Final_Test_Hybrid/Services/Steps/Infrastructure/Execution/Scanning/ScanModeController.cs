@@ -408,6 +408,7 @@ public class ScanModeController : IDisposable
             }
             else
             {
+                TryRearmOrdinaryScannerOwnerUnsafe();
                 SyncScanTimingForInputReadinessUnsafe();
             }
         }
@@ -445,6 +446,33 @@ public class ScanModeController : IDisposable
         _logger.LogInformation("ScanMode ready transition resumed after post-AskEnd full cleanup");
         TransitionToReadyInternal();
         return true;
+    }
+
+    private void TryRearmOrdinaryScannerOwnerUnsafe()
+    {
+        if (!CanRearmOrdinaryScannerOwnerUnsafe())
+        {
+            return;
+        }
+
+        var ownerState = _scannerOwnership.GetCurrentOwnerState();
+        if (ownerState.CurrentOwner != ScannerInputOwnerKind.None)
+        {
+            return;
+        }
+
+        _sessionManager.AcquireSession(HandleBarcodeScanned);
+        _logger.LogInformation(
+            "Обычный scanner owner перевооружён при возврате в ожидание barcode");
+    }
+
+    private bool CanRearmOrdinaryScannerOwnerUnsafe()
+    {
+        return _preExecutionCoordinator.IsAcceptingInput
+               && IsScanModeEnabledCached
+               && _connectionState.IsConnected
+               && !_isResetting
+               && _isActivated;
     }
 
     private void ResumeTimingWhenAllowedUnsafe()

@@ -138,6 +138,168 @@ public sealed class PreExecutionHardResetScannerTests
         }
     }
 
+    [Fact]
+    public void HandlePreExecutionStateChanged_RearmsScannerOwner_WhenBarcodeWaitReturnsAfterRepeat()
+    {
+        using var loggerFactory = CreateLoggerFactory(out var logs);
+        var context = PreExecutionTestContextFactory.Create(loggerFactory);
+        var autoReady = TestInfrastructure.CreateAutoReadySubscription(loggerFactory: loggerFactory);
+        var scannerOwnership = CreateOwnershipService(loggerFactory);
+        var controller = CreateSelfHealController(
+            scannerOwnership,
+            autoReady,
+            context.Coordinator,
+            context.StepTimingService,
+            loggerFactory);
+
+        try
+        {
+            SetAcceptingInput(context.Coordinator, true);
+
+            TestInfrastructure.InvokePrivate(controller, "HandlePreExecutionStateChanged");
+
+            Assert.True(scannerOwnership.IsPreExecutionOwnerActive);
+            Assert.Contains(
+                logs.Entries,
+                entry => entry.Level == LogLevel.Information
+                    && entry.Message.Contains(
+                        "Обычный scanner owner перевооружён при возврате в ожидание barcode",
+                        StringComparison.Ordinal));
+        }
+        finally
+        {
+            scannerOwnership.Dispose();
+            context.BoilerState.StopChangeoverTimer();
+            context.StepTimingService.Dispose();
+        }
+    }
+
+    [Fact]
+    public void HandlePreExecutionStateChanged_DoesNotRearmScannerOwner_WhenDialogOwnerIsActive()
+    {
+        using var loggerFactory = CreateLoggerFactory(out _);
+        var context = PreExecutionTestContextFactory.Create(loggerFactory);
+        var autoReady = TestInfrastructure.CreateAutoReadySubscription(loggerFactory: loggerFactory);
+        var scannerOwnership = CreateOwnershipService(loggerFactory);
+        var controller = CreateSelfHealController(
+            scannerOwnership,
+            autoReady,
+            context.Coordinator,
+            context.StepTimingService,
+            loggerFactory);
+
+        try
+        {
+            scannerOwnership.AcquireDialogOwner("dialog", _ => { });
+            SetAcceptingInput(context.Coordinator, true);
+
+            TestInfrastructure.InvokePrivate(controller, "HandlePreExecutionStateChanged");
+
+            var ownerState = scannerOwnership.GetCurrentOwnerState();
+            Assert.Equal(ScannerInputOwnerKind.Dialog, ownerState.CurrentOwner);
+            Assert.False(scannerOwnership.IsPreExecutionOwnerActive);
+        }
+        finally
+        {
+            scannerOwnership.Dispose();
+            context.BoilerState.StopChangeoverTimer();
+            context.StepTimingService.Dispose();
+        }
+    }
+
+    [Fact]
+    public void HandlePreExecutionStateChanged_DoesNotRearmScannerOwner_WhenAutoReadyIsFalse()
+    {
+        using var loggerFactory = CreateLoggerFactory(out _);
+        var context = PreExecutionTestContextFactory.Create(loggerFactory);
+        var autoReady = TestInfrastructure.CreateAutoReadySubscription(loggerFactory: loggerFactory);
+        var scannerOwnership = CreateOwnershipService(loggerFactory);
+        var controller = CreateSelfHealController(
+            scannerOwnership,
+            autoReady,
+            context.Coordinator,
+            context.StepTimingService,
+            loggerFactory);
+
+        try
+        {
+            SetAcceptingInput(context.Coordinator, true);
+            TestInfrastructure.SetPrivateField(autoReady, "_isReady", false);
+            TestInfrastructure.SetPrivateField(controller, "_cachedIsAutoReady", false);
+
+            TestInfrastructure.InvokePrivate(controller, "HandlePreExecutionStateChanged");
+
+            Assert.Equal(ScannerInputOwnerKind.None, scannerOwnership.GetCurrentOwnerState().CurrentOwner);
+        }
+        finally
+        {
+            scannerOwnership.Dispose();
+            context.BoilerState.StopChangeoverTimer();
+            context.StepTimingService.Dispose();
+        }
+    }
+
+    [Fact]
+    public void HandlePreExecutionStateChanged_DoesNotRearmScannerOwner_WhenPlcIsDisconnected()
+    {
+        using var loggerFactory = CreateLoggerFactory(out _);
+        var context = PreExecutionTestContextFactory.Create(loggerFactory);
+        var autoReady = TestInfrastructure.CreateAutoReadySubscription(loggerFactory: loggerFactory);
+        var scannerOwnership = CreateOwnershipService(loggerFactory);
+        var controller = CreateSelfHealController(
+            scannerOwnership,
+            autoReady,
+            context.Coordinator,
+            context.StepTimingService,
+            loggerFactory,
+            isConnected: false);
+
+        try
+        {
+            SetAcceptingInput(context.Coordinator, true);
+
+            TestInfrastructure.InvokePrivate(controller, "HandlePreExecutionStateChanged");
+
+            Assert.Equal(ScannerInputOwnerKind.None, scannerOwnership.GetCurrentOwnerState().CurrentOwner);
+        }
+        finally
+        {
+            scannerOwnership.Dispose();
+            context.BoilerState.StopChangeoverTimer();
+            context.StepTimingService.Dispose();
+        }
+    }
+
+    [Fact]
+    public void HandlePreExecutionStateChanged_DoesNotRearmScannerOwner_WhenNotAcceptingInput()
+    {
+        using var loggerFactory = CreateLoggerFactory(out _);
+        var context = PreExecutionTestContextFactory.Create(loggerFactory);
+        var autoReady = TestInfrastructure.CreateAutoReadySubscription(loggerFactory: loggerFactory);
+        var scannerOwnership = CreateOwnershipService(loggerFactory);
+        var controller = CreateSelfHealController(
+            scannerOwnership,
+            autoReady,
+            context.Coordinator,
+            context.StepTimingService,
+            loggerFactory);
+
+        try
+        {
+            SetAcceptingInput(context.Coordinator, false);
+
+            TestInfrastructure.InvokePrivate(controller, "HandlePreExecutionStateChanged");
+
+            Assert.Equal(ScannerInputOwnerKind.None, scannerOwnership.GetCurrentOwnerState().CurrentOwner);
+        }
+        finally
+        {
+            scannerOwnership.Dispose();
+            context.BoilerState.StopChangeoverTimer();
+            context.StepTimingService.Dispose();
+        }
+    }
+
     private static ILoggerFactory CreateLoggerFactory(out RecordingLoggerProvider provider)
     {
         var recordingProvider = new RecordingLoggerProvider();
@@ -269,5 +431,49 @@ public sealed class PreExecutionHardResetScannerTests
         TestInfrastructure.SetPrivateField(controller, "_resetReadyTransitionPending", true);
         TestInfrastructure.SetPrivateField(controller, "_cachedIsAutoReady", true);
         return controller;
+    }
+
+    private static ScanModeController CreateSelfHealController(
+        ScannerInputOwnershipService scannerOwnership,
+        AutoReadySubscription autoReady,
+        PreExecutionCoordinator coordinator,
+        IStepTimingService stepTimingService,
+        ILoggerFactory loggerFactory,
+        bool isConnected = true)
+    {
+        var operatorState = new OperatorState();
+        var connectionState = new OpcUaConnectionState(loggerFactory.CreateLogger<OpcUaConnectionState>());
+        var sessionManager = new ScanSessionManager(
+            scannerOwnership,
+            loggerFactory.CreateLogger<ScanSessionManager>());
+        var controller = new ScanModeController(
+            sessionManager,
+            operatorState,
+            autoReady,
+            connectionState,
+            (StepStatusReporter)RuntimeHelpers.GetUninitializedObject(typeof(StepStatusReporter)),
+            (BarcodeDebounceHandler)RuntimeHelpers.GetUninitializedObject(typeof(BarcodeDebounceHandler)),
+            coordinator,
+            (PlcResetCoordinator)RuntimeHelpers.GetUninitializedObject(typeof(PlcResetCoordinator)),
+            scannerOwnership,
+            stepTimingService,
+            new ExecutionActivityTracker(),
+            new DualLogger<ScanModeController>(
+                loggerFactory.CreateLogger<ScanModeController>(),
+                new TestStepLoggerStub()));
+
+        operatorState.SetManualAuth("tester");
+        connectionState.SetConnected(isConnected, "test");
+        TestInfrastructure.SetPrivateField(autoReady, "_isReady", true);
+        TestInfrastructure.SetPrivateField(controller, "_isActivated", true);
+        TestInfrastructure.SetPrivateField(controller, "_isResetting", false);
+        TestInfrastructure.SetPrivateField(controller, "_resetReadyTransitionPending", false);
+        TestInfrastructure.SetPrivateField(controller, "_cachedIsAutoReady", true);
+        return controller;
+    }
+
+    private static void SetAcceptingInput(PreExecutionCoordinator coordinator, bool value)
+    {
+        TestInfrastructure.SetPrivateField(coordinator, "<IsAcceptingInput>k__BackingField", value);
     }
 }

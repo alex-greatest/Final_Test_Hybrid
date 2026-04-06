@@ -1,11 +1,6 @@
 using Final_Test_Hybrid.Models;
 using Final_Test_Hybrid.Services.Common.Logging;
-using Final_Test_Hybrid.Services.Common.Settings;
-using Final_Test_Hybrid.Services.Errors;
-using Final_Test_Hybrid.Services.Results;
 using Final_Test_Hybrid.Services.SpringBoot.Operation.Finish;
-using Final_Test_Hybrid.Services.SpringBoot.Operator;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Timing;
 
 namespace Final_Test_Hybrid.Services.Storage;
 
@@ -15,11 +10,7 @@ namespace Final_Test_Hybrid.Services.Storage;
 /// </summary>
 public class MesTestResultStorage(
     BoilerState boilerState,
-    OperatorState operatorState,
-    AppSettingsService appSettings,
-    ITestResultsService testResultsService,
-    IErrorService errorService,
-    IStepTimingService stepTimingService,
+    FinalTestResultsSnapshotBuilder snapshotBuilder,
     OperationFinishService finishService,
     DualLogger<MesTestResultStorage> logger) : ITestResultStorage
 {
@@ -37,96 +28,16 @@ public class MesTestResultStorage(
             return SaveResult.Fail($"Некорректный результат теста: {testResult}");
         }
 
-        var serialNumber = boilerState.SerialNumber;
-        if (string.IsNullOrEmpty(serialNumber))
+        if (!snapshotBuilder.TryBuild(testResult, out var request, out var errorMessage))
         {
-            logger.LogWarning("SerialNumber не найден в BoilerState");
-            return SaveResult.Fail("Серийный номер котла не найден");
-        }
-
-        var operatorName = operatorState.Username;
-        if (string.IsNullOrEmpty(operatorName))
-        {
-            logger.LogWarning("Оператор не авторизован");
-            return SaveResult.Fail("Оператор не авторизован");
+            return SaveResult.Fail(errorMessage);
         }
 
         logger.LogInformation(
             "Подготовка результатов теста для MES: SerialNumber={SerialNumber}, Result={TestResult}",
-            serialNumber,
+            boilerState.SerialNumber,
             testResult);
 
-        var request = BuildRequest(serialNumber, operatorName, testResult);
         return await finishService.FinishOperationAsync(request, ct);
-    }
-
-    private FinalTestResultsRequest BuildRequest(string serialNumber, string operatorName, int testResult)
-    {
-        var results = testResultsService.GetResults();
-        var history = errorService.GetHistory();
-        var timings = stepTimingService.GetAll();
-
-        var items = results
-            .Where(r => !r.IsRanged)
-            .Select(r => new FinalTestResultItem
-            {
-                Name = r.ParameterName,
-                Value = r.Value,
-                Status = r.Status.ToString(),
-                Test = r.Test,
-                ValueType = ResolveValueType(r.ParameterName)
-            })
-            .ToList();
-
-        var itemsLimited = results
-            .Where(r => r.IsRanged)
-            .Select(r => new FinalTestResultItemLimited
-            {
-                Name = r.ParameterName,
-                Value = r.Value,
-                Min = r.Min,
-                Max = r.Max,
-                Status = r.Status.ToString(),
-                Test = r.Test,
-                ValueType = ResolveValueType(r.ParameterName)
-            })
-            .ToList();
-
-        var times = timings
-            .Select(t => new FinalTestResultTime
-            {
-                Test = t.Name,
-                Time = t.Duration
-            })
-            .ToList();
-
-        // Для трассируемости отправляем историю ошибок как есть: с повторами и в исходном порядке.
-        var errors = history
-            .Select(e => e.Code)
-            .ToList();
-
-        logger.LogDebug(
-            "Собрано результатов: Items={ItemsCount}, ItemsLimited={ItemsLimitedCount}, Times={TimesCount}, ErrorHistoryRecords={ErrorsCount}",
-            items.Count,
-            itemsLimited.Count,
-            times.Count,
-            errors.Count);
-
-        return new FinalTestResultsRequest
-        {
-            SerialNumber = serialNumber,
-            StationName = appSettings.NameStation,
-            Operator = operatorName,
-            Items = items,
-            ItemsLimited = itemsLimited,
-            Time = times,
-            Errors = errors,
-            Result = testResult
-        };
-    }
-
-    private static string ResolveValueType(string parameterName)
-    {
-        return parameterName is "Timer_1" or "Timer_2" ? "string" : "real";
     }
 }

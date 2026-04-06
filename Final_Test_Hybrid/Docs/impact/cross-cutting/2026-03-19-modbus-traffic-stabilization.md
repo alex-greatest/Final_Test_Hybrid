@@ -63,6 +63,12 @@
   - во время измерения остаётся динамический progress `Измерение: t, EV1, EV2`;
   - при фактическом отпускании катушек progress фиксирует последний raw-sample `Катушки выключены: EV1=..., EV2=..., t=... сек`.
 - `Read_Soft_Code_Plug` для mismatch `1054` возвращён к операторской диагностике по котлу/жгуту и не деградирует до generic boiler wording.
+- `Read_Soft_Code_Plug` выровнен по фактической раскладке строковых регистров:
+  - `1175..1181` читается, сравнивается с `BoilerState.Article` и сохраняется как `Soft_Code_Plug`;
+  - `1139..1145` читается только как `Nomenclature_EngP3`;
+  - `1182..1188` остаётся read-only `Nomenclature_ITELMA`;
+  - ложная финальная запись `Soft_Code_Plug` напрямую из `BoilerState.Article` удалена.
+  - cleanup-список результатов дедуплицирован: `Soft_Code_Plug` больше не добавляется вручную вне action-table, single source of truth восстановлен без изменения runtime-контракта шага.
 - `EcuErrorSyncService` теперь очищает ECU-state не только на `Disconnecting`, но и на `Stopped`, чтобы неожиданный stop worker'а не оставлял активную ECU-ошибку залипшей.
 - `CH.razor` и `DHW.razor` переведены на guarded polling:
   - idle: `2000 мс`;
@@ -101,7 +107,10 @@
 - `Final_Test_Hybrid/Services/Steps/Steps/Coms/WriteSoftCodePlugStep.cs`
 - `Final_Test_Hybrid/Services/Steps/Steps/Coms/WriteSoftCodePlugStep.Parameters.cs`
 - `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Execution.cs`
+- `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Table.cs`
 - `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Table.Part1.cs`
+- `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Table.Part2.cs`
+- `Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.cs`
 - `Final_Test_Hybrid/Services/Steps/Steps/Coms/CheckCommsStep.cs`
 - `Final_Test_Hybrid/Services/Steps/Steps/Coms/SafetyTimeStep.cs`
 - `Final_Test_Hybrid/Services/Steps/Steps/Coms/ChPumpStartStep.cs`
@@ -137,6 +146,7 @@
 - `Final_Test_Hybrid.Tests/Runtime/StandModeWriteExecutionHelperTests.cs`
 - `Final_Test_Hybrid/Docs/execution/StepsGuide.md`
 - `Final_Test_Hybrid/Docs/diagnostics/DiagnosticGuide.md`
+- `Final_Test_Hybrid.Tests/Runtime/ReadSoftCodePlugStepTests.cs`
 - `Final_Test_Hybrid/Docs/changes/2026-03-20-modbus-reconnect-pending-hang.md`
 - `Final_Test_Hybrid/Docs/changes/2026-03-20-modbus-runtime-handoff-stale-state.md`
 - `Final_Test_Hybrid/Docs/changes/2026-03-20-execution-stand-write-reconnect-gate.md`
@@ -201,11 +211,26 @@
   - `dotnet format style Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
   - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/StandModeWriteExecutionHelper.cs;Final_Test_Hybrid.Tests/Runtime/StandModeWriteExecutionHelperTests.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-warning-stand-mode-race.txt" -e=WARNING` — отчёт пуст (`Solution Final_Test_Hybrid.slnx`).
   - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/StandModeWriteExecutionHelper.cs;Final_Test_Hybrid.Tests/Runtime/StandModeWriteExecutionHelperTests.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-hint-stand-mode-race.txt" -e=HINT` — отчёт пуст (`Solution Final_Test_Hybrid.slnx`).
+- После исправления раскладки `Read_Soft_Code_Plug` дополнительно выполнены:
+  - `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --filter ReadSoftCodePlugStepTests` — успешно, `3/3`; остаются baseline warning `MSB3277` по `WindowsBase`.
+  - `dotnet build Final_Test_Hybrid.slnx` — успешно; остаются baseline warning `MSB3277` по `WindowsBase`.
+  - `dotnet format analyzers Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
+  - `dotnet format style Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
+  - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Table.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Table.Part1.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Table.Part2.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Execution.cs;Final_Test_Hybrid.Tests/Runtime/ReadSoftCodePlugStepTests.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-warning-read-soft-code-plug-layout.txt" -e=WARNING` — в отчёте остался только старый warning `Equality comparison of floating point numbers` в общем `ExecuteVerifyFloatAction`; новых warning по string-register layout не найдено.
+  - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Table.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Table.Part1.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Table.Part2.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.Actions.Execution.cs;Final_Test_Hybrid.Tests/Runtime/ReadSoftCodePlugStepTests.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-hint-read-soft-code-plug-layout.txt" -e=HINT` — остались только non-blocking suggestions (`Use deconstruction`, `Redundant parentheses`, `List` return type, LINQ cleanup) и тот же float-equality warning в общем verify helper.
+  - После cleanup-dedupe `ReadSoftCodePlugStep.cs` дополнительно выполнены:
+    - `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --filter ReadSoftCodePlugStepTests` — успешно, `3/3`; остаются baseline warning `MSB3277` по `WindowsBase`.
+    - `dotnet build Final_Test_Hybrid.slnx` — успешно; остаются baseline warning `MSB3277` по `WindowsBase`.
+    - `dotnet format analyzers Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
+    - `dotnet format style Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
+    - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-warning-read-soft-code-plug-cleanup-dedupe.txt" -e=WARNING` — отчёт пуст (`Solution Final_Test_Hybrid.slnx`); консольный прогон завершился с `I/O error occurred`, но файл отчёта был создан и не содержит warning.
+    - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-hint-read-soft-code-plug-cleanup-dedupe.txt" -e=HINT` — только два non-blocking hint про возврат `List<string>` вместо `IReadOnlyList<string>` для helper-методов `BuildRequiredRecipeAddresses` и `BuildResultNames`.
 
 ## Residual Risks
 
 - Hidden legacy-файлы `*Old*.cs` в `Coms/*` сознательно не менялись в этом change-set; при их возврате в runtime они не получат новый step-level contract автоматически.
 - В worktree есть несвязанные с этой задачей изменённые файлы в execution/runtime/docs; они не ревьюились как часть данного change-set и не откатывались.
+- В `ReadSoftCodePlugStep.Actions.Execution.cs` остаётся старый inspectcode warning про `float == float` в общем `ExecuteVerifyFloatAction`; этот change-set не меняет float-контракт шага и не пересматривает сравнение аналоговых параметров.
 
 ## Инциденты
 
@@ -213,4 +238,5 @@
 - Новый failure mode runtime handoff/stale state зафиксирован в `Docs/changes/2026-03-20-modbus-runtime-handoff-stale-state.md`.
 - Новый failure mode execution stand-write during reconnect зафиксирован в `Docs/changes/2026-03-20-execution-stand-write-reconnect-gate.md`.
 - Для локального batch-read/progress fix в `Coms/Safety_Time` новый incident не выявлен.
+- Для исправления раскладки `Read_Soft_Code_Plug` новый incident не выявлен.
 - Текущая доработка stand-write helper уточняет уже зафиксированный incident про execution stand-write during reconnect; нового incident-document не добавлялось.

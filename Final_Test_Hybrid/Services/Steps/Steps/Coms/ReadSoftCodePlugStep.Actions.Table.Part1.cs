@@ -17,22 +17,22 @@ public partial class ReadSoftCodePlugStep
             MismatchError: ErrorDefinitions.EcuConnectionTypeMismatch);
     }
 
-    private static VerifyStringAction BuildArticleAction()
+    private static VerifyStringAction BuildSoftCodePlugAction()
     {
         return CreateVerifyStringAction(
             stepNo: 2,
-            title: "Проверка артикула",
+            title: "Проверка Soft Code Plug",
             startRegister: RegisterBoilerArticle,
             registerCount: 7,
             maxLength: NomenclatureMaxLength,
             usesBoilerArticle: true,
             expectedRecipeKey: null,
-            resultName: ArticleResultName,
+            resultName: SoftCodePlugResultName,
             mismatchError: ErrorDefinitions.EcuArticleMismatch,
-            readLogMessage: $"Чтение артикула из регистров {RegisterBoilerArticle}-{RegisterBoilerArticle + 6}",
-            readErrorPrefix: $"Ошибка при чтении артикула из регистров {RegisterBoilerArticle}-{RegisterBoilerArticle + 6}. ",
-            statusLogTemplate: "Артикул: {0}, ожидался: {1}, статус: {2}",
-            mismatchTemplate: "Артикул в ЭБУ ({0}) не совпадает с ожидаемым ({1})");
+            readLogMessage: $"Чтение Soft Code Plug из регистров {RegisterBoilerArticle}-{RegisterBoilerArticle + 6}",
+            readErrorPrefix: $"Ошибка при чтении Soft Code Plug из регистров {RegisterBoilerArticle}-{RegisterBoilerArticle + 6}. ",
+            statusLogTemplate: "Soft Code Plug: {0}, ожидался артикул: {1}, статус: {2}",
+            mismatchTemplate: "Soft Code Plug в ЭБУ ({0}) не совпадает с ожидаемым артикулом ({1})");
     }
 
     private static VerifyUInt16Action BuildBoilerTypeAction()

@@ -21,4 +21,14 @@ public interface IOperationStorageService
         string serialNumber,
         int testResult,
         CancellationToken ct);
+
+    /// <summary>
+    /// Находит активную Operation и переводит её в Interrupted.
+    /// </summary>
+    Task<Operation?> UpdateInterruptedOperationAsync(
+        AppDbContext context,
+        string serialNumber,
+        string adminUsername,
+        string reason,
+        CancellationToken ct);
 }

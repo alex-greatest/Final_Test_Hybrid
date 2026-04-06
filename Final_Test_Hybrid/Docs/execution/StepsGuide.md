@@ -250,6 +250,13 @@ void Add(string parameterName, string value, string min, string max, int status,
 
 Источник решения: `plan-result-step-testname.md`.
 
+Interrupt save использует тот же runtime source of truth, что и штатный finish-flow:
+- при soft-reset с окном причины текущие `TestResults`, `ErrorHistory` и `StepTiming` считаются partial snapshot текущего прогона;
+- для `UseMes=true` snapshot уходит в interrupt payload плоскими полями верхнего уровня
+  (`operator`, `Items`, `Items_limited`, `time`, `errors`, `result`);
+- для `UseMes=false` тот же snapshot сохраняется в локальные `TB_RESULT`, `TB_ERROR`, `TB_STEP_TIME`;
+- для interrupt snapshot итоговый код результата фиксируется как `4`.
+
 Рекомендуемый шаблон вызова:
 
 ```csharp
@@ -264,6 +271,18 @@ testResultsService.Add(
     unit: unit,
     test: Name);
 ```
+
+**Примечание по `DHW/Set_Circuit_Pressure`:**
+- Для результата `DHW_In_Pres` пределы формируются от recipe `DB_Recipe.DHW.PresTest.Value` и `DB_Recipe.DHW.PresTest.Tol`.
+- Контракт пределов: `min = Value - Tol`, `max = Value + Tol`.
+
+**Примечание по `DHW/Set_Tank_Mode`:**
+- Для результата `Tank_DHW_Mode` пределы формируются как `DB_Recipe.DHW.Tank.WaterMin .. DB_Recipe.DHW.Tank.WaterMax`.
+
+**Примечание по `DHW/Check_Tank_Mode`:**
+- Для результата `Tank_DHW_Press` значение читается из `DB_Parameter.DHW.Tank_Mode`.
+- Пределы формируются от recipe `DB_Recipe.DHW.Tank.Mode` и `DB_Recipe.DHW.PresTest.Tol`.
+- Контракт пределов: `min = Tank.Mode - Tol`, `max = Tank.Mode + Tol`.
 
 ---
 
@@ -293,6 +312,11 @@ public string? GetLimits(LimitsContext context)
 - `CheckCommsStep` реализует `INonSkippable`, поэтому оператор не может обойти шаг.
 - При `AutoReady = false` и отсутствии диагностической связи шаг возвращает `NoDiagnosticConnection`; рабочий путь продолжения — восстановить автомат и выполнить `Retry`.
 - После захвата runtime-lease шаг ждёт именно свежий runtime ping; stale `LastPingData` от ручной панели не считается успешной проверкой связи.
+
+**Примечание по `Coms/Read_Soft_Code_Plug`:**
+- Диапазон `1175..1181` читается, сравнивается с `BoilerState.Article` и сохраняется как `Soft_Code_Plug`.
+- Диапазон `1139..1145` читается только как `Nomenclature_EngP3`.
+- Диапазон `1182..1188` читается только как `Nomenclature_ITELMA`.
 
 **Примечание по execution stand-write (`SetStandModeAsync`)**
 - Execution-шаги, которые на retry возвращают котёл в режим Стенд, не должны писать ключ во время `dispatcher.IsReconnecting`.

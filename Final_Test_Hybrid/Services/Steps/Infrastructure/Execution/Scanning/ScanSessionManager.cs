@@ -14,14 +14,24 @@ public class ScanSessionManager(
     {
         lock (_sessionLock)
         {
-            if (_barcodeHandler != null && ReferenceEquals(_barcodeHandler, barcodeHandler))
+            if (CanReuseExistingSessionUnsafe(barcodeHandler))
             {
                 return;
             }
+
             _barcodeHandler = barcodeHandler;
             scannerOwnership.EnsurePreExecutionOwner(barcodeHandler);
             logger.LogDebug("Scan session acquired");
         }
+    }
+
+    private bool CanReuseExistingSessionUnsafe(Action<string> barcodeHandler)
+    {
+        // PLC reset clears ownership directly in ScannerInputOwnershipService,
+        // so the cached handler alone is not enough to treat the session as alive.
+        return _barcodeHandler != null
+               && ReferenceEquals(_barcodeHandler, barcodeHandler)
+               && scannerOwnership.GetCurrentOwnerState().HasPreExecutionOwner;
     }
 
     public void ReleaseSession()

@@ -25,24 +25,9 @@ public class OperationStorageService(DualLogger<OperationStorageService> logger)
         int testResult,
         CancellationToken ct)
     {
-        var boiler = await context.Boilers
-            .FirstOrDefaultAsync(b => b.SerialNumber == serialNumber, ct);
-
-        if (boiler == null)
-        {
-            logger.LogWarning("Котел с серийным номером {SerialNumber} не найден", serialNumber);
-            return null;
-        }
-
-        var operation = await context.Operations
-            .Where(o => o.BoilerId == boiler.Id && o.Status == OperationResultStatus.InWork)
-            .OrderByDescending(o => o.DateStart)
-            .ThenByDescending(o => o.Id)
-            .FirstOrDefaultAsync(ct);
-
+        var operation = await FindInWorkOperationAsync(context, serialNumber, ct);
         if (operation == null)
         {
-            logger.LogWarning("Operation со статусом InWork не найдена для котла {SerialNumber}", serialNumber);
             return null;
         }
 
@@ -54,6 +39,60 @@ public class OperationStorageService(DualLogger<OperationStorageService> logger)
             operation.Id,
             operation.Status,
             operation.DateEnd);
+
+        return operation;
+    }
+
+    public async Task<Operation?> UpdateInterruptedOperationAsync(
+        AppDbContext context,
+        string serialNumber,
+        string adminUsername,
+        string reason,
+        CancellationToken ct)
+    {
+        var operation = await FindInWorkOperationAsync(context, serialNumber, ct);
+        if (operation == null)
+        {
+            return null;
+        }
+
+        operation.Status = OperationResultStatus.Interrupted;
+        operation.Comment = reason;
+        operation.AdminInterrupted = adminUsername;
+        operation.DateEnd = DateTime.UtcNow;
+
+        logger.LogInformation(
+            "Operation {OperationId} обновлена: Status={Status}, AdminInterrupted={AdminInterrupted}, DateEnd={DateEnd}",
+            operation.Id,
+            operation.Status,
+            operation.AdminInterrupted,
+            operation.DateEnd);
+
+        return operation;
+    }
+
+    private async Task<Operation?> FindInWorkOperationAsync(
+        AppDbContext context,
+        string serialNumber,
+        CancellationToken ct)
+    {
+        var boiler = await context.Boilers
+            .FirstOrDefaultAsync(item => item.SerialNumber == serialNumber, ct);
+        if (boiler == null)
+        {
+            logger.LogWarning("Котел с серийным номером {SerialNumber} не найден", serialNumber);
+            return null;
+        }
+
+        var operation = await context.Operations
+            .Where(item => item.BoilerId == boiler.Id && item.Status == OperationResultStatus.InWork)
+            .OrderByDescending(item => item.DateStart)
+            .ThenByDescending(item => item.Id)
+            .FirstOrDefaultAsync(ct);
+        if (operation == null)
+        {
+            logger.LogWarning("Operation со статусом InWork не найдена для котла {SerialNumber}", serialNumber);
+        }
 
         return operation;
     }

@@ -349,27 +349,4 @@ public partial class ReadSoftCodePlugStep
         return success ? "OK" : "NOK";
     }
 
-    private TestStepResult SaveSoftCodePlugResult()
-    {
-        var article = boilerState.Article;
-        if (string.IsNullOrWhiteSpace(article))
-        {
-            const string message = "Артикул котла не задан в BoilerState";
-            logger.LogError(message);
-            return TestStepResult.Fail(message, errors: [ErrorDefinitions.EcuArticleMismatch]);
-        }
-
-        testResultsService.Add(
-            parameterName: SoftCodePlugResultName,
-            value: article,
-            min: "",
-            max: "",
-            status: 1,
-            isRanged: false,
-            unit: "",
-            test: Name);
-
-        logger.LogInformation("Soft_Code_Plug сохранён: {Article}", article);
-        return TestStepResult.Pass();
-    }
 }

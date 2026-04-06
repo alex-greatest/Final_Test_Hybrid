@@ -1,6 +1,8 @@
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Common.Settings;
+using Final_Test_Hybrid.Services.SpringBoot.Operation.Finish;
 using Final_Test_Hybrid.Settings.Spring;
+using Final_Test_Hybrid.Services.Storage;
 
 namespace Final_Test_Hybrid.Services.SpringBoot.Operation.Interrupt;
 
@@ -10,6 +12,7 @@ namespace Final_Test_Hybrid.Services.SpringBoot.Operation.Interrupt;
 public class InterruptedOperationService(
     SpringBootHttpClient httpClient,
     AppSettingsService appSettings,
+    FinalTestResultsSnapshotBuilder snapshotBuilder,
     DualLogger<InterruptedOperationService> logger)
 {
     public async Task<SaveResult> SendAsync(
@@ -43,11 +46,21 @@ public class InterruptedOperationService(
         string message,
         CancellationToken ct)
     {
-        var request = new InterruptedOperationRequest(
-            SerialNumber: serialNumber,
-            StationName: appSettings.NameStation,
-            Message: message,
-            AdminInterrupted: adminUsername);
+        var snapshot = TryBuildInterruptSnapshot();
+        var request = new InterruptedOperationRequest
+        {
+            SerialNumber = serialNumber,
+            StationName = appSettings.NameStation,
+            Message = message,
+            AdminInterrupted = adminUsername,
+            Operator = snapshot?.Operator,
+            Items = snapshot?.Items,
+            ItemsLimited = snapshot?.ItemsLimited,
+            Time = snapshot?.Time,
+            Errors = snapshot?.Errors,
+            Result = snapshot?.Result
+        };
+        LogRequestPrepared(request);
 
         var response = await httpClient.PostWithResponseAsync(
             "/api/operation/interrupt", request, ct);
@@ -65,5 +78,32 @@ public class InterruptedOperationService(
             content);
 
         return SaveResult.Fail("Ошибка сервера");
+    }
+
+    private FinalTestResultsRequest? TryBuildInterruptSnapshot()
+    {
+        if (snapshotBuilder.TryBuild(InterruptedTestResultCodes.Interrupted, out var snapshot, out _))
+        {
+            return snapshot;
+        }
+
+        logger.LogWarning("Interrupt snapshot результатов не собран, запрос будет отправлен без полей snapshot");
+        return null;
+    }
+
+    private void LogRequestPrepared(InterruptedOperationRequest request)
+    {
+        logger.LogDebug(
+            "Подготовлен interrupt request: SerialNumber={SerialNumber}, StationName={StationName}, AdminInterrupted={AdminInterrupted}, Message={Message}, HasResultSnapshot={HasResultSnapshot}",
+            request.SerialNumber,
+            request.StationName,
+            request.AdminInterrupted,
+            request.Message,
+            request.Result != null
+                || request.Operator != null
+                || request.Items != null
+                || request.ItemsLimited != null
+                || request.Time != null
+                || request.Errors != null);
     }
 }

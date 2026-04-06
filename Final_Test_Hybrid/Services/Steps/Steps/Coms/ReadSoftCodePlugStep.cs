@@ -21,6 +21,7 @@ public partial class ReadSoftCodePlugStep(
     // Регистры для чтения (адреса из документации)
     private const ushort RegisterConnectionType = 1054;
     private const ushort RegisterBoilerArticle = 1175;
+    private const ushort RegisterProductArticle = 1139;
     private const ushort RegisterBoilerPowerType = 1002;
     private const ushort RegisterPumpType = 1003;
     private const ushort RegisterPressureDeviceType = 1004;
@@ -97,7 +98,7 @@ public partial class ReadSoftCodePlugStep(
     private const string NumberOfContoursRecipe = "NumberOfContours";
 
     // Имена параметров для результатов
-    private const string ArticleResultName = "Nomenclature_EngP3";
+    private const string ProductArticleResultName = "Nomenclature_EngP3";
     private const string BoilerTypeResultName = "Boiler_Type";
     private const string PumpTypeResultName = "Type_pumps";
     private const string PresSensorResultName = "Pres_sensor";
@@ -154,12 +155,6 @@ public partial class ReadSoftCodePlugStep(
             }
         }
 
-        var softCodeResult = SaveSoftCodePlugResult();
-        if (!softCodeResult.Success)
-        {
-            return softCodeResult;
-        }
-
         logger.LogInformation("Все параметры успешно прочитаны и верифицированы");
         return TestStepResult.Pass();
     }
@@ -200,7 +195,6 @@ public partial class ReadSoftCodePlugStep(
         var resultNames = (from action in actions
             where !string.IsNullOrWhiteSpace(action.ResultParameterName)
             select action.ResultParameterName).ToList();
-        resultNames.Add(SoftCodePlugResultName);
         return resultNames;
     }
 }
