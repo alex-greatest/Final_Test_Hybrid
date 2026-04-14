@@ -56,6 +56,14 @@ public static partial class ErrorDefinitions
         RelatedStepId: "ch-slow-fill-circuit",
         RelatedStepName: "CH/Slow_Fill_Circuit");
 
+    public static readonly ErrorDefinition AlWaterPressureHighChSlow = new(
+        "П-301-03", "Высокое давление воды",
+        ActivatesResetButton: true,
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Slow_Fill_Circuit\".\"Al_WaterPressureHight\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-slow-fill-circuit",
+        RelatedStepName: "CH/Slow_Fill_Circuit");
+
     #endregion
 
     #region CH/Check_Water_Flow
@@ -260,6 +268,14 @@ public static partial class ErrorDefinitions
         "П-305-09", "Неисправность. Разность температур вне допуска",
         ActivatesResetButton: true,
         PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Compare_Flow_NTC_Temp_Hot\".\"Al_DeltaTempNOK\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-compare-flow-ntc-temperatures-hot",
+        RelatedStepName: "CH/Compare_Flow_NTC_Temperatures_Hot");
+
+    public static readonly ErrorDefinition AlLowTempCompareHot = new(
+        "П-305-10", "Неисправность. Заданная температура воды не достигнута",
+        ActivatesResetButton: true,
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Compare_Flow_NTC_Temp_Hot\".\"Al_LowTemp\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "ch-compare-flow-ntc-temperatures-hot",
         RelatedStepName: "CH/Compare_Flow_NTC_Temperatures_Hot");

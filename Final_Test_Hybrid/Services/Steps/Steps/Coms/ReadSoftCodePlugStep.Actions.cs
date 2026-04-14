@@ -1,4 +1,3 @@
-using Final_Test_Hybrid.Models.Errors;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
 namespace Final_Test_Hybrid.Services.Steps.Steps.Coms;
@@ -73,12 +72,12 @@ public partial class ReadSoftCodePlugStep
 
     private TestStepResult? ValidateVerifyConnectionAction(VerifyConnectionType1054Action action)
     {
-        if (!string.IsNullOrWhiteSpace(action.ExpectedRecipeKey))
+        if (string.IsNullOrWhiteSpace(action.ExpectedRecipeKey))
         {
-            return null;
+            return CreateConfigurationFailure($"Для подшага {action.StepNo} ({action.Title}) не задан ключ expected-рецепта");
         }
 
-        return CreateConfigurationFailure($"Для подшага {action.StepNo} ({action.Title}) не задан ключ expected-рецепта");
+        return ValidateResultName(action.StepNo, action.Title, action.ResultName);
     }
 
     private TestStepResult? ValidateVerifyStringAction(VerifyStringAction action)
@@ -125,9 +124,12 @@ public partial class ReadSoftCodePlugStep
 
     private TestStepResult? ValidateThermostatAction(ThermostatJumperCheckAction action)
     {
-        return action.Register > 0
-            ? null
-            : CreateConfigurationFailure($"Для подшага {action.StepNo} ({action.Title}) задан некорректный регистр");
+        if (action.Register <= 0)
+        {
+            return CreateConfigurationFailure($"Для подшага {action.StepNo} ({action.Title}) задан некорректный регистр");
+        }
+
+        return ValidateResultName(action.StepNo, action.Title, action.ResultName);
     }
 
     private TestStepResult? ValidateStringRange(int stepNo, string title, ushort startRegister, int registerCount, int maxLength)

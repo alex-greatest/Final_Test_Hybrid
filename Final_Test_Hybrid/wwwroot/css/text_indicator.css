@@ -36,6 +36,16 @@
     color: black;
 }
 
+.field-row-parameter .rz-textbox.parameter-alert-input {
+    background-color: #f4b5b1;
+    border: 2px solid #a61b1b;
+    color: #220505;
+}
+
+.field-row-parameter .rz-textbox.parameter-alert-input::placeholder {
+    color: #220505;
+}
+
 /* ===== PARAMETER BLOCKS - индивидуальные настройки ===== */
 .param-gas       { --label-width: 100px; --label-gap: 35px; --input-width: 120px; margin-right: 70px; }
 .param-delta     { --label-width: 120px; --label-gap: 35px; --input-width: 120px;  margin-right: 70px; }

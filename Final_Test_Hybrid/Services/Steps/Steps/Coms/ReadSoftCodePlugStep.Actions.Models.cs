@@ -19,6 +19,7 @@ public partial class ReadSoftCodePlugStep
         int StepNo,
         string Title,
         ushort Register,
+        string ResultName,
         string ExpectedRecipeKey,
         string ReadLogMessage,
         string ReadErrorPrefix,
@@ -26,6 +27,7 @@ public partial class ReadSoftCodePlugStep
         ErrorDefinition MismatchError) : SoftCodePlugAction(StepNo, Title)
     {
         public override IReadOnlyList<string> RecipeKeys => [ExpectedRecipeKey];
+        public override string ResultParameterName => ResultName;
     }
 
     private sealed record VerifyStringAction(
@@ -49,7 +51,7 @@ public partial class ReadSoftCodePlugStep
         public override IReadOnlyList<string> RecipeKeys =>
             UsesBoilerArticle || string.IsNullOrWhiteSpace(ExpectedRecipeKey) ? [] : [ExpectedRecipeKey];
 
-        public override string? ResultParameterName => ResultName;
+        public override string ResultParameterName => ResultName;
     }
 
     private sealed record VerifyUInt16Action(
@@ -70,7 +72,7 @@ public partial class ReadSoftCodePlugStep
         string? SkipLogMessage = null) : SoftCodePlugAction(StepNo, Title, ShouldRun, SkipLogMessage)
     {
         public override IReadOnlyList<string> RecipeKeys => [ExpectedRecipeKey, MinRecipeKey, MaxRecipeKey];
-        public override string? ResultParameterName => ResultName;
+        public override string ResultParameterName => ResultName;
     }
 
     private sealed record VerifyFloatAction(
@@ -93,7 +95,7 @@ public partial class ReadSoftCodePlugStep
         string? SkipLogMessage = null) : SoftCodePlugAction(StepNo, Title, ShouldRun, SkipLogMessage)
     {
         public override IReadOnlyList<string> RecipeKeys => [ExpectedRecipeKey, MinRecipeKey, MaxRecipeKey];
-        public override string? ResultParameterName => ResultName;
+        public override string ResultParameterName => ResultName;
     }
 
     private sealed record ReadOnlyStringAction(
@@ -108,7 +110,7 @@ public partial class ReadSoftCodePlugStep
         string ReadErrorPrefix,
         string ValueLogTemplate) : SoftCodePlugAction(StepNo, Title)
     {
-        public override string? ResultParameterName => ResultName;
+        public override string ResultParameterName => ResultName;
     }
 
     private sealed record ReadOnlyUInt32Action(
@@ -124,7 +126,7 @@ public partial class ReadSoftCodePlugStep
         string ReadErrorPrefix,
         string ValueLogTemplate) : SoftCodePlugAction(StepNo, Title)
     {
-        public override string? ResultParameterName => ResultName;
+        public override string ResultParameterName => ResultName;
     }
 
     private sealed record ThermostatJumperCheckAction(
@@ -134,6 +136,10 @@ public partial class ReadSoftCodePlugStep
         string ReadLogMessage,
         string ReadErrorPrefix,
         string StatusLogTemplate,
+        string ResultName,
         string MissingMessage,
-        ErrorDefinition MissingError) : SoftCodePlugAction(StepNo, Title);
+        ErrorDefinition MissingError) : SoftCodePlugAction(StepNo, Title)
+    {
+        public override string ResultParameterName => ResultName;
+    }
 }

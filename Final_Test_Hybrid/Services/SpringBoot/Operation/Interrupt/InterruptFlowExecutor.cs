@@ -15,12 +15,14 @@ public class InterruptFlowExecutor
     /// <param name="saveCallback">Callback для сохранения (admin, reason, ct).</param>
     /// <param name="requireAdminAuth">Нужно ли показывать авторизацию администратора перед вводом причины.</param>
     /// <param name="operatorUsername">Имя оператора для flow без авторизации.</param>
+    /// <param name="showCancelButton">Нужно ли показывать локальную кнопку отмены в auth/reason dialog.</param>
     /// <param name="ct">Токен отмены.</param>
     public async Task<InterruptFlowResult> ExecuteAsync(
         InterruptDialogService dialogService,
         Func<string, string, CancellationToken, Task<SaveResult>> saveCallback,
         bool requireAdminAuth,
         string operatorUsername,
+        bool showCancelButton,
         CancellationToken ct)
     {
         if (IsCancelled(ct))
@@ -29,8 +31,8 @@ public class InterruptFlowExecutor
         }
         using var registration = ct.Register(dialogService.CloseDialog);
         return requireAdminAuth
-            ? await ExecuteFullFlowAsync(dialogService, saveCallback, ct)
-            : await ExecuteSimpleFlowAsync(dialogService, saveCallback, operatorUsername, ct);
+            ? await ExecuteFullFlowAsync(dialogService, saveCallback, showCancelButton, ct)
+            : await ExecuteSimpleFlowAsync(dialogService, saveCallback, operatorUsername, showCancelButton, ct);
     }
 
     /// <summary>
@@ -39,10 +41,11 @@ public class InterruptFlowExecutor
     private async Task<InterruptFlowResult> ExecuteFullFlowAsync(
         InterruptDialogService dialogService,
         Func<string, string, CancellationToken, Task<SaveResult>> saveCallback,
+        bool showCancelButton,
         CancellationToken ct)
     {
-        var authResult = await ExecuteAuthStepAsync(dialogService, ct);
-        return await ContinueWithReasonStepAsync(dialogService, saveCallback, authResult, ct);
+        var authResult = await ExecuteAuthStepAsync(dialogService, showCancelButton, ct);
+        return await ContinueWithReasonStepAsync(dialogService, saveCallback, authResult, showCancelButton, ct);
     }
 
     /// <summary>
@@ -52,31 +55,36 @@ public class InterruptFlowExecutor
         InterruptDialogService dialogService,
         Func<string, string, CancellationToken, Task<SaveResult>> saveCallback,
         string operatorUsername,
+        bool showCancelButton,
         CancellationToken ct)
     {
-        return ExecuteReasonStepAsync(dialogService, saveCallback, operatorUsername, ct);
+        return ExecuteReasonStepAsync(dialogService, saveCallback, operatorUsername, showCancelButton, ct);
     }
 
     private Task<InterruptFlowResult> ContinueWithReasonStepAsync(
         InterruptDialogService dialogService,
         Func<string, string, CancellationToken, Task<SaveResult>> saveCallback,
         AdminAuthResult? authResult,
+        bool showCancelButton,
         CancellationToken ct)
     {
         return authResult == null
             ? Task.FromResult(InterruptFlowResult.Cancelled())
-            : ExecuteReasonStepAsync(dialogService, saveCallback, authResult.Username, ct);
+            : ExecuteReasonStepAsync(dialogService, saveCallback, authResult.Username, showCancelButton, ct);
     }
 
     private async Task<AdminAuthResult?> ExecuteAuthStepAsync(
         InterruptDialogService dialogService,
+        bool showCancelButton,
         CancellationToken ct)
     {
         if (IsCancelled(ct))
         {
             return null;
         }
-        var result = await dialogService.ShowAdminAuthAsync();
+        var result = await dialogService.ShowAdminAuthAsync(
+            showCancelButton,
+            requireProtectedCancel: showCancelButton);
         return IsCancelled(ct) ? null : result;
     }
 
@@ -84,13 +92,19 @@ public class InterruptFlowExecutor
         InterruptDialogService dialogService,
         Func<string, string, CancellationToken, Task<SaveResult>> saveCallback,
         string adminUsername,
+        bool showCancelButton,
         CancellationToken ct)
     {
         if (IsCancelled(ct))
         {
             return InterruptFlowResult.Cancelled();
         }
-        var submitResult = await ShowReasonDialogAsync(dialogService, saveCallback, adminUsername, ct);
+        var submitResult = await ShowReasonDialogAsync(
+            dialogService,
+            saveCallback,
+            adminUsername,
+            showCancelButton,
+            ct);
         return BuildReasonResult(submitResult, adminUsername, ct);
     }
 
@@ -98,11 +112,13 @@ public class InterruptFlowExecutor
         InterruptDialogService dialogService,
         Func<string, string, CancellationToken, Task<SaveResult>> saveCallback,
         string adminUsername,
+        bool showCancelButton,
         CancellationToken ct)
     {
         return await dialogService.ShowInterruptReasonAsync(
             (reason, token) => saveCallback(adminUsername, reason, token),
-            ct);
+            ct,
+            showCancelButton);
     }
 
     private static InterruptFlowResult BuildReasonResult(

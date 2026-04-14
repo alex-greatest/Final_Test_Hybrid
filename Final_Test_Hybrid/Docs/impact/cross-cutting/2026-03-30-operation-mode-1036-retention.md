@@ -2,7 +2,7 @@
 
 ## Контур
 
-- Execution steps `Coms/CH_Start_Max_Heatout`, `Coms/CH_Start_Min_Heatout`, `Coms/CH_Start_ST_Heatout`, `Coms/CH_Reset`
+- Execution steps `Coms/CH_Start_Max_Heatout`, `Coms/CH_Start_Min_Heatout`, `Coms/CH_Start_ST_Heatout`, `Coms/CH_Reset`, `Elec/Boiler_Power_OFF`
 - Diagnostics / Modbus runtime services
 - Reset / completion / repeat lifecycle
 
@@ -21,6 +21,7 @@
 - После review-fix refresh дополнительно перепроверяет актуальность snapshot/token после захвата shared mode-change lease и перед каждым Modbus IO, чтобы invalidate в queued/ready-to-write окне не пропускал позднюю stale запись `1036`.
 - Интервал refresh вынесен в `Diagnostic:OperationModeRefreshInterval`; при отсутствии или некорректном значении (`<= 0`) сервис откатывается к default `15 минут`.
 - После follow-up hardening active `ChStartMaxHeatoutStep`, `ChStartMinHeatoutStep`, `ChStartStHeatoutStep` делают awaited `ClearAndDrainAsync(...)` на входе, поэтому предыдущий retained-mode больше не переживает новый step/retry/PLC-wait сценарий до нового arm.
+- `BoilerPowerOffStep` делает awaited `ClearAndDrainAsync(...)` сразу на входе в шаг: это только memory-clear старого retained-mode, без записи `1036` в котёл и без нового arm.
 - `TestExecutionCoordinator.CompleteAsync()` теперь при `ExecutionStopReason.Operator` ждёт `ClearAndDrainAsync(...)` до публикации `SequenceCompleted`.
 - Источники arm:
   - `ChStartMaxHeatoutStep`;
@@ -28,6 +29,7 @@
   - `ChStartStHeatoutStep`.
 - Arm происходит сразу после успешного write/read-back `1036`.
 - Источники clear:
+  - `BoilerPowerOffStep` на входе в шаг без записи `1036`;
   - `ChResetStep` только после подтверждённого `1036 == 0`;
   - `TestExecutionCoordinator.CompleteAsync()` при `ExecutionStopReason.Operator`;
   - `PlcResetCoordinator.OnForceStop`;
@@ -51,6 +53,7 @@
 - `Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMinHeatoutStep.cs`
 - `Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartStHeatoutStep.cs`
 - `Final_Test_Hybrid/Services/Steps/Steps/Coms/ChResetStep.cs`
+- `Final_Test_Hybrid/Services/Steps/Steps/Elec/BoilerPowerOffStep.cs`
 - `Final_Test_Hybrid.Tests/Runtime/BoilerOperationModeRefreshServiceTests.cs`
 - `Final_Test_Hybrid.Tests/Runtime/BoilerOperationModeStepRetentionTests.cs`
 - `Final_Test_Hybrid.Tests/Runtime/TestExecutionCoordinatorCompletionTests.cs`
@@ -63,12 +66,13 @@
 
 - `dotnet build Final_Test_Hybrid.slnx` — успешно; остаётся baseline warning `MSB3277` по `WindowsBase`.
 - `dotnet build Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj` — успешно; остаются baseline warning `MSB3277` по `WindowsBase`.
-- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --filter "FullyQualifiedName~BoilerOperationMode"` — успешно, `28/28`.
-- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --filter "FullyQualifiedName~BoilerOperationMode|FullyQualifiedName~TestExecutionCoordinatorCompletionTests"` — успешно, `35/35`.
+- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --filter "FullyQualifiedName~BoilerOperationMode"` — успешно, `31/31`.
+- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --filter "FullyQualifiedName~BoilerOperationMode|FullyQualifiedName~TestExecutionCoordinatorCompletionTests"` — успешно, `36/36`.
 - `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --no-build --filter "FullyQualifiedName~TestExecutionCoordinatorCompletionTests"` — успешно, `5/5`.
-- `dotnet format analyzers Final_Test_Hybrid.slnx --verify-no-changes` — см. текущий change-set.
-- `dotnet format style Final_Test_Hybrid.slnx --verify-no-changes` — см. текущий change-set.
-- `jb inspectcode` warning + hint по изменённым runtime `*.cs` — см. текущий change-set.
+- `dotnet format analyzers Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
+- `dotnet format style Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
+- `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Elec/BoilerPowerOffStep.cs" --no-build --format=Text "--output=.codex-build/inspect-operation-mode-poweroff-warning.txt" -e=WARNING` — без findings.
+- `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Elec/BoilerPowerOffStep.cs" --no-build --format=Text "--output=.codex-build/inspect-operation-mode-poweroff-hint.txt" -e=HINT` — без findings.
 
 ## Residual Risks
 

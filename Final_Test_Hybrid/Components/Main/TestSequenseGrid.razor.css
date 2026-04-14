@@ -1,11 +1,16 @@
 .test-sequense-grid {
     display: flex;
     flex: 1;
+    width: 100%;
+    min-width: 0;
     min-height: 0;
     margin-top: -5px;
 }
 
 .test-sequense-grid ::deep .main-grid-legacy {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
     overflow-x: hidden !important;
 }
 

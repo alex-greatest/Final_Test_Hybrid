@@ -11,6 +11,7 @@ using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 using Final_Test_Hybrid.Services.Steps.Steps.Coms;
+using Final_Test_Hybrid.Services.Steps.Steps.Elec;
 using Final_Test_Hybrid.Tests.TestSupport;
 using Microsoft.Extensions.Options;
 using Opc.Ua.Client;
@@ -316,6 +317,25 @@ public sealed class BoilerOperationModeStepRetentionTests
 
         Assert.True(result.Success);
         Assert.Equal([0], modbusClient.WrittenValues);
+    }
+
+    [Fact]
+    public async Task BoilerPowerOffStep_ClearsRetentionAtEntryWithoutWriting1036()
+    {
+        var dispatcher = new TestModbusDispatcher();
+        var modbusClient = new StepModbusClient();
+        using var service = CreateRefreshService(dispatcher, modbusClient);
+        var context = CreateContext(modbusClient);
+        var step = new BoilerPowerOffStep(
+            service,
+            TestInfrastructure.CreateDualLogger<BoilerPowerOffStep>());
+
+        service.ArmMode(4, "old-mode");
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.False(result.Success);
+        await Task.Delay(180);
+        Assert.Empty(modbusClient.WrittenValues);
     }
 
     private static BoilerOperationModeRefreshService CreateRefreshService(

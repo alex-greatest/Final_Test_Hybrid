@@ -91,7 +91,7 @@ public class ReadEcuVersionStep(
         logger.LogInformation("Версия ПО ЭБУ: {Actual}, диапазон: [{Min}..{Max}], статус: {Status}",
             actualVersion, versionMinStr, versionMaxStr, isInRange ? "OK" : "NOK");
 
-        var msg = $"Версия ПО ЭБУ: {actualVersion} [{versionMinStr}..{versionMaxStr}]";
+        var msg = $"Версия ПО ЭБУ: {actualVersion}";
 
         if (!isInRange)
         {

@@ -1,5 +1,6 @@
 using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Results;
+using Final_Test_Hybrid.Services.Steps.Infrastructure;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Limits;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Recipe;
@@ -166,7 +167,7 @@ public class CheckFlowTemperatureRiseStep(
             unit: "л/мин",
             test: Name);
 
-        var msg = $"Температура: Разница: {flwTempHot:F3} {flowNtcTempRise:F3}, Расход: {dhwFlowHotRate:F3}";
+        var msg = TemperatureRiseResultMessageFormatter.FormatWithFlow(flwTempHot, flowNtcTempRise, dhwFlowHotRate);
 
         logger.LogInformation(
             "Flw_Temp_Hot: {FlwTempHot:F3}, Flow_NTC_Temp_Rise: {FlowNtcTempRise:F3}, пределы: [{Min:F3} .. {Max:F3}], статус: {Status}",

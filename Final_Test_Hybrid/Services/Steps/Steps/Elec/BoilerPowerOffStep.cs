@@ -1,6 +1,6 @@
 using Final_Test_Hybrid.Services.Common.Logging;
+using Final_Test_Hybrid.Services.Diagnostic.Services;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Plc;
-using Final_Test_Hybrid.Services.Steps.Infrastructure.Interfaces.Test;
 using Final_Test_Hybrid.Services.Steps.Infrastructure.Registrator;
 
 namespace Final_Test_Hybrid.Services.Steps.Steps.Elec;
@@ -9,7 +9,8 @@ namespace Final_Test_Hybrid.Services.Steps.Steps.Elec;
 /// Тестовый шаг выключения котла и отключения питания.
 /// </summary>
 public class BoilerPowerOffStep(
-    DualLogger<BoilerPowerOffStep> logger) : ITestStep, IHasPlcBlockPath, IRequiresPlcSubscriptions
+    BoilerOperationModeRefreshService boilerOperationModeRefreshService,
+    DualLogger<BoilerPowerOffStep> logger) : IHasPlcBlockPath, IRequiresPlcSubscriptions
 {
     private const string BlockPath = "DB_VI.Elec.Boiler_Power_OFF";
     private const string StartTag = "ns=3;s=\"DB_VI\".\"Elec\".\"Boiler_Power_OFF\".\"Start\"";
@@ -30,6 +31,8 @@ public class BoilerPowerOffStep(
     /// <returns>Результат выполнения шага.</returns>
     public async Task<TestStepResult> ExecuteAsync(TestStepContext context, CancellationToken ct)
     {
+        await boilerOperationModeRefreshService.ClearAndDrainAsync($"вход в шаг выключения котла: {Name}", ct);
+
         logger.LogInformation("Запуск выключения котла");
 
         var writeResult = await context.OpcUa.WriteAsync(StartTag, true, ct);

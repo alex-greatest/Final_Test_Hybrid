@@ -167,6 +167,7 @@ private static void ConfigureDiagnosticEvents(ServiceProvider serviceProvider)
 - display-only polling для `CH/DHW` работает с профилем:
   - idle: `2000 мс`;
   - active execution: `3000 мс`.
+- display-only polling `CH/DHW` читает температуры с `CommandPriority.Low`, чтобы не конкурировать с execution step-level Modbus операциями в high-priority очереди.
 - ошибки фонового display-only polling логируются в самих `CH/DHW` как источник `Котёл/Modbus` с throttling по повторяющейся ошибке; базовый `BoilerTemperatureService` для этих чтений не пишет per-tick error-log.
 
 ### Свойства
@@ -341,6 +342,7 @@ private static void StopDispatcherSafely(IModbusDispatcher dispatcher, ILogger l
 - После `ArmMode(...)` запускается countdown из `Diagnostic:OperationModeRefreshInterval` (по умолчанию `15 минут`).
 - Некорректное значение интервала (`<= 0`) не используется: сервис логирует warning и откатывается к стандартным `15 минутам`.
 - При входе в любой active `CH_Start_*` шаг сервис сначала делает awaited `ClearAndDrainAsync(...)`, чтобы предыдущий retained-mode не мог пережить новый mode-changing сценарий до нового `ArmMode(...)`.
+- При входе в `Elec/Boiler_Power_OFF` сервис делает такой же awaited memory-clear, но не пишет `1036` и не создаёт новый retained-state.
 - По дедлайну сервис ждёт `dispatcher ready` (`IsStarted && IsConnected && !IsReconnecting && LastPingData != null`) и только затем повторно пишет `1036` через системные `RegisterWriter` / `RegisterReader`.
 - Step-level write/read/clear по `1036` и runtime-refresh используют общий mode-change lease, чтобы фоновый refresh не мог вклиниться между шаговым write/read-back и `ArmMode(...)` / `Clear(...)`.
 - `StartAsync()` dispatcher из этого сервиса не вызывается. При потере связи latch остаётся armed и ждёт восстановления ready-state.
@@ -348,8 +350,8 @@ private static void StopDispatcherSafely(IModbusDispatcher dispatcher, ILogger l
 - При write/read/verify fail сервис не использует `WriteVerifyDelayMs` шагов: повторный failed refresh идёт через отдельный slow retry `5 секунд`, чтобы не заспамить high-priority Modbus очередь.
 - `Coms/CH_Reset` очищает retained-mode только после read-back `1036 == 0`.
 - `Clear(...)` инвалидирует retained-state сразу и запускает coalesced background-drain, не накапливая новые fire-and-forget задачи.
-- `ClearAndDrainAsync(...)` дополнительно ждёт выхода уже начатого refresh из mode-change critical section. Этот путь используется только там, где caller не держит shared lease; текущий runtime-hook: `TestExecutionCoordinator.CompleteAsync()` при `ExecutionStopReason.Operator`.
-- Дополнительные clear hooks: `PlcResetCoordinator.OnForceStop`, `ErrorCoordinator.OnReset`, `BoilerState.OnCleared`, `TestExecutionCoordinator.ResetForRepeat()`, `TestExecutionCoordinator.CompleteAsync()` для operator stop.
+- `ClearAndDrainAsync(...)` дополнительно ждёт выхода уже начатого refresh из mode-change critical section. Этот путь используется только там, где caller не держит shared lease: step-entry clear в active `CH_Start_*` / `Elec/Boiler_Power_OFF` и `TestExecutionCoordinator.CompleteAsync()` при `ExecutionStopReason.Operator`.
+- Дополнительные clear hooks: вход в `Elec/Boiler_Power_OFF`, `PlcResetCoordinator.OnForceStop`, `ErrorCoordinator.OnReset`, `BoilerState.OnCleared`, `TestExecutionCoordinator.ResetForRepeat()`, `TestExecutionCoordinator.CompleteAsync()` для operator stop.
 - Ручные диагностические изменения режима и `SetStandModeAsync(...)` retained-state не меняют.
 
 ## Ping Keep-Alive
@@ -722,10 +724,13 @@ public class MyService(RegisterWriter writer)
 
 #### Runtime-контракт `Coms/Read_Soft_Code_Plug`
 
+- `1054` читается, сравнивается с recipe `NumberOfContours` и сохраняется как `NumberOfContours`.
 - `1175..1181` читается как фактическое значение `Soft_Code_Plug`.
 - Для `1175..1181` шаг сравнивает прочитанное значение с `BoilerState.Article`, потому что `Coms/Write_Soft_Code_Plug` пишет в этот диапазон именно артикул.
 - `1139..1145` читается только как `Nomenclature_EngP3`.
 - `1182..1188` читается только как `Nomenclature_ITELMA`.
+- `1071` читается как фактическое состояние перемычки термостата и сохраняется как `Thermostat_Jumper`.
+- `NumberOfContours` и `Thermostat_Jumper` сохраняются raw-числами; при NOK статус пишется как `2`, `isRanged = false`, `min/max/unit` пустые, `test = "Coms/Read_Soft_Code_Plug"`.
 
 #### Safety-контракт строковой записи
 

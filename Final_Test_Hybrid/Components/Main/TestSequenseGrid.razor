@@ -10,33 +10,33 @@
         TItem="TestSequenseData"
         Data="_data"
         class="main-grid-legacy"
-        ColumnWidth="150px"
         AllowPaging="false"
+        AllowColumnResize="true"
         AllowSorting="false"
         >
         <Columns>
-            <RadzenDataGridColumn TItem="TestSequenseData" Property="Module" Title="Модуль">
+            <RadzenDataGridColumn TItem="TestSequenseData" Property="Module" Title="Модуль" Width="150px" MinWidth="120px">
                 <Template Context="data">
                     <div class="cell-container @GetCellClass(data)">
                         <span class="cell-text" title="@data.Module">@data.Module</span>
                     </div>
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="TestSequenseData" Property="Description" Title="Описание">
+            <RadzenDataGridColumn TItem="TestSequenseData" Property="Description" Title="Описание" Width="150px" MinWidth="120px">
                 <Template Context="data">
                     <div class="cell-container @GetCellClass(data)">
                         <span class="cell-text" title="@data.Description">@data.Description</span>
                     </div>
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="TestSequenseData" Property="Status" Title="Статус" Width="50px">
+            <RadzenDataGridColumn TItem="TestSequenseData" Property="Status" Title="Статус" Width="60px" MinWidth="40px">
                 <Template Context="data">
                     <div class="cell-container @GetCellClass(data)">
                         <span class="cell-text" title="@data.Status">@data.Status</span>
                     </div>
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="TestSequenseData" Property="Result" Title="Результаты">
+            <RadzenDataGridColumn TItem="TestSequenseData" Property="Result" Title="Результаты" Width="230px" MinWidth="160px">
                 <Template Context="data">
                     @{
                         var displayText = data.StepStatus == TestStepStatus.Running
@@ -48,7 +48,7 @@
                     </div>
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="TestSequenseData" Property="Range" Title="Пределы">
+            <RadzenDataGridColumn TItem="TestSequenseData" Property="Range" Title="Пределы" Width="80px" MinWidth="80px">
                 <Template Context="data">
                     <div class="cell-container @GetCellClass(data)">
                         <span class="cell-text" title="@data.Range">@(string.IsNullOrEmpty(data.Range) ? "\u00A0" : data.Range)</span>
@@ -85,6 +85,9 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        await Js.InvokeVoidAsync("mainTestSequenceGridResizeFix.register", "test-sequense-grid-container");
+        await SyncColumnWidthsAsync();
+
         if (_pendingGridReload)
         {
             await ReloadGridAndScheduleScrollAsync();
@@ -143,6 +146,8 @@
             await _grid.Reload();
         }
 
+        await SyncColumnWidthsAsync();
+
         RequestScrollToBottom();
     }
 
@@ -160,6 +165,11 @@
     private async Task ScrollToBottom()
     {
         await Js.InvokeVoidAsync("scrollGridToBottom", "test-sequense-grid-container");
+    }
+
+    private async Task SyncColumnWidthsAsync()
+    {
+        await Js.InvokeVoidAsync("mainTestSequenceGridResizeFix.sync", "test-sequense-grid-container");
     }
 
     public void Dispose()

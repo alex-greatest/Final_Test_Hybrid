@@ -63,6 +63,7 @@ public partial class PreExecutionCoordinator(
     private bool _skipNextScan;
     private bool _executeFullPreparation;
     private PreExecutionContext? _lastSuccessfulContext;
+    private string? _pendingRepeatOperationSerialNumber;
     private const string ScanBarcodeTestName = "ScanBarcode";
     private const string AppVersionResult = "App_Version";
     private const string ShiftNoResult = "Shift_No";
@@ -92,6 +93,7 @@ public partial class PreExecutionCoordinator(
 
     private void ClearStateOnReset()
     {
+        ClearPendingRepeatOperationState();
         state.BoilerState.Clear();
         state.PhaseState.Clear();
         infra.ErrorService.IsHistoryEnabled = false;
@@ -109,6 +111,7 @@ public partial class PreExecutionCoordinator(
     /// </summary>
     private void ClearForTestCompletion()
     {
+        ClearPendingRepeatOperationState();
         infra.StatusReporter.ClearAllExceptScan(SequenceClearMode.CompletedTest);
         infra.StepTimingService.Clear();
         infra.RecipeProvider.Clear();
@@ -126,6 +129,7 @@ public partial class PreExecutionCoordinator(
     /// </summary>
     private void ClearForNewTestStart()
     {
+        ClearPendingRepeatOperationState();
         infra.ErrorService.ClearHistory();
         infra.TestResultsService.Clear();
         infra.StepHistory.Clear();
@@ -153,6 +157,7 @@ public partial class PreExecutionCoordinator(
 
     private void ClearForNokRepeat()
     {
+        ClearPendingRepeatOperationState();
         // Очистка состояния котла (но не CurrentBarcode!)
         state.BoilerState.Clear();
         state.PhaseState.Clear();
@@ -326,6 +331,24 @@ public partial class PreExecutionCoordinator(
     {
         var barcodeSource = Volatile.Read(ref _barcodeSource);
         return barcodeSource != null && !barcodeSource.Task.IsCompleted;
+    }
+
+    private bool HasPendingRepeatOperationState(string serialNumber)
+    {
+        return string.Equals(
+            Volatile.Read(ref _pendingRepeatOperationSerialNumber),
+            serialNumber,
+            StringComparison.Ordinal);
+    }
+
+    private void MarkPendingRepeatOperationState(string serialNumber)
+    {
+        Volatile.Write(ref _pendingRepeatOperationSerialNumber, serialNumber);
+    }
+
+    private void ClearPendingRepeatOperationState()
+    {
+        Interlocked.Exchange(ref _pendingRepeatOperationSerialNumber, null);
     }
 
     /// <summary>

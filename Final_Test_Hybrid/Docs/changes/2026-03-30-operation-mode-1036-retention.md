@@ -32,6 +32,7 @@
 - Добавлен awaited-path `ClearAndDrainAsync(...)`, который завершает cleanup только после выхода активного refresh из mode-change critical section.
 - Интервал refresh вынесен в `Diagnostic:OperationModeRefreshInterval`; при отсутствии или некорректном значении (`<= 0`) сервис откатывается к default `15 минут`.
 - После follow-up hardening active `Coms/CH_Start_*` шаги делают awaited `ClearAndDrainAsync(...)` на входе, поэтому предыдущий retained-mode больше не переживает новый step/retry/PLC-wait сценарий до нового `ArmMode(...)`.
+- `Elec/Boiler_Power_OFF` делает awaited `ClearAndDrainAsync(...)` сразу на входе в шаг, но это только memory-clear: шаг не пишет `1036` и не создаёт новый arm.
 - `TestExecutionCoordinator.CompleteAsync()` теперь при `ExecutionStopReason.Operator` вызывает `ClearAndDrainAsync(...)` до `SequenceCompleted`, поэтому downstream больше не видит armed retained-mode после ручной остановки.
 - Источники arm:
   - `Coms/CH_Start_Max_Heatout`;
@@ -40,6 +41,7 @@
 - Arm ставится сразу после успешного write/read-back `1036`, а не по завершению всего шага.
 - Источники clear:
   - вход в active `Coms/CH_Start_Max_Heatout`, `Coms/CH_Start_Min_Heatout`, `Coms/CH_Start_ST_Heatout`;
+  - вход в `Elec/Boiler_Power_OFF` без записи `1036` в котёл;
   - успешный `Coms/CH_Reset` после подтверждённого `1036 == 0`;
   - `TestExecutionCoordinator.CompleteAsync()` при `ExecutionStopReason.Operator`;
   - `PlcResetCoordinator.OnForceStop`;
@@ -64,10 +66,11 @@
   - concurrent signal и late callback после dispose;
   - arm в `CH_Start_Max_Heatout`, `CH_Start_Min_Heatout`, `CH_Start_ST_Heatout`;
   - entry-clear прежнего retained-mode в `CH_Start_Max_Heatout`, `CH_Start_Min_Heatout`, `CH_Start_ST_Heatout`;
+  - entry-clear прежнего retained-mode в `BoilerPowerOffStep` без записи `1036`;
   - shared mode-change lease в `CH_Start_Max_Heatout`, `CH_Start_Min_Heatout`, `CH_Start_ST_Heatout`, `CH_Reset`;
   - clear-only-on-success для `CH_Reset`.
 
 ## Notes
 
-- Новый retained-state относится только к runtime-шагам, которые напрямую пишут `1036`.
+- Новый retained-state относится только к runtime-шагам, которые напрямую пишут `1036`; `BoilerPowerOffStep` является только memory-clear source.
 - Legacy-файлы `*Old*.cs` не менялись.

@@ -27,7 +27,7 @@ public class SafetyTimeStep(
     private const ushort CurrentThresholdMa = 200;
     private const short BlockageBStatus = 1;
     private const ushort ResetValue = 0;
-    private const int PollingIntervalMs = 100;
+    private const int PollingIntervalMs = 500;
     private const int WaitTimeoutMs = 30_000;
 
     private const string SafetyTimeMinRecipe = "ns=3;s=\"DB_Recipe\".\"Time\".\"ignSafetyTimeMin\"";
@@ -169,7 +169,7 @@ public class SafetyTimeStep(
                     readResult.CanSkip);
             }
 
-            if (readResult.Ev1Current < CurrentThresholdMa && readResult.Ev2Current < CurrentThresholdMa)
+            if (readResult is { Ev1Current: < CurrentThresholdMa, Ev2Current: < CurrentThresholdMa })
             {
                 stopwatch.Stop();
                 var safetyTime = (float)(stopwatch.ElapsedMilliseconds / 1000.0);
@@ -217,7 +217,7 @@ public class SafetyTimeStep(
         logger.LogInformation("Safety time: {SafetyTime:F2} сек, пределы: [{Min:F2} .. {Max:F2}], статус: {Status}",
             safetyTime, min, max, isInRange ? "OK" : "NOK");
 
-        return !isInRange ? TestStepResult.Fail($"Safety time {safetyTime:F2} сек вне пределов [{min:F2} .. {max:F2}]") : null;
+        return !isInRange ? TestStepResult.Fail($"Safety time {safetyTime:F2} сек вне пределов") : null;
     }
 
     /// <summary>

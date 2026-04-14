@@ -31,6 +31,7 @@ public class InterruptFlowExecutorTests
             },
             requireAdminAuth: true,
             operatorUsername: "operator-user",
+            showCancelButton: true,
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -40,6 +41,9 @@ public class InterruptFlowExecutorTests
         Assert.Equal("interrupt reason", submittedReason);
         Assert.Equal(1, dialogService.ShowAdminAuthCalls);
         Assert.Equal(1, dialogService.ShowInterruptReasonCalls);
+        Assert.True(dialogService.LastAdminAuthShowCancelButton);
+        Assert.True(dialogService.LastAdminAuthRequireProtectedCancel);
+        Assert.True(dialogService.LastReasonShowCancelButton);
     }
 
     [Fact]
@@ -58,6 +62,7 @@ public class InterruptFlowExecutorTests
             },
             requireAdminAuth: true,
             operatorUsername: "operator-user",
+            showCancelButton: true,
             CancellationToken.None);
 
         Assert.False(result.IsSuccess);
@@ -86,6 +91,7 @@ public class InterruptFlowExecutorTests
             },
             requireAdminAuth: false,
             operatorUsername: "operator-user",
+            showCancelButton: true,
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -94,6 +100,35 @@ public class InterruptFlowExecutorTests
         Assert.Equal("operator-user", submittedUsername);
         Assert.Equal(0, dialogService.ShowAdminAuthCalls);
         Assert.Equal(1, dialogService.ShowInterruptReasonCalls);
+        Assert.True(dialogService.LastReasonShowCancelButton);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_HidesCancelButtons_WhenRepeatSaveModeIsUsed()
+    {
+        var dialogService = new FakeInterruptDialogService
+        {
+            AuthResult = new AdminAuthResult
+            {
+                Success = true,
+                Username = "admin-user"
+            },
+            ReasonHandler = (onSubmit, ct) => onSubmit("repeat reason", ct)
+        };
+        var executor = new InterruptFlowExecutor();
+
+        var result = await executor.ExecuteAsync(
+            dialogService,
+            (_, _, _) => Task.FromResult(SaveResult.Success()),
+            requireAdminAuth: true,
+            operatorUsername: "operator-user",
+            showCancelButton: false,
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.False(dialogService.LastAdminAuthShowCancelButton);
+        Assert.False(dialogService.LastAdminAuthRequireProtectedCancel);
+        Assert.False(dialogService.LastReasonShowCancelButton);
     }
 
     private sealed class FakeInterruptDialogService : InterruptDialogService
@@ -112,17 +147,29 @@ public class InterruptFlowExecutorTests
 
         public int ShowInterruptReasonCalls { get; private set; }
 
-        public override Task<AdminAuthResult?> ShowAdminAuthAsync()
+        public bool LastAdminAuthShowCancelButton { get; private set; }
+
+        public bool LastAdminAuthRequireProtectedCancel { get; private set; }
+
+        public bool LastReasonShowCancelButton { get; private set; }
+
+        public override Task<AdminAuthResult?> ShowAdminAuthAsync(
+            bool showCancelButton = true,
+            bool requireProtectedCancel = true)
         {
             ShowAdminAuthCalls++;
+            LastAdminAuthShowCancelButton = showCancelButton;
+            LastAdminAuthRequireProtectedCancel = requireProtectedCancel;
             return Task.FromResult(AuthResult);
         }
 
         public override async Task<SaveResult?> ShowInterruptReasonAsync(
             Func<string, CancellationToken, Task<SaveResult>> onSubmit,
-            CancellationToken ct)
+            CancellationToken ct,
+            bool showCancelButton = true)
         {
             ShowInterruptReasonCalls++;
+            LastReasonShowCancelButton = showCancelButton;
             return ReasonHandler == null ? null : await ReasonHandler(onSubmit, ct);
         }
     }

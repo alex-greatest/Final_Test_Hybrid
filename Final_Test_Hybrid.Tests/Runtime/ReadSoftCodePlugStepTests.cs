@@ -38,6 +38,8 @@ public sealed class ReadSoftCodePlugStepTests
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
         Assert.True(result.Success);
+        AssertResult(results, "NumberOfContours", "1", 1);
+        AssertResult(results, "Thermostat_Jumper", "1", 1);
         AssertResult(results, "Soft_Code_Plug", Article, 1);
         AssertResult(results, "Nomenclature_EngP3", EngP3Article, 1);
         AssertResult(results, "Nomenclature_ITELMA", ItelmaArticle, 1);
@@ -72,6 +74,8 @@ public sealed class ReadSoftCodePlugStepTests
         var recipeProvider = CreateRecipeProvider();
         var boilerState = CreateBoilerState(recipeProvider);
         var results = new TestResultsService();
+        results.Add("NumberOfContours", "old-contours", "", "", 1, false, "", "Coms/Read_Soft_Code_Plug");
+        results.Add("Thermostat_Jumper", "old-jumper", "", "", 1, false, "", "Coms/Read_Soft_Code_Plug");
         results.Add("Soft_Code_Plug", "old-soft", "", "", 1, false, "", "Coms/Read_Soft_Code_Plug");
         results.Add("Nomenclature_EngP3", "old-engp3", "", "", 1, false, "", "Coms/Read_Soft_Code_Plug");
         results.Add("Nomenclature_ITELMA", "old-itelma", "", "", 1, false, "", "Coms/Read_Soft_Code_Plug");
@@ -83,12 +87,52 @@ public sealed class ReadSoftCodePlugStepTests
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
         Assert.True(result.Success);
+        Assert.Single(results.GetResults(), x => x.ParameterName == "NumberOfContours");
+        Assert.Single(results.GetResults(), x => x.ParameterName == "Thermostat_Jumper");
         Assert.Single(results.GetResults(), x => x.ParameterName == "Soft_Code_Plug");
         Assert.Single(results.GetResults(), x => x.ParameterName == "Nomenclature_EngP3");
         Assert.Single(results.GetResults(), x => x.ParameterName == "Nomenclature_ITELMA");
+        AssertResult(results, "NumberOfContours", "1", 1);
+        AssertResult(results, "Thermostat_Jumper", "1", 1);
         AssertResult(results, "Soft_Code_Plug", Article, 1);
         AssertResult(results, "Nomenclature_EngP3", EngP3Article, 1);
         AssertResult(results, "Nomenclature_ITELMA", ItelmaArticle, 1);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FailsOnConnectionTypeMismatch_AndStoresNumberOfContours()
+    {
+        var recipeProvider = CreateRecipeProvider();
+        var boilerState = CreateBoilerState(recipeProvider);
+        var results = new TestResultsService();
+        var step = CreateStep(boilerState, results);
+        var client = new DictionaryModbusClient();
+        client.AddUInt16(1054, 2);
+        var context = CreateContext(client, recipeProvider);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.False(result.Success);
+        AssertResult(results, "NumberOfContours", "2", 2);
+        Assert.DoesNotContain(results.GetResults(), x => x.ParameterName == "Soft_Code_Plug");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FailsOnMissingThermostatJumper_AndStoresRawValue()
+    {
+        var recipeProvider = CreateRecipeProvider();
+        var boilerState = CreateBoilerState(recipeProvider);
+        var results = new TestResultsService();
+        var step = CreateStep(boilerState, results);
+        var client = CreateHappyPathClient();
+        client.AddUInt16(1071, 0);
+        var context = CreateContext(client, recipeProvider);
+
+        var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("перемычка", result.Message);
+        AssertResult(results, "Thermostat_Jumper", "0", 2);
     }
 
     private static ReadSoftCodePlugStep CreateStep(BoilerState boilerState, ITestResultsService results)
@@ -186,6 +230,10 @@ public sealed class ReadSoftCodePlugStepTests
         Assert.Equal(expectedValue, item.Value);
         Assert.Equal(expectedStatus, item.Status);
         Assert.Equal("Coms/Read_Soft_Code_Plug", item.Test);
+        Assert.False(item.IsRanged);
+        Assert.Equal("", item.Min);
+        Assert.Equal("", item.Max);
+        Assert.Equal("", item.Unit);
     }
 
     private sealed class DictionaryModbusClient : IModbusClient

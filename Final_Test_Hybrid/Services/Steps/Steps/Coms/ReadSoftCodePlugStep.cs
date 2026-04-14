@@ -120,6 +120,8 @@ public partial class ReadSoftCodePlugStep(
     private const string SupplierCodeResultName = "Supplier_Code";
     private const string CounterNumberResultName = "Counter_Number";
     private const string SoftCodePlugResultName = "Soft_Code_Plug";
+    private const string NumberOfContoursResultName = NumberOfContoursRecipe;
+    private const string ThermostatJumperResultName = "Thermostat_Jumper";
 
     private static readonly IReadOnlyList<SoftCodePlugAction> Actions = BuildActions();
     private static readonly IReadOnlyList<string> RequiredRecipeAddressesInternal = BuildRequiredRecipeAddresses(Actions);

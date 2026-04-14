@@ -204,6 +204,18 @@ RunSingleCycleAsync:
 Если в момент soft reset был активный тест и включён `UseInterruptReason`, после `AskEnd` выполняется post-AskEnd decision flow:
 - показывается `red_smile`;
 - если PLC запросил `Req_Repeat`, PC отвечает `AskRepeat=true` и переводит цикл в существующий repeat path;
+- если PLC запросил `Req_Repeat` во время уже идущего теста, repeat-path теперь дополнительно
+  gated сохранением причины и runtime snapshot:
+  - сначала открывается существующий interrupt-save flow;
+  - локальная `Отмена` в `AdminAuthDialog` и `InterruptReasonDialog` скрыта;
+  - после успешного interrupt-save дополнительно стартует новая repeat-операция:
+    `UseMes=true` -> серверный `start operation`,
+    `UseMes=false` -> локальная `TB_OPERATION` через existing DB init path;
+  - порядок фиксирован: сначала `interrupt`, потом `start/create operation`;
+  - `AskRepeat=true` пишется только после успешного `interrupt -> start/create`;
+  - при ошибке сервера/БД окно остаётся открытым и repeat не стартует;
+  - выйти из этого окна можно только внешним soft reset, который закрывает dialog через текущий cancel/reset path;
+  - если после уже сохранённого `interrupt` серия уходит в non-repeat cleanup, второй dialog причины не показывается.
 - если repeat не выбран, открывается диалог `Причина прерывания`, а cleanup выполняется только после штатного завершения диалога.
 
 - На одну серию reset разрешён максимум один показ диалога.
@@ -216,7 +228,11 @@ RunSingleCycleAsync:
 - Любой новый reset (Soft/Hard) немедленно закрывает активный диалог (`CancelActiveDialog`).
 - На время активного диалога принудительно замораживаются step timers (`PauseAllColumnsTiming`), включая Scan.
 - Попытка restart scan-таймера из `OnResetCompleted` в этом окне блокируется (`ScanTimingRestartBlockedByInterruptDialog`).
-- В UX диалога есть явная кнопка `Отмена`; она завершает серию так же, как и успешное сохранение причины.
+- Для обычного full-interrupt flow в UX диалога есть явная кнопка `Отмена`; она завершает серию так же, как и успешное сохранение причины.
+- Для post-`AskEnd` repeat-save gate локальной `Отмена` нет:
+  - `AdminAuthDialog` открывается без cancel и без protected-cancel;
+  - `InterruptReasonDialog` открывается без cancel;
+  - выйти из окна можно только внешним soft reset.
 
 - Для `UseMes=true` soft-reset interrupt-flow использует два окна подряд:
   - `Авторизация администратора`;
@@ -225,6 +241,13 @@ RunSingleCycleAsync:
 - Маршрут сохранения не меняется:
   - `UseMes=true` → MES;
   - `UseMes=false` → локальная БД.
+- Для post-`AskEnd` repeat-save gate в `UseMes=true` порядок запросов менять нельзя:
+  - `interrupt` обязан сначала закрыть старую `InWork` операцию;
+  - только после этого `start` создаёт новую repeat-операцию;
+  - иначе interrupt может завершить уже новую операцию вместо прерванной.
+- Для `UseMes=false` repeat-save gate симметрично должен после local interrupt-save создать новую локальную `InWork` операцию:
+  - обычный non-MES scan-start делает это через `InitializeDatabaseAsync()` -> `BoilerDatabaseInitializer` -> `OperationService.CreateAsync()`;
+  - repeat пропускает `ScanBarcodeStep`, поэтому этот local start обязан вызываться отдельно до `AskRepeat=true`.
 - Состав сохранения в interrupt-flow расширен:
   - вместе с причиной всегда пытаемся сохранить текущий runtime snapshot результатов;
   - для `UseMes=true` snapshot уходит в MES interrupt payload плоскими полями верхнего уровня:
@@ -247,6 +270,7 @@ RunSingleCycleAsync:
 - Повторный запуск interrupt-flow после `Cancel` всегда начинает цепочку заново с admin-auth окна.
 - Для interrupt-path окно `Авторизация администратора` имеет защищённую отмену:
   закрытие разрешено только после инженерного пароля, как и у окна причины прерывания.
+- Исключение: в post-`AskEnd` repeat-save gate protected cancel не показывается, потому что локальная отмена там полностью запрещена.
 
 ## Changeover ownership в reset-сценариях
 
@@ -269,7 +293,11 @@ RunSingleCycleAsync:
   - при полном cleanup changeover стартует из финального cleanup path, где AskEnd фиксируется уже как завершённая стадия для changeover.
 - `ScanModeController` различает исход post-AskEnd flow:
   - `full cleanup` возвращает scan-ready состояние после завершения post-AskEnd ветки;
-  - `repeat` не должен поднимать scan timing/session, потому что следующий цикл уходит в существующий repeat path с `_skipNextScan`.
+  - `repeat` не должен поднимать scan timing/session, потому что следующий цикл уходит в существующий repeat path с `_skipNextScan`;
+  - новый save-before-repeat gate живёт внутри terminal окна и не должен менять semantics `TestTime`, `ChangeoverTime`, `StepTimingService` или completion-handshake;
+  - этот gate делает два последовательных шага: сначала `interrupt` для текущей `InWork` операции, потом создание новой repeat-операции, и только затем разрешает `AskRepeat=true`;
+  - в `UseMes=true` второй шаг идёт через серверный `start operation`;
+  - в `UseMes=false` второй шаг идёт через existing local DB init path без server request.
 - Отдельное правило для аварийного abort:
   - если deferred post-AskEnd ветка оборвана non-PLC `HardReset`, scanner-ready catch-up трактует этот выход как `full cleanup`;
   - фактический возврат ordinary scanner owner и editable `BoilerInfo` всё равно допускается только при `AutoReady=true` и `IsConnected=true`.

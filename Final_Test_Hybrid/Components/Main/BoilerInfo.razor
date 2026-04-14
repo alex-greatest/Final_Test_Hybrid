@@ -358,6 +358,7 @@
         bool useMes,
         bool requireAdminAuth,
         string operatorUsername,
+        bool showCancelButton,
         CancellationToken ct)
     {
         if (_disposed)
@@ -387,7 +388,13 @@
 
                 var dialogService = new InterruptDialogService(DialogService, UiSafeClose);
                 var executor = new InterruptFlowExecutor();
-                var result = await executor.ExecuteAsync(dialogService, onSave, requireAdminAuth, operatorUsername, ct);
+                var result = await executor.ExecuteAsync(
+                    dialogService,
+                    onSave,
+                    requireAdminAuth,
+                    operatorUsername,
+                    showCancelButton,
+                    ct);
                 tcs.TrySetResult(result);
             });
         }

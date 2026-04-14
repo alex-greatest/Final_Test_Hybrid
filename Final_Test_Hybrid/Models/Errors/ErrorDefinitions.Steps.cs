@@ -20,6 +20,7 @@ public static partial class ErrorDefinitions
         AlNoWaterFlowChSlow,
         AlNoWaterPressureСhSlow,
         AlFillTimeСhSlow,
+        AlWaterPressureHighChSlow,
         NoDiagnosticConnection,
         WriteBytesOn,
         WriteBytesOff,
@@ -75,6 +76,7 @@ public static partial class ErrorDefinitions
         AlWaterPressureHighCompareHot,
         AlFillTimeCompareHot,
         AlDeltaTempNokCompareHot,
+        AlLowTempCompareHot,
         AlGasFlowLow,
         AlGasFlowHigh,
         AlNotStendReady,
@@ -125,12 +127,15 @@ public static partial class ErrorDefinitions
         AlNoFlowGasDhwCheckFlowTempRise,
         AlNoSetFlowDhwCheckFlowTempRise,
         AlNotStendReadyGetFlowNtcCold,
+        AlWaterFlowMinGetFlowNtcCold,
+        AlWaterFlowMaxGetFlowNtcCold,
         AlNotStendReadyCheckFlowRate,
         AlPressureLowCheckFlowRate,
         AlWaterFlowMinCheckFlowRate,
         AlWaterFlowMaxCheckFlowRate,
         AlNotStendReadyDhwCompareFlowNtcTempHot,
         AlDeltaTempNokDhwCompareFlowNtcTempHot,
+        AlLowTempDhwCompareFlowNtcTempHot,
         AlFlowChNokCheckWaterFlowDhwMode,
         AlPressureLowDhwHighPressureTest,
         AlPressureHightDhwHighPressureTest,
@@ -142,6 +147,7 @@ public static partial class ErrorDefinitions
         AlNotStendReadyDhwCompareFlowNtcTempCold,
         AlDeltaTempNokDhwCompareFlowNtcTempCold,
         AlWaterFlowLowSetTankMode,
-        AlPressureLowSetTankMode
+        AlPressureLowSetTankMode,
+        AlPressureHightSetTankMode
     ];
 }

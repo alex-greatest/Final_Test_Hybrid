@@ -189,7 +189,12 @@ public partial class PreExecutionCoordinator
         infra.StatusReporter.ClearAllExceptScan(SequenceClearMode.OperationalReset);
     }
 
-    private async Task<InterruptFlowResult> TryShowInterruptDialogAsync(string serialNumber, int resetSequence, CancellationToken ct)
+    private async Task<InterruptFlowResult> TryShowInterruptDialogAsync(
+        string serialNumber,
+        int resetSequence,
+        CancellationToken ct,
+        bool showCancelButton = true,
+        Func<string, string, CancellationToken, Task<SaveResult>>? saveCallback = null)
     {
         if (!TryAcquireDialogLock())
         {
@@ -204,7 +209,11 @@ public partial class PreExecutionCoordinator
 
         try
         {
-            return await ShowInterruptReasonDialogAsync(serialNumber, cts.Token);
+            return await ShowInterruptReasonDialogAsync(
+                serialNumber,
+                showCancelButton,
+                saveCallback,
+                cts.Token);
         }
         finally
         {
@@ -270,7 +279,11 @@ public partial class PreExecutionCoordinator
         }
     }
 
-    private async Task<InterruptFlowResult> ShowInterruptReasonDialogAsync(string serialNumber, CancellationToken ct)
+    private async Task<InterruptFlowResult> ShowInterruptReasonDialogAsync(
+        string serialNumber,
+        bool showCancelButton,
+        Func<string, string, CancellationToken, Task<SaveResult>>? saveCallback,
+        CancellationToken ct)
     {
         void HandleCancel() => CancelActiveDialog();
         coordinators.PlcResetCoordinator.OnForceStop += HandleCancel;
@@ -281,14 +294,21 @@ public partial class PreExecutionCoordinator
             var useMes = infra.AppSettings.UseMes;
             var requireAdminAuth = useMes;
             var operatorUsername = state.OperatorState.Username ?? "Unknown";
+            var submitCallback = saveCallback
+                ?? ((admin, reason, token) => infra.InterruptReasonRouter.SaveAsync(
+                    serialNumber,
+                    admin,
+                    reason,
+                    useMes,
+                    token));
 
             var result = await coordinators.DialogCoordinator.ShowInterruptReasonDialogAsync(
                 serialNumber,
-                (admin, reason, token) => infra.InterruptReasonRouter.SaveAsync(
-                    serialNumber, admin, reason, useMes, token),
+                submitCallback,
                 useMes,
                 requireAdminAuth,
                 operatorUsername,
+                showCancelButton,
                 ct);
 
             LogInterruptResult(result);

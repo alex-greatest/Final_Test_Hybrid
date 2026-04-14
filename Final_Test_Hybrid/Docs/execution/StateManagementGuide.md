@@ -873,6 +873,7 @@ private void HandleHardReset()
 | **OnReset** | TestExecutionCoordinator | Errors, StopAsFailure | `HandleReset()` → `ClearErrors()` |
 | **OnReset** | BoilerOperationModeRefreshService | Очистка retained-mode `1036` | `Clear("hard reset / ErrorCoordinator.OnReset")` |
 | **Test completion** | PreExecutionCoordinator | Финализация + completed-history через `CompletedTest` | `HandleTestCompletionAsync()` |
+| **Elec/Boiler_Power_OFF entry** | BoilerOperationModeRefreshService | Awaited memory-clear retained-mode `1036` без записи в котёл | `BoilerPowerOffStep.ExecuteAsync()` |
 | **Operator stop / SequenceCompleted** | BoilerOperationModeRefreshService | Awaited clear+drain retained-mode `1036` до `SequenceCompleted` | `TestExecutionCoordinator.CompleteAsync()` |
 | **Test completion / BoilerState.Clear()** | BoilerOperationModeRefreshService | Очистка retained-mode `1036` | `HandleBoilerStateCleared()` |
 | **Repeat / ResetForRepeat()** | BoilerOperationModeRefreshService | Очистка retained-mode `1036` перед новым циклом | `TestExecutionCoordinator.ResetForRepeat()` |
@@ -881,7 +882,7 @@ private void HandleHardReset()
 Примечание по retained-mode `1036`:
 
 - `Clear(...)` остаётся sync-path для reset/repeat и lease-held сценариев; он инвалидирует armed-state сразу и запускает coalesced background-drain.
-- `ClearAndDrainAsync(...)` используется только вне shared mode-change lease и даёт awaited barrier: `SequenceCompleted` публикуется уже после выхода активного refresh из critical section.
+- `ClearAndDrainAsync(...)` используется только вне shared mode-change lease и даёт awaited barrier: active `CH_Start_*` / `Elec/Boiler_Power_OFF` сначала забывают прежний latch, а `SequenceCompleted` публикуется уже после выхода активного refresh из critical section.
 
 ### Подробнее о PreExecutionCoordinator handlers
 

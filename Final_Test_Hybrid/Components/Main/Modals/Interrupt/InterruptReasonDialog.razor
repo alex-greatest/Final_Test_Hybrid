@@ -22,12 +22,15 @@
                       ButtonStyle="ButtonStyle.Primary"
                       IsBusy="_isSaving"
                       class="dialog-button save-button" />
-        <RadzenButton Text="Отмена"
-                      Icon="close"
-                      Click="@OnCancelClick"
-                      ButtonStyle="ButtonStyle.Danger"
-                      Disabled="_isSaving"
-                      class="dialog-button cancel-button" />
+        @if (ShowCancelButton)
+        {
+            <RadzenButton Text="Отмена"
+                          Icon="close"
+                          Click="@OnCancelClick"
+                          ButtonStyle="ButtonStyle.Danger"
+                          Disabled="_isSaving"
+                          class="dialog-button cancel-button" />
+        }
     </div>
 </div>
 
@@ -37,6 +40,9 @@
 
     [Parameter]
     public CancellationToken CancellationToken { get; set; }
+
+    [Parameter]
+    public bool ShowCancelButton { get; set; } = true;
 
     private string _reason = "";
     private bool _isSaving;

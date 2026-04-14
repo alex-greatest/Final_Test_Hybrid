@@ -66,6 +66,14 @@ ExecuteCycleAsync:
   repeat/pre-execution обязан снова пройти normal AutoReady gate.
 - Если PLC-связь жива, но `AutoReady=false`, pipeline поднимает существующий
   `AutoModeDisabled` interrupt и ждёт resume вместо тихого продолжения по сохранённому контексту.
+- Для post-`AskEnd` soft-reset repeat есть отдельный pre-repeat gate:
+  - `Req_Repeat=true` во время уже идущего теста не запускает repeat немедленно;
+  - сначала обязателен existing interrupt-save flow (причина + runtime snapshot);
+  - после interrupt-save ещё обязателен новый старт операции для новой попытки:
+    `UseMes=true` -> server `start operation`,
+    `UseMes=false` -> local DB operation create через existing init path;
+  - порядок фиксирован: сначала `interrupt`, потом `start/create operation`;
+  - только после успешного `interrupt -> start/create` пишется `AskRepeat=true`, и цикл доходит до `CycleExitReason.RepeatRequested`.
 
 ### Что читается заново
 

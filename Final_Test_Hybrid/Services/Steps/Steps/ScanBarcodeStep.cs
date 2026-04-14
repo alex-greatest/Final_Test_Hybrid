@@ -3,6 +3,7 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.OpcUa;
 using Final_Test_Hybrid.Services.Preparation;
+using Final_Test_Hybrid.Services.SpringBoot.Operation.Interrupt;
 using Final_Test_Hybrid.Services.Scanner;
 using Final_Test_Hybrid.Services.SpringBoot.Operator;
 using Final_Test_Hybrid.Services.SpringBoot.Shift;
@@ -44,6 +45,22 @@ public class ScanBarcodeStep(
     public override string Name => "ScanBarcode";
     public override string Description => "Сканирование штрих-кода котла";
     protected override IDualLogger Logger => _logger;
+
+    public async Task<SaveResult> StartRepeatOperationAsync(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        _logger.LogInformation(
+            "Local repeat: создание новой операции в БД для {SerialNumber}",
+            BoilerState.SerialNumber);
+        var initDbError = await preparationFacade.InitializeDatabaseAsync(
+            BoilerState,
+            operatorState.Username ?? UnknownOperator,
+            shiftState.ShiftNumber ?? 0);
+        ct.ThrowIfCancellationRequested();
+        return initDbError == null
+            ? SaveResult.Success()
+            : SaveResult.Fail(initDbError.ErrorMessage ?? "Ошибка старта операции");
+    }
 
     public override async Task<PreExecutionResult> ExecuteAsync(PreExecutionContext context, CancellationToken ct)
     {

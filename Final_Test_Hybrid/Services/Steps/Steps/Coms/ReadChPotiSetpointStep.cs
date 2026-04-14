@@ -71,7 +71,7 @@ public class ReadChPotiSetpointStep(
         logger.LogInformation("Установленная температура CH: {Value} °C, диапазон: [{Min}..{Max}], статус: {Status}",
             value, MinTemp, MaxTemp, isInRange ? "OK" : "NOK");
 
-        var msg2 = $"CH_Temp_SP: {value} °C [{MinTemp}..{MaxTemp}]";
+        var msg2 = $"CH_Temp_SP: {value} °C";
 
         if (!isInRange)
         {

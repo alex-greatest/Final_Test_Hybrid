@@ -43,6 +43,9 @@ public static class MainScreenTags
     /// <summary>Давление газа (Gas_P)</summary>
     public const string GasP = "ns=3;s=\"DB_Measure\".\"Sensor\".\"Gas_P\"";
 
+    /// <summary>Аварийный флаг давления газа для HMI-индикации P-GAS</summary>
+    public const string GasPressureNok = "ns=3;s=\"DB_HMI\".\"GasPressureNOK\"";
+
     #endregion
 
     #region DB_Measure.Temper

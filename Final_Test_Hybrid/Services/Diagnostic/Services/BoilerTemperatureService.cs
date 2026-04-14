@@ -2,6 +2,7 @@ using Final_Test_Hybrid.Services.Common.Logging;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol;
+using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -47,10 +48,26 @@ public class BoilerTemperatureService(
     /// </remarks>
     /// <param name="ct">Токен отмены операции.</param>
     /// <returns>Результат чтения с температурой в градусах Цельсия.</returns>
-    public async Task<DiagnosticReadResult<short>> ReadSupplyLineTemperatureAsync(CancellationToken ct = default)
+    public Task<DiagnosticReadResult<short>> ReadSupplyLineTemperatureAsync(CancellationToken ct = default)
+    {
+        return ReadSupplyLineTemperatureAsync(CommandPriority.High, ct);
+    }
+
+    /// <summary>
+    /// Читает температуру подающей линии (подача).
+    /// </summary>
+    /// <remarks>
+    /// Регистр 1006. Единица измерения: C.
+    /// </remarks>
+    /// <param name="priority">Приоритет команды в очереди Modbus.</param>
+    /// <param name="ct">Токен отмены операции.</param>
+    /// <returns>Результат чтения с температурой в градусах Цельсия.</returns>
+    public async Task<DiagnosticReadResult<short>> ReadSupplyLineTemperatureAsync(
+        CommandPriority priority,
+        CancellationToken ct = default)
     {
         var address = (ushort)(RegisterSupplyLineTemperature - _settings.BaseAddressOffset);
-        return await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
+        return await reader.ReadInt16Async(address, priority, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -61,10 +78,26 @@ public class BoilerTemperatureService(
     /// </remarks>
     /// <param name="ct">Токен отмены операции.</param>
     /// <returns>Результат чтения с температурой в градусах Цельсия.</returns>
-    public async Task<DiagnosticReadResult<short>> ReadDHWTemperatureAsync(CancellationToken ct = default)
+    public Task<DiagnosticReadResult<short>> ReadDHWTemperatureAsync(CancellationToken ct = default)
+    {
+        return ReadDHWTemperatureAsync(CommandPriority.High, ct);
+    }
+
+    /// <summary>
+    /// Читает температуру горячего водоснабжения (ГВС).
+    /// </summary>
+    /// <remarks>
+    /// Регистр 1009. Единица измерения: C.
+    /// </remarks>
+    /// <param name="priority">Приоритет команды в очереди Modbus.</param>
+    /// <param name="ct">Токен отмены операции.</param>
+    /// <returns>Результат чтения с температурой в градусах Цельсия.</returns>
+    public async Task<DiagnosticReadResult<short>> ReadDHWTemperatureAsync(
+        CommandPriority priority,
+        CancellationToken ct = default)
     {
         var address = (ushort)(RegisterDhwTemperature - _settings.BaseAddressOffset);
-        return await reader.ReadInt16Async(address, ct).ConfigureAwait(false);
+        return await reader.ReadInt16Async(address, priority, ct).ConfigureAwait(false);
     }
 
     /// <summary>

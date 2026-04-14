@@ -117,6 +117,12 @@ public class ScanBarcodeMesStep(
         return await HandleOperationFailure(context, result);
     }
 
+    public Task<OperationStartResult> StartRepeatOperationAsync(string serialNumber, CancellationToken ct)
+    {
+        _logger.LogInformation("MES repeat: старт новой операции для {SerialNumber}", serialNumber);
+        return operationStartService.StartOperationAsync(serialNumber, CurrentOperatorName, ct: ct);
+    }
+
     private PreExecutionResult? HandleSuccessfulStart(PreExecutionContext context, OperationStartResponse data)
     {
         if (data.Recipes.Count == 0)

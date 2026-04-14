@@ -63,10 +63,10 @@
 
 @code {
     [Parameter]
-    public bool ShowCancelButton { get; set; }
+    public bool ShowCancelButton { get; set; } = true;
 
     [Parameter]
-    public bool RequireProtectedCancel { get; set; }
+    public bool RequireProtectedCancel { get; set; } = true;
 
     private bool UseQrAuth => AppSettingsService.UseAdminQrAuth;
     private readonly string _dialogKey = $"admin-auth-dialog:{Guid.NewGuid():N}";

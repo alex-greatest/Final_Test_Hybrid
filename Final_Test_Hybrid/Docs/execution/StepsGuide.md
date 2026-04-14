@@ -138,6 +138,7 @@ context.ReportProgress("Инициализация...");
 
 - Шаги `Coms/CH_Start_Max_Heatout`, `Coms/CH_Start_Min_Heatout` и `Coms/CH_Start_ST_Heatout` после успешной записи и read-back `1036` обязаны вызвать `BoilerOperationModeRefreshService.ArmMode(rawModeValue, step.Name)`.
 - При входе в любой active `CH_Start_*` шаг сервис сначала делает `ClearAndDrainAsync(...)`, чтобы предыдущий retained-mode не жил во время retry-path и ожиданий PLC до нового arm.
+- При входе в `Elec/Boiler_Power_OFF` сервис также делает `ClearAndDrainAsync(...)`, но только забывает retained-mode в памяти и не пишет `1036` в котёл.
 - В `1036` хранится raw `ushort`; `SystemWorkMode` для этого контура не использовать.
 - `BoilerOperationModeRefreshService` работает системными `RegisterWriter` / `RegisterReader`, а не `context.PacedDiag*`, потому что удержание режима не должно зависеть от step pause (`Auto OFF`).
 - Step-level write/read-back `1036` и `ChReset` выполняются под shared mode-change lease из `BoilerOperationModeRefreshService`, чтобы фоновый refresh не мог вклиниться между шаговой записью, verify и `ArmMode(...)` / `Clear(...)`.
@@ -145,7 +146,7 @@ context.ReportProgress("Инициализация...");
 - Если к моменту refresh диагностика недоступна, сервис не делает `StartAsync()` сам, не очищает latch и ждёт восстановления ready-state.
 - Если refresh уже дошёл до write/read/verify и получил fail при готовом dispatcher, сервис повторяет попытку через отдельный slow retry `5 секунд`, а не через step pacing `WriteVerifyDelayMs`.
 - Успешный `Coms/CH_Reset` очищает latch только после подтверждённого `1036 == 0`.
-- Дополнительные точки очистки latch: `PlcResetCoordinator.OnForceStop`, `ErrorCoordinator.OnReset`, `BoilerState.OnCleared` и `TestExecutionCoordinator.ResetForRepeat()`.
+- Дополнительные точки очистки latch: вход в `Elec/Boiler_Power_OFF`, `PlcResetCoordinator.OnForceStop`, `ErrorCoordinator.OnReset`, `BoilerState.OnCleared` и `TestExecutionCoordinator.ResetForRepeat()`.
 - Ручные инженерные изменения режима и `SetStandModeAsync(...)` не обновляют retained-state `1036`.
 
 Шаги могут сообщать о прогрессе выполнения через `context.ReportProgress()`. Сообщение отображается в колонке "Результаты" пока шаг выполняется.
@@ -308,15 +309,23 @@ public string? GetLimits(LimitsContext context)
 }
 ```
 
+**Правило для `TestSequenseGrid`:**
+- `TestStepResult.Message` в колонке `Результаты` должен содержать только фактический результат шага или краткий текст ошибки.
+- Пределы и диапазоны (`min/max`, `[..]`, `<=`, `>=`) должны выводиться через `IProvideLimits` в отдельную колонку `Пределы`, без дублирования в `Result`.
+- Если `Result` содержит несколько измерений, каждое поле оформляется отдельной парой `<Метка>: <Значение>`; метка не может оставаться без своего значения, а пары должны разделяться `, ` или `; `.
+
 **Примечание по `Coms/Check_Comms`:**
 - `CheckCommsStep` реализует `INonSkippable`, поэтому оператор не может обойти шаг.
 - При `AutoReady = false` и отсутствии диагностической связи шаг возвращает `NoDiagnosticConnection`; рабочий путь продолжения — восстановить автомат и выполнить `Retry`.
 - После захвата runtime-lease шаг ждёт именно свежий runtime ping; stale `LastPingData` от ручной панели не считается успешной проверкой связи.
 
 **Примечание по `Coms/Read_Soft_Code_Plug`:**
+- Регистр `1054` читается, сравнивается с recipe `NumberOfContours` и сохраняется как `NumberOfContours`.
 - Диапазон `1175..1181` читается, сравнивается с `BoilerState.Article` и сохраняется как `Soft_Code_Plug`.
 - Диапазон `1139..1145` читается только как `Nomenclature_EngP3`.
 - Диапазон `1182..1188` читается только как `Nomenclature_ITELMA`.
+- Регистр `1071` читается как фактическое состояние перемычки термостата и сохраняется как `Thermostat_Jumper`.
+- `NumberOfContours` и `Thermostat_Jumper` сохраняются raw-числами; при NOK статус пишется как `2`, `isRanged = false`, `min/max/unit` пустые, `test = "Coms/Read_Soft_Code_Plug"`.
 
 **Примечание по execution stand-write (`SetStandModeAsync`)**
 - Execution-шаги, которые на retry возвращают котёл в режим Стенд, не должны писать ключ во время `dispatcher.IsReconnecting`.
@@ -330,6 +339,8 @@ public string? GetLimits(LimitsContext context)
 - Шаг измерения `Safety time` использует только фактические step-level Modbus операции как источник истины по связи.
 - Любой read/write fail текущей попытки завершает шаг ошибкой без отдельного diagnostic connection latch.
 - Краткий reconnect внутри этого шага не пережидается: продолжение допускается только через штатный `Retry`.
+- Локальный polling шага выполняется с интервалом `300 мс`; результат `Safety time` фиксируется по моменту обнаружения отключения на очередном Modbus-read, а не по аппаратному timestamp.
+- Фактическая погрешность обнаружения зависит от polling interval, длительности Modbus-read и ожидания в очереди dispatcher. Увеличение этого интервала требует отдельной проверки нижнего предела `ignSafetyTimeMin`, чтобы не замаскировать слишком быстрое отключение.
 
 ---
 

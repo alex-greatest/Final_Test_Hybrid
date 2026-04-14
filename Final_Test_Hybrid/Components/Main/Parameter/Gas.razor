@@ -15,7 +15,7 @@
     </div>
     <div class="field-row-parameter">
         <RadzenLabel Text="P-GAS"/>
-        <RadzenTextBox Value="@_pGas" ReadOnly Style="width:100%"/>
+        <RadzenTextBox Value="@_pGas" ReadOnly Style="width:100%" class="@GetPGasInputClass()"/>
     </div>
     <div class="field-row-parameter">
         <RadzenLabel Text="BURNER"/>
@@ -27,6 +27,7 @@
     private string _qGasG20 = "N/A";
     private string _pGas = "N/A";
     private string _burner = "N/A";
+    private bool _isGasPressureNok;
     private bool _disposed;
     [Parameter] public bool EmitCachedValueImmediately { get; set; }
 
@@ -35,6 +36,7 @@
         await Subscription.SubscribeAsync(MainScreenTags.GasPog, OnQGasG20Changed, emitCachedValueImmediately: EmitCachedValueImmediately);
         await Subscription.SubscribeAsync(MainScreenTags.GasPag, OnPGasChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
         await Subscription.SubscribeAsync(MainScreenTags.GasPgb, OnBurnerChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
+        await Subscription.SubscribeAsync(MainScreenTags.GasPressureNok, OnGasPressureNokChanged, emitCachedValueImmediately: EmitCachedValueImmediately);
     }
 
     private async Task OnQGasG20Changed(object? value)
@@ -58,11 +60,23 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    private async Task OnGasPressureNokChanged(object? value)
+    {
+        if (_disposed) return;
+        _isGasPressureNok = value is true;
+        await InvokeAsync(StateHasChanged);
+    }
+
     private static string FormatValue(object? value)
     {
         if (value == null) return "N/A";
         if (value is IFormattable formattable) return formattable.ToString("F3", CultureInfo.CurrentCulture);
         return value.ToString() ?? "N/A";
+    }
+
+    private string GetPGasInputClass()
+    {
+        return _isGasPressureNok ? "parameter-alert-input" : string.Empty;
     }
 
     public async ValueTask DisposeAsync()
@@ -71,5 +85,6 @@
         await Subscription.UnsubscribeAsync(MainScreenTags.GasPog, OnQGasG20Changed, removeTag: false, ct: CancellationToken.None);
         await Subscription.UnsubscribeAsync(MainScreenTags.GasPag, OnPGasChanged, removeTag: false, ct: CancellationToken.None);
         await Subscription.UnsubscribeAsync(MainScreenTags.GasPgb, OnBurnerChanged, removeTag: false, ct: CancellationToken.None);
+        await Subscription.UnsubscribeAsync(MainScreenTags.GasPressureNok, OnGasPressureNokChanged, removeTag: false, ct: CancellationToken.None);
     }
 }

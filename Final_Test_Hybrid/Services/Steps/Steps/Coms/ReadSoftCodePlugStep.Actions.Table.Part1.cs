@@ -10,6 +10,7 @@ public partial class ReadSoftCodePlugStep
             StepNo: 1,
             Title: "Проверка типа подключения к котлу (1054)",
             Register: RegisterConnectionType,
+            ResultName: NumberOfContoursResultName,
             ExpectedRecipeKey: NumberOfContoursRecipe,
             ReadLogMessage: $"Чтение типа (по кол-ву контуров) из регистра {RegisterConnectionType}",
             ReadErrorPrefix: $"Ошибка при чтении типа котла (по кол-ву контуров) из регистра {RegisterConnectionType}. ",

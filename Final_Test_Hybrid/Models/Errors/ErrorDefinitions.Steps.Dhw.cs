@@ -132,6 +132,22 @@ public static partial class ErrorDefinitions
         RelatedStepId: "dhw-get-flow-ntc-cold",
         RelatedStepName: "DHW/Get_Flow_NTC_Cold");
 
+    public static readonly ErrorDefinition AlWaterFlowMinGetFlowNtcCold = new(
+        "П-206-01", "Неисправность. Слишком малый расход воды",
+        ActivatesResetButton: true,
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Get_Flow_NTC_Cold\".\"Al_WaterFlowMin\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-get-flow-ntc-cold",
+        RelatedStepName: "DHW/Get_Flow_NTC_Cold");
+
+    public static readonly ErrorDefinition AlWaterFlowMaxGetFlowNtcCold = new(
+        "П-206-02", "Неисправность. Слишком большой расход воды",
+        ActivatesResetButton: true,
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Get_Flow_NTC_Cold\".\"Al_WaterFlowMax\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-get-flow-ntc-cold",
+        RelatedStepName: "DHW/Get_Flow_NTC_Cold");
+
     #endregion
 
     #region DHW/Check_Flow_Rate
@@ -184,6 +200,14 @@ public static partial class ErrorDefinitions
         "П-208-01", "Неисправность. Разность температур вне допуска",
         ActivatesResetButton: true,
         PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Compare_Flow_NTC_Temp_Hot\".\"Al_DeltaTempNOK\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-compare-flow-ntc-temperature-hot",
+        RelatedStepName: "DHW/Compare_Flow_NTC_Temperature_Hot");
+
+    public static readonly ErrorDefinition AlLowTempDhwCompareFlowNtcTempHot = new(
+        "П-208-02", "Неисправность. Заданная температура воды не достигнута",
+        ActivatesResetButton: true,
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Compare_Flow_NTC_Temp_Hot\".\"Al_LowTemp\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "dhw-compare-flow-ntc-temperature-hot",
         RelatedStepName: "DHW/Compare_Flow_NTC_Temperature_Hot");
@@ -300,6 +324,14 @@ public static partial class ErrorDefinitions
         "П-213-01", "DB_Set_Tank_Mode. Неисправность. Давление не достигнуто",
         ActivatesResetButton: true,
         PlcTag: "ns=3;s=\"DB_DHW\".\"DB_Set_Tank_Mode\".\"Al_PressureLow\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-set-tank-mode",
+        RelatedStepName: "DHW/Set_Tank_Mode");
+
+    public static readonly ErrorDefinition AlPressureHightSetTankMode = new(
+        "П-213-02", "DB_Set_Tank_Mode. Неисправность. Давление выше заданного",
+        ActivatesResetButton: true,
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_Set_Tank_Mode\".\"Al_PressureHight\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "dhw-set-tank-mode",
         RelatedStepName: "DHW/Set_Tank_Mode");

@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Final_Test_Hybrid.Models.Plc.Tags;
 using Final_Test_Hybrid.Services.SpringBoot.Operation.Interrupt;
+using Final_Test_Hybrid.Services.Steps.Steps;
 
 namespace Final_Test_Hybrid.Services.Steps.Infrastructure.Execution.PreExecution;
 
@@ -19,6 +20,11 @@ public partial class PreExecutionCoordinator
         var shouldRepeat = await WaitRepeatDecisionAfterAskEndAsync(postAskEndToken);
         if (shouldRepeat)
         {
+            if (wasTestRunning)
+            {
+                await SaveInterruptReasonBeforeRepeatAsync(serialNumber, window.Sequence, postAskEndToken);
+            }
+
             await AcknowledgeRepeatRequestAsync(postAskEndToken);
             if (!wasTestRunning)
             {
@@ -37,6 +43,143 @@ public partial class PreExecutionCoordinator
         }
 
         await ShowInterruptReasonThenCleanupAsync(serialNumber, window.Sequence, postAskEndToken);
+    }
+
+    private async Task SaveInterruptReasonBeforeRepeatAsync(
+        string? serialNumber,
+        int expectedSequence,
+        CancellationToken ct)
+    {
+        if (serialNumber == null || !infra.AppSettings.UseInterruptReason)
+        {
+            return;
+        }
+
+        var saveCallback = CreateRepeatSaveCallback(serialNumber);
+        coordinators.CompletionUiState.HideImage();
+        var result = await TryShowInterruptDialogAsync(
+            serialNumber,
+            expectedSequence,
+            ct,
+            showCancelButton: false,
+            saveCallback: saveCallback);
+        ct.ThrowIfCancellationRequested();
+        if (result.IsSuccess)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            "Repeat-save dialog завершился без успешного сохранения причины.");
+    }
+
+    private Func<string, string, CancellationToken, Task<SaveResult>> CreateRepeatSaveCallback(
+        string serialNumber)
+    {
+        return (adminUsername, reason, ct) => SaveRepeatInterruptThenStartOperationAsync(
+            serialNumber,
+            adminUsername,
+            reason,
+            ct);
+    }
+
+    private async Task<SaveResult> SaveRepeatInterruptThenStartOperationAsync(
+        string serialNumber,
+        string adminUsername,
+        string reason,
+        CancellationToken ct)
+    {
+        var saveResult = await SaveRepeatInterruptAsync(
+            serialNumber,
+            adminUsername,
+            reason,
+            ct);
+        if (!saveResult.IsSuccess)
+        {
+            return saveResult;
+        }
+
+        return await StartRepeatOperationAsync(serialNumber, ct);
+    }
+
+    private async Task<SaveResult> SaveRepeatInterruptAsync(
+        string serialNumber,
+        string adminUsername,
+        string reason,
+        CancellationToken ct)
+    {
+        if (HasPendingRepeatOperationState(serialNumber))
+        {
+            return SaveResult.Success();
+        }
+
+        var saveResult = await infra.InterruptReasonRouter.SaveAsync(
+            serialNumber,
+            adminUsername,
+            reason,
+            infra.AppSettings.UseMes,
+            ct);
+        if (saveResult.IsSuccess)
+        {
+            MarkPendingRepeatOperationState(serialNumber);
+        }
+
+        return saveResult;
+    }
+
+    private async Task<SaveResult> StartRepeatOperationAsync(string serialNumber, CancellationToken ct)
+    {
+        if (infra.AppSettings.UseMes)
+        {
+            return await StartMesRepeatOperationAsync(serialNumber, ct);
+        }
+
+        return await StartLocalRepeatOperationAsync(ct);
+    }
+
+    private async Task<SaveResult> StartMesRepeatOperationAsync(string serialNumber, CancellationToken ct)
+    {
+        if (steps.GetScanStep() is not ScanBarcodeMesStep mesStep)
+        {
+            infra.Logger.LogError(
+                "Post-AskEnd repeat: MES шаг недоступен для старта новой операции");
+            return SaveResult.Fail("Ошибка конфигурации старта операции");
+        }
+
+        var startResult = await mesStep.StartRepeatOperationAsync(serialNumber, ct);
+        if (startResult.IsSuccess)
+        {
+            ClearPendingRepeatOperationState();
+            return SaveResult.Success();
+        }
+
+        infra.Logger.LogWarning(
+            "Post-AskEnd repeat: новая операция не запущена для {SerialNumber}: {Error}",
+            serialNumber,
+            startResult.ErrorMessage);
+        return SaveResult.Fail(startResult.ErrorMessage ?? "Ошибка старта операции");
+    }
+
+    private async Task<SaveResult> StartLocalRepeatOperationAsync(CancellationToken ct)
+    {
+        if (steps.GetScanStep() is not ScanBarcodeStep scanStep)
+        {
+            infra.Logger.LogError(
+                "Post-AskEnd repeat: local scan шаг недоступен для старта новой операции");
+            return SaveResult.Fail("Ошибка конфигурации старта операции");
+        }
+
+        var startResult = await scanStep.StartRepeatOperationAsync(ct);
+        if (startResult.IsSuccess)
+        {
+            ClearPendingRepeatOperationState();
+            return SaveResult.Success();
+        }
+
+        infra.Logger.LogWarning(
+            "Post-AskEnd repeat: локальная операция не запущена: {Error}",
+            startResult.ErrorMessage);
+        return startResult;
     }
 
     private bool TryGetCurrentAskEndWindow([NotNullWhen(true)] out ResetAskEndWindow? window)
@@ -120,6 +263,15 @@ public partial class PreExecutionCoordinator
         if (serialNumber == null || !infra.AppSettings.UseInterruptReason)
         {
             FinalizeResetCleanup(expectedSequence);
+            return;
+        }
+
+        if (HasPendingRepeatOperationState(serialNumber))
+        {
+            infra.Logger.LogInformation(
+                "Post-AskEnd cleanup: причина уже сохранена для {SerialNumber}, повторный диалог пропущен",
+                serialNumber);
+            FinalizeResetCleanup(expectedSequence, InterruptFlowResult.Success(string.Empty));
             return;
         }
 

@@ -13,12 +13,14 @@ public class InterruptDialogService(DialogService dialogService, Action? closeOv
 {
     private readonly Action _closeAction = closeOverride ?? (() => dialogService.Close());
 
-    public virtual Task<AdminAuthResult?> ShowAdminAuthAsync()
+    public virtual Task<AdminAuthResult?> ShowAdminAuthAsync(
+        bool showCancelButton = true,
+        bool requireProtectedCancel = true)
     {
         var parameters = new Dictionary<string, object>
         {
-            ["ShowCancelButton"] = true,
-            ["RequireProtectedCancel"] = true
+            ["ShowCancelButton"] = showCancelButton,
+            ["RequireProtectedCancel"] = requireProtectedCancel
         };
         return ShowDialogAsync<AdminAuthDialog, AdminAuthResult>(
             "Авторизация администратора", "450px", parameters);
@@ -26,12 +28,14 @@ public class InterruptDialogService(DialogService dialogService, Action? closeOv
 
     public virtual Task<SaveResult?> ShowInterruptReasonAsync(
         Func<string, CancellationToken, Task<SaveResult>> onSubmit,
-        CancellationToken ct)
+        CancellationToken ct,
+        bool showCancelButton = true)
     {
         var parameters = new Dictionary<string, object>
         {
             ["OnSubmit"] = onSubmit,
-            ["CancellationToken"] = ct
+            ["CancellationToken"] = ct,
+            ["ShowCancelButton"] = showCancelButton
         };
         return ShowDialogAsync<InterruptReasonDialog, SaveResult>(
             "Причина прерывания", "85vw", parameters);

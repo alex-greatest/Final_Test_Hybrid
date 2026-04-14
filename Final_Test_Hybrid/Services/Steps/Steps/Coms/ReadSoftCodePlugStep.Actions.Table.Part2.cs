@@ -199,6 +199,7 @@ public partial class ReadSoftCodePlugStep
             ReadLogMessage: $"Проверка перемычки термостата из регистра {RegisterThermostatJumper}",
             ReadErrorPrefix: $"Ошибка при чтении перемычки термостата из регистра {RegisterThermostatJumper}. ",
             StatusLogTemplate: "Перемычка термостата: {0} ({1})",
+            ResultName: ThermostatJumperResultName,
             MissingMessage: "Не установлена перемычка термостата (значение: 0)",
             MissingError: ErrorDefinitions.ThermostatJumperMissing);
     }
