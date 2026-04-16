@@ -41,9 +41,7 @@ public class CheckWaterFlowStep(
     {
         var min = context.RecipeProvider.GetValue<float>(FlowRateMinRecipe);
         var max = context.RecipeProvider.GetValue<float>(FlowRateMaxRecipe);
-        var minCh = context.RecipeProvider.GetValue<float>(FlowRateMinRecipe);
-        var maxCh = context.RecipeProvider.GetValue<float>(FlowRateMaxRecipe);
-        return min != null && max != null ? $"[{minCh} .. {maxCh}] [{min} .. {max}]" : null;
+        return min != null && max != null ? $"[{min} .. {max}]" : null;
     }
 
     /// <summary>

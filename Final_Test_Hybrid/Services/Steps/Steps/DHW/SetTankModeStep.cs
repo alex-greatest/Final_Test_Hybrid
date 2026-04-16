@@ -19,24 +19,30 @@ public class SetTankModeStep(
     private const string EndTag = "ns=3;s=\"DB_VI\".\"DHW\".\"Set_Tank_Mode\".\"End\"";
     private const string ErrorTag = "ns=3;s=\"DB_VI\".\"DHW\".\"Set_Tank_Mode\".\"Error\"";
     private const string TankModeTag = "ns=3;s=\"DB_Parameter\".\"DHW\".\"Tank_Mode\"";
-    private const string WaterMinRecipe = "ns=3;s=\"DB_Recipe\".\"DHW\".\"Tank\".\"WaterMin\"";
-    private const string WaterMaxRecipe = "ns=3;s=\"DB_Recipe\".\"DHW\".\"Tank\".\"WaterMax\"";
+    private const string TankModeRecipe = "ns=3;s=\"DB_Recipe\".\"DHW\".\"Tank\".\"Mode\"";
+    private const string ToleranceRecipe = "ns=3;s=\"DB_Recipe\".\"DHW\".\"PresTest\".\"Tol\"";
 
     public string Id => "dhw-set-tank-mode";
     public string Name => "DHW/Set_Tank_Mode";
     public string Description => "Давление воды в режиме БКН";
     public string PlcBlockPath => BlockPath;
     public IReadOnlyList<string> RequiredPlcTags => [StartTag, EndTag, ErrorTag, TankModeTag];
-    public IReadOnlyList<string> RequiredRecipeAddresses => [WaterMinRecipe, WaterMaxRecipe];
+    public IReadOnlyList<string> RequiredRecipeAddresses => [TankModeRecipe, ToleranceRecipe];
 
     /// <summary>
     /// Возвращает пределы для отображения в гриде.
     /// </summary>
     public string? GetLimits(LimitsContext context)
     {
-        var min = context.RecipeProvider.GetValue<float>(WaterMinRecipe);
-        var max = context.RecipeProvider.GetValue<float>(WaterMaxRecipe);
-        return min != null && max != null ? $"[{min:F1} .. {max:F1}]" : null;
+        var target = context.RecipeProvider.GetValue<float>(TankModeRecipe);
+        var tolerance = context.RecipeProvider.GetValue<float>(ToleranceRecipe);
+        if (target == null || tolerance == null)
+        {
+            return null;
+        }
+
+        var (min, max) = GetPressureLimits(target.Value, tolerance.Value);
+        return $"[{min:F1} .. {max:F1}]";
     }
 
     /// <summary>
@@ -87,8 +93,9 @@ public class SetTankModeStep(
             return TestStepResult.Fail($"Ошибка чтения Tank_Mode: {error}");
         }
 
-        var min = context.RecipeProvider.GetValue<float>(WaterMinRecipe)!.Value;
-        var max = context.RecipeProvider.GetValue<float>(WaterMaxRecipe)!.Value;
+        var target = context.RecipeProvider.GetValue<float>(TankModeRecipe)!.Value;
+        var tolerance = context.RecipeProvider.GetValue<float>(ToleranceRecipe)!.Value;
+        var (min, max) = GetPressureLimits(target, tolerance);
         var status = isSuccess ? 1 : 2;
 
         testResultsService.Add(
@@ -115,6 +122,11 @@ public class SetTankModeStep(
 
         var resetResult = await context.OpcUa.WriteAsync(StartTag, false, ct);
         return resetResult.Error != null ? TestStepResult.Fail($"Ошибка сброса Start: {resetResult.Error}") : TestStepResult.Pass(msg);
+    }
+    
+    private static (float Min, float Max) GetPressureLimits(float target, float tolerance)
+    {
+        return (target - tolerance, target + tolerance);
     }
 
     private enum TankModeResult { Success, Error }

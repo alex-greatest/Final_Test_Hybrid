@@ -43,7 +43,7 @@ public abstract class ScanStepBase(
     protected readonly IRecipeProvider RecipeProvider = recipeProvider;
     protected readonly ExecutionPhaseState PhaseState = phaseState;
 
-    private const string AppVersionRecipe = "App_Version";
+    private const string AppVersionValue = "v1.0";
     private const string PlantIdRecipe = "Plant_ID";
     private const string UnknownOperator = "Unknown";
 
@@ -377,7 +377,7 @@ public abstract class ScanStepBase(
 
     protected void CaptureScanServiceContext(PreExecutionContext context, string testerNumber, int? shiftNumber)
     {
-        var appVersion = RecipeProvider.GetStringValue(AppVersionRecipe) ?? string.Empty;
+        var appVersion = AppVersionValue;
         var plantId = RecipeProvider.GetStringValue(PlantIdRecipe) ?? string.Empty;
         var shiftNo = shiftNumber?.ToString(CultureInfo.InvariantCulture) ?? "0";
         var testerNo = string.IsNullOrWhiteSpace(testerNumber) ? UnknownOperator : testerNumber;

@@ -37,11 +37,11 @@ public sealed class BoilerOperationModeRefreshServiceTests
         await Task.Delay(40);
         Assert.Equal(0, modbusClient.WriteSingleRegisterCalls);
 
-        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 1, TimeSpan.FromSeconds(1));
-        Assert.Equal([4], modbusClient.WrittenValues);
-
         await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 2, TimeSpan.FromSeconds(1));
-        Assert.Equal([4, 4], modbusClient.WrittenValues);
+        Assert.Equal([3, 4], modbusClient.WrittenValues);
+
+        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 4, TimeSpan.FromSeconds(1));
+        Assert.Equal([3, 4, 3, 4], modbusClient.WrittenValues);
         Assert.Equal(0, dispatcher.StartCalls);
     }
 
@@ -59,8 +59,8 @@ public sealed class BoilerOperationModeRefreshServiceTests
 
         dispatcher.SetReady();
 
-        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 1, TimeSpan.FromSeconds(1));
-        Assert.Equal([3], modbusClient.WrittenValues);
+        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 2, TimeSpan.FromSeconds(1));
+        Assert.Equal([4, 3], modbusClient.WrittenValues);
         Assert.Equal(0, dispatcher.StartCalls);
     }
 
@@ -87,8 +87,21 @@ public sealed class BoilerOperationModeRefreshServiceTests
         await Task.Delay(15);
         Assert.Equal(0, modbusClient.WriteSingleRegisterCalls);
 
+        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 2, TimeSpan.FromSeconds(1));
+        Assert.Equal([3, 4], modbusClient.WrittenValues);
+    }
+
+    [Fact]
+    public async Task ArmMode_UsesSingleWriteFallback_ForUnknownTargetMode()
+    {
+        var dispatcher = new TestModbusDispatcher(ready: true);
+        var modbusClient = new TrackingModbusClient();
+        using var service = CreateService(dispatcher, modbusClient);
+
+        service.ArmMode(7, "unknown-mode");
+
         await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 1, TimeSpan.FromSeconds(1));
-        Assert.Equal([4], modbusClient.WrittenValues);
+        Assert.Equal([7], modbusClient.WrittenValues);
     }
 
     [Fact]
@@ -151,8 +164,8 @@ public sealed class BoilerOperationModeRefreshServiceTests
         await clearTask;
         await Task.Delay(120);
 
-        Assert.Equal(1, modbusClient.WriteSingleRegisterCalls);
-        Assert.Equal([4], modbusClient.WrittenValues);
+        Assert.Equal(2, modbusClient.WriteSingleRegisterCalls);
+        Assert.Equal([3, 4], modbusClient.WrittenValues);
     }
 
     [Fact]
@@ -171,6 +184,36 @@ public sealed class BoilerOperationModeRefreshServiceTests
         await Task.Delay(180);
 
         Assert.Equal(0, modbusClient.WriteSingleRegisterCalls);
+    }
+
+    [Fact]
+    public async Task ClearDuringTwoStepRefresh_CompletesTargetWrite_WithoutLateRetry()
+    {
+        var dispatcher = new TestModbusDispatcher(ready: true);
+        var modbusClient = new TrackingModbusClient();
+        var serviceHolder = new RefreshServiceHolder();
+        modbusClient.AfterWriteCall = callNumber =>
+        {
+            if (callNumber == 1)
+            {
+                serviceHolder.Instance!.Clear("clear after opposite write");
+            }
+        };
+
+        using var service = CreateService(dispatcher, modbusClient);
+        serviceHolder.Instance = service;
+        service.ArmMode(4, "Coms/CH_Start_Max_Heatout");
+
+        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 2, TimeSpan.FromSeconds(1));
+        await Task.Delay(180);
+
+        Assert.Equal([3, 4], modbusClient.WrittenValues);
+        Assert.Equal(2, modbusClient.WriteSingleRegisterCalls);
+    }
+
+    private sealed class RefreshServiceHolder
+    {
+        public BoilerOperationModeRefreshService? Instance { get; set; }
     }
 
     [Fact]
@@ -324,8 +367,8 @@ public sealed class BoilerOperationModeRefreshServiceTests
             await Task.Delay(40);
             Assert.Equal(0, modbusClient.WriteSingleRegisterCalls);
 
-            await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 1, TimeSpan.FromSeconds(1));
-            Assert.Equal([3], modbusClient.WrittenValues);
+            await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 2, TimeSpan.FromSeconds(1));
+            Assert.Equal([4, 3], modbusClient.WrittenValues);
         }
         finally
         {
@@ -354,9 +397,57 @@ public sealed class BoilerOperationModeRefreshServiceTests
 
         service.ArmMode(4, "Coms/CH_Start_Max_Heatout");
 
-        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 2, TimeSpan.FromSeconds(2));
-        var retryDelta = modbusClient.WriteMomentsUtc[1] - modbusClient.WriteMomentsUtc[0];
+        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 4, TimeSpan.FromSeconds(2));
+        var retryDelta = modbusClient.WriteMomentsUtc[2] - modbusClient.WriteMomentsUtc[1];
 
+        Assert.True(
+            retryDelta >= SlowFailedRefreshRetryDelay - TimeSpan.FromMilliseconds(25),
+            $"Ожидался slow retry не раньше {SlowFailedRefreshRetryDelay.TotalMilliseconds} мс, фактически {retryDelta.TotalMilliseconds} мс.");
+    }
+
+    [Fact]
+    public async Task FailedRefresh_WhenIntermediateWriteFails_UsesDedicatedSlowRetry()
+    {
+        var dispatcher = new TestModbusDispatcher(ready: true);
+        var modbusClient = new TrackingModbusClient();
+        modbusClient.FailWriteCallNumbers.Add(1);
+        using var service = CreateService(
+            dispatcher,
+            modbusClient,
+            refreshInterval: TimeSpan.FromMilliseconds(50),
+            dispatcherPollInterval: DispatcherPollInterval,
+            failedRefreshRetryDelay: SlowFailedRefreshRetryDelay);
+
+        service.ArmMode(4, "Coms/CH_Start_Max_Heatout");
+
+        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 3, TimeSpan.FromSeconds(2));
+        Assert.Equal([3, 3, 4], modbusClient.WrittenValues);
+
+        var retryDelta = modbusClient.WriteMomentsUtc[1] - modbusClient.WriteMomentsUtc[0];
+        Assert.True(
+            retryDelta >= SlowFailedRefreshRetryDelay - TimeSpan.FromMilliseconds(25),
+            $"Ожидался slow retry не раньше {SlowFailedRefreshRetryDelay.TotalMilliseconds} мс, фактически {retryDelta.TotalMilliseconds} мс.");
+    }
+
+    [Fact]
+    public async Task FailedRefresh_WhenTargetWriteFails_UsesDedicatedSlowRetry()
+    {
+        var dispatcher = new TestModbusDispatcher(ready: true);
+        var modbusClient = new TrackingModbusClient();
+        modbusClient.FailWriteCallNumbers.Add(2);
+        using var service = CreateService(
+            dispatcher,
+            modbusClient,
+            refreshInterval: TimeSpan.FromMilliseconds(50),
+            dispatcherPollInterval: DispatcherPollInterval,
+            failedRefreshRetryDelay: SlowFailedRefreshRetryDelay);
+
+        service.ArmMode(4, "Coms/CH_Start_Max_Heatout");
+
+        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 4, TimeSpan.FromSeconds(2));
+        Assert.Equal([3, 4, 3, 4], modbusClient.WrittenValues);
+
+        var retryDelta = modbusClient.WriteMomentsUtc[2] - modbusClient.WriteMomentsUtc[1];
         Assert.True(
             retryDelta >= SlowFailedRefreshRetryDelay - TimeSpan.FromMilliseconds(25),
             $"Ожидался slow retry не раньше {SlowFailedRefreshRetryDelay.TotalMilliseconds} мс, фактически {retryDelta.TotalMilliseconds} мс.");
@@ -613,11 +704,14 @@ public sealed class BoilerOperationModeRefreshServiceTests
     {
         private readonly Lock _lock = new();
         private readonly Dictionary<ushort, ushort> _registers = [];
+        private const string DefaultWriteFailureMessage = "write failure";
 
         public int WriteSingleRegisterCalls { get; private set; }
         public List<ushort> WrittenValues { get; } = [];
         public List<DateTime> WriteMomentsUtc { get; } = [];
         public ushort? ForcedReadValue { get; init; }
+        public HashSet<int> FailWriteCallNumbers { get; } = [];
+        public Action<int>? AfterWriteCall { get; set; }
 
         public Task<ushort[]> ReadHoldingRegistersAsync(
             ushort address,
@@ -648,14 +742,23 @@ public sealed class BoilerOperationModeRefreshServiceTests
             CommandPriority priority = CommandPriority.High,
             CancellationToken ct = default)
         {
+            int writeCallNumber;
             lock (_lock)
             {
                 WriteSingleRegisterCalls++;
+                writeCallNumber = WriteSingleRegisterCalls;
                 WrittenValues.Add(value);
                 WriteMomentsUtc.Add(DateTime.UtcNow);
+
+                if (FailWriteCallNumbers.Contains(writeCallNumber))
+                {
+                    throw new InvalidOperationException(DefaultWriteFailureMessage);
+                }
+
                 _registers[address] = value;
             }
 
+            AfterWriteCall?.Invoke(writeCallNumber);
             return Task.CompletedTask;
         }
 

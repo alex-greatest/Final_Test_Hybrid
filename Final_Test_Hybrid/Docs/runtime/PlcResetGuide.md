@@ -207,32 +207,39 @@ RunSingleCycleAsync:
 - если PLC запросил `Req_Repeat` во время уже идущего теста, repeat-path теперь дополнительно
   gated сохранением причины и runtime snapshot:
   - сначала открывается существующий interrupt-save flow;
-  - локальная `Отмена` в `AdminAuthDialog` и `InterruptReasonDialog` скрыта;
   - после успешного interrupt-save дополнительно стартует новая repeat-операция:
     `UseMes=true` -> серверный `start operation`,
     `UseMes=false` -> локальная `TB_OPERATION` через existing DB init path;
   - порядок фиксирован: сначала `interrupt`, потом `start/create operation`;
   - `AskRepeat=true` пишется только после успешного `interrupt -> start/create`;
   - при ошибке сервера/БД окно остаётся открытым и repeat не стартует;
-  - выйти из этого окна можно только внешним soft reset, который закрывает dialog через текущий cancel/reset path;
+  - `Отмена` в repeat-save flow теперь делает аварийный `RepeatBypass`:
+    пишет `AskRepeat=true` и запускает repeat без сохранения в MES/локальной БД;
   - если после уже сохранённого `interrupt` серия уходит в non-repeat cleanup, второй dialog причины не показывается.
 - если repeat не выбран, открывается диалог `Причина прерывания`, а cleanup выполняется только после штатного завершения диалога.
 
 - На одну серию reset разрешён максимум один показ диалога.
 - Право на повторный показ расходуется только после пользовательского завершения окна:
   - `Save`;
-  - `Cancel`.
+  - `Cancel`;
+  - `RepeatBypass`.
 - Принудительное закрытие окна новым `Req_Reset` право на показ **не** расходует.
-- Следствие: если диалог был закрыт новым soft reset до `Save/Cancel`, следующий `AskEnd` в той же серии снова может показать окно причины.
+- Следствие: если диалог был закрыт новым soft reset до `Save/Cancel/RepeatBypass`, следующий `AskEnd` в той же серии снова может показать окно причины.
 - Серия reset завершается только при запуске нового pre-exec pipeline (`InitializeTestRunningAsync`).
 - Любой новый reset (Soft/Hard) немедленно закрывает активный диалог (`CancelActiveDialog`).
 - На время активного диалога принудительно замораживаются step timers (`PauseAllColumnsTiming`), включая Scan.
 - Попытка restart scan-таймера из `OnResetCompleted` в этом окне блокируется (`ScanTimingRestartBlockedByInterruptDialog`).
 - Для обычного full-interrupt flow в UX диалога есть явная кнопка `Отмена`; она завершает серию так же, как и успешное сохранение причины.
-- Для post-`AskEnd` repeat-save gate локальной `Отмена` нет:
-  - `AdminAuthDialog` открывается без cancel и без protected-cancel;
-  - `InterruptReasonDialog` открывается без cancel;
-  - выйти из окна можно только внешним soft reset.
+- Для post-`AskEnd` repeat-save gate локальная `Отмена` теперь включена как аварийный bypass repeat:
+  - `UseMes=true`:
+    - `AdminAuthDialog` остаётся первым окном и показывает `Отмена`;
+    - `Отмена` проходит через существующий protected-cancel и завершает flow как `RepeatBypass`, без отправки `interrupt` и без `start operation` в MES;
+    - если оператор дошёл до `InterruptReasonDialog`, `Отмена` в нём тоже завершает flow как `RepeatBypass`, без сохранения причины в MES;
+  - `UseMes=false`:
+    - новый admin-auth шаг не добавляется;
+    - `InterruptReasonDialog` показывает `Отмена`, и она завершает flow как `RepeatBypass`, без local interrupt-save и без создания новой `TB_OPERATION`;
+  - после `RepeatBypass` PC пишет `AskRepeat=true` и продолжает только через existing `StartRepeatAfterReset(...)`;
+  - `FinalizeResetCleanup(...)`, отдельный scanner-unlock path и отдельный timing path для bypass не используются.
 
 - Для `UseMes=true` soft-reset interrupt-flow использует два окна подряд:
   - `Авторизация администратора`;
@@ -270,7 +277,9 @@ RunSingleCycleAsync:
 - Повторный запуск interrupt-flow после `Cancel` всегда начинает цепочку заново с admin-auth окна.
 - Для interrupt-path окно `Авторизация администратора` имеет защищённую отмену:
   закрытие разрешено только после инженерного пароля, как и у окна причины прерывания.
-- Исключение: в post-`AskEnd` repeat-save gate protected cancel не показывается, потому что локальная отмена там полностью запрещена.
+- В post-`AskEnd` repeat-save gate это правило сохраняется для `UseMes=true`:
+  `Отмена` доступна, но остаётся protected-cancel и ведёт в `RepeatBypass`, а не в обычный non-repeat cancel.
+- Для `UseMes=false` новый admin-auth шаг не вводится; bypass доступен из `InterruptReasonDialog`.
 
 ## Changeover ownership в reset-сценариях
 
@@ -295,7 +304,8 @@ RunSingleCycleAsync:
   - `full cleanup` возвращает scan-ready состояние после завершения post-AskEnd ветки;
   - `repeat` не должен поднимать scan timing/session, потому что следующий цикл уходит в существующий repeat path с `_skipNextScan`;
   - новый save-before-repeat gate живёт внутри terminal окна и не должен менять semantics `TestTime`, `ChangeoverTime`, `StepTimingService` или completion-handshake;
-  - этот gate делает два последовательных шага: сначала `interrupt` для текущей `InWork` операции, потом создание новой repeat-операции, и только затем разрешает `AskRepeat=true`;
+  - штатный submit делает два последовательных шага: сначала `interrupt` для текущей `InWork` операции, потом создание новой repeat-операции, и только затем разрешает `AskRepeat=true`;
+  - аварийный `RepeatBypass` не делает ни `interrupt`, ни `start/create operation`, а сразу переводит окно в тот же `repeat` outcome через existing `StartRepeatAfterReset(...)`;
   - в `UseMes=true` второй шаг идёт через серверный `start operation`;
   - в `UseMes=false` второй шаг идёт через existing local DB init path без server request.
 - Отдельное правило для аварийного abort:

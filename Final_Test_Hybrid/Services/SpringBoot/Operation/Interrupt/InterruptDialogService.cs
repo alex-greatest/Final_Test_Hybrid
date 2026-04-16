@@ -15,29 +15,33 @@ public class InterruptDialogService(DialogService dialogService, Action? closeOv
 
     public virtual Task<AdminAuthResult?> ShowAdminAuthAsync(
         bool showCancelButton = true,
-        bool requireProtectedCancel = true)
+        bool requireProtectedCancel = true,
+        bool returnRepeatBypassOnCancel = false)
     {
         var parameters = new Dictionary<string, object>
         {
             ["ShowCancelButton"] = showCancelButton,
-            ["RequireProtectedCancel"] = requireProtectedCancel
+            ["RequireProtectedCancel"] = requireProtectedCancel,
+            ["ReturnRepeatBypassOnCancel"] = returnRepeatBypassOnCancel
         };
         return ShowDialogAsync<AdminAuthDialog, AdminAuthResult>(
             "Авторизация администратора", "450px", parameters);
     }
 
-    public virtual Task<SaveResult?> ShowInterruptReasonAsync(
+    public virtual Task<InterruptReasonDialogResult?> ShowInterruptReasonAsync(
         Func<string, CancellationToken, Task<SaveResult>> onSubmit,
         CancellationToken ct,
-        bool showCancelButton = true)
+        bool showCancelButton = true,
+        bool returnRepeatBypassOnCancel = false)
     {
         var parameters = new Dictionary<string, object>
         {
             ["OnSubmit"] = onSubmit,
             ["CancellationToken"] = ct,
-            ["ShowCancelButton"] = showCancelButton
+            ["ShowCancelButton"] = showCancelButton,
+            ["ReturnRepeatBypassOnCancel"] = returnRepeatBypassOnCancel
         };
-        return ShowDialogAsync<InterruptReasonDialog, SaveResult>(
+        return ShowDialogAsync<InterruptReasonDialog, InterruptReasonDialogResult>(
             "Причина прерывания", "85vw", parameters);
     }
 

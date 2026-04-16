@@ -75,14 +75,14 @@ public class ChStartMinHeatoutStep(
             innerCt => accessLevelManager.SetStandModeAsync(context.PacedDiagWriter, innerCt),
             logger,
             ct);
-        if (!setResult.Success)
+        if (setResult.Success)
         {
-            var message = ComsStepFailureHelper.BuildWriteMessage(setResult, "установке режима Стенд", $"Ошибка установки режима Стенд. {setResult.Error}");
-            logger.LogError(message);
-            return TestStepResult.Fail(message);
+            return await StartMinHeatoutAsync(context, ct);
         }
 
-        return await StartMinHeatoutAsync(context, ct);
+        var message = ComsStepFailureHelper.BuildWriteMessage(setResult, "установке режима Стенд", $"Ошибка установки режима Стенд. {setResult.Error}");
+        logger.LogError(message);
+        return await FailWithFaultAsync(context, message, ct);
     }
 
     /// <summary>
@@ -285,6 +285,7 @@ public class ChStartMinHeatoutStep(
     /// </summary>
     private async Task WriteFaultAsync(TestStepContext context, CancellationToken ct)
     {
+        logger.LogInformation("запись fault в плк");
         var faultResult = await context.OpcUa.WriteAsync(FaultTag, true, ct);
         if (faultResult.Error != null)
         {

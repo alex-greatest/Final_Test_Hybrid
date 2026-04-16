@@ -16,6 +16,7 @@ public class InterruptFlowExecutor
     /// <param name="requireAdminAuth">Нужно ли показывать авторизацию администратора перед вводом причины.</param>
     /// <param name="operatorUsername">Имя оператора для flow без авторизации.</param>
     /// <param name="showCancelButton">Нужно ли показывать локальную кнопку отмены в auth/reason dialog.</param>
+    /// <param name="allowRepeatBypassOnCancel">Разрешён ли аварийный repeat-bypass через cancel outcome.</param>
     /// <param name="ct">Токен отмены.</param>
     public async Task<InterruptFlowResult> ExecuteAsync(
         InterruptDialogService dialogService,
@@ -23,6 +24,7 @@ public class InterruptFlowExecutor
         bool requireAdminAuth,
         string operatorUsername,
         bool showCancelButton,
+        bool allowRepeatBypassOnCancel,
         CancellationToken ct)
     {
         if (IsCancelled(ct))
@@ -31,8 +33,19 @@ public class InterruptFlowExecutor
         }
         using var registration = ct.Register(dialogService.CloseDialog);
         return requireAdminAuth
-            ? await ExecuteFullFlowAsync(dialogService, saveCallback, showCancelButton, ct)
-            : await ExecuteSimpleFlowAsync(dialogService, saveCallback, operatorUsername, showCancelButton, ct);
+            ? await ExecuteFullFlowAsync(
+                dialogService,
+                saveCallback,
+                showCancelButton,
+                allowRepeatBypassOnCancel,
+                ct)
+            : await ExecuteSimpleFlowAsync(
+                dialogService,
+                saveCallback,
+                operatorUsername,
+                showCancelButton,
+                allowRepeatBypassOnCancel,
+                ct);
     }
 
     /// <summary>
@@ -42,10 +55,21 @@ public class InterruptFlowExecutor
         InterruptDialogService dialogService,
         Func<string, string, CancellationToken, Task<SaveResult>> saveCallback,
         bool showCancelButton,
+        bool allowRepeatBypassOnCancel,
         CancellationToken ct)
     {
-        var authResult = await ExecuteAuthStepAsync(dialogService, showCancelButton, ct);
-        return await ContinueWithReasonStepAsync(dialogService, saveCallback, authResult, showCancelButton, ct);
+        var authResult = await ExecuteAuthStepAsync(
+            dialogService,
+            showCancelButton,
+            allowRepeatBypassOnCancel,
+            ct);
+        return await ContinueWithReasonStepAsync(
+            dialogService,
+            saveCallback,
+            authResult,
+            showCancelButton,
+            allowRepeatBypassOnCancel,
+            ct);
     }
 
     /// <summary>
@@ -56,9 +80,16 @@ public class InterruptFlowExecutor
         Func<string, string, CancellationToken, Task<SaveResult>> saveCallback,
         string operatorUsername,
         bool showCancelButton,
+        bool allowRepeatBypassOnCancel,
         CancellationToken ct)
     {
-        return ExecuteReasonStepAsync(dialogService, saveCallback, operatorUsername, showCancelButton, ct);
+        return ExecuteReasonStepAsync(
+            dialogService,
+            saveCallback,
+            operatorUsername,
+            showCancelButton,
+            allowRepeatBypassOnCancel,
+            ct);
     }
 
     private Task<InterruptFlowResult> ContinueWithReasonStepAsync(
@@ -66,16 +97,29 @@ public class InterruptFlowExecutor
         Func<string, string, CancellationToken, Task<SaveResult>> saveCallback,
         AdminAuthResult? authResult,
         bool showCancelButton,
+        bool allowRepeatBypassOnCancel,
         CancellationToken ct)
     {
+        if (authResult?.IsRepeatBypass == true)
+        {
+            return Task.FromResult(InterruptFlowResult.RepeatBypass());
+        }
+
         return authResult == null
             ? Task.FromResult(InterruptFlowResult.Cancelled())
-            : ExecuteReasonStepAsync(dialogService, saveCallback, authResult.Username, showCancelButton, ct);
+            : ExecuteReasonStepAsync(
+                dialogService,
+                saveCallback,
+                authResult.Username,
+                showCancelButton,
+                allowRepeatBypassOnCancel,
+                ct);
     }
 
     private async Task<AdminAuthResult?> ExecuteAuthStepAsync(
         InterruptDialogService dialogService,
         bool showCancelButton,
+        bool allowRepeatBypassOnCancel,
         CancellationToken ct)
     {
         if (IsCancelled(ct))
@@ -84,7 +128,8 @@ public class InterruptFlowExecutor
         }
         var result = await dialogService.ShowAdminAuthAsync(
             showCancelButton,
-            requireProtectedCancel: showCancelButton);
+            requireProtectedCancel: showCancelButton,
+            returnRepeatBypassOnCancel: allowRepeatBypassOnCancel);
         return IsCancelled(ct) ? null : result;
     }
 
@@ -93,6 +138,7 @@ public class InterruptFlowExecutor
         Func<string, string, CancellationToken, Task<SaveResult>> saveCallback,
         string adminUsername,
         bool showCancelButton,
+        bool allowRepeatBypassOnCancel,
         CancellationToken ct)
     {
         if (IsCancelled(ct))
@@ -104,25 +150,28 @@ public class InterruptFlowExecutor
             saveCallback,
             adminUsername,
             showCancelButton,
+            allowRepeatBypassOnCancel,
             ct);
         return BuildReasonResult(submitResult, adminUsername, ct);
     }
 
-    private static async Task<SaveResult?> ShowReasonDialogAsync(
+    private static async Task<InterruptReasonDialogResult?> ShowReasonDialogAsync(
         InterruptDialogService dialogService,
         Func<string, string, CancellationToken, Task<SaveResult>> saveCallback,
         string adminUsername,
         bool showCancelButton,
+        bool allowRepeatBypassOnCancel,
         CancellationToken ct)
     {
         return await dialogService.ShowInterruptReasonAsync(
             (reason, token) => saveCallback(adminUsername, reason, token),
             ct,
-            showCancelButton);
+            showCancelButton,
+            allowRepeatBypassOnCancel);
     }
 
     private static InterruptFlowResult BuildReasonResult(
-        SaveResult? submitResult,
+        InterruptReasonDialogResult? submitResult,
         string adminUsername,
         CancellationToken ct)
     {
@@ -130,7 +179,13 @@ public class InterruptFlowExecutor
         {
             return InterruptFlowResult.Cancelled();
         }
-        return submitResult is { IsSuccess: true }
+
+        if (submitResult?.IsRepeatBypass == true)
+        {
+            return InterruptFlowResult.RepeatBypass();
+        }
+
+        return submitResult?.SaveResult is { IsSuccess: true }
             ? InterruptFlowResult.Success(adminUsername)
             : InterruptFlowResult.Cancelled();
     }

@@ -76,14 +76,14 @@ public class ChStartMaxHeatoutStep(
             innerCt => accessLevelManager.SetStandModeAsync(context.PacedDiagWriter, innerCt),
             logger,
             ct);
-        if (!setResult.Success)
+        if (setResult.Success)
         {
-            var message = ComsStepFailureHelper.BuildWriteMessage(setResult, "установке режима Стенд", $"Ошибка установки режима Стенд. {setResult.Error}");
-            logger.LogError(message);
-            return TestStepResult.Fail(message);
+            return await StartMaxHeatoutAsync(context, ct);
         }
 
-        return await StartMaxHeatoutAsync(context, ct);
+        var message = ComsStepFailureHelper.BuildWriteMessage(setResult, "установке режима Стенд", $"Ошибка установки режима Стенд. {setResult.Error}");
+        logger.LogError(message);
+        return await FailWithFaultAsync(context, message, ct);
     }
 
     /// <summary>

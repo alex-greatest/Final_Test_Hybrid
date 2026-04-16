@@ -384,6 +384,14 @@ public static partial class ErrorDefinitions
         RelatedStepId: "ch-check-flow-temperature-rise",
         RelatedStepName: "CH/Check_Flow_Temperature_Rise");
 
+    public static readonly ErrorDefinition AlLowTempTempRise = new(
+        "П-307-11", "Неисправность. Заданная температура не достигнута",
+        ActivatesResetButton: true,
+        PlcTag: "ns=3;s=\"DB_CH\".\"DB_CH_Check_Flow_Temperature_Rise\".\"Al_LowTemp\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "ch-check-flow-temperature-rise",
+        RelatedStepName: "CH/Check_Flow_Temperature_Rise");
+
     #endregion
 
     #region CH/Close_Circuit_Valve

@@ -69,11 +69,16 @@ ExecuteCycleAsync:
 - Для post-`AskEnd` soft-reset repeat есть отдельный pre-repeat gate:
   - `Req_Repeat=true` во время уже идущего теста не запускает repeat немедленно;
   - сначала обязателен existing interrupt-save flow (причина + runtime snapshot);
-  - после interrupt-save ещё обязателен новый старт операции для новой попытки:
+  - штатный submit после interrupt-save ещё требует новый старт операции для новой попытки:
     `UseMes=true` -> server `start operation`,
     `UseMes=false` -> local DB operation create через existing init path;
   - порядок фиксирован: сначала `interrupt`, потом `start/create operation`;
   - только после успешного `interrupt -> start/create` пишется `AskRepeat=true`, и цикл доходит до `CycleExitReason.RepeatRequested`.
+  - отдельный аварийный путь `RepeatBypass` доступен через `Отмена` внутри repeat-save flow:
+    `UseMes=true` -> из `AdminAuthDialog` и `InterruptReasonDialog` после existing protected-cancel,
+    `UseMes=false` -> из `InterruptReasonDialog` без нового admin-auth шага;
+  - `RepeatBypass` не трогает MES и локальную БД, сразу пишет `AskRepeat=true` и продолжает только через existing `StartRepeatAfterReset(...)`;
+  - `RepeatBypass` не должен вызывать `FinalizeResetCleanup(...)`, отдельный scanner-unlock path или отдельный timing path.
 
 ### Что читается заново
 
@@ -82,6 +87,10 @@ ExecuteCycleAsync:
 
 - Из `ScanServiceContext` (кэш): `App_Version`, `Shift_No`, `Tester_No`.
 - Из OPC (reread каждый старт): `Pres_atmosph.`, `Pres_in_gas`.
+
+Источник кэшируемых scan-полей:
+- `App_Version` фиксируется как жёсткая application-константа `v1.0`.
+- `Shift_No` и `Tester_No` приходят из scan/runtime-контекста.
 
 `Plant_ID` остаётся в сохранённом scan-контексте для внутреннего использования,
 но больше не пишется в `TestResultsService` на старте теста и на repeat.

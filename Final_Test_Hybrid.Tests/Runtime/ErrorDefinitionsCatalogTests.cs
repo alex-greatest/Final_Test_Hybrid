@@ -73,6 +73,10 @@ public sealed class ErrorDefinitionsCatalogTests
         "П-305-10",
         "Неисправность. Заданная температура воды не достигнута")]
     [InlineData(
+        "ns=3;s=\"DB_CH\".\"DB_CH_Check_Flow_Temperature_Rise\".\"Al_LowTemp\"",
+        "П-307-11",
+        "Неисправность. Заданная температура не достигнута")]
+    [InlineData(
         "ns=3;s=\"DB_DHW\".\"DB_DHW_Get_Flow_NTC_Cold\".\"Al_WaterFlowMin\"",
         "П-206-01",
         "Неисправность. Слишком малый расход воды")]
@@ -81,9 +85,25 @@ public sealed class ErrorDefinitionsCatalogTests
         "П-206-02",
         "Неисправность. Слишком большой расход воды")]
     [InlineData(
+        "ns=3;s=\"DB_DHW\".\"DB_DHW_Check_Flow_Temperature_Rise\".\"Al_LowTemp\"",
+        "П-205-03",
+        "Неисправность. Заданная температура не достигнута")]
+    [InlineData(
         "ns=3;s=\"DB_DHW\".\"DB_DHW_Compare_Flow_NTC_Temp_Hot\".\"Al_LowTemp\"",
         "П-208-02",
         "Неисправность. Заданная температура воды не достигнута")]
+    [InlineData(
+        "ns=3;s=\"DB_DHW\".\"DB_DHW_Compare_Flow_NTC_Temp_Hot\".\"Al_WaterFlowMin\"",
+        "П-208-03",
+        "Неисправность. Слишком малый расход воды")]
+    [InlineData(
+        "ns=3;s=\"DB_DHW\".\"DB_DHW_Compare_Flow_NTC_Temp_Hot\".\"Al_WaterFlowMax\"",
+        "П-208-04",
+        "Неисправность. Слишком большой расход воды")]
+    [InlineData(
+        "ns=3;s=\"DB_Coms\".\"DB_CH_Start_Max_Heatout_Without\".\"Al_NoWaterFlow\"",
+        "П-109-02",
+        "Неисправность. Нет протока воды")]
     [InlineData(
         "ns=3;s=\"DB_DHW\".\"DB_Set_Tank_Mode\".\"Al_PressureHight\"",
         "П-213-02",
@@ -95,6 +115,15 @@ public sealed class ErrorDefinitionsCatalogTests
         Assert.NotNull(error);
         Assert.Equal(expectedCode, error.Code);
         Assert.Equal(expectedDescription, error.Description);
+    }
+
+    [Fact]
+    public void ChStartMaxHeatoutWithoutPlcError_BindsToSeparateWithoutStep()
+    {
+        var error = ErrorDefinitions.AlNoWaterFlowChStartMaxHeatoutWithout;
+
+        Assert.Equal("coms-ch-start-max-heatout-without", error.RelatedStepId);
+        Assert.Equal("Coms/CH_Start_Max_Heatout_Without", error.RelatedStepName);
     }
 
     private static IEnumerable<(string Name, ErrorDefinition Definition)> GetDeclaredDefinitions()

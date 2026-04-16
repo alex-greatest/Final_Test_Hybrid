@@ -13,7 +13,7 @@ public sealed class BoilerBlockABehavior : IInterruptBehavior
 
     public Task ExecuteAsync(IInterruptContext context, CancellationToken ct)
     {
-        context.Notifications.ShowWarning(Message, "Остановите тест");
+        context.Notifications.ShowWarning(Message, "Нажмите сброс");
         context.Pause();
         return Task.CompletedTask;
     }

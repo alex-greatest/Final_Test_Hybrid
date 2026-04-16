@@ -359,6 +359,7 @@
         bool requireAdminAuth,
         string operatorUsername,
         bool showCancelButton,
+        bool allowRepeatBypassOnCancel,
         CancellationToken ct)
     {
         if (_disposed)
@@ -394,6 +395,7 @@
                     requireAdminAuth,
                     operatorUsername,
                     showCancelButton,
+                    allowRepeatBypassOnCancel,
                     ct);
                 tcs.TrySetResult(result);
             });

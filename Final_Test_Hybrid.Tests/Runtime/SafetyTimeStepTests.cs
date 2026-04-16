@@ -60,7 +60,7 @@ public sealed class SafetyTimeStepTests
         Assert.False(result.CanSkip);
         Assert.Contains("Ошибка чтения тока катушек", result.Message);
         Assert.Contains("Ошибка связи при чтении тока катушки EV1", result.Message);
-        Assert.Empty(results.GetResults());
+        AssertCommunicationFailureResult(results);
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public sealed class SafetyTimeStepTests
         Assert.False(result.CanSkip);
         Assert.Contains("Ошибка чтения тока катушек", result.Message);
         Assert.Contains("Ошибка связи при чтении тока катушки EV1", result.Message);
-        Assert.Empty(results.GetResults());
+        AssertCommunicationFailureResult(results);
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public sealed class SafetyTimeStepTests
         Assert.False(result.Success);
         Assert.False(result.CanSkip);
         Assert.Contains("Ошибка связи при чтении тока катушки EV1", result.Message);
-        Assert.Empty(results.GetResults());
+        AssertCommunicationFailureResult(results);
     }
 
     [Fact]
@@ -119,7 +119,11 @@ public sealed class SafetyTimeStepTests
         Assert.False(result.Success);
         Assert.False(result.CanSkip);
         Assert.Contains("Ошибка связи при сбросе блокировки", result.Message);
-        Assert.Single(results.GetResults());
+        var saved = Assert.Single(results.GetResults());
+        Assert.Equal(ResultParameterName, saved.ParameterName);
+        Assert.Equal("Coms/Safety_Time", saved.Test);
+        Assert.Equal("0.00", saved.Value.Replace(',', '.'));
+        Assert.Equal(1, saved.Status);
     }
 
     private static SafetyTimeStep CreateStep(TestResultsServiceStub results)
@@ -158,6 +162,19 @@ public sealed class SafetyTimeStepTests
             new RecipeResponseDto { Address = SafetyTimeMinRecipe, Value = "0.00" },
             new RecipeResponseDto { Address = SafetyTimeMaxRecipe, Value = "10.00" }
         ]);
+    }
+
+    private static void AssertCommunicationFailureResult(TestResultsServiceStub results)
+    {
+        var saved = Assert.Single(results.GetResults());
+        Assert.Equal(ResultParameterName, saved.ParameterName);
+        Assert.Equal("Coms/Safety_Time", saved.Test);
+        Assert.Equal("0.00", saved.Value.Replace(',', '.'));
+        Assert.Equal("0.00", saved.Min.Replace(',', '.'));
+        Assert.Equal("10.00", saved.Max.Replace(',', '.'));
+        Assert.Equal(2, saved.Status);
+        Assert.True(saved.IsRanged);
+        Assert.Equal("сек", saved.Unit);
     }
 
     private sealed class ScriptedModbusClient : IModbusClient

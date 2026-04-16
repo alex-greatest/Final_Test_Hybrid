@@ -18,6 +18,11 @@
 
 - Добавлен singleton `BoilerOperationModeRefreshService`.
 - Сервис сохраняет raw `ushort` последнего подтверждённого шагом режима `1036` и повторно пишет его через системные `RegisterWriter` / `RegisterReader` по интервалу `Diagnostic:OperationModeRefreshInterval` (по умолчанию `15 минут`).
+- Для retained refresh добавлен локальный runtime-only sequence:
+  - target `4` -> `write(3) -> write(4) -> read(4)`;
+  - target `3` -> `write(4) -> write(3) -> read(3)`;
+  - остальные raw target остаются на fallback `write(target) -> read(target)`.
+- Промежуточный opposite-mode не получает отдельный read-back; первичная step-level запись `1036` в `Coms/CH_Start_*` не меняется.
 - Refresh выполняется только при `dispatcher ready`:
   - `IsStarted = true`;
   - `IsConnected = true`;
@@ -54,7 +59,9 @@
 
 - Добавлены unit/regression tests на:
   - refresh после настроенного дедлайна из `DiagnosticSettings.OperationModeRefreshInterval`;
+  - two-step refresh pattern `4 -> 3 -> 4` и `3 -> 4 -> 3`;
   - отложенный refresh до восстановления dispatcher ready-state;
+  - fallback single-write для неизвестного raw target `1036`;
   - отсутствие `StartAsync()` из runtime-сервиса;
   - clear по `Clear(...)`, `BoilerState.Clear()`, `OnForceStop`, `OnReset`;
   - awaited operator-stop cleanup до `SequenceCompleted`;
@@ -63,6 +70,7 @@
   - sync clear под уже удерживаемым shared lease без deadlock;
   - stale snapshot под удержанным mode-change lease;
   - отдельный slow retry/backoff для failed refresh;
+  - failed refresh на промежуточной записи и на целевой записи two-step sequence;
   - concurrent signal и late callback после dispose;
   - arm в `CH_Start_Max_Heatout`, `CH_Start_Min_Heatout`, `CH_Start_ST_Heatout`;
   - entry-clear прежнего retained-mode в `CH_Start_Max_Heatout`, `CH_Start_Min_Heatout`, `CH_Start_ST_Heatout`;
@@ -74,3 +82,4 @@
 
 - Новый retained-state относится только к runtime-шагам, которые напрямую пишут `1036`; `BoilerPowerOffStep` является только memory-clear source.
 - Legacy-файлы `*Old*.cs` не менялись.
+- No new incident: change продолжает уже зафиксированный failure mode истечения удерживаемого режима `1036`.

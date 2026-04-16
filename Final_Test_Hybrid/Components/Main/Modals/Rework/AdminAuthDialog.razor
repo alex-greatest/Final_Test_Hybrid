@@ -68,6 +68,9 @@
     [Parameter]
     public bool RequireProtectedCancel { get; set; } = true;
 
+    [Parameter]
+    public bool ReturnRepeatBypassOnCancel { get; set; }
+
     private bool UseQrAuth => AppSettingsService.UseAdminQrAuth;
     private readonly string _dialogKey = $"admin-auth-dialog:{Guid.NewGuid():N}";
     private bool _disposed;
@@ -136,7 +139,7 @@
             return;
         }
 
-        CloseDialog();
+        CloseDialog(ReturnRepeatBypassOnCancel ? AdminAuthResult.RepeatBypass() : null);
     }
 
     private bool ValidateFields()
@@ -197,7 +200,12 @@
     private void CloseWithSuccess(OperatorAuthResult result)
     {
         NotificationService.Notify(NotificationSeverity.Success, "Авторизация успешна");
-        CloseDialog(new AdminAuthResult { Success = true, Username = result.Username ?? _login });
+        CloseDialog(new AdminAuthResult
+        {
+            Success = true,
+            Username = result.Username ?? _login,
+            ErrorMessage = null
+        });
     }
 
     private void ShowAuthError(OperatorAuthResult result)

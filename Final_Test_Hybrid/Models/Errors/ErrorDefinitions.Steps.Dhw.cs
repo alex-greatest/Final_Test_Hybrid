@@ -120,6 +120,14 @@ public static partial class ErrorDefinitions
         RelatedStepId: "dhw-check-flow-temperature-rise",
         RelatedStepName: "DHW/Check_Flow_Temperature_Rise");
 
+    public static readonly ErrorDefinition AlLowTempDhwCheckFlowTempRise = new(
+        "П-205-03", "Неисправность. Заданная температура не достигнута",
+        ActivatesResetButton: true,
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Check_Flow_Temperature_Rise\".\"Al_LowTemp\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-check-flow-temperature-rise",
+        RelatedStepName: "DHW/Check_Flow_Temperature_Rise");
+
     #endregion
 
     #region DHW/Get_Flow_NTC_Cold
@@ -208,6 +216,22 @@ public static partial class ErrorDefinitions
         "П-208-02", "Неисправность. Заданная температура воды не достигнута",
         ActivatesResetButton: true,
         PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Compare_Flow_NTC_Temp_Hot\".\"Al_LowTemp\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-compare-flow-ntc-temperature-hot",
+        RelatedStepName: "DHW/Compare_Flow_NTC_Temperature_Hot");
+
+    public static readonly ErrorDefinition AlWaterFlowMinDhwCompareFlowNtcTempHot = new(
+        "П-208-03", "Неисправность. Слишком малый расход воды",
+        ActivatesResetButton: true,
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Compare_Flow_NTC_Temp_Hot\".\"Al_WaterFlowMin\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "dhw-compare-flow-ntc-temperature-hot",
+        RelatedStepName: "DHW/Compare_Flow_NTC_Temperature_Hot");
+
+    public static readonly ErrorDefinition AlWaterFlowMaxDhwCompareFlowNtcTempHot = new(
+        "П-208-04", "Неисправность. Слишком большой расход воды",
+        ActivatesResetButton: true,
+        PlcTag: "ns=3;s=\"DB_DHW\".\"DB_DHW_Compare_Flow_NTC_Temp_Hot\".\"Al_WaterFlowMax\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "dhw-compare-flow-ntc-temperature-hot",
         RelatedStepName: "DHW/Compare_Flow_NTC_Temperature_Hot");

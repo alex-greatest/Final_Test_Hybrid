@@ -36,7 +36,8 @@ public class SlowFillCircuitStep(
     public string? GetLimits(LimitsContext context)
     {
         var pressTestValue = context.RecipeProvider.GetValue<float>(PressTestValueRecipe);
-        return pressTestValue != null ? $">= {pressTestValue:F1}" : null;
+        return pressTestValue != null ? $"[{pressTestValue:F1} .. {FlowPressMaxLimit:F1}]" : null;
+        //return pressTestValue != null ? $">= {pressTestValue:F1}" : null;
     }
 
     /// <summary>

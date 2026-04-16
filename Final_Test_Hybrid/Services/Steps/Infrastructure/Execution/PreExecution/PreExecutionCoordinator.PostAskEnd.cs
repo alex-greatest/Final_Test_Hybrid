@@ -61,11 +61,21 @@ public partial class PreExecutionCoordinator
             serialNumber,
             expectedSequence,
             ct,
-            showCancelButton: false,
+            showCancelButton: true,
+            allowRepeatBypassOnCancel: true,
             saveCallback: saveCallback);
         ct.ThrowIfCancellationRequested();
+        MarkInterruptDialogCompletedInCurrentSeries(result);
         if (result.IsSuccess)
         {
+            return;
+        }
+
+        if (result.IsRepeatBypass)
+        {
+            infra.Logger.LogWarning(
+                "Repeat-save bypass: повтор будет запущен без сохранения в backend для {SerialNumber}",
+                serialNumber);
             return;
         }
 
@@ -413,9 +423,10 @@ public partial class PreExecutionCoordinator
     private void MarkInterruptDialogCompletedInCurrentSeries(InterruptFlowResult result)
     {
         // Право на повторный показ тратим только если оператор
-        // реально завершил окно: сохранил причину или нажал Cancel.
+        // реально завершил окно: сохранил причину, нажал Cancel
+        // или подтвердил аварийный RepeatBypass.
         // Принудительное закрытие новым reset сюда не попадает.
-        if (!result.IsSuccess && !result.IsCancelled)
+        if (!result.IsSuccess && !result.IsCancelled && !result.IsRepeatBypass)
         {
             return;
         }
@@ -424,8 +435,9 @@ public partial class PreExecutionCoordinator
         Volatile.Write(ref _interruptDialogAllowedSequence, 0);
 
         infra.Logger.LogInformation(
-            "InterruptReasonDialogSeriesCompleted: success={IsSuccess}, cancelled={IsCancelled}",
+            "InterruptReasonDialogSeriesCompleted: success={IsSuccess}, cancelled={IsCancelled}, repeatBypass={IsRepeatBypass}",
             result.IsSuccess,
-            result.IsCancelled);
+            result.IsCancelled,
+            result.IsRepeatBypass);
     }
 }

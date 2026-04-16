@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using Final_Test_Hybrid.Services.Common;
 using Final_Test_Hybrid.Services.Diagnostic.Connection;
+using Final_Test_Hybrid.Services.Diagnostic.Access;
 using Final_Test_Hybrid.Services.Diagnostic.Models;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol;
 using Final_Test_Hybrid.Services.Diagnostic.Protocol.CommandQueue;
@@ -39,8 +40,8 @@ public sealed class BoilerOperationModeStepRetentionTests
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
         Assert.True(result.Success);
-        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 2, TimeSpan.FromSeconds(1));
-        Assert.Equal([4, 4], modbusClient.WrittenValues);
+        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 3, TimeSpan.FromSeconds(1));
+        Assert.Equal([4, 3, 4], modbusClient.WrittenValues);
     }
 
     [Fact]
@@ -112,8 +113,8 @@ public sealed class BoilerOperationModeStepRetentionTests
         var result = await InvokeReady1Async(step, context);
 
         Assert.False(result.Success);
-        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 2, TimeSpan.FromSeconds(1));
-        Assert.Equal([4, 4], modbusClient.WrittenValues);
+        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 3, TimeSpan.FromSeconds(1));
+        Assert.Equal([4, 3, 4], modbusClient.WrittenValues);
     }
 
     [Fact]
@@ -187,8 +188,8 @@ public sealed class BoilerOperationModeStepRetentionTests
         var result = await InvokeReady1Async(step, context);
 
         Assert.False(result.Success);
-        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 2, TimeSpan.FromSeconds(1));
-        Assert.Equal([3, 3], modbusClient.WrittenValues);
+        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 3, TimeSpan.FromSeconds(1));
+        Assert.Equal([3, 4, 3], modbusClient.WrittenValues);
     }
 
     [Fact]
@@ -244,6 +245,60 @@ public sealed class BoilerOperationModeStepRetentionTests
     }
 
     [Fact]
+    public async Task ChStartMaxHeatoutStep_RetryStandModeFailure_UsesFaultPath()
+    {
+        var dispatcher = new TestModbusDispatcher();
+        var modbusClient = new StepModbusClient
+        {
+            FailWriteMultipleRemaining = 1,
+            WriteMultipleFailureMessage = "forced stand mode write failure"
+        };
+        using var service = CreateRefreshService(dispatcher, modbusClient);
+        var context = CreateContext(
+            modbusClient,
+            "ns=3;s=\"DB_VI\".\"Coms\".\"CH_Start_Max_Heatout\".\"Error\"");
+        var accessLevelManager = CreateAccessLevelManager();
+        var step = new ChStartMaxHeatoutStep(
+            accessLevelManager,
+            dispatcher,
+            service,
+            Options.Create(CreateDiagnosticSettings()),
+            TestInfrastructure.CreateDualLogger<ChStartMaxHeatoutStep>());
+
+        var result = await InvokeRetryAsync(step, context);
+
+        Assert.False(result.Success);
+        Assert.True(context.Variables.ContainsKey("coms-ch-start-max-heatout-had-error"));
+    }
+
+    [Fact]
+    public async Task ChStartMinHeatoutStep_RetryStandModeFailure_UsesFaultPath()
+    {
+        var dispatcher = new TestModbusDispatcher();
+        var modbusClient = new StepModbusClient
+        {
+            FailWriteMultipleRemaining = 1,
+            WriteMultipleFailureMessage = "forced stand mode write failure"
+        };
+        using var service = CreateRefreshService(dispatcher, modbusClient);
+        var context = CreateContext(
+            modbusClient,
+            "ns=3;s=\"DB_VI\".\"Coms\".\"CH_Start_Min_Heatout\".\"Error\"");
+        var accessLevelManager = CreateAccessLevelManager();
+        var step = new ChStartMinHeatoutStep(
+            accessLevelManager,
+            dispatcher,
+            service,
+            Options.Create(CreateDiagnosticSettings()),
+            TestInfrastructure.CreateDualLogger<ChStartMinHeatoutStep>());
+
+        var result = await InvokeRetryAsync(step, context);
+
+        Assert.False(result.Success);
+        Assert.True(context.Variables.ContainsKey("coms-ch-start-min-heatout-had-error"));
+    }
+
+    [Fact]
     public async Task ChResetStep_ClearsRetentionOnlyAfterConfirmedZero()
     {
         var dispatcher = new TestModbusDispatcher();
@@ -287,8 +342,8 @@ public sealed class BoilerOperationModeStepRetentionTests
         var result = await step.ExecuteAsync(context, CancellationToken.None);
 
         Assert.False(result.Success);
-        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 2, TimeSpan.FromSeconds(1));
-        Assert.Equal([0, 4], modbusClient.WrittenValues);
+        await WaitUntilAsync(() => modbusClient.WriteSingleRegisterCalls >= 3, TimeSpan.FromSeconds(1));
+        Assert.Equal([0, 3, 4], modbusClient.WrittenValues);
     }
 
     [Fact]
@@ -359,12 +414,7 @@ public sealed class BoilerOperationModeStepRetentionTests
             retryDelay ?? RetryDelay);
     }
 
-    private static TestStepContext CreateContext(StepModbusClient modbusClient)
-    {
-        return CreateContext(modbusClient, errorTag: null);
-    }
-
-    private static TestStepContext CreateContext(StepModbusClient modbusClient, string? errorTag)
+    private static TestStepContext CreateContext(StepModbusClient modbusClient, string? errorTag = null)
     {
         var pauseToken = new PauseTokenSource();
         var writer = new RegisterWriter(modbusClient, TestInfrastructure.CreateLogger<RegisterWriter>(), new TestStepLoggerStub());
@@ -435,6 +485,23 @@ public sealed class BoilerOperationModeStepRetentionTests
         var task = Assert.IsAssignableFrom<Task<TestStepResult>>(
             TestInfrastructure.InvokePrivate(step!, "HandleReady1Async", context, CancellationToken.None));
         return await task;
+    }
+
+    private static async Task<TestStepResult> InvokeRetryAsync<TStep>(TStep step, TestStepContext context)
+    {
+        var task = Assert.IsAssignableFrom<Task<TestStepResult>>(
+            TestInfrastructure.InvokePrivate(step!, "HandleRetryAsync", context, CancellationToken.None));
+        return await task;
+    }
+
+    private static AccessLevelManager CreateAccessLevelManager()
+    {
+        var modbusClient = new StepModbusClient();
+        var writer = new RegisterWriter(modbusClient, TestInfrastructure.CreateLogger<RegisterWriter>(), new TestStepLoggerStub());
+        return new AccessLevelManager(
+            writer,
+            Options.Create(CreateDiagnosticSettings()),
+            TestInfrastructure.CreateLogger<AccessLevelManager>());
     }
 
     private static async Task WaitUntilAsync(Func<bool> predicate, TimeSpan timeout)
@@ -517,7 +584,9 @@ public sealed class BoilerOperationModeStepRetentionTests
         private readonly Dictionary<ushort, ushort> _registers = [];
 
         public int FailReadsRemaining { get; set; }
-        public string ReadFailureMessage { get; set; } = "read failure";
+        public string ReadFailureMessage { get; init; } = "read failure";
+        public int FailWriteMultipleRemaining { get; set; }
+        public string WriteMultipleFailureMessage { get; init; } = "write multiple failure";
         public int WriteSingleRegisterCalls { get; private set; }
         public List<ushort> WrittenValues { get; } = [];
 
@@ -569,6 +638,12 @@ public sealed class BoilerOperationModeStepRetentionTests
         {
             lock (_lock)
             {
+                if (FailWriteMultipleRemaining > 0)
+                {
+                    FailWriteMultipleRemaining--;
+                    throw new InvalidOperationException(WriteMultipleFailureMessage);
+                }
+
                 for (var i = 0; i < values.Length; i++)
                 {
                     _registers[(ushort)(address + i)] = values[i];

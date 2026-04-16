@@ -15,6 +15,7 @@ using Final_Test_Hybrid.Services.Export;
 using Final_Test_Hybrid.Services.Main;
 using Final_Test_Hybrid.Services.Main.Messages;
 using Final_Test_Hybrid.Services.Main.PlcReset;
+using Final_Test_Hybrid.Services.Diagnostic.Services;
 using Final_Test_Hybrid.Services.OpcUa.Connection;
 using Final_Test_Hybrid.Services.OpcUa.Heartbeat;
 using Final_Test_Hybrid.Services.OpcUa.Subscription;
@@ -46,7 +47,7 @@ namespace Final_Test_Hybrid.Tests.Runtime;
 public sealed class PostAskEndRepeatSaveTests
 {
     [Fact]
-    public async Task SaveInterruptReasonBeforeRepeatAsync_UsesDialogWithoutCancel()
+    public async Task SaveInterruptReasonBeforeRepeatAsync_UsesDialogWithRepeatBypassCancel()
     {
         var loggerFactory = LoggerFactory.Create(_ => { });
         var context = CreateContext(loggerFactory);
@@ -59,6 +60,7 @@ public sealed class PostAskEndRepeatSaveTests
             requireAdminAuth,
             operatorUsername,
             showCancelButton,
+            allowRepeatBypassOnCancel,
             _) =>
         {
             captured.SerialNumber = serialNumber;
@@ -66,6 +68,7 @@ public sealed class PostAskEndRepeatSaveTests
             captured.RequireAdminAuth = requireAdminAuth;
             captured.OperatorUsername = operatorUsername;
             captured.ShowCancelButton = showCancelButton;
+            captured.AllowRepeatBypassOnCancel = allowRepeatBypassOnCancel;
             return Task.FromResult(InterruptFlowResult.Success("admin-user"));
         };
 
@@ -79,7 +82,8 @@ public sealed class PostAskEndRepeatSaveTests
         Assert.True(captured.UseMes);
         Assert.True(captured.RequireAdminAuth);
         Assert.Equal("operator-user", captured.OperatorUsername);
-        Assert.False(captured.ShowCancelButton);
+        Assert.True(captured.ShowCancelButton);
+        Assert.True(captured.AllowRepeatBypassOnCancel);
     }
 
     [Fact]
@@ -96,6 +100,7 @@ public sealed class PostAskEndRepeatSaveTests
         var window = CreateResetAskEndWindow(context.Coordinator, sequence: 7);
 
         context.DialogCoordinator.OnInterruptReasonDialogRequested += (
+            _,
             _,
             _,
             _,
@@ -126,6 +131,7 @@ public sealed class PostAskEndRepeatSaveTests
         var dialogStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         context.DialogCoordinator.OnInterruptReasonDialogRequested += async (
+            _,
             _,
             _,
             _,
@@ -239,6 +245,7 @@ public sealed class PostAskEndRepeatSaveTests
             _,
             _,
             _,
+            _,
             _) =>
         {
             dialogRequests++;
@@ -253,6 +260,141 @@ public sealed class PostAskEndRepeatSaveTests
 
         Assert.Equal(0, dialogRequests);
         Assert.Null(GetPendingRepeatOperationSerialNumber(context.Coordinator));
+    }
+
+    [Fact]
+    public async Task HandlePostAskEndDecisionAsync_StartsRepeatWithoutMesRequests_WhenRepeatBypassRequested()
+    {
+        var loggerFactory = LoggerFactory.Create(_ => { });
+        var handler = new RequestScriptHandler([]);
+        var context = CreateContext(loggerFactory, handler);
+        var values = TestInfrastructure.GetSubscriptionValues(context.Subscription);
+        values[BaseTags.ErrorRetry] = true;
+
+        context.BoilerState.SetData("SN-42", "ART-1", true);
+        context.BoilerState.SetTestRunning(true);
+        PreparePostAskEndToken(context.Coordinator);
+        var window = CreateResetAskEndWindow(context.Coordinator, sequence: 7);
+
+        context.DialogCoordinator.OnInterruptReasonDialogRequested += (
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _) => Task.FromResult(InterruptFlowResult.RepeatBypass());
+
+        await InvokeHandlePostAskEndDecisionAsync(context.Coordinator, window);
+
+        Assert.Equal(1, context.ErrorCoordinator.SendAskRepeatCalls);
+        Assert.Empty(handler.RequestPaths);
+        Assert.False(context.BoilerState.IsTestRunning);
+        Assert.Null(GetPendingRepeatOperationSerialNumber(context.Coordinator));
+        Assert.Equal(GetPostAskEndScanModeDecisionRepeatValue(), GetPostAskEndScanModeDecision(context.Coordinator));
+        Assert.Equal(1, GetInterruptDialogCompletedInCurrentSeries(context.Coordinator));
+        Assert.Equal(0, GetInterruptDialogAllowedSequence(context.Coordinator));
+    }
+
+    [Fact]
+    public async Task HandlePostAskEndDecisionAsync_StartsRepeatWithoutLocalDbCreate_WhenRepeatBypassRequested()
+    {
+        var loggerFactory = LoggerFactory.Create(_ => { });
+        var preparationFacade = new StubScanPreparationFacade();
+        var context = CreateContext(
+            loggerFactory,
+            useMes: false,
+            preparationFacade: preparationFacade);
+        var values = TestInfrastructure.GetSubscriptionValues(context.Subscription);
+        values[BaseTags.ErrorRetry] = true;
+
+        context.BoilerState.SetData("SN-42", "ART-1", true);
+        context.BoilerState.SetTestRunning(true);
+        PreparePostAskEndToken(context.Coordinator);
+        var window = CreateResetAskEndWindow(context.Coordinator, sequence: 7);
+
+        context.DialogCoordinator.OnInterruptReasonDialogRequested += (
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _) => Task.FromResult(InterruptFlowResult.RepeatBypass());
+
+        await InvokeHandlePostAskEndDecisionAsync(context.Coordinator, window);
+
+        Assert.Equal(1, context.ErrorCoordinator.SendAskRepeatCalls);
+        Assert.Equal(0, preparationFacade.InitializeDatabaseCalls);
+        Assert.False(context.BoilerState.IsTestRunning);
+        Assert.Null(GetPendingRepeatOperationSerialNumber(context.Coordinator));
+        Assert.Equal(GetPostAskEndScanModeDecisionRepeatValue(), GetPostAskEndScanModeDecision(context.Coordinator));
+    }
+
+    [Fact]
+    public async Task HandlePostAskEndDecisionAsync_DoesNotRearmInterruptDialogSeries_AfterRepeatBypass()
+    {
+        var loggerFactory = LoggerFactory.Create(_ => { });
+        var context = CreateContext(loggerFactory);
+        var values = TestInfrastructure.GetSubscriptionValues(context.Subscription);
+        values[BaseTags.ErrorRetry] = true;
+
+        context.BoilerState.SetData("SN-42", "ART-1", true);
+        context.BoilerState.SetTestRunning(true);
+        PreparePostAskEndToken(context.Coordinator);
+        var window = CreateResetAskEndWindow(context.Coordinator, sequence: 7);
+
+        context.DialogCoordinator.OnInterruptReasonDialogRequested += (
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _) => Task.FromResult(InterruptFlowResult.RepeatBypass());
+
+        await InvokeHandlePostAskEndDecisionAsync(context.Coordinator, window);
+
+        InvokeHandleSoftStop(context.Coordinator);
+
+        Assert.Equal(1, GetInterruptDialogCompletedInCurrentSeries(context.Coordinator));
+        Assert.Equal(0, GetInterruptDialogAllowedSequence(context.Coordinator));
+    }
+
+    [Fact]
+    public async Task HandlePostAskEndDecisionAsync_PreservesBoilerTimers_WhenRepeatBypassRequested()
+    {
+        var loggerFactory = LoggerFactory.Create(_ => { });
+        var context = CreateContext(loggerFactory);
+        var values = TestInfrastructure.GetSubscriptionValues(context.Subscription);
+        values[BaseTags.ErrorRetry] = true;
+        var expectedTestDuration = TimeSpan.FromSeconds(123);
+        var expectedChangeoverDuration = TimeSpan.FromSeconds(456);
+
+        TestInfrastructure.SetPrivateField(context.BoilerState, "_testStoppedDuration", expectedTestDuration);
+        TestInfrastructure.SetPrivateField(context.BoilerState, "_changeoverStoppedDuration", expectedChangeoverDuration);
+        context.BoilerState.SetData("SN-42", "ART-1", true);
+        context.BoilerState.SetTestRunning(true);
+        PreparePostAskEndToken(context.Coordinator);
+        var window = CreateResetAskEndWindow(context.Coordinator, sequence: 7);
+
+        context.DialogCoordinator.OnInterruptReasonDialogRequested += (
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _) => Task.FromResult(InterruptFlowResult.RepeatBypass());
+
+        await InvokeHandlePostAskEndDecisionAsync(context.Coordinator, window);
+
+        Assert.Equal(expectedTestDuration, context.BoilerState.GetTestDuration());
+        Assert.Equal(expectedChangeoverDuration, context.BoilerState.GetChangeoverDuration());
     }
 
     private static async Task InvokeSaveInterruptReasonBeforeRepeatAsync(
@@ -342,6 +484,18 @@ public sealed class PostAskEndRepeatSaveTests
         _ = method.Invoke(coordinator, null);
     }
 
+    private static void InvokeHandleSoftStop(PreExecutionCoordinator coordinator)
+    {
+        var method = Assert.IsAssignableFrom<MethodInfo>(
+            coordinator.GetType().GetMethod(
+                "HandleSoftStop",
+                BindingFlags.Instance | BindingFlags.NonPublic,
+                binder: null,
+                types: [],
+                modifiers: null));
+        _ = method.Invoke(coordinator, null);
+    }
+
     private static Func<string, string, CancellationToken, Task<SaveResult>> CreateRepeatSaveCallback(
         PreExecutionCoordinator coordinator,
         string serialNumber)
@@ -360,6 +514,39 @@ public sealed class PostAskEndRepeatSaveTests
                 "_pendingRepeatOperationSerialNumber",
                 BindingFlags.Instance | BindingFlags.NonPublic));
         return field.GetValue(coordinator) as string;
+    }
+
+    private static int GetInterruptDialogCompletedInCurrentSeries(PreExecutionCoordinator coordinator)
+    {
+        return GetPrivateIntField(coordinator, "_interruptDialogCompletedInCurrentResetSeries");
+    }
+
+    private static int GetInterruptDialogAllowedSequence(PreExecutionCoordinator coordinator)
+    {
+        return GetPrivateIntField(coordinator, "_interruptDialogAllowedSequence");
+    }
+
+    private static int GetPostAskEndScanModeDecision(PreExecutionCoordinator coordinator)
+    {
+        return GetPrivateIntField(coordinator, "_postAskEndScanModeDecision");
+    }
+
+    private static int GetPostAskEndScanModeDecisionRepeatValue()
+    {
+        var field = Assert.IsAssignableFrom<FieldInfo>(
+            typeof(PreExecutionCoordinator).GetField(
+                "PostAskEndScanModeDecisionRepeat",
+                BindingFlags.Static | BindingFlags.NonPublic));
+        return Assert.IsType<int>(field.GetRawConstantValue());
+    }
+
+    private static int GetPrivateIntField(PreExecutionCoordinator coordinator, string fieldName)
+    {
+        var field = Assert.IsAssignableFrom<FieldInfo>(
+            coordinator.GetType().GetField(
+                fieldName,
+                BindingFlags.Instance | BindingFlags.NonPublic));
+        return Assert.IsType<int>(field.GetValue(coordinator));
     }
 
     private static HttpResponseMessage CreateJsonResponse(HttpStatusCode statusCode, string json)
@@ -573,10 +760,23 @@ public sealed class PostAskEndRepeatSaveTests
     private static TestExecutionCoordinator CreateTestCoordinator()
     {
         var coordinator = CreateUninitialized<TestExecutionCoordinator>();
+        var modeRefreshService = CreateUninitialized<BoilerOperationModeRefreshService>();
+        var stateLock = Activator.CreateInstance(typeof(Lock))!;
+        TestInfrastructure.SetPrivateField(modeRefreshService, "_stateLock", stateLock);
+        TestInfrastructure.SetPrivateField(modeRefreshService, "_disposed", true);
+
         TestInfrastructure.SetPrivateField(
             coordinator,
             "<StateManager>k__BackingField",
             new ExecutionStateManager());
+        TestInfrastructure.SetPrivateField(
+            coordinator,
+            "_boilerOperationModeRefreshService",
+            modeRefreshService);
+        TestInfrastructure.SetPrivateField(
+            coordinator,
+            "_executors",
+            Array.Empty<ColumnExecutor>());
         return coordinator;
     }
 
@@ -599,6 +799,7 @@ public sealed class PostAskEndRepeatSaveTests
         public bool RequireAdminAuth { get; set; }
         public string OperatorUsername { get; set; } = string.Empty;
         public bool ShowCancelButton { get; set; }
+        public bool AllowRepeatBypassOnCancel { get; set; }
     }
 
     private sealed class StubErrorCoordinator : IErrorCoordinator

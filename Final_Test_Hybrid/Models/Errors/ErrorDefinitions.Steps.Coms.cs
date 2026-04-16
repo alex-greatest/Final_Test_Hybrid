@@ -238,12 +238,20 @@ public static partial class ErrorDefinitions
         RelatedStepName: "Coms/CH_Start_Max_Heatout");
 
     public static readonly ErrorDefinition AlIonCurrentOutTolChStartMaxHeatout = new(
-        "П-109-01", "Неисправность. Ток ионизации вне допуска",
+        "П-109-01", "Ошибка связи с котлом",
         ActivatesResetButton: true,
         PlcTag: "ns=3;s=\"DB_Coms\".\"DB_CH_Start_Max_Heatout\".\"Al_IonCurrentOutTol\"",
         Severity: ErrorSeverity.Critical,
         RelatedStepId: "coms-ch-start-max-heatout",
         RelatedStepName: "Coms/CH_Start_Max_Heatout");
+
+    public static readonly ErrorDefinition AlNoWaterFlowChStartMaxHeatoutWithout = new(
+        "П-109-02", "Неисправность. Нет протока воды",
+        ActivatesResetButton: true,
+        PlcTag: "ns=3;s=\"DB_Coms\".\"DB_CH_Start_Max_Heatout_Without\".\"Al_NoWaterFlow\"",
+        Severity: ErrorSeverity.Critical,
+        RelatedStepId: "coms-ch-start-max-heatout-without",
+        RelatedStepName: "Coms/CH_Start_Max_Heatout_Without");
 
     #endregion
 
@@ -258,7 +266,7 @@ public static partial class ErrorDefinitions
         RelatedStepName: "Coms/CH_Start_Min_Heatout");
 
     public static readonly ErrorDefinition AlIonCurrentOutTolChStartMinHeatout = new(
-        "П-110-01", "Неисправность. Ток ионизации вне допуска",
+        "П-110-01", "Ошибка связи с котлом",
         ActivatesResetButton: true,
         PlcTag: "ns=3;s=\"DB_Coms\".\"DB_CH_Start_Min_Heatout\".\"Al_IonCurrentOutTol\"",
         Severity: ErrorSeverity.Critical,

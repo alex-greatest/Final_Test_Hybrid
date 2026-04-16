@@ -133,16 +133,24 @@ context.ReportProgress("Инициализация...");
 - `context.DiagReader` / `context.DiagWriter` считать базовым/совместимостным путём и не использовать в новых test steps без отдельного обоснования.
 - Ручные `DelayAsync(...WriteVerifyDelayMs...)` между соседними Modbus `read/write` в test steps не использовать.
 - Global pacing получает тот же `CancellationToken`, умеет отменяться и pause-aware: ожидание не продолжается во время `Auto OFF`.
+- Локальный reconnect-aware retry в test step допустим только как bounded retry для transient reconnect-race: после communication-fail вида `State=pending` / `State=rejected` / `начато переподключение Modbus до начала выполнения` шаг может один раз дождаться `dispatcher ready` и повторить операцию. Бесконечные циклы и повтор для functional fail недопустимы.
 
 #### Контракт удержания режима `1036`
 
 - Шаги `Coms/CH_Start_Max_Heatout`, `Coms/CH_Start_Min_Heatout` и `Coms/CH_Start_ST_Heatout` после успешной записи и read-back `1036` обязаны вызвать `BoilerOperationModeRefreshService.ArmMode(rawModeValue, step.Name)`.
+- `Coms/CH_Start_Max_Heatout_Without` является отдельным PLC-only шагом на блоке `DB_Coms.DB_CH_Start_Max_Heatout_Without`: он слушает только `Start/End/Error`, не пишет `1036` и не вызывает `ArmMode(...)`.
 - При входе в любой active `CH_Start_*` шаг сервис сначала делает `ClearAndDrainAsync(...)`, чтобы предыдущий retained-mode не жил во время retry-path и ожиданий PLC до нового arm.
+- Если retry-path `CH_Start_Max_Heatout` / `CH_Start_Min_Heatout` не смог вернуть котёл в режим Стенд через `SetStandModeAsync(...)`, шаг обязан поднять свой block `Fault=true` и перейти в тот же PLC terminal fail-path, что и для основной ошибки записи/чтения `1036`.
 - При входе в `Elec/Boiler_Power_OFF` сервис также делает `ClearAndDrainAsync(...)`, но только забывает retained-mode в памяти и не пишет `1036` в котёл.
 - В `1036` хранится raw `ushort`; `SystemWorkMode` для этого контура не использовать.
 - `BoilerOperationModeRefreshService` работает системными `RegisterWriter` / `RegisterReader`, а не `context.PacedDiag*`, потому что удержание режима не должно зависеть от step pause (`Auto OFF`).
 - Step-level write/read-back `1036` и `ChReset` выполняются под shared mode-change lease из `BoilerOperationModeRefreshService`, чтобы фоновый refresh не мог вклиниться между шаговой записью, verify и `ArmMode(...)` / `Clear(...)`.
 - Refresh-цикл использует `Diagnostic:OperationModeRefreshInterval` (по умолчанию `15 минут`) и повторно подтверждает сохранённый режим только при `dispatcher ready` (`IsStarted && IsConnected && !IsReconnecting && LastPingData != null`).
+- Для background refresh действует только runtime sequence:
+  - retained target `4` -> `write(3) -> write(4) -> read(4)`;
+  - retained target `3` -> `write(4) -> write(3) -> read(3)`;
+  - остальные raw target используют fallback `write(target) -> read(target)`.
+- Промежуточный opposite-mode отдельно не перечитывается; step-level успешный write/read-back и точка `ArmMode(...)` в самих `CH_Start_*` шагах не меняются.
 - Если к моменту refresh диагностика недоступна, сервис не делает `StartAsync()` сам, не очищает latch и ждёт восстановления ready-state.
 - Если refresh уже дошёл до write/read/verify и получил fail при готовом dispatcher, сервис повторяет попытку через отдельный slow retry `5 секунд`, а не через step pacing `WriteVerifyDelayMs`.
 - Успешный `Coms/CH_Reset` очищает latch только после подтверждённого `1036 == 0`.
@@ -319,6 +327,12 @@ public string? GetLimits(LimitsContext context)
 - При `AutoReady = false` и отсутствии диагностической связи шаг возвращает `NoDiagnosticConnection`; рабочий путь продолжения — восстановить автомат и выполнить `Retry`.
 - После захвата runtime-lease шаг ждёт именно свежий runtime ping; stale `LastPingData` от ручной панели не считается успешной проверкой связи.
 
+**Примечание по `Coms/Read_Article_Without_Connection`:**
+- Шаг не читает PLC/OPC/Modbus и использует только `BoilerState.Article`, сохранённый scan-фазой текущего теста.
+- Результат сохраняется как `Article_Without_Connection` со `status = 1`, `isRanged = false`, пустыми `min/max/unit`, `test = "Coms/Read_Article_Without_Connection"`.
+- Перед записью результата шаг удаляет старый `Article_Without_Connection`, чтобы retry не создавал дубликаты.
+- Если `BoilerState.Article` пустой, шаг завершается ошибкой без возможности skip и не сохраняет пустой результат.
+
 **Примечание по `Coms/Read_Soft_Code_Plug`:**
 - Регистр `1054` читается, сравнивается с recipe `NumberOfContours` и сохраняется как `NumberOfContours`.
 - Диапазон `1175..1181` читается, сравнивается с `BoilerState.Article` и сохраняется как `Soft_Code_Plug`.
@@ -338,6 +352,7 @@ public string? GetLimits(LimitsContext context)
 **Примечание по `Coms/Safety_Time`:**
 - Шаг измерения `Safety time` использует только фактические step-level Modbus операции как источник истины по связи.
 - Любой read/write fail текущей попытки завершает шаг ошибкой без отдельного diagnostic connection latch.
+- Если communication-fail происходит до сохранения измеренного значения, шаг записывает `Safety time = 0.00 сек` со статусом NOK (`status = 2`) и пределами из `ignSafetyTimeMin/Max`, затем завершает попытку ошибкой связи.
 - Краткий reconnect внутри этого шага не пережидается: продолжение допускается только через штатный `Retry`.
 - Локальный polling шага выполняется с интервалом `300 мс`; результат `Safety time` фиксируется по моменту обнаружения отключения на очередном Modbus-read, а не по аппаратному timestamp.
 - Фактическая погрешность обнаружения зависит от polling interval, длительности Modbus-read и ожидания в очереди dispatcher. Увеличение этого интервала требует отдельной проверки нижнего предела `ignSafetyTimeMin`, чтобы не замаскировать слишком быстрое отключение.

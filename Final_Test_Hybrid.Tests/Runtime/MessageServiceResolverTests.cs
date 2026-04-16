@@ -138,7 +138,7 @@ public sealed class MessageServiceResolverTests
 
         var message = MessageServiceResolver.Resolve(snapshot);
 
-        Assert.Equal("Блокировка А. Остановите тест", message);
+        Assert.Equal("Блокировка А. Нажмите сброс", message);
     }
 
     [Fact]

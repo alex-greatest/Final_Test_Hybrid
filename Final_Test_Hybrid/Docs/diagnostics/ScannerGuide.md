@@ -91,6 +91,8 @@
 - Если reset завершился repeat outcome и следующий тест был запущен без нового scan-step, ordinary scanner owner может остаться `None` до момента фактического возврата в ожидание barcode.
   Когда `PreExecutionCoordinator` снова поднимает `IsAcceptingInput=true`, `ScanModeController` обязан перевооружить ordinary owner только при `owner=None`, `AutoReady=true`, `IsConnected=true` и вне reset.
   Этот self-heal не должен перехватывать scanner у dialog-mode и не должен менять timing/changeover контуры.
+- Аварийный `RepeatBypass` в post-`AskEnd` repeat-save flow не создаёт отдельный scanner outcome:
+  он обязан идти через тот же existing repeat-path, что и обычный `StartRepeatAfterReset(...)`, без отдельного unlock/rearm шага.
 - Возврат ordinary scanner-ready не должен перезапускать `BoilerState` timers (`TestTime`, `ChangeoverTime`) и не должен менять completion-handshake;
   для UI-таймеров допускается только существующий `StepTimingService` scan-step lifecycle.
 

@@ -339,11 +339,17 @@ private static void StopDispatcherSafely(IModbusDispatcher dispatcher, ILogger l
 `BoilerOperationModeRefreshService` удерживает последний шаговый режим котла, установленный в `1036` (`CH_Start_Max_Heatout`, `CH_Start_Min_Heatout`, `CH_Start_ST_Heatout`).
 
 - Сервис хранит raw `ushort` и не использует `SystemWorkMode`.
+- `Coms/CH_Start_Max_Heatout_Without` не входит в этот контракт: шаг работает только через `DB_Coms.DB_CH_Start_Max_Heatout_Without.Start/End/Error`, без Modbus-связи с котлом, записи `1036` и `ArmMode(...)`.
 - После `ArmMode(...)` запускается countdown из `Diagnostic:OperationModeRefreshInterval` (по умолчанию `15 минут`).
 - Некорректное значение интервала (`<= 0`) не используется: сервис логирует warning и откатывается к стандартным `15 минутам`.
 - При входе в любой active `CH_Start_*` шаг сервис сначала делает awaited `ClearAndDrainAsync(...)`, чтобы предыдущий retained-mode не мог пережить новый mode-changing сценарий до нового `ArmMode(...)`.
 - При входе в `Elec/Boiler_Power_OFF` сервис делает такой же awaited memory-clear, но не пишет `1036` и не создаёт новый retained-state.
 - По дедлайну сервис ждёт `dispatcher ready` (`IsStarted && IsConnected && !IsReconnecting && LastPingData != null`) и только затем повторно пишет `1036` через системные `RegisterWriter` / `RegisterReader`.
+- Для retained refresh сервис использует только runtime mapping:
+  - target `4` -> `write(3) -> write(4) -> read(4)`;
+  - target `3` -> `write(4) -> write(3) -> read(3)`;
+  - любой другой raw target остаётся на fallback `write(target) -> read(target)`.
+- Промежуточный opposite-mode отдельным read-back не подтверждается; step-level первичная запись `1036` в `CH_Start_*` этим контрактом не меняется.
 - Step-level write/read/clear по `1036` и runtime-refresh используют общий mode-change lease, чтобы фоновый refresh не мог вклиниться между шаговым write/read-back и `ArmMode(...)` / `Clear(...)`.
 - `StartAsync()` dispatcher из этого сервиса не вызывается. При потере связи latch остаётся armed и ждёт восстановления ready-state.
 - Новый refresh-интервал считается от фактической успешной записи/verify.

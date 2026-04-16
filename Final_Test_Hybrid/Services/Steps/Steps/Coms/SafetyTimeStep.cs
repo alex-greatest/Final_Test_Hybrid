@@ -29,6 +29,7 @@ public class SafetyTimeStep(
     private const ushort ResetValue = 0;
     private const int PollingIntervalMs = 500;
     private const int WaitTimeoutMs = 30_000;
+    private const float CommunicationFailureSafetyTime = 0f;
 
     private const string SafetyTimeMinRecipe = "ns=3;s=\"DB_Recipe\".\"Time\".\"ignSafetyTimeMin\"";
     private const string SafetyTimeMaxRecipe = "ns=3;s=\"DB_Recipe\".\"Time\".\"ignSafetyTimeMax\"";
@@ -121,6 +122,7 @@ public class SafetyTimeStep(
             var readResult = await ReadCoilCurrentsAsync(context, ct);
             if (!readResult.Success)
             {
+                SaveCommunicationFailureResultIfNeeded(context, readResult);
                 return new CoilsOnWaitResult(
                     TestStepResult.Fail(
                         $"Ошибка чтения тока катушек: {readResult.Error}",
@@ -162,6 +164,7 @@ public class SafetyTimeStep(
             var readResult = await ReadCoilCurrentsAsync(context, ct);
             if (!readResult.Success)
             {
+                SaveCommunicationFailureResultIfNeeded(context, readResult);
                 return new SafetyTimeResult(
                     false,
                     0f,
@@ -218,6 +221,35 @@ public class SafetyTimeStep(
             safetyTime, min, max, isInRange ? "OK" : "NOK");
 
         return !isInRange ? TestStepResult.Fail($"Safety time {safetyTime:F2} сек вне пределов") : null;
+    }
+
+    private void SaveCommunicationFailureResultIfNeeded(TestStepContext context, CoilCurrentsResult readResult)
+    {
+        if (readResult.FailureKind != DiagnosticFailureKind.Communication)
+        {
+            return;
+        }
+
+        SaveCommunicationFailureResult(context);
+    }
+
+    private void SaveCommunicationFailureResult(TestStepContext context)
+    {
+        var minValue = context.RecipeProvider.GetValue<float>(SafetyTimeMinRecipe);
+        var maxValue = context.RecipeProvider.GetValue<float>(SafetyTimeMaxRecipe);
+        var hasLimits = minValue != null && maxValue != null;
+
+        testResultsService.Add(
+            parameterName: ResultParameterName,
+            value: $"{CommunicationFailureSafetyTime:F2}",
+            min: hasLimits ? $"{minValue!.Value:F2}" : "",
+            max: hasLimits ? $"{maxValue!.Value:F2}" : "",
+            status: 2,
+            isRanged: hasLimits,
+            unit: "сек",
+            test: Name);
+
+        logger.LogInformation("Safety time не измерен из-за ошибки связи, записан NOK результат 0.00 сек");
     }
 
     /// <summary>
@@ -277,6 +309,7 @@ public class SafetyTimeStep(
                 0,
                 0,
                 ComsStepFailureHelper.BuildReadMessage(ev1Result, $"чтении тока катушки EV1 из регистра {RegisterEv1Current}", $"Ошибка чтения тока катушки EV1: {ev1Result.Error}"),
+                ev1Result.FailureKind,
                 ev1Result.FailureKind != DiagnosticFailureKind.Communication);
         }
 
@@ -289,10 +322,11 @@ public class SafetyTimeStep(
                 0,
                 0,
                 ComsStepFailureHelper.BuildReadMessage(ev2Result, $"чтении тока катушки EV2 из регистра {RegisterEv2Current}", $"Ошибка чтения тока катушки EV2: {ev2Result.Error}"),
+                ev2Result.FailureKind,
                 ev2Result.FailureKind != DiagnosticFailureKind.Communication);
         }
 
-        return new CoilCurrentsResult(true, ev1Result.Value, ev2Result.Value, null, true);
+        return new CoilCurrentsResult(true, ev1Result.Value, ev2Result.Value, null, DiagnosticFailureKind.None, true);
     }
 
     private DiagnosticReadResult<ushort> GetCoilCurrentResult(
@@ -339,6 +373,7 @@ public class SafetyTimeStep(
         ushort Ev1Current,
         ushort Ev2Current,
         string? Error,
+        DiagnosticFailureKind FailureKind,
         bool CanSkip);
 
     /// <summary>

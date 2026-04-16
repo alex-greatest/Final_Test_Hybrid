@@ -31,7 +31,7 @@ public class ReadChPotiSetpointStep(
     /// <summary>
     /// Возвращает фиксированные пределы для отображения в гриде.
     /// </summary>
-    public string? GetLimits(LimitsContext context) => $"{MinTemp} .. {MaxTemp}";
+    public string? GetLimits(LimitsContext context) => $"{MinTemp} .. {MaxTemp} °C";
 
     /// <summary>
     /// Читает установленную температуру CH из регистра 1008 и проверяет диапазон.
@@ -56,7 +56,7 @@ public class ReadChPotiSetpointStep(
         }
 
         var value = result.Value;
-        var isInRange = value >= MinTemp && value <= MaxTemp;
+        var isInRange = value is >= MinTemp and <= MaxTemp;
 
         testResultsService.Add(
             parameterName: ResultName,
@@ -71,7 +71,7 @@ public class ReadChPotiSetpointStep(
         logger.LogInformation("Установленная температура CH: {Value} °C, диапазон: [{Min}..{Max}], статус: {Status}",
             value, MinTemp, MaxTemp, isInRange ? "OK" : "NOK");
 
-        var msg2 = $"CH_Temp_SP: {value} °C";
+        var msg2 = $"{value} °C";
 
         if (!isInRange)
         {

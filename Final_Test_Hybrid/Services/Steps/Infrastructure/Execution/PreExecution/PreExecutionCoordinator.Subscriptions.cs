@@ -194,6 +194,7 @@ public partial class PreExecutionCoordinator
         int resetSequence,
         CancellationToken ct,
         bool showCancelButton = true,
+        bool allowRepeatBypassOnCancel = false,
         Func<string, string, CancellationToken, Task<SaveResult>>? saveCallback = null)
     {
         if (!TryAcquireDialogLock())
@@ -212,6 +213,7 @@ public partial class PreExecutionCoordinator
             return await ShowInterruptReasonDialogAsync(
                 serialNumber,
                 showCancelButton,
+                allowRepeatBypassOnCancel,
                 saveCallback,
                 cts.Token);
         }
@@ -282,6 +284,7 @@ public partial class PreExecutionCoordinator
     private async Task<InterruptFlowResult> ShowInterruptReasonDialogAsync(
         string serialNumber,
         bool showCancelButton,
+        bool allowRepeatBypassOnCancel,
         Func<string, string, CancellationToken, Task<SaveResult>>? saveCallback,
         CancellationToken ct)
     {
@@ -309,6 +312,7 @@ public partial class PreExecutionCoordinator
                 requireAdminAuth,
                 operatorUsername,
                 showCancelButton,
+                allowRepeatBypassOnCancel,
                 ct);
 
             LogInterruptResult(result);
@@ -326,6 +330,12 @@ public partial class PreExecutionCoordinator
         if (result.IsSuccess)
         {
             infra.Logger.LogInformation("Причина прерывания сохранена: {Admin}", result.AdminUsername);
+            return;
+        }
+
+        if (result.IsRepeatBypass)
+        {
+            infra.Logger.LogWarning("Repeat-save bypass завершён без сохранения причины в backend");
         }
     }
 

@@ -10,6 +10,11 @@
 
 - Добавлен singleton `BoilerOperationModeRefreshService` в diagnostic runtime.
 - Сервис хранит последний подтверждённый шагом режим `1036` как raw `ushort` и повторно подтверждает его через системные `RegisterWriter` / `RegisterReader` по интервалу `Diagnostic:OperationModeRefreshInterval` (по умолчанию `15 минут`).
+- Для background retained refresh добавлен runtime-only sequence:
+  - target `4` -> `write(3) -> write(4) -> read(4)`;
+  - target `3` -> `write(4) -> write(3) -> read(3)`;
+  - остальные raw target используют fallback `write(target) -> read(target)`.
+- Промежуточный opposite-mode не получает отдельный read-back; первичная step-level запись `1036` в `ChStartMaxHeatoutStep`, `ChStartMinHeatoutStep`, `ChStartStHeatoutStep` не меняется.
 - Refresh выполняется только при `dispatcher ready` (`IsStarted && IsConnected && !IsReconnecting && LastPingData != null`).
 - При потере связи без reset retained-state не очищается и не пытается поднять диагностику сам; запись откладывается до восстановления ready-state.
 - После post-review hardening runtime-refresh и step-owned write/read/clear по `1036` используют shared mode-change lease, чтобы stale refresh не мог вклиниться между шаговой записью, verify и `ArmMode(...)` / `Clear(...)`.
@@ -21,6 +26,8 @@
 - После review-fix refresh дополнительно перепроверяет актуальность snapshot/token после захвата shared mode-change lease и перед каждым Modbus IO, чтобы invalidate в queued/ready-to-write окне не пропускал позднюю stale запись `1036`.
 - Интервал refresh вынесен в `Diagnostic:OperationModeRefreshInterval`; при отсутствии или некорректном значении (`<= 0`) сервис откатывается к default `15 минут`.
 - После follow-up hardening active `ChStartMaxHeatoutStep`, `ChStartMinHeatoutStep`, `ChStartStHeatoutStep` делают awaited `ClearAndDrainAsync(...)` на входе, поэтому предыдущий retained-mode больше не переживает новый step/retry/PLC-wait сценарий до нового arm.
+- После follow-up hardening retry-path `ChStartMaxHeatoutStep` / `ChStartMinHeatoutStep` больше не завершает fail `SetStandModeAsync(...)` голым `TestStepResult.Fail(...)`: шаг переводит этот сценарий в свой block `Fault=true` и идёт в тот же PLC terminal fail-path, что и основной fail вокруг `1036`.
+- Дополнительный аудит похожих шагов подтвердил, что именно `ChStartMaxHeatoutStep` и `ChStartMinHeatoutStep` были единственными актуальными шагами с собственным block `FaultTag`, где retry-path обходил запись PLC fault при fail `SetStandModeAsync(...)`; другие fault-tagged шаги уже шли через свой `WriteFaultAsync(...)`.
 - `BoilerPowerOffStep` делает awaited `ClearAndDrainAsync(...)` сразу на входе в шаг: это только memory-clear старого retained-mode, без записи `1036` в котёл и без нового arm.
 - `TestExecutionCoordinator.CompleteAsync()` теперь при `ExecutionStopReason.Operator` ждёт `ClearAndDrainAsync(...)` до публикации `SequenceCompleted`.
 - Источники arm:
@@ -69,8 +76,12 @@
 - `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --filter "FullyQualifiedName~BoilerOperationMode"` — успешно, `31/31`.
 - `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --filter "FullyQualifiedName~BoilerOperationMode|FullyQualifiedName~TestExecutionCoordinatorCompletionTests"` — успешно, `36/36`.
 - `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --no-build --filter "FullyQualifiedName~TestExecutionCoordinatorCompletionTests"` — успешно, `5/5`.
+- `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --filter "FullyQualifiedName~BoilerOperationModeStepRetentionTests"` — успешно; добавлены регрессии на retry-fail `SetStandModeAsync(...)` для `ChStartMaxHeatoutStep` / `ChStartMinHeatoutStep`, подтверждающие переход в block fault-path.
+- `dotnet build Final_Test_Hybrid.slnx` — успешно; остались baseline warning `MSB3277` по конфликту `WindowsBase 4.0.0.0/5.0.0.0` в app/test проектах.
 - `dotnet format analyzers Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
 - `dotnet format style Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
+- `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMinHeatoutStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMaxHeatoutStep.cs;Final_Test_Hybrid.Tests/Runtime/BoilerOperationModeStepRetentionTests.cs" --no-build --format=Text "--output=.codex-build/inspect-fault-retry-warning.txt" -e=WARNING` — без findings.
+- `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMinHeatoutStep.cs;Final_Test_Hybrid/Services/Steps/Steps/Coms/ChStartMaxHeatoutStep.cs;Final_Test_Hybrid.Tests/Runtime/BoilerOperationModeStepRetentionTests.cs" --no-build --format=Text "--output=.codex-build/inspect-fault-retry-hint.txt" -e=HINT` — без findings после cleanup guard-clauses и `init`-only в тестовом стабe.
 - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Elec/BoilerPowerOffStep.cs" --no-build --format=Text "--output=.codex-build/inspect-operation-mode-poweroff-warning.txt" -e=WARNING` — без findings.
 - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Elec/BoilerPowerOffStep.cs" --no-build --format=Text "--output=.codex-build/inspect-operation-mode-poweroff-hint.txt" -e=HINT` — без findings.
 
@@ -79,7 +90,9 @@
 - Retained-state сознательно игнорирует ручные инженерные изменения режима и `SetStandModeAsync(...)`; источником истины остаётся только последний успешный шаговый write/read-back `1036`.
 - Operator stop теперь ждёт выхода активного shared mode-change участка до `SequenceCompleted`; это сознательный sequencing trade-off ради гарантированного cleanup retained-mode без stale refresh.
 - Legacy `*Old*.cs` шаги не обновлялись и не получают новый lifecycle-контракт автоматически.
+- Contract распространяется только на шаги с собственным block `FaultTag`; `Coms`/другие шаги без такого PLC fault-сигнала этим change-set не менялись.
 
 ## Инциденты
 
 - Новый failure mode истечения `1036` во время длительной наладки зафиксирован в `Docs/changes/2026-03-30-operation-mode-1036-retention.md`.
+- No new incident: текущий change-set только дожимает retry fail-path внутри уже зафиксированного workstream по `1036` / `CH_Start_*`.

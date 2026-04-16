@@ -17,6 +17,8 @@ namespace Final_Test_Hybrid.Services.Diagnostic.Services;
 public sealed class BoilerOperationModeRefreshService : IDisposable
 {
     private const ushort OperationModeRegisterDoc = 1036;
+    private const ushort RetainedMinHeatingMode = 3;
+    private const ushort RetainedMaxHeatingMode = 4;
     private static readonly TimeSpan DefaultRefreshInterval = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan DefaultDispatcherPollInterval = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan DefaultFailedRefreshRetryDelay = TimeSpan.FromSeconds(5);
@@ -273,23 +275,8 @@ public sealed class BoilerOperationModeRefreshService : IDisposable
             snapshot.ModeValue,
             snapshot.SourceStep);
 
-        if (!CanContinueRefresh(snapshot, ct))
-        {
-            return false;
-        }
-
-        var writeResult = await _writer.WriteUInt16Async(_operationModeAddress, snapshot.ModeValue, ct);
-        if (!writeResult.Success)
-        {
-            _logger.LogWarning(
-                "Не удалось повторно записать режим 1036={Mode} ({SourceStep}): {Error}",
-                snapshot.ModeValue,
-                snapshot.SourceStep,
-                writeResult.Error);
-            return false;
-        }
-
-        if (!CanContinueRefresh(snapshot, ct))
+        var sequence = CreateRefreshSequence(snapshot.ModeValue);
+        if (!await TryWriteRefreshSequenceAsync(snapshot, sequence, ct))
         {
             return false;
         }
@@ -320,6 +307,115 @@ public sealed class BoilerOperationModeRefreshService : IDisposable
             snapshot.ModeValue,
             snapshot.SourceStep);
         return true;
+    }
+
+    private static RefreshSequence CreateRefreshSequence(ushort targetMode)
+    {
+        var oppositeMode = TryGetOppositeRefreshMode(targetMode);
+        return new RefreshSequence(oppositeMode, targetMode);
+    }
+
+    private static ushort? TryGetOppositeRefreshMode(ushort targetMode)
+    {
+        return targetMode switch
+        {
+            RetainedMinHeatingMode => RetainedMaxHeatingMode,
+            RetainedMaxHeatingMode => RetainedMinHeatingMode,
+            _ => null
+        };
+    }
+
+    private async Task<bool> TryWriteRefreshSequenceAsync(
+        RefreshSnapshot snapshot,
+        RefreshSequence sequence,
+        CancellationToken ct)
+    {
+        var oppositeMode = sequence.OppositeMode;
+        if (!oppositeMode.HasValue)
+        {
+            return await TryWriteRefreshModeAsync(
+                snapshot,
+                sequence.TargetMode,
+                sequence.TargetMode,
+                isIntermediate: false,
+                checkCurrentBeforeWrite: true,
+                checkCurrentAfterWrite: true,
+                ioCt: _disposeCts.Token,
+                currentCt: ct);
+        }
+
+        if (!await TryWriteRefreshModeAsync(
+                snapshot,
+                oppositeMode.Value,
+                sequence.TargetMode,
+                isIntermediate: true,
+                checkCurrentBeforeWrite: true,
+                checkCurrentAfterWrite: false,
+                ioCt: _disposeCts.Token,
+                currentCt: ct))
+        {
+            return false;
+        }
+
+        return await TryWriteRefreshModeAsync(
+            snapshot,
+            sequence.TargetMode,
+            sequence.TargetMode,
+            isIntermediate: false,
+            checkCurrentBeforeWrite: false,
+            checkCurrentAfterWrite: true,
+            ioCt: _disposeCts.Token,
+            currentCt: ct);
+    }
+
+    private async Task<bool> TryWriteRefreshModeAsync(
+        RefreshSnapshot snapshot,
+        ushort modeToWrite,
+        ushort targetMode,
+        bool isIntermediate,
+        bool checkCurrentBeforeWrite,
+        bool checkCurrentAfterWrite,
+        CancellationToken ioCt,
+        CancellationToken currentCt)
+    {
+        if (checkCurrentBeforeWrite && !CanContinueRefresh(snapshot, currentCt))
+        {
+            return false;
+        }
+
+        var writeResult = await _writer.WriteUInt16Async(_operationModeAddress, modeToWrite, ioCt);
+        if (writeResult.Success)
+        {
+            return !checkCurrentAfterWrite || CanContinueRefresh(snapshot, currentCt);
+        }
+
+        LogRefreshWriteFailure(snapshot, modeToWrite, targetMode, isIntermediate, writeResult.Error);
+        return false;
+    }
+
+    private void LogRefreshWriteFailure(
+        RefreshSnapshot snapshot,
+        ushort modeToWrite,
+        ushort targetMode,
+        bool isIntermediate,
+        string? error)
+    {
+        if (isIntermediate)
+        {
+            _logger.LogWarning(
+                "Не удалось записать промежуточный режим 1036={IntermediateMode} перед целевым режимом {TargetMode} ({SourceStep}): {Error}",
+                modeToWrite,
+                targetMode,
+                snapshot.SourceStep,
+                error);
+            return;
+        }
+
+        _logger.LogWarning(
+            "Не удалось повторно записать режим 1036={Mode} ({SourceStep}): {Error}",
+            modeToWrite,
+            snapshot.SourceStep,
+            error);
     }
 
     private bool CanContinueRefresh(RefreshSnapshot snapshot, CancellationToken ct)
@@ -561,6 +657,8 @@ public sealed class BoilerOperationModeRefreshService : IDisposable
         string SourceStep,
         DateTime NextRefreshUtc,
         CancellationToken Token);
+
+    private sealed record RefreshSequence(ushort? OppositeMode, ushort TargetMode);
 
     private sealed class ModeChangeLease(SemaphoreSlim gate) : IDisposable
     {

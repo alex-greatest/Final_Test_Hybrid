@@ -40,6 +40,7 @@ public partial class Form1 : Form
     public Form1()
     {
         InitializeComponent();
+        ApplyWindowIcon();
         StartPosition = FormStartPosition.Manual;
         WindowState = FormWindowState.Maximized;
 
@@ -71,6 +72,29 @@ public partial class Form1 : Form
         blazorWebView1.Services = _serviceProvider;
         StartServices(_serviceProvider);
         blazorWebView1.RootComponents.Add<MyComponent>("#app");
+    }
+
+    private void ApplyWindowIcon()
+    {
+        var appIcon = LoadApplicationIcon();
+        if (appIcon == null)
+        {
+            return;
+        }
+
+        Icon = appIcon;
+    }
+
+    private static Icon? LoadApplicationIcon()
+    {
+        try
+        {
+            return Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private void StartServices(ServiceProvider serviceProvider)
@@ -186,7 +210,7 @@ public partial class Form1 : Form
         _rawInputService?.Unregister();
     }
 
-    private static void HandleException(Microsoft.Extensions.Logging.ILogger logger)
+    private static void HandleException(ILogger logger)
     {
         Application.ThreadException += (_, error) =>
         {

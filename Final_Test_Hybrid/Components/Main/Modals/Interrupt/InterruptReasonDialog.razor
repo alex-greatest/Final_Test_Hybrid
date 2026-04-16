@@ -44,6 +44,9 @@
     [Parameter]
     public bool ShowCancelButton { get; set; } = true;
 
+    [Parameter]
+    public bool ReturnRepeatBypassOnCancel { get; set; }
+
     private string _reason = "";
     private bool _isSaving;
     private string _validationError = "";
@@ -71,7 +74,10 @@
             return;
         }
 
-        DialogService.Close();
+        DialogService.Close(
+            ReturnRepeatBypassOnCancel
+                ? InterruptReasonDialogResult.RepeatBypass()
+                : null);
     }
 
     private async Task<bool> ShowPasswordDialogAsync()
@@ -132,7 +138,7 @@
         }
         if (result.IsSuccess)
         {
-            DialogService.Close(result);
+            DialogService.Close(InterruptReasonDialogResult.Saved(result));
             return;
         }
         if (string.IsNullOrEmpty(result.ErrorMessage))

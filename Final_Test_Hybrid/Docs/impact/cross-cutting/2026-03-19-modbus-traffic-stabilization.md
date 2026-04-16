@@ -38,6 +38,12 @@
   - stale `LastPingData` от ручной панели не считается успешной проверкой связи;
   - fail-path `NoDiagnosticConnection` теперь всегда пытается остановить dispatcher, включая shared-session reuse.
 - Для selected `Coms/*` шагов введён единый helper communication-vs-functional сообщений без добавления новых error codes.
+- `Coms/Delete_Error_History` получил локальный reconnect-aware retry без изменения общего fail-fast контракта очереди:
+  - первая запись очистки журнала ошибок по-прежнему идёт через `context.PacedDiagWriter`;
+  - только при communication-fail класса reconnect-race (`State=pending` / `State=rejected` / `начато переподключение Modbus до начала выполнения`) шаг boundedly ждёт `dispatcher ready` (`IsStarted && IsConnected && !IsReconnecting && LastPingData != null`);
+  - ожидание ограничено `20 c`, выполняется через `context.DelayAsync(...)`, остаётся pause-aware/cancellation-aware и не превращается в бесконечный retry;
+  - после восстановления ready-state шаг делает ровно одну повторную попытку записи;
+  - если dispatcher остановлен, ready-state не восстановился за дедлайн или повторная запись снова падает, оператор получает штатный fail шага; финальный текст остаётся в контракте `ComsStepFailureHelper` и зависит от фактического `FailureKind` последней неуспешной операции.
 - Для execution stand-write введён общий reconnect-ready gate:
   - retry-ветки `Coms/*`, которые перед своей основной операцией вызывают `SetStandModeAsync(...)`, теперь не пишут ключ стенда в active reconnect-window;
   - перед фактической записью helper boundedly ждёт `IsStarted=true`, `IsConnected=true`, `IsReconnecting=false`, `LastPingData!=null`;
@@ -225,6 +231,18 @@
     - `dotnet format style Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
     - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-warning-read-soft-code-plug-cleanup-dedupe.txt" -e=WARNING` — отчёт пуст (`Solution Final_Test_Hybrid.slnx`); консольный прогон завершился с `I/O error occurred`, но файл отчёта был создан и не содержит warning.
     - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/ReadSoftCodePlugStep.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-hint-read-soft-code-plug-cleanup-dedupe.txt" -e=HINT` — только два non-blocking hint про возврат `List<string>` вместо `IReadOnlyList<string>` для helper-методов `BuildRequiredRecipeAddresses` и `BuildResultNames`.
+- После локального reconnect-aware retry для `Coms/Delete_Error_History` дополнительно выполнены:
+  - `DeleteErrorHistoryStepTests` переведены с wall-clock `Task.Delay(...)` на детерминированный gate по факту первой записи, чтобы reconnect-retry сценарий не зависел от планировщика и polling cadence.
+  - Добавлен отдельный unit-test на отмену во время ожидания `dispatcher ready`: текущий `CancellationToken` доходит до `PacedDiagWriter` и прерывает `context.DelayAsync(...)`/retry-wait без фонового подвисающего процесса.
+  - Добавлен unit-test на reconnect-race с `State=rejected`, чтобы локальный retry-path покрывал обе fail-fast ветки dispatcher внутри reconnect-window.
+  - Добавлен отрицательный unit-test, что обычный communication-fail без reconnect-marker не делает повторную запись.
+  - Добавлен unit-test на fail-fast при `dispatcher.IsStarted == false`: шаг не ждёт retry-window и не делает вторую запись после остановки dispatcher.
+  - `dotnet test Final_Test_Hybrid.Tests/Final_Test_Hybrid.Tests.csproj --filter DeleteErrorHistoryStepTests` — успешно, `8/8`; остаются baseline warning `MSB3277` по `WindowsBase`.
+  - `dotnet build Final_Test_Hybrid.slnx` — успешно; остаются baseline warning `MSB3277` по `WindowsBase`.
+  - `dotnet format analyzers Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
+  - `dotnet format style Final_Test_Hybrid.slnx --verify-no-changes` — успешно.
+  - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/DeleteErrorHistoryStep.cs;Final_Test_Hybrid.Tests/Runtime/DeleteErrorHistoryStepTests.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-warning-delete-error-history.txt" -e=WARNING` — блокирующих runtime-warning не найдено; в отчёте остались только неопасные cleanup/style замечания по тесту (`using directive`, `qualifier is redundant`).
+  - `jb inspectcode Final_Test_Hybrid.slnx "--include=Final_Test_Hybrid/Services/Steps/Steps/Coms/DeleteErrorHistoryStep.cs;Final_Test_Hybrid.Tests/Runtime/DeleteErrorHistoryStepTests.cs" --no-build --format=Text "--output=D:\\projects\\Final_Test_Hybrid\\.codex-build\\inspect-hint-delete-error-history.txt" -e=HINT` — новых safety/regression замечаний по шагу нет; остались только non-blocking reflection/style hints (`constructor is never used` для DI/reflection, lambda/style cleanup в тесте).
 
 ## Residual Risks
 
@@ -240,3 +258,4 @@
 - Для локального batch-read/progress fix в `Coms/Safety_Time` новый incident не выявлен.
 - Для исправления раскладки `Read_Soft_Code_Plug` новый incident не выявлен.
 - Текущая доработка stand-write helper уточняет уже зафиксированный incident про execution stand-write during reconnect; нового incident-document не добавлялось.
+- Для локального reconnect-aware retry в `Coms/Delete_Error_History` новый incident не выявлен (`no new incident`).

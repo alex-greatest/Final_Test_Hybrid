@@ -121,6 +121,8 @@ public void ResetScanTiming()
 - pre-execution возвращается в ожидание barcode;
 - при `SetAcceptingInput(true)` выполняется `ResetScanTiming()` (сброс и старт scan-таймера с нуля);
 - stale reset-seq не должен запускать таймер.
+- аварийный `RepeatBypass` из repeat-save flow не вводит отдельного timing-контурa:
+  он использует existing repeat outcome через `StartRepeatAfterReset(...)` и не должен добавлять новые вызовы в `StepTimingService`.
 
 ## Глобальная пауза
 

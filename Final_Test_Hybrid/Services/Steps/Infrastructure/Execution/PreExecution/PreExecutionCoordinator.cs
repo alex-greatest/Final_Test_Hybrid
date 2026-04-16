@@ -55,7 +55,7 @@ public partial class PreExecutionCoordinator(
     private int _postAskEndScanModeDecision;
     // Серия reset считается "закрытой" для окна причины
     // только после пользовательского завершения диалога:
-    // Save или Cancel. Принудительное закрытие новым reset
+    // Save, Cancel или RepeatBypass. Принудительное закрытие новым reset
     // право на повторный показ не тратит.
     private int _interruptDialogCompletedInCurrentResetSeries;
     private int _interruptDialogAllowedSequence;
